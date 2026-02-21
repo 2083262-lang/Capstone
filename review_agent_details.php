@@ -276,6 +276,8 @@ $stmt_fetch_agent->close();
             line-height: 1.8;
             color: #374151;
             white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: break-word;
             padding: 1.5rem;
             background: var(--background-color);
             border-radius: 12px;
@@ -531,6 +533,27 @@ $stmt_fetch_agent->close();
             margin-bottom: 0.5rem;
         }
 
+        /* Agent Action Forms - Specific styling to avoid conflicts */
+        .agent-action-form {
+            width: 100%;
+        }
+
+        #approveAgentForm {
+            margin-bottom: 0;
+        }
+
+        .btn-approve-agent {
+            width: 100%;
+        }
+
+        .btn-reject-agent {
+            width: 100%;
+        }
+
+        .btn-back-to-list {
+            width: 100%;
+        }
+
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
@@ -767,24 +790,42 @@ include 'admin_navbar.php';
                                         </a>
                                     </div>
                                 <?php else: ?>
-                                    <form action="review_agent_details.php?account_id=<?php echo $account_id_to_review; ?>" method="POST">
+                                    <!-- Approve Agent Form -->
+                                    <form id="approveAgentForm" class="agent-action-form" action="review_agent_details.php?account_id=<?php echo $account_id_to_review; ?>" method="POST">
                                         <input type="hidden" name="account_id" value="<?php echo $account_id_to_review; ?>">
+                                        <input type="hidden" name="action" value="approve">
                                         <div class="d-grid gap-3">
-                                            <button type="submit" name="action" value="approve" 
-                                                    class="btn btn-modern btn-approve" 
+                                            <button type="submit" 
+                                                    class="btn btn-modern btn-approve btn-approve-agent" 
                                                     <?php echo ($is_profile_incomplete || $agent_data['is_approved']) ? 'disabled' : ''; ?>>
                                                 <i class="bi bi-check-circle me-2"></i>Approve Agent
                                             </button>
+                                        </div>
+                                    </form>
+                                    
+                                    <!-- Reject/Disable Agent Form (Modal Trigger) -->
+                                    <form class="agent-action-form mt-3">
+                                        <div class="d-grid gap-3">
+                                            <?php if ($agent_data['is_approved']): ?>
+                                                <!-- Disable Agent Button (for approved agents) -->
+                                                <button type="button" 
+                                                        class="btn btn-modern btn-reject btn-disable-agent" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#disableModal">
+                                                    <i class="bi bi-ban me-2"></i>Disable Agent Account
+                                                </button>
+                                            <?php else: ?>
+                                                <!-- Reject Agent Button (for pending agents) -->
+                                                <button type="button" 
+                                                        class="btn btn-modern btn-reject btn-reject-agent" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#rejectionModal" 
+                                                        <?php echo $is_profile_incomplete ? 'disabled' : ''; ?>>
+                                                    <i class="bi bi-x-circle me-2"></i>Reject Agent
+                                                </button>
+                                            <?php endif; ?>
                                             
-                                            <button type="button" 
-                                                    class="btn btn-modern btn-reject" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#rejectionModal" 
-                                                    <?php echo $is_profile_incomplete ? 'disabled' : ''; ?>>
-                                                <i class="bi bi-x-circle me-2"></i>Reject Agent
-                                            </button>
-                                            
-                                            <a href="agent.php" class="btn btn-modern btn-secondary-modern">
+                                            <a href="agent.php" class="btn btn-modern btn-secondary-modern btn-back-to-list">
                                                 <i class="bi bi-arrow-left me-2"></i>Back to Agent List
                                             </a>
                                         </div>
@@ -891,16 +932,115 @@ include 'admin_navbar.php';
     </div>
 </div>
 
+<!-- Disable Agent Modal -->
+<div class="modal fade" id="disableModal" tabindex="-1" aria-labelledby="disableModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="review_agent_details.php?account_id=<?php echo $account_id_to_review; ?>" method="POST">
+                <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                    <h5 class="modal-title" id="disableModalLabel">
+                        <i class="bi bi-ban me-2"></i>Disable Agent Account
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Warning:</strong> This will deactivate the agent's account and prevent them from logging in. The agent will be notified via email.
+                    </div>
+                    
+                    <p class="text-muted mb-3">Please provide a detailed reason for disabling this agent's account. This message will be sent to the agent's email and recorded in the system.</p>
+                    
+                    <input type="hidden" name="action" value="disable">
+                    <input type="hidden" name="account_id" value="<?php echo $account_id_to_review; ?>">
+                    
+                    <div class="mb-3">
+                        <label for="disable_reason" class="form-label">Reason for Disabling *</label>
+                        <textarea class="form-control" id="disable_reason" name="disable_reason" rows="4" 
+                                  placeholder="Please provide specific reasons for disabling this account..." required></textarea>
+                        <div class="form-text">Be clear and professional in explaining why this account is being disabled.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-modern btn-reject">
+                        <i class="bi bi-ban me-2"></i>Disable Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php include 'logout_modal.php'; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Enhanced form validation and submission handling
+    // Enhanced form validation and submission handling for agent actions
     document.addEventListener('DOMContentLoaded', function() {
-        const forms = document.querySelectorAll('form');
+        let isFormSubmitting = false;
         
-        forms.forEach(form => {
-            form.addEventListener('submit', function(e) {
+        // Handle Approve Agent Form specifically
+        const approveForm = document.getElementById('approveAgentForm');
+        if (approveForm) {
+            console.log('Approve form found and listener attached');
+            
+            approveForm.addEventListener('submit', function(e) {
+                console.log('Approve form submitted');
+                console.log('Form action:', this.action);
+                console.log('Form method:', this.method);
+                
+                // Log form data
+                const formData = new FormData(this);
+                console.log('Form data:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key + ': ' + value);
+                }
+                
+                // Prevent double submission
+                if (isFormSubmitting) {
+                    console.log('Double submission prevented');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                const submitButton = this.querySelector('button[type="submit"]');
+                
+                if (submitButton && !submitButton.disabled) {
+                    // Mark as submitting
+                    isFormSubmitting = true;
+                    console.log('Form marked as submitting');
+                    
+                    // Show loading state
+                    const originalContent = submitButton.innerHTML;
+                    submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
+                    submitButton.disabled = true;
+                    
+                    // Re-enable after timeout (fallback)
+                    setTimeout(() => {
+                        submitButton.innerHTML = originalContent;
+                        submitButton.disabled = false;
+                        isFormSubmitting = false;
+                        console.log('Form re-enabled after timeout');
+                    }, 10000);
+                }
+                
+                console.log('Form submitting normally...');
+                // Allow form to submit normally
+                return true;
+            });
+        }
+        
+        // Handle Rejection Modal Form
+        const rejectionForm = document.querySelector('#rejectionModal form');
+        if (rejectionForm) {
+            rejectionForm.addEventListener('submit', function(e) {
+                // Prevent double submission
+                if (isFormSubmitting) {
+                    e.preventDefault();
+                    return false;
+                }
+                
                 const requiredInputs = this.querySelectorAll('[required]');
                 const submitButton = this.querySelector('button[type="submit"]');
                 let isValid = true;
@@ -922,33 +1062,39 @@ include 'admin_navbar.php';
                     if (firstInvalid) {
                         firstInvalid.focus();
                     }
-                } else {
-                    // Validation passed - show loading state and allow submission
-                    if (submitButton && !submitButton.disabled) {
-                        const originalContent = submitButton.innerHTML;
-                        submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
-                        submitButton.disabled = true;
-                        
-                        // Re-enable after timeout (fallback in case redirect fails)
-                        setTimeout(() => {
-                            submitButton.innerHTML = originalContent;
-                            submitButton.disabled = false;
-                        }, 10000);
-                    }
-                    // Form will submit normally (e is not prevented)
+                    return false;
                 }
+                
+                // Validation passed - mark as submitting and show loading state
+                isFormSubmitting = true;
+                
+                if (submitButton && !submitButton.disabled) {
+                    const originalContent = submitButton.innerHTML;
+                    submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
+                    submitButton.disabled = true;
+                    
+                    // Re-enable after timeout (fallback in case redirect fails)
+                    setTimeout(() => {
+                        submitButton.innerHTML = originalContent;
+                        submitButton.disabled = false;
+                        isFormSubmitting = false;
+                    }, 10000);
+                }
+                
+                // Allow form to submit
+                return true;
             });
-        });
+        }
 
-        // Real-time validation for textarea
-        const textareas = document.querySelectorAll('textarea[required]');
-        textareas.forEach(textarea => {
-            textarea.addEventListener('input', function() {
+        // Real-time validation for textarea in rejection modal
+        const rejectionTextarea = document.getElementById('rejection_reason');
+        if (rejectionTextarea) {
+            rejectionTextarea.addEventListener('input', function() {
                 if (this.value.trim()) {
                     this.classList.remove('is-invalid');
                 }
             });
-        });
+        }
     });
 
     // Auto-hide alerts after 5 seconds
@@ -1009,23 +1155,6 @@ include 'admin_navbar.php';
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Prevent double-click form submission
-    let formSubmitted = false;
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            if (formSubmitted) {
-                e.preventDefault();
-                return false;
-            }
-            formSubmitted = true;
-            
-            // Reset after 3 seconds
-            setTimeout(() => {
-                formSubmitted = false;
-            }, 3000);
-        });
     });
 
     // Character count for textarea
