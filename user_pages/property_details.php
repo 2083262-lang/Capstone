@@ -1,0 +1,1706 @@
+<?php
+include '../connection.php';
+
+// Initialize variables
+$error_message = '';
+$property_data = null;
+$property_images = [];
+$property_amenities = [];
+$agent_info = null;
+$rental_details = null;
+
+// Get property ID from URL
+$property_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+if ($property_id <= 0) {
+    $error_message = 'Invalid property ID provided.';
+} else {
+    // Fetch property details
+    $property_sql = "
+        SELECT
+            p.property_ID, p.StreetAddress, p.City, p.State, p.County, p.PropertyType,
+            p.YearBuilt, p.SquareFootage, p.LotSize, p.Bedrooms, p.Bathrooms,
+            p.ListingPrice, p.Status, p.ListingDate, p.ListingDescription,
+            p.ParkingType, p.MLSNumber, p.approval_status, p.Likes,
+            COALESCE(p.ViewsCount,0) AS ViewsCount
+        FROM property p
+        WHERE p.property_ID = ? AND p.approval_status = 'approved'
+    ";
+
+    $stmt = $conn->prepare($property_sql);
+    $stmt->bind_param("i", $property_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $property_data = $result->fetch_assoc();
+
+        // Update view count
+        $update_views = "UPDATE property SET ViewsCount = COALESCE(ViewsCount, 0) + 1 WHERE property_ID = ?";
+        $stmt_update = $conn->prepare($update_views);
+        $stmt_update->bind_param("i", $property_id);
+        $stmt_update->execute();
+        $stmt_update->close();
+
+        // If rental, fetch rental details
+        if (isset($property_data['Status']) && trim($property_data['Status']) === 'For Rent') {
+            $rd_sql = "SELECT monthly_rent, security_deposit, lease_term_months, furnishing, available_from FROM rental_details WHERE property_id = ? LIMIT 1";
+            $stmt = $conn->prepare($rd_sql);
+            $stmt->bind_param("i", $property_id);
+            $stmt->execute();
+            $rd_res = $stmt->get_result();
+            if ($rd_res->num_rows > 0) {
+                $rental_details = $rd_res->fetch_assoc();
+            }
+        }
+
+        // Fetch property images
+        $images_sql = "SELECT PhotoURL FROM property_images WHERE property_ID = ? ORDER BY SortOrder ASC";
+        $stmt = $conn->prepare($images_sql);
+        $stmt->bind_param("i", $property_id);
+        $stmt->execute();
+        $images_result = $stmt->get_result();
+        $property_images = $images_result->fetch_all(MYSQLI_ASSOC);
+        $property_images = array_column($property_images, 'PhotoURL');
+
+        // Fetch floor images grouped by floor number
+        $floor_images = [];
+        $floor_images_sql = "SELECT floor_number, photo_url, sort_order FROM property_floor_images WHERE property_id = ? ORDER BY floor_number ASC, sort_order ASC";
+        $stmt_floor = $conn->prepare($floor_images_sql);
+        $stmt_floor->bind_param("i", $property_id);
+        $stmt_floor->execute();
+        $floor_result = $stmt_floor->get_result();
+        while ($row = $floor_result->fetch_assoc()) {
+            $floor_num = (int)$row['floor_number'];
+            if (!isset($floor_images[$floor_num])) {
+                $floor_images[$floor_num] = [];
+            }
+            $floor_images[$floor_num][] = $row['photo_url'];
+        }
+        $stmt_floor->close();
+
+        // Fetch property amenities
+        $amenities_sql = "
+            SELECT a.amenity_name
+            FROM amenities a
+            JOIN property_amenities pa ON a.amenity_id = pa.amenity_id
+            WHERE pa.property_id = ?
+            ORDER BY a.amenity_name ASC
+        ";
+        $stmt = $conn->prepare($amenities_sql);
+        $stmt->bind_param("i", $property_id);
+        $stmt->execute();
+        $amenities_result = $stmt->get_result();
+        $property_amenities = $amenities_result->fetch_all(MYSQLI_ASSOC);
+        $property_amenities = array_column($property_amenities, 'amenity_name');
+
+        // Fetch agent information
+        $agent_sql = "
+            SELECT
+                a.first_name, a.last_name, a.phone_number, a.email,
+                ai.specialization, ai.profile_picture_url, ai.license_number,
+                adm.license_number AS admin_license,
+                adm.profile_picture_url AS admin_profile_picture_url,
+                ur.role_name AS user_role
+            FROM accounts a
+            JOIN property_log pl ON pl.account_id = a.account_id
+            LEFT JOIN agent_information ai ON ai.account_id = a.account_id AND ai.is_approved = 1
+            LEFT JOIN admin_information adm ON adm.account_id = a.account_id
+            LEFT JOIN user_roles ur ON a.role_id = ur.role_id
+            WHERE pl.property_id = ? AND pl.action = 'CREATED'
+            LIMIT 1
+        ";
+        $stmt = $conn->prepare($agent_sql);
+        $stmt->bind_param("i", $property_id);
+        $stmt->execute();
+        $agent_result = $stmt->get_result();
+
+        if ($agent_result->num_rows > 0) {
+            $agent_info = $agent_result->fetch_assoc();
+            
+            if ($agent_info['user_role'] === 'admin') {
+                $agent_info['profile_picture_url'] = $agent_info['admin_profile_picture_url'];
+                $agent_info['specialization'] = 'Licensed Real Estate Admin';
+                $agent_info['license_number'] = $agent_info['admin_license'];
+            }
+        }
+    } else {
+        $error_message = 'Property not found or no longer available.';
+    }
+
+    $stmt->close();
+}
+
+$conn->close();
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $property_data ? htmlspecialchars($property_data['StreetAddress']) . ' - ' . htmlspecialchars($property_data['City']) : 'Property Details'; ?> | HomeEstate Realty</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            /* Gold Palette */
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --gold-dark: #b8941f;
+            
+            /* Blue Palette */
+            --blue: #2563eb;
+            --blue-light: #3b82f6;
+            --blue-dark: #1e40af;
+            
+            /* Black Palette */
+            --black: #0a0a0a;
+            --black-light: #111111;
+            --black-lighter: #1a1a1a;
+            --black-border: #1f1f1f;
+            
+            /* Semantic Gray Scale */
+            --white: #ffffff;
+            --gray-50: #f8f9fa;
+            --gray-100: #e9ecef;
+            --gray-200: #dee2e6;
+            --gray-300: #c5cdd5;
+            --gray-400: #a0aab5;
+            --gray-500: #7a8a99;
+            --gray-600: #5a6c7d;
+            --gray-700: #3d4f61;
+            --gray-800: #253545;
+            --gray-900: #1a1f24;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
+            line-height: 1.6;
+            color: var(--white);
+            overflow-x: hidden;
+        }
+
+        /* Breadcrumb */
+        .breadcrumb-section {
+            background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(15, 15, 15, 0.98) 100%);
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+            margin-top: 35px;
+        }
+
+        .breadcrumb {
+            background: transparent;
+            margin: 0;
+            padding: 0;
+            font-size: 0.875rem;
+        }
+
+        .breadcrumb-item {
+            color: var(--gray-400);
+        }
+
+        .breadcrumb-item a {
+            color: var(--blue-light);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .breadcrumb-item a:hover {
+            color: var(--blue);
+        }
+
+        .breadcrumb-item.active {
+            color: var(--gray-300);
+        }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            color: var(--gray-600);
+        }
+
+        /* Hero Section with Images */
+        .property-hero {
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+            padding: 60px 0;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+        }
+
+        .image-gallery-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 12px;
+            height: 600px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .gallery-main {
+            position: relative;
+            overflow: hidden;
+            background: var(--black);
+            cursor: pointer;
+        }
+
+        .gallery-main img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-main:hover img {
+            transform: scale(1.05);
+        }
+
+        .gallery-sidebar {
+            display: grid;
+            grid-template-rows: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            background: var(--black);
+            cursor: pointer;
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-item:hover img {
+            transform: scale(1.05);
+        }
+
+        .view-all-photos {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(8px);
+            color: var(--white);
+            padding: 12px 24px;
+            border-radius: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .view-all-photos:hover {
+            background: rgba(37, 99, 235, 0.9);
+            border-color: var(--blue);
+        }
+
+        /* Floor Navigation Pills */
+        .floor-pills {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .floor-pill {
+            padding: 10px 18px;
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(8px);
+            color: var(--white);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .floor-pill:hover {
+            background: rgba(37, 99, 235, 0.9);
+            border-color: var(--blue);
+        }
+
+        .floor-pill.active {
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+            border-color: var(--gold);
+            color: var(--black);
+        }
+
+        .floor-pill i {
+            font-size: 1rem;
+        }
+
+        /* Property Header */
+        .property-header {
+            margin: 40px 0;
+        }
+
+        .property-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--white);
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+
+        .property-address {
+            font-size: 1.125rem;
+            color: var(--gray-400);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .property-meta {
+            display: flex;
+            gap: 32px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9375rem;
+            color: var(--gray-300);
+        }
+
+        .meta-item i {
+            color: var(--blue-light);
+            font-size: 1.125rem;
+        }
+
+        .property-price {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.3));
+        }
+
+        /* Content Grid */
+        .property-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        /* Main Content Sections */
+        .content-card {
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 4px;
+            padding: 32px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .content-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--blue), transparent);
+            opacity: 0.5;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title i {
+            color: var(--gold);
+            font-size: 1.25rem;
+        }
+
+        .description-text {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--gray-300);
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-box {
+            background: rgba(37, 99, 235, 0.05);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 2px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .feature-box:hover {
+            border-color: rgba(37, 99, 235, 0.3);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+        }
+
+        .feature-icon i {
+            font-size: 24px;
+            color: var(--black);
+        }
+
+        .feature-label {
+            font-size: 0.75rem;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .feature-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+
+        /* Amenities */
+        .amenities-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .amenity-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(212, 175, 55, 0.05);
+            border-radius: 2px;
+            font-size: 0.875rem;
+            color: var(--gray-300);
+        }
+
+        .amenity-item i {
+            color: var(--gold);
+            font-size: 1rem;
+        }
+
+        /* Sidebar */
+        .sticky-sidebar {
+            position: sticky;
+            top: 100px;
+            align-self: start;
+        }
+
+        /* Agent Card */
+        .agent-card {
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 4px;
+            padding: 28px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .agent-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            opacity: 0.5;
+        }
+
+        .agent-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            border: 3px solid var(--gold);
+            object-fit: cover;
+        }
+
+        .agent-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 4px;
+        }
+
+        .agent-title {
+            font-size: 0.875rem;
+            color: var(--gray-400);
+            margin-bottom: 20px;
+        }
+
+        .contact-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
+            color: var(--white);
+            border: none;
+            border-radius: 2px;
+            font-weight: 700;
+            font-size: 0.9375rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 12px;
+        }
+
+        .contact-btn:hover {
+            background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .contact-btn i {
+            margin-right: 8px;
+        }
+
+        /* Image Lightbox (Facebook-style) */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.96);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox-image {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .lightbox-prev,
+        .lightbox-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 56px;
+            height: 56px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+        }
+
+        .lightbox-prev {
+            left: 40px;
+        }
+
+        .lightbox-next {
+            right: 40px;
+        }
+
+        .lightbox-prev:hover,
+        .lightbox-next:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .lightbox-counter {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            z-index: 10001;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .property-content {
+                grid-template-columns: 1fr;
+            }
+
+            .sticky-sidebar {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .image-gallery-grid {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .gallery-main {
+                height: 400px;
+            }
+
+            .gallery-sidebar {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: auto;
+            }
+
+            .gallery-item {
+                height: 200px;
+            }
+
+            .property-title {
+                font-size: 2rem;
+            }
+
+            .property-price {
+                font-size: 2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .lightbox-prev {
+                left: 10px;
+            }
+
+            .lightbox-next {
+                right: 10px;
+            }
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+            color: var(--black);
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 2px;
+            margin-bottom: 16px;
+        }
+
+        .status-badge.for-rent {
+            background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 50%, var(--blue-dark) 100%);
+            color: var(--white);
+        }
+
+        /* Property Stats */
+        .property-stats {
+            display: flex;
+            gap: 24px;
+            padding: 20px 0;
+            border-top: 1px solid rgba(37, 99, 235, 0.15);
+            border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-item i {
+            color: var(--blue-light);
+        }
+
+        .stat-item.likes i {
+            color: #ef4444;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        /* Like Button */
+        .like-button-container {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            z-index: 1000;
+        }
+
+        .like-button {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(26, 26, 26, 0.95) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .like-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .like-button:hover {
+            transform: translateY(-4px) scale(1.05);
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 12px 32px rgba(239, 68, 68, 0.3);
+        }
+
+        .like-button:active::before {
+            width: 100px;
+            height: 100px;
+        }
+
+        .like-button.liked {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border-color: #ef4444;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5);
+        }
+
+        .like-button.liked:hover {
+            box-shadow: 0 12px 32px rgba(239, 68, 68, 0.6);
+        }
+
+        .like-button i {
+            font-size: 28px;
+            color: rgba(255, 255, 255, 0.7);
+            transition: all 0.3s ease;
+        }
+
+        .like-button:hover i {
+            color: #ef4444;
+            transform: scale(1.1);
+        }
+
+        .like-button.liked i {
+            color: var(--white);
+            animation: heartBeat 0.6s ease;
+        }
+
+        .like-count {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .like-button.liked .like-count {
+            color: var(--white);
+        }
+
+        @keyframes heartBeat {
+            0%, 100% { transform: scale(1); }
+            10%, 30% { transform: scale(0.9); }
+            20%, 40%, 60%, 80% { transform: scale(1.1); }
+            50%, 70% { transform: scale(1.05); }
+        }
+
+        /* Like tooltip */
+        .like-tooltip {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            background: rgba(10, 10, 10, 0.95);
+            color: var(--white);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .like-button-container:hover .like-tooltip {
+            opacity: 1;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .like-button-container {
+                bottom: 24px;
+                right: 24px;
+            }
+
+            .like-button {
+                width: 60px;
+                height: 60px;
+            }
+
+            .like-button i {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<?php include 'navbar.php'; ?>
+
+<!-- Breadcrumb -->
+<div class="breadcrumb-section">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="index.php">Home</a></li>
+                <li class="breadcrumb-item"><a href="search_results.php">Properties</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Property Details</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<?php if ($error_message): ?>
+    <div class="container" style="padding: 100px 0; text-align: center;">
+        <div class="alert alert-danger" style="max-width: 600px; margin: 0 auto;">
+            <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem; display: block; margin-bottom: 20px;"></i>
+            <h3><?php echo htmlspecialchars($error_message); ?></h3>
+            <a href="search_results.php" class="btn btn-primary mt-3">Browse Properties</a>
+        </div>
+    </div>
+<?php else: ?>
+
+<!-- Property Hero -->
+<section class="property-hero">
+    <div class="container">
+        <!-- Image Gallery -->
+        <div class="image-gallery-grid">
+            <div class="gallery-main" onclick="openLightbox(0)">
+                <img src="../<?php echo htmlspecialchars($property_images[0] ?? 'images/placeholder.jpg'); ?>" alt="Main property image" id="mainHeroImage">
+                
+                <!-- Floor Navigation Pills -->
+                <div class="floor-pills">
+                    <button class="floor-pill active" data-type="featured" onclick="switchHeroView('featured')">
+                        <i class="bi bi-star-fill"></i>
+                        Featured
+                    </button>
+                    <?php if (!empty($floor_images)): ?>
+                        <?php foreach ($floor_images as $floor_num => $images): ?>
+                            <button class="floor-pill" data-type="floor" data-floor="<?php echo $floor_num; ?>" onclick="switchHeroView('floor', <?php echo $floor_num; ?>)">
+                                <i class="bi bi-building"></i>
+                                Floor <?php echo $floor_num; ?>
+                            </button>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="view-all-photos" onclick="event.stopPropagation(); openLightbox(0)">
+                    <i class="bi bi-images"></i> View all <?php echo count($property_images); ?> photos
+                </div>
+            </div>
+            <div class="gallery-sidebar">
+                <?php for($i = 1; $i < min(3, count($property_images)); $i++): ?>
+                    <div class="gallery-item" onclick="openLightbox(<?php echo $i; ?>)">
+                        <img src="../<?php echo htmlspecialchars($property_images[$i]); ?>" alt="Property image <?php echo $i + 1; ?>">
+                    </div>
+                <?php endfor; ?>
+                <?php if(count($property_images) < 2): ?>
+                    <div class="gallery-item" style="background: var(--black-lighter); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-image" style="font-size: 3rem; color: var(--gray-600);"></i>
+                    </div>
+                <?php endif; ?>
+                <?php if(count($property_images) < 3): ?>
+                    <div class="gallery-item" style="background: var(--black-lighter); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-image" style="font-size: 3rem; color: var(--gray-600);"></i>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Property Content -->
+<section class="container" style="padding: 40px 20px;">
+    <div class="property-header">
+        <span class="status-badge <?php echo $property_data['Status'] === 'For Rent' ? 'for-rent' : ''; ?>">
+            <?php echo htmlspecialchars($property_data['Status']); ?>
+        </span>
+        <h1 class="property-title"><?php echo htmlspecialchars($property_data['StreetAddress']); ?></h1>
+        <div class="property-address">
+            <i class="bi bi-geo-alt-fill"></i>
+            <?php echo htmlspecialchars($property_data['City'] . ', ' . $property_data['State']); ?>
+        </div>
+        <div class="property-meta">
+            <div class="property-price">₱<?php echo number_format($property_data['ListingPrice']); ?></div>
+            <div class="property-stats">
+                <div class="stat-item">
+                    <i class="bi bi-eye-fill"></i>
+                    <span class="stat-value"><?php echo number_format($property_data['ViewsCount']); ?></span>
+                    <span style="color: var(--gray-400);">views</span>
+                </div>
+                <div class="stat-item likes">
+                    <i class="bi bi-heart-fill"></i>
+                    <span class="stat-value"><?php echo number_format($property_data['Likes']); ?></span>
+                    <span style="color: var(--gray-400);">likes</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="property-content">
+        <!-- Main Content -->
+        <div>
+            <!-- Key Features -->
+            <div class="content-card">
+                <h2 class="section-title">
+                    <i class="bi bi-house-door-fill"></i>
+                    Property Features
+                </h2>
+                <div class="features-grid">
+                    <div class="feature-box">
+                        <div class="feature-icon">
+                            <i class="bi bi-door-open-fill"></i>
+                        </div>
+                        <div class="feature-label">Bedrooms</div>
+                        <div class="feature-value"><?php echo $property_data['Bedrooms']; ?></div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-icon">
+                            <i class="bi bi-droplet-fill"></i>
+                        </div>
+                        <div class="feature-label">Bathrooms</div>
+                        <div class="feature-value"><?php echo $property_data['Bathrooms']; ?></div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-icon">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </div>
+                        <div class="feature-label">Area</div>
+                        <div class="feature-value"><?php echo number_format($property_data['SquareFootage']); ?> ft²</div>
+                    </div>
+                    <?php if($property_data['LotSize']): ?>
+                    <div class="feature-box">
+                        <div class="feature-icon">
+                            <i class="bi bi-map"></i>
+                        </div>
+                        <div class="feature-label">Lot Size</div>
+                        <div class="feature-value"><?php echo number_format($property_data['LotSize'], 2); ?> acres</div>
+                    </div>
+                    <?php endif; ?>
+                    <div class="feature-box">
+                        <div class="feature-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <div class="feature-label">Year Built</div>
+                        <div class="feature-value"><?php echo $property_data['YearBuilt']; ?></div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-icon">
+                            <i class="bi bi-car-front-fill"></i>
+                        </div>
+                        <div class="feature-label">Parking</div>
+                        <div class="feature-value" style="font-size: 0.875rem;"><?php echo htmlspecialchars($property_data['ParkingType']); ?></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="content-card">
+                <h2 class="section-title">
+                    <i class="bi bi-card-text"></i>
+                    Property Description
+                </h2>
+                <p class="description-text"><?php echo nl2br(htmlspecialchars($property_data['ListingDescription'])); ?></p>
+            </div>
+
+            <!-- Amenities -->
+            <?php if(!empty($property_amenities)): ?>
+            <div class="content-card">
+                <h2 class="section-title">
+                    <i class="bi bi-stars"></i>
+                    Amenities & Features
+                </h2>
+                <div class="amenities-list">
+                    <?php foreach($property_amenities as $amenity): ?>
+                        <div class="amenity-item">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span><?php echo htmlspecialchars($amenity); ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Property Details -->
+            <div class="content-card">
+                <h2 class="section-title">
+                    <i class="bi bi-info-circle-fill"></i>
+                    Property Information
+                </h2>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                    <div>
+                        <div style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: 4px;">Property Type</div>
+                        <div style="color: var(--white); font-weight: 600;"><?php echo htmlspecialchars($property_data['PropertyType']); ?></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: 4px;">County</div>
+                        <div style="color: var(--white); font-weight: 600;"><?php echo htmlspecialchars($property_data['County']); ?></div>
+                    </div>
+                    <?php if($property_data['MLSNumber']): ?>
+                    <div>
+                        <div style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: 4px;">MLS Number</div>
+                        <div style="color: var(--white); font-weight: 600;"><?php echo htmlspecialchars($property_data['MLSNumber']); ?></div>
+                    </div>
+                    <?php endif; ?>
+                    <div>
+                        <div style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: 4px;">Listed Date</div>
+                        <div style="color: var(--white); font-weight: 600;">
+                            <?php 
+                                $ld = $property_data['ListingDate'] ?? '';
+                                if (!empty($ld) && $ld !== '0000-00-00') {
+                                    $ts = strtotime($ld);
+                                    if ($ts !== false) {
+                                        echo date('M d, Y', $ts);
+                                    } else {
+                                        echo '<span style="color: var(--gray-500);">Not set</span>';
+                                    }
+                                } else {
+                                    echo '<span style="color: var(--gray-500);">Not set</span>';
+                                }
+                            ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sticky-sidebar">
+            <!-- Agent Card -->
+            <?php if($agent_info): ?>
+            <div class="agent-card">
+                <img src="../<?php echo htmlspecialchars($agent_info['profile_picture_url'] ?? 'images/default-avatar.png'); ?>" 
+                     alt="Agent photo" class="agent-avatar">
+                <h3 class="agent-name"><?php echo htmlspecialchars($agent_info['first_name'] . ' ' . $agent_info['last_name']); ?></h3>
+                <p class="agent-title"><?php echo htmlspecialchars($agent_info['specialization'] ?? 'Real Estate Professional'); ?></p>
+                
+                <?php if($agent_info['license_number']): ?>
+                <div style="margin-bottom: 20px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-radius: 2px;">
+                    <div style="font-size: 0.75rem; color: var(--gray-400); margin-bottom: 4px;">License Number</div>
+                    <div style="font-size: 0.875rem; color: var(--gold); font-weight: 600;"><?php echo htmlspecialchars($agent_info['license_number']); ?></div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Contact Information -->
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 0.75rem; color: var(--gray-400); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600;">Contact Information</div>
+
+                    <a href="mailto:<?php echo htmlspecialchars($agent_info['email']); ?>" class="contact-card">
+                        <div class="contact-icon"><i class="bi bi-envelope-fill"></i></div>
+                        <div class="contact-details">
+                            <div class="contact-label">Email</div>
+                            <div class="contact-value"><?php echo htmlspecialchars($agent_info['email']); ?></div>
+                        </div>
+                    </a>
+
+                    <a href="tel:<?php echo htmlspecialchars($agent_info['phone_number']); ?>" class="contact-card">
+                        <div class="contact-icon"><i class="bi bi-telephone-fill"></i></div>
+                        <div class="contact-details">
+                            <div class="contact-label">Phone</div>
+                            <div class="contact-value"><?php echo htmlspecialchars($agent_info['phone_number']); ?></div>
+                        </div>
+                    </a>
+
+                    <style>
+                    /* Contact cards: left-aligned, consistent spacing */
+                    .contact-card {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        padding: 12px;
+                        background: rgba(37, 99, 235, 0.06);
+                        border: 1px solid rgba(37, 99, 235, 0.12);
+                        border-radius: 6px;
+                        text-decoration: none;
+                        margin-bottom: 10px;
+                        transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+                    }
+                    .contact-card:hover { background: rgba(37, 99, 235, 0.12); border-color: rgba(37, 99, 235, 0.25); transform: translateY(-1px); }
+                    .contact-card .contact-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(37,99,235,0.04); }
+                    .contact-card .contact-icon i { color: var(--blue-light); font-size: 1.125rem; }
+                    .contact-card .contact-details { text-align: left; }
+                    .contact-label { font-size: 0.75rem; color: var(--gray-400); margin-bottom: 2px; }
+                    .contact-value { font-size: 0.95rem; color: var(--white); font-weight: 600; }
+                    @media (max-width: 480px) {
+                        .contact-card { gap: 10px; padding: 10px; }
+                        .contact-card .contact-icon { width: 32px; height: 32px; }
+                        .contact-value { font-size: 0.9rem; }
+                    }
+                    </style>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Request Tour Card -->
+            <div class="content-card">
+                <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--white); margin-bottom: 16px;">
+                    <i class="bi bi-calendar-event" style="color: var(--gold);"></i> Schedule a Tour
+                </h3>
+                <p style="font-size: 0.875rem; color: var(--gray-400); margin-bottom: 20px;">
+                    Interested in viewing this property? Request a tour and we'll contact you to confirm.
+                </p>
+                <button class="contact-btn" style="background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);" data-bs-toggle="modal" data-bs-target="#requestTourModal">
+                    <i class="bi bi-calendar-check"></i> Request Tour
+                </button>
+            </div>
+        </aside>
+    </div>
+</section>
+
+<!-- Floating Like Button -->
+<div class="like-button-container">
+    <div class="like-tooltip" id="likeTooltip">Click to like this property</div>
+    <button class="like-button" id="likeButton" onclick="toggleLike()" aria-label="Like property">
+        <i class="bi bi-heart-fill"></i>
+        <span class="like-count" id="likeCount"><?php echo number_format($property_data['Likes']); ?></span>
+    </button>
+</div>
+
+<!-- Image Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+    <button class="lightbox-close" onclick="closeLightbox(event)">
+        <i class="bi bi-x"></i>
+    </button>
+    <button class="lightbox-prev" onclick="changeImage(-1, event)">
+        <i class="bi bi-chevron-left"></i>
+    </button>
+    <div class="lightbox-content">
+        <img src="" alt="Property image" class="lightbox-image" id="lightboxImage">
+    </div>
+    <button class="lightbox-next" onclick="changeImage(1, event)">
+        <i class="bi bi-chevron-right"></i>
+    </button>
+    <div class="lightbox-counter" id="lightboxCounter"></div>
+</div>
+
+<?php endif; ?>
+
+<!-- Request Tour Modal -->
+<div class="modal fade" id="requestTourModal" tabindex="-1" aria-labelledby="requestTourModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: linear-gradient(135deg, rgba(26, 26, 26, 0.98) 0%, rgba(10, 10, 10, 0.98) 100%); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 4px;">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(37, 99, 235, 0.15); padding: 24px 32px;">
+                <h5 class="modal-title" id="requestTourModalLabel" style="color: var(--white); font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                    <i class="bi bi-calendar-check" style="color: var(--gold);"></i> Request a Tour
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1) brightness(2);"></button>
+            </div>
+            <div class="modal-body" style="padding: 32px;">
+                <!-- Alert container -->
+                <div id="tourRequestAlert" class="alert d-none" role="alert"></div>
+
+                <form id="tourRequestForm">
+                    <input type="hidden" name="property_id" value="<?php echo $property_data['property_ID']; ?>">
+                    <p style="color: var(--gray-400); margin-bottom: 28px; font-size: 0.9375rem; line-height: 1.5;">Select your preferred date and time for a tour. An agent will contact you to confirm.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Tour Type</label>
+                        <div class="d-flex gap-3 align-items-center" style="flex-wrap: wrap;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tour_type" id="tourTypePrivate" value="private" checked>
+                                <label class="form-check-label" for="tourTypePrivate" style="color: var(--gray-300);">Private (1-on-1)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tour_type" id="tourTypePublic" value="public">
+                                <label class="form-check-label" for="tourTypePublic" style="color: var(--gray-300);">Public (Group)</label>
+                            </div>
+                        </div>
+                        <div style="color: var(--gray-500); font-size: 0.85rem; margin-top: 6px;">Public tours let the agent group multiple visitors for the same property and timeslot.</div>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="tourDate" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Date <span style="color: #ff4444;">*</span></label>
+                            <input type="date" class="form-control" id="tourDate" name="tour_date" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
+                            <div class="invalid-feedback" id="tourDateFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="tourTime" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Time <span style="color: #ff4444;">*</span></label>
+                            <select class="form-select" id="tourTime" name="time" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
+                                <option value="" style="background: var(--black);">Select a time</option>
+                                <option value="09:00:00" style="background: var(--black);">9:00 AM</option>
+                                <option value="10:00:00" style="background: var(--black);">10:00 AM</option>
+                                <option value="11:00:00" style="background: var(--black);">11:00 AM</option>
+                                <option value="13:00:00" style="background: var(--black);">1:00 PM</option>
+                                <option value="14:00:00" style="background: var(--black);">2:00 PM</option>
+                                <option value="15:00:00" style="background: var(--black);">3:00 PM</option>
+                                <option value="16:00:00" style="background: var(--black);">4:00 PM</option>
+                            </select>
+                            <div class="invalid-feedback" id="tourTimeFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tourName" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Full Name <span style="color: #ff4444;">*</span></label>
+                        <input type="text" class="form-control" id="tourName" name="name" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
+                        <div class="invalid-feedback" id="tourNameFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tourEmail" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Email <span style="color: #ff4444;">*</span></label>
+                        <input type="email" class="form-control" id="tourEmail" name="email" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
+                        <div class="invalid-feedback" id="tourEmailFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tourPhone" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Phone <span style="color: #ff4444;">*</span></label>
+                        <input type="tel" class="form-control" id="tourPhone" name="phone" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
+                        <div class="invalid-feedback" id="tourPhoneFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="tourMessage" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Message (Optional)</label>
+                        <textarea class="form-control" id="tourMessage" name="message" rows="3" placeholder="Any specific requests or questions?" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="w-100" style="background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%); color: var(--black); border: none; padding: 14px; font-weight: 700; border-radius: 2px; cursor: pointer; transition: all 0.2s ease; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(212, 175, 55, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <i class="bi bi-calendar-check"></i>
+                        Submit Tour Request
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Tour Modal Input Placeholder Styling */
+#requestTourModal input::placeholder,
+#requestTourModal textarea::placeholder {
+    color: rgba(255, 255, 255, 0.4) !important;
+    opacity: 1 !important;
+}
+
+#requestTourModal input::-webkit-input-placeholder,
+#requestTourModal textarea::-webkit-input-placeholder {
+    color: rgba(255, 255, 255, 0.4) !important;
+}
+
+#requestTourModal input::-moz-placeholder,
+#requestTourModal textarea::-moz-placeholder {
+    color: rgba(255, 255, 255, 0.4) !important;
+    opacity: 1 !important;
+}
+
+#requestTourModal input:-ms-input-placeholder,
+#requestTourModal textarea:-ms-input-placeholder {
+    color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Focus states for better UX */
+#requestTourModal input:focus,
+#requestTourModal select:focus,
+#requestTourModal textarea:focus {
+    outline: none !important;
+    border-color: rgba(37, 99, 235, 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* Better alignment for form labels */
+#requestTourModal .form-label {
+    font-weight: 600 !important;
+}
+
+/* Invalid feedback styling */
+#requestTourModal .invalid-feedback {
+    display: block;
+    color: #ff4444;
+}
+
+#requestTourModal .form-control.is-invalid {
+    border-color: #ff4444 !important;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Property image data from PHP
+const featuredImages = <?php echo json_encode($property_images); ?>;
+const floorImages = <?php echo json_encode($floor_images); ?>;
+
+// Gallery state
+let currentImageIndex = 0;
+let currentImages = featuredImages;
+let currentHeroView = 'featured';
+let currentHeroFloor = null;
+
+// Switch hero view between featured and floor images
+function switchHeroView(viewType, floorNum = null) {
+    const mainImage = document.getElementById('mainHeroImage');
+    const pills = document.querySelectorAll('.floor-pill');
+    
+    // Update active pill
+    pills.forEach(pill => {
+        if (viewType === 'featured' && pill.dataset.type === 'featured') {
+            pill.classList.add('active');
+        } else if (viewType === 'floor' && pill.dataset.type === 'floor' && parseInt(pill.dataset.floor) === floorNum) {
+            pill.classList.add('active');
+        } else {
+            pill.classList.remove('active');
+        }
+    });
+    
+    currentHeroView = viewType;
+    currentHeroFloor = floorNum;
+    
+    let imagesToShow = [];
+    if (viewType === 'featured') {
+        imagesToShow = featuredImages;
+        currentImages = featuredImages;
+    } else if (viewType === 'floor' && floorImages[floorNum]) {
+        imagesToShow = floorImages[floorNum];
+        currentImages = floorImages[floorNum];
+    }
+    
+    if (imagesToShow.length > 0) {
+        mainImage.src = '../' + imagesToShow[0];
+    }
+}
+
+// Lightbox functionality
+function openLightbox(index) {
+    currentImageIndex = index;
+    updateLightboxImage();
+    document.getElementById('lightbox').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox(event) {
+    if (event.target.id === 'lightbox' || event.target.closest('.lightbox-close')) {
+        event.stopPropagation();
+        document.getElementById('lightbox').classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+function changeImage(direction, event) {
+    event.stopPropagation();
+    currentImageIndex += direction;
+    if (currentImageIndex < 0) currentImageIndex = currentImages.length - 1;
+    if (currentImageIndex >= currentImages.length) currentImageIndex = 0;
+    updateLightboxImage();
+}
+
+function updateLightboxImage() {
+    const img = document.getElementById('lightboxImage');
+    const counter = document.getElementById('lightboxCounter');
+    img.src = '../' + currentImages[currentImageIndex];
+    counter.textContent = `${currentImageIndex + 1} / ${currentImages.length}`;
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    const lightbox = document.getElementById('lightbox');
+    if (lightbox.classList.contains('active')) {
+        if (e.key === 'Escape') closeLightbox({ target: lightbox });
+        if (e.key === 'ArrowLeft') changeImage(-1, e);
+        if (e.key === 'ArrowRight') changeImage(1, e);
+    }
+});
+
+// Like functionality
+const propertyId = <?php echo $property_id; ?>;
+const likeButton = document.getElementById('likeButton');
+const likeCount = document.getElementById('likeCount');
+const likeTooltip = document.getElementById('likeTooltip');
+let isLiked = false;
+let isProcessing = false;
+
+// Check if user has already liked this property (using localStorage)
+function checkLikeStatus() {
+    const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+    isLiked = likedProperties.includes(propertyId);
+    
+    if (isLiked) {
+        likeButton.classList.add('liked');
+        likeTooltip.textContent = 'You liked this property';
+    } else {
+        likeButton.classList.remove('liked');
+        likeTooltip.textContent = 'Click to like this property';
+    }
+}
+
+// Toggle like status
+function toggleLike() {
+    if (isProcessing) return;
+    
+    // Optimistic UI update
+    const wasLiked = isLiked;
+    isLiked = !isLiked;
+    
+    if (isLiked) {
+        likeButton.classList.add('liked');
+        likeTooltip.textContent = 'You liked this property';
+        
+        // Save to database
+        saveLikeToDatabase();
+        
+        // Save to localStorage
+        const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+        if (!likedProperties.includes(propertyId)) {
+            likedProperties.push(propertyId);
+            localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
+        }
+    } else {
+        likeButton.classList.remove('liked');
+        likeTooltip.textContent = 'Click to like this property';
+        
+        // Remove from localStorage
+        let likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+        likedProperties = likedProperties.filter(id => id !== propertyId);
+        localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
+        
+        // Update count immediately (decrement)
+        const currentCount = parseInt(likeCount.textContent.replace(/,/g, ''));
+        likeCount.textContent = (currentCount - 1).toLocaleString();
+    }
+}
+
+// Save like to database via AJAX
+function saveLikeToDatabase() {
+    isProcessing = true;
+    
+    fetch('like_property.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'property_id=' + propertyId
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the like count with the actual database value
+            likeCount.textContent = data.likes.toLocaleString();
+        } else {
+            console.error('Failed to save like:', data.message);
+            // Revert UI on error
+            isLiked = false;
+            likeButton.classList.remove('liked');
+            likeTooltip.textContent = 'Click to like this property';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Revert UI on error
+        isLiked = false;
+        likeButton.classList.remove('liked');
+        likeTooltip.textContent = 'Click to like this property';
+    })
+    .finally(() => {
+        isProcessing = false;
+    });
+}
+
+// Initialize like status on page load
+checkLikeStatus();
+
+// Tour Request Form Handler
+document.getElementById('tourRequestForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    const alertBox = document.getElementById('tourRequestAlert');
+    const fieldMap = {
+        tour_date: { input: '#tourDate', feedback: '#tourDateFeedback' },
+        time: { input: '#tourTime', feedback: '#tourTimeFeedback' },
+        name: { input: '#tourName', feedback: '#tourNameFeedback' },
+        email: { input: '#tourEmail', feedback: '#tourEmailFeedback' },
+        phone: { input: '#tourPhone', feedback: '#tourPhoneFeedback' }
+    };
+
+    // Clear previous validation states
+    Object.values(fieldMap).forEach(({ input, feedback }) => {
+        const el = document.querySelector(input);
+        const fb = document.querySelector(feedback);
+        if (el) el.classList.remove('is-invalid');
+        if (fb) fb.textContent = '';
+    });
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class=\"spinner-border spinner-border-sm me-2\"></span>Sending...';
+    
+    fetch('request_tour_process.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Ensure alert box is visible with proper styling
+        if (alertBox) {
+            alertBox.classList.remove('d-none', 'alert-success', 'alert-danger');
+            alertBox.classList.add(data.success ? 'alert-success' : 'alert-danger');
+            if (data.html) {
+                alertBox.innerHTML = data.html;
+            } else {
+                alertBox.textContent = data.message || (data.success ? 'Request completed.' : 'There was a problem with your request.');
+            }
+        }
+
+        // Apply per-field error messages if provided
+        if (!data.success && data.errors) {
+            Object.entries(data.errors).forEach(([key, msg]) => {
+                const mapping = fieldMap[key];
+                if (!mapping) return;
+                const el = document.querySelector(mapping.input);
+                const fb = document.querySelector(mapping.feedback);
+                if (el) el.classList.add('is-invalid');
+                if (fb) fb.textContent = msg;
+            });
+        }
+
+        if (data.success) {
+            submitBtn.innerHTML = '<i class=\"bi bi-check-circle-fill me-2\"></i>Request Sent!';
+            submitBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+
+            // Reset form after brief confirmation
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                submitBtn.style.background = 'linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%)';
+                // Keep success alert visible; clear form fields
+                this.reset();
+                // Clear validation states after reset
+                Object.values(fieldMap).forEach(({ input, feedback }) => {
+                    const el = document.querySelector(input);
+                    const fb = document.querySelector(feedback);
+                    if (el) el.classList.remove('is-invalid');
+                    if (fb) fb.textContent = '';
+                });
+                
+                // Close modal after 2 seconds
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('requestTourModal'));
+                    if (modal) modal.hide();
+                    if (alertBox) alertBox.classList.add('d-none');
+                }, 2000);
+            }, 1500);
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (alertBox) {
+            alertBox.classList.remove('d-none', 'alert-success');
+            alertBox.classList.add('alert-danger');
+            alertBox.textContent = 'An unexpected error occurred. Please try again.';
+        }
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+// Set minimum date for tour date picker to today
+const tourDateInput = document.getElementById('tourDate');
+if (tourDateInput) {
+    const today = new Date().toISOString().split('T')[0];
+    tourDateInput.setAttribute('min', today);
+}
+
+</script>
+
+</body>
+</html>

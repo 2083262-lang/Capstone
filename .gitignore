@@ -1,0 +1,17 @@
+# IDE files
+.vs/
+.vscode/
+*.suo
+*.user
+
+# Log files
+logs/*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+logs/mail.log
