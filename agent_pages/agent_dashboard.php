@@ -1,18 +1,18 @@
 <?php
-session_start(); 
+session_start();
 include '../connection.php';
 
 // Check if the user is logged in AND their role is 'agent'
 if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'agent') {
-    header("Location: login.php");
-    exit(); 
+    header("Location: ../login.php");
+    exit();
 }
 
 $agent_account_id = $_SESSION['account_id'];
 $agent_username = $_SESSION['username'];
 
 // Fetch agent information
-$agent_info_query = "SELECT ai.*, a.first_name, a.last_name, a.email, a.phone_number 
+$agent_info_query = "SELECT ai.*, a.first_name, a.last_name, a.email, a.phone_number, a.date_registered
                      FROM agent_information ai 
                      JOIN accounts a ON ai.account_id = a.account_id 
                      WHERE ai.account_id = ?";
@@ -22,647 +22,1395 @@ $stmt->execute();
 $agent_info = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// Fetch statistics
+// -- Property Statistics --
 $stats_query = "SELECT 
-                COUNT(CASE WHEN approval_status = 'approved' THEN 1 END) as total_active,
-                COUNT(CASE WHEN approval_status = 'pending' THEN 1 END) as total_pending,
-                COUNT(CASE WHEN Status = 'For Sale' AND approval_status = 'approved' THEN 1 END) as for_sale,
-                COUNT(CASE WHEN Status = 'For Rent' AND approval_status = 'approved' THEN 1 END) as for_rent,
-                SUM(CASE WHEN approval_status = 'approved' THEN ViewsCount ELSE 0 END) as total_views,
-                SUM(CASE WHEN approval_status = 'approved' THEN Likes ELSE 0 END) as total_likes
-                FROM property 
-                WHERE property_ID IN (
-                    SELECT property_id FROM property_log WHERE account_id = ? AND action = 'CREATED'
-                )";
+    COUNT(*) as total_listings,
+    COUNT(CASE WHEN approval_status = 'approved' AND Status NOT IN ('Sold','Pending Sold') THEN 1 END) as active_listings,
+    COUNT(CASE WHEN approval_status = 'pending' THEN 1 END) as pending_approval,
+    COUNT(CASE WHEN Status = 'For Sale' AND approval_status = 'approved' THEN 1 END) as for_sale,
+    COUNT(CASE WHEN Status = 'For Rent' AND approval_status = 'approved' THEN 1 END) as for_rent,
+    COUNT(CASE WHEN Status = 'Sold' THEN 1 END) as total_sold,
+    COALESCE(SUM(CASE WHEN approval_status = 'approved' THEN ViewsCount ELSE 0 END), 0) as total_views,
+    COALESCE(SUM(CASE WHEN approval_status = 'approved' THEN Likes ELSE 0 END), 0) as total_likes,
+    COALESCE(AVG(CASE WHEN approval_status = 'approved' AND Status NOT IN ('Sold','Pending Sold') THEN ListingPrice END), 0) as avg_listing_price
+    FROM property 
+    WHERE property_ID IN (
+        SELECT property_id FROM property_log WHERE account_id = ? AND action = 'CREATED'
+    )";
 $stmt = $conn->prepare($stats_query);
 $stmt->bind_param("i", $agent_account_id);
 $stmt->execute();
 $stats = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// Fetch recent properties
+// -- Tour Request Statistics --
+$tour_stats_query = "SELECT 
+    COUNT(*) as total_tours,
+    COUNT(CASE WHEN request_status = 'Pending' THEN 1 END) as pending_tours,
+    COUNT(CASE WHEN request_status = 'Confirmed' THEN 1 END) as confirmed_tours,
+    COUNT(CASE WHEN request_status = 'Completed' THEN 1 END) as completed_tours,
+    COUNT(CASE WHEN request_status = 'Cancelled' THEN 1 END) as cancelled_tours,
+    COUNT(CASE WHEN request_status = 'Rejected' THEN 1 END) as rejected_tours
+    FROM tour_requests 
+    WHERE agent_account_id = ?";
+$stmt = $conn->prepare($tour_stats_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$tour_stats = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+// -- Commission Statistics --
+$commission_query = "SELECT 
+    COALESCE(SUM(commission_amount), 0) as total_commission,
+    COALESCE(SUM(CASE WHEN status = 'paid' THEN commission_amount ELSE 0 END), 0) as paid_commission,
+    COALESCE(SUM(CASE WHEN status IN ('pending','calculated') THEN commission_amount ELSE 0 END), 0) as unpaid_commission,
+    COUNT(*) as commission_count
+    FROM agent_commissions 
+    WHERE agent_id = ?";
+$stmt = $conn->prepare($commission_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$commissions = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+// -- Total Sales Volume (from finalized sales) --
+$sales_volume_query = "SELECT 
+    COALESCE(SUM(fs.final_sale_price), 0) as total_sales_volume,
+    COUNT(fs.sale_id) as finalized_count
+    FROM finalized_sales fs
+    WHERE fs.agent_id = ?";
+$stmt = $conn->prepare($sales_volume_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$sales_volume = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+// -- Upcoming Tours (Confirmed, future dates) --
+$upcoming_tours_query = "SELECT tr.*, p.StreetAddress, p.City, p.PropertyType,
+    (SELECT PhotoURL FROM property_images WHERE property_ID = p.property_ID ORDER BY SortOrder ASC LIMIT 1) as image
+    FROM tour_requests tr
+    JOIN property p ON tr.property_id = p.property_ID
+    WHERE tr.agent_account_id = ? 
+    AND tr.request_status = 'Confirmed' 
+    AND tr.tour_date >= CURDATE()
+    ORDER BY tr.tour_date ASC, tr.tour_time ASC
+    LIMIT 5";
+$stmt = $conn->prepare($upcoming_tours_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$upcoming_tours = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+// -- Pending Tour Requests --
+$pending_tours_query = "SELECT tr.*, p.StreetAddress, p.City, p.PropertyType
+    FROM tour_requests tr
+    JOIN property p ON tr.property_id = p.property_ID
+    WHERE tr.agent_account_id = ? AND tr.request_status = 'Pending'
+    ORDER BY tr.requested_at DESC
+    LIMIT 5";
+$stmt = $conn->prepare($pending_tours_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$pending_tours = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+// -- Recent Properties --
 $recent_properties_query = "SELECT p.*, 
-                           (SELECT PhotoURL FROM property_images WHERE property_ID = p.property_ID ORDER BY SortOrder ASC LIMIT 1) as image 
-                           FROM property p 
-                           WHERE p.property_ID IN (
-                               SELECT property_id FROM property_log WHERE account_id = ? AND action = 'CREATED'
-                           ) 
-                           ORDER BY p.ListingDate DESC 
-                           LIMIT 5";
+    (SELECT PhotoURL FROM property_images WHERE property_ID = p.property_ID ORDER BY SortOrder ASC LIMIT 1) as image 
+    FROM property p 
+    WHERE p.property_ID IN (
+        SELECT property_id FROM property_log WHERE account_id = ? AND action = 'CREATED'
+    ) 
+    AND p.approval_status = 'approved' AND p.Status NOT IN ('Sold','Pending Sold')
+    ORDER BY p.ListingDate DESC 
+    LIMIT 4";
 $stmt = $conn->prepare($recent_properties_query);
 $stmt->bind_param("i", $agent_account_id);
 $stmt->execute();
 $recent_properties = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Fetch recent activity logs
+// -- Top Performing Properties (most views) --
+$top_properties_query = "SELECT p.property_ID, p.StreetAddress, p.City, p.PropertyType, p.ListingPrice, 
+    p.ViewsCount, p.Likes, p.Status, p.Bedrooms, p.Bathrooms, p.SquareFootage,
+    (SELECT PhotoURL FROM property_images WHERE property_ID = p.property_ID ORDER BY SortOrder ASC LIMIT 1) as image
+    FROM property p 
+    WHERE p.property_ID IN (
+        SELECT property_id FROM property_log WHERE account_id = ? AND action = 'CREATED'
+    ) AND p.approval_status = 'approved'
+    ORDER BY p.ViewsCount DESC
+    LIMIT 3";
+$stmt = $conn->prepare($top_properties_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$top_properties = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+// -- Recent Activity Logs --
 $activity_query = "SELECT pl.*, p.StreetAddress, p.City 
-                  FROM property_log pl 
-                  JOIN property p ON pl.property_id = p.property_ID 
-                  WHERE pl.account_id = ? 
-                  ORDER BY pl.log_timestamp DESC 
-                  LIMIT 8";
+    FROM property_log pl 
+    JOIN property p ON pl.property_id = p.property_ID 
+    WHERE pl.account_id = ? 
+    ORDER BY pl.log_timestamp DESC 
+    LIMIT 8";
 $stmt = $conn->prepare($activity_query);
 $stmt->bind_param("i", $agent_account_id);
 $stmt->execute();
 $recent_activity = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
+// -- Pending Sale Verifications --
+$pending_sales_query = "SELECT sv.*, p.StreetAddress, p.City, p.PropertyType
+    FROM sale_verifications sv
+    JOIN property p ON sv.property_id = p.property_ID
+    WHERE sv.agent_id = ? AND sv.status = 'Pending'
+    ORDER BY sv.submitted_at DESC
+    LIMIT 5";
+$stmt = $conn->prepare($pending_sales_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$pending_sales = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
 $conn->close();
+
+// Helper: greeting based on time of day
+$hour = (int) date('G');
+if ($hour < 12) $greeting = 'Good Morning';
+elseif ($hour < 17) $greeting = 'Good Afternoon';
+else $greeting = 'Good Evening';
+
+$agent_name = htmlspecialchars($agent_info['first_name'] ?? $agent_username);
+$member_since = isset($agent_info['date_registered']) ? date('M Y', strtotime($agent_info['date_registered'])) : 'N/A';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Dashboard - Real Estate</title>
+    <title>Agent Dashboard - HomeEstate Realty</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <style>
         :root {
-            --primary-color: #161209;
-            --secondary-color: #bc9e42;
-            --background-color: #f8f4f4;
-            --card-bg-color: #ffffff;
-            --border-color: #e6e6e6;
-            --text-muted: #6c757d;
-            --shadow-light: 0 2px 8px rgba(0,0,0,0.05);
-            --shadow-medium: 0 4px 12px rgba(0,0,0,0.1);
-            --shadow-heavy: 0 8px 32px rgba(0,0,0,0.15);
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --gold-dark: #b8941f;
+            --blue: #2563eb;
+            --blue-light: #3b82f6;
+            --blue-dark: #1e40af;
+
+            --black: #0a0a0a;
+            --black-light: #111111;
+            --black-lighter: #1a1a1a;
+            --black-border: #1f1f1f;
+            --white: #ffffff;
+
+            --gray-50: #f8f9fa;
+            --gray-100: #e8e9eb;
+            --gray-200: #d1d4d7;
+            --gray-300: #b8bec4;
+            --gray-400: #9ca4ab;
+            --gray-500: #7a8a99;
+            --gray-600: #5d6d7d;
+            --gray-700: #3f4b56;
+            --gray-800: #2a3138;
+            --gray-900: #1a1f24;
+
+            --card-bg: linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%);
+            --card-border: rgba(37, 99, 235, 0.15);
+            --card-hover-border: rgba(37, 99, 235, 0.35);
         }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--background-color);
-            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
         }
-        /* Content */
-        .content {
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(26, 26, 26, 0.4); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--gold-light), var(--gold));
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .dashboard-content {
             padding: 2rem;
-            max-width: 1600px;
+            max-width: 1440px;
             margin: 0 auto;
         }
 
-        /* Welcome Section */
-        .welcome-banner {
-            background: linear-gradient(135deg, var(--primary-color), #2a2419);
-            color: white;
-            padding: 2.5rem;
-            border-radius: 16px;
+        /* ===== WELCOME HERO ===== */
+        .welcome-hero {
+            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            padding: 2.5rem 3rem;
             margin-bottom: 2rem;
-            box-shadow: var(--shadow-medium);
             position: relative;
             overflow: hidden;
         }
 
-        .welcome-banner::before {
+        .welcome-hero::before {
             content: '';
             position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(188, 158, 66, 0.2), transparent);
-            border-radius: 50%;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at top right, rgba(37, 99, 235, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom left, rgba(212, 175, 55, 0.04) 0%, transparent 50%);
+            pointer-events: none;
         }
 
-        .welcome-content {
+        .welcome-hero::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+        }
+
+        .welcome-hero-inner {
             position: relative;
             z-index: 2;
-        }
-
-        .welcome-banner h1 {
-            font-weight: 700;
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .welcome-banner p {
-            opacity: 0.9;
-            font-size: 1.1rem;
-            margin-bottom: 0;
-        }
-
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
             gap: 1.5rem;
+        }
+
+        .welcome-text h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, var(--white) 0%, var(--gray-100) 50%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-text .subtitle {
+            color: var(--gray-400);
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        .welcome-text .date-display {
+            color: var(--gray-500);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        .welcome-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .welcome-brand img {
+            height: 50px;
+            width: auto;
+            filter: brightness(1.1) saturate(1.2);
+        }
+
+        .welcome-brand .brand-info {
+            text-align: right;
+        }
+
+        .welcome-brand .brand-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-brand .brand-tagline {
+            font-size: 0.7rem;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* ===== KPI STAT CARDS ===== */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
             margin-bottom: 2rem;
         }
 
-        .stat-card {
-            background: var(--card-bg-color);
-            border-radius: 16px;
-            padding: 1.75rem;
-            box-shadow: var(--shadow-light);
-            border: 1px solid var(--border-color);
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
             transition: all 0.3s ease;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--blue), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            border-color: var(--card-hover-border);
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12),
+                        inset 0 0 20px rgba(37, 99, 235, 0.03);
+            transform: translateY(-4px);
+        }
+
+        .kpi-card:hover::before { opacity: 1; }
+
+        .kpi-card .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .kpi-card .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .kpi-icon.gold {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.2) 100%);
+            color: var(--gold);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .kpi-icon.blue {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.2) 100%);
+            color: var(--blue-light);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .kpi-icon.green {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.2) 100%);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .kpi-icon.red {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.2) 100%);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .kpi-card .kpi-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray-400);
+        }
+
+        .kpi-card .kpi-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--white);
+            line-height: 1.2;
+        }
+
+        .kpi-card .kpi-sub {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            margin-top: 0.25rem;
+        }
+
+        /* ===== SECTION PANEL ===== */
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            border-color: rgba(37, 99, 235, 0.25);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .panel-title i { color: var(--gold); }
+
+        .panel-action {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--blue-light);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .panel-action:hover {
+            color: var(--gold);
+            transform: translateX(3px);
+        }
+
+        .panel-body { padding: 1.5rem; }
+
+        /* ===== QUICK ACTIONS ===== */
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .qa-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1.5rem 1rem;
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(15, 15, 15, 0.95) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 4px;
+            text-decoration: none;
+            color: var(--gray-300);
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
             position: relative;
             overflow: hidden;
         }
 
-        .stat-card::before {
+        .qa-btn::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--secondary-color);
-            transform: scaleY(0);
-            transition: transform 0.3s ease;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
         }
 
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-medium);
+        .qa-btn:hover::before {
+            opacity: 1;
         }
 
-        .stat-card:hover::before {
-            transform: scaleY(1);
+        .qa-btn:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.03) 100%);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(212, 175, 55, 0.2),
+                        0 0 0 1px rgba(212, 175, 55, 0.2);
         }
 
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
+        .qa-btn .qa-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .stat-icon.primary {
-            background: linear-gradient(135deg, rgba(188, 158, 66, 0.1), rgba(188, 158, 66, 0.2));
-            color: var(--secondary-color);
-        }
-
-        .stat-icon.success {
-            background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(40, 167, 69, 0.2));
-            color: #28a745;
-        }
-
-        .stat-icon.warning {
-            background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 193, 7, 0.2));
-            color: #ffc107;
-        }
-
-        .stat-icon.info {
-            background: linear-gradient(135deg, rgba(13, 202, 240, 0.1), rgba(13, 202, 240, 0.2));
-            color: #0dcaf0;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        /* Section Cards */
-        .section-card {
-            background: var(--card-bg-color);
-            border-radius: 16px;
-            padding: 1.75rem;
-            box-shadow: var(--shadow-light);
-            border: 1px solid var(--border-color);
-            margin-bottom: 2rem;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .section-title {
             font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
+            color: var(--black);
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
 
-        .section-title i {
-            color: var(--secondary-color);
+        .qa-btn:hover .qa-icon {
+            box-shadow: 0 8px 28px rgba(212, 175, 55, 0.5),
+                        0 0 20px rgba(212, 175, 55, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transform: scale(1.1) rotate(5deg);
         }
 
-        .view-all-btn {
-            color: var(--secondary-color);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .view-all-btn:hover {
-            color: var(--primary-color);
-            transform: translateX(3px);
-        }
-
-        /* Property Cards */
-        .property-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .property-card {
-            border-radius: 12px;
+        /* ===== PROPERTY CARD ===== */
+        .prop-card {
+            background: rgba(26, 26, 26, 0.6);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: var(--shadow-light);
-            border: 1px solid var(--border-color);
             transition: all 0.3s ease;
-            background: var(--card-bg-color);
         }
 
-        .property-card:hover {
+        .prop-card:hover {
+            border-color: rgba(37, 99, 235, 0.3);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.1);
             transform: translateY(-3px);
-            box-shadow: var(--shadow-medium);
         }
 
-        .property-image {
+        .prop-card-img {
             width: 100%;
             height: 180px;
             object-fit: cover;
-            background: linear-gradient(135deg, #f0ebe5, #e8dfd2);
+            background: rgba(26, 26, 26, 0.8);
         }
 
-        .property-body {
+        .prop-card-body {
             padding: 1.25rem;
         }
 
-        .property-price {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--secondary-color);
-            margin-bottom: 0.5rem;
+        .prop-card-price {
+            font-size: 1.25rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .property-title {
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .property-location {
-            color: var(--text-muted);
+        .prop-card-address {
             font-size: 0.85rem;
+            color: var(--gray-400);
+            margin-top: 0.25rem;
+        }
+
+        .prop-card-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+
+        .prop-card-meta span {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.3rem;
         }
 
-        .property-status {
+        .prop-badge {
             display: inline-block;
-            padding: 0.35rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .status-approved {
-            background: rgba(40, 167, 69, 0.1);
-            color: #28a745;
+        .prop-badge.sale {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.25);
         }
 
-        .status-pending {
-            background: rgba(255, 193, 7, 0.1);
-            color: #856404;
+        .prop-badge.rent {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--blue-light);
+            border: 1px solid rgba(37, 99, 235, 0.25);
         }
 
-        /* Activity Timeline */
-        .activity-timeline {
-            position: relative;
+        .prop-badge.sold {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.25);
         }
 
+        /* ===== TOP PROPERTY ROW ===== */
+        .top-prop-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid rgba(37, 99, 235, 0.08);
+            transition: all 0.3s ease;
+            margin-bottom: 0.75rem;
+        }
+
+        .top-prop-item:last-child { margin-bottom: 0; }
+
+        .top-prop-item:hover {
+            background: rgba(37, 99, 235, 0.03);
+            border-color: rgba(37, 99, 235, 0.15);
+        }
+
+        .top-prop-img {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+            background: rgba(26, 26, 26, 0.8);
+        }
+
+        .top-prop-info { flex: 1; min-width: 0; }
+
+        .top-prop-info .top-prop-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--white);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .top-prop-info .top-prop-loc {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+
+        .top-prop-stats {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+        }
+
+        .top-prop-stats span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: var(--gray-400);
+        }
+
+        .top-prop-stats span i { font-size: 0.75rem; }
+
+        /* ===== TOUR LIST ===== */
+        .tour-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid rgba(37, 99, 235, 0.08);
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .tour-item:last-child { margin-bottom: 0; }
+
+        .tour-item:hover {
+            background: rgba(37, 99, 235, 0.03);
+            border-color: rgba(37, 99, 235, 0.15);
+        }
+
+        .tour-item-left {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .tour-date-box {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.05) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .tour-date-box .day {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--gold);
+            line-height: 1;
+        }
+
+        .tour-date-box .month {
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gold-dark);
+        }
+
+        .tour-details .tour-prop {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--white);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 250px;
+        }
+
+        .tour-details .tour-meta {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+
+        .tour-time-badge {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--blue-light);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            padding: 0.25rem 0.6rem;
+            border-radius: 2px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .tour-status-badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tour-status-badge.pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        .tour-status-badge.confirmed {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.25);
+        }
+
+        /* ===== ACTIVITY TIMELINE ===== */
         .activity-item {
             display: flex;
             gap: 1rem;
-            margin-bottom: 1.5rem;
-            position: relative;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.06);
         }
 
-        .activity-icon {
-            width: 40px;
-            height: 40px;
+        .activity-item:last-child { border-bottom: none; }
+
+        .activity-dot {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
             flex-shrink: 0;
-            z-index: 2;
+            margin-top: 6px;
         }
 
-        .activity-icon.created {
-            background: rgba(40, 167, 69, 0.1);
-            color: #28a745;
-        }
+        .activity-dot.created { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }
+        .activity-dot.updated { background: var(--blue-light); box-shadow: 0 0 8px rgba(59, 130, 246, 0.4); }
+        .activity-dot.sold { background: var(--gold); box-shadow: 0 0 8px rgba(212, 175, 55, 0.4); }
+        .activity-dot.deleted { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+        .activity-dot.rejected { background: #f97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4); }
 
-        .activity-icon.updated {
-            background: rgba(13, 202, 240, 0.1);
-            color: #0dcaf0;
-        }
+        .activity-info { flex: 1; }
 
-        .activity-icon.deleted {
-            background: rgba(220, 53, 69, 0.1);
-            color: #dc3545;
-        }
-
-        .activity-content {
-            flex: 1;
-            background: rgba(188, 158, 66, 0.05);
-            padding: 1rem;
-            border-radius: 10px;
-            border-left: 3px solid var(--secondary-color);
-        }
-
-        .activity-title {
+        .activity-info .act-title {
             font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            color: var(--white);
         }
 
-        .activity-meta {
-            font-size: 0.85rem;
-            color: var(--text-muted);
+        .activity-info .act-desc {
+            font-size: 0.8rem;
+            color: var(--gray-500);
         }
 
-        /* Quick Actions */
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
+        .activity-info .act-time {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            margin-top: 0.15rem;
         }
 
-        .action-btn {
+        /* ===== PENDING SALE ITEM ===== */
+        .sale-item {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.75rem;
-            padding: 1rem 1.25rem;
-            background: linear-gradient(135deg, var(--secondary-color), #d4b966);
-            color: var(--primary-color);
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 600;
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid rgba(245, 158, 11, 0.1);
+            margin-bottom: 0.75rem;
+            background: rgba(245, 158, 11, 0.02);
             transition: all 0.3s ease;
-            box-shadow: var(--shadow-light);
         }
 
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-medium);
-            color: var(--primary-color);
+        .sale-item:last-child { margin-bottom: 0; }
+
+        .sale-item:hover {
+            border-color: rgba(245, 158, 11, 0.2);
+            background: rgba(245, 158, 11, 0.04);
         }
 
-        .action-btn i {
-            font-size: 1.5rem;
+        .sale-item .sale-prop {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--white);
         }
 
-        /* Empty State */
+        .sale-item .sale-detail {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+
+        .sale-price {
+            font-weight: 800;
+            color: var(--gold);
+            font-size: 0.95rem;
+        }
+
+        /* ===== EMPTY STATE ===== */
         .empty-state {
             text-align: center;
-            padding: 3rem 1rem;
-            color: var(--text-muted);
+            padding: 2.5rem 1rem;
+            color: var(--gray-500);
         }
 
         .empty-state i {
-            font-size: 3rem;
-            color: var(--secondary-color);
+            font-size: 2.5rem;
+            color: rgba(37, 99, 235, 0.3);
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
             margin-bottom: 1rem;
         }
 
-        /* Responsive */
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+            color: var(--white);
+            border: none;
+            padding: 14px 32px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3),
+                        0 0 0 1px rgba(212, 175, 55, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-gold::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 28px rgba(212, 175, 55, 0.5),
+                        0 0 0 1px rgba(212, 175, 55, 0.5),
+                        0 0 40px rgba(212, 175, 55, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            color: var(--white);
+        }
+
+        .btn-gold:hover::before {
+            left: 100%;
+        }
+
+        .btn-gold:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        .btn-gold i {
+            font-size: 1.1rem;
+            color: var(--white);
+            display: inline-flex;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+
+        .btn-gold:hover i {
+            transform: rotate(90deg);
+        }
+        
+        .btn-gold span {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .btn-outline-blue {
+            background: transparent;
+            color: var(--blue-light);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            padding: 8px 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 2px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-blue:hover {
+            background: rgba(37, 99, 235, 0.08);
+            border-color: var(--blue);
+            color: var(--blue-light);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1200px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
         @media (max-width: 768px) {
-            .content {
-                padding: 1rem;
-            }
+            .dashboard-content { padding: 1rem; }
+            .welcome-hero { padding: 1.5rem; }
+            .welcome-hero-inner { flex-direction: column; text-align: center; }
+            .welcome-brand { justify-content: center; }
+            .welcome-brand .brand-info { text-align: center; }
+            .welcome-text h1 { font-size: 1.5rem; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+            .kpi-card .kpi-value { font-size: 1.5rem; }
+            .quick-actions-grid { grid-template-columns: repeat(2, 1fr); }
+        }
 
-            .welcome-banner {
-                padding: 1.5rem;
-            }
-
-            .welcome-banner h1 {
-                font-size: 1.5rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                gap: 1rem;
-            }
-
-            .stat-card {
-                padding: 1.25rem;
-            }
-
-            .stat-value {
-                font-size: 1.5rem;
-            }
+        @media (max-width: 480px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+            .quick-actions-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
 <body>
 
-<?php include 'agent_navbar.php'; ?>
+<?php
+// Set this file as active in navbar
+$active_page = 'agent_dashboard.php';
+include 'agent_navbar.php';
+?>
 
-<div class="content">
-    <!-- Welcome Banner -->
-    <div class="welcome-banner">
-        <div class="welcome-content">
-            <h1>Welcome back, <?php echo htmlspecialchars($agent_info['first_name'] ?? $agent_username); ?></h1>
-            <p>Here's an overview of your real estate portfolio and recent activities</p>
+<div class="dashboard-content">
+
+    <!-- Welcome Hero -->
+    <div class="welcome-hero">
+        <div class="welcome-hero-inner">
+            <div class="welcome-text">
+                <h1><?php echo $greeting; ?>, <?php echo $agent_name; ?></h1>
+                <div class="subtitle">Here's your real estate performance overview</div>
+                <div class="date-display">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    <?php echo date('l, F j, Y'); ?>
+                    &nbsp;&bull;&nbsp; Member since <?php echo $member_since; ?>
+                </div>
+            </div>
+            <div class="welcome-brand">
+                <div class="brand-info">
+                    <div class="brand-name">HomeEstate Realty</div>
+                    <div class="brand-tagline">Agent Portal</div>
+                </div>
+                <img src="../images/Logo.png" alt="HomeEstate Realty Logo">
+            </div>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon primary">
-                <i class="fas fa-building"></i>
+    <!-- KPI Stats Row -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div class="kpi-label">Active Listings</div>
+                <div class="kpi-icon gold"><i class="bi bi-building"></i></div>
             </div>
-            <div class="stat-value"><?php echo $stats['total_active'] ?? 0; ?></div>
-            <div class="stat-label">Active Properties</div>
+            <div class="kpi-value"><?php echo $stats['active_listings'] ?? 0; ?></div>
+            <div class="kpi-sub">
+                <?php echo ($stats['for_sale'] ?? 0); ?> for sale &bull; <?php echo ($stats['for_rent'] ?? 0); ?> for rent
+            </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon warning">
-                <i class="fas fa-clock"></i>
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div class="kpi-label">Total Sales Volume</div>
+                <div class="kpi-icon green"><i class="bi bi-cash-stack"></i></div>
             </div>
-            <div class="stat-value"><?php echo $stats['total_pending'] ?? 0; ?></div>
-            <div class="stat-label">Pending Approval</div>
+            <div class="kpi-value">₱<?php echo number_format($sales_volume['total_sales_volume'] ?? 0, 0); ?></div>
+            <div class="kpi-sub">
+                <?php echo $sales_volume['finalized_count'] ?? 0; ?> finalized sale<?php echo ($sales_volume['finalized_count'] ?? 0) != 1 ? 's' : ''; ?>
+            </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon success">
-                <i class="fas fa-home"></i>
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div class="kpi-label">Commission Earned</div>
+                <div class="kpi-icon blue"><i class="bi bi-wallet2"></i></div>
             </div>
-            <div class="stat-value"><?php echo $stats['for_sale'] ?? 0; ?></div>
-            <div class="stat-label">For Sale</div>
+            <div class="kpi-value">₱<?php echo number_format($commissions['total_commission'] ?? 0, 0); ?></div>
+            <div class="kpi-sub">
+                ₱<?php echo number_format($commissions['paid_commission'] ?? 0, 0); ?> paid &bull;
+                ₱<?php echo number_format($commissions['unpaid_commission'] ?? 0, 0); ?> pending
+            </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon info">
-                <i class="fas fa-key"></i>
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div class="kpi-label">Tour Requests</div>
+                <div class="kpi-icon red"><i class="bi bi-calendar-event"></i></div>
             </div>
-            <div class="stat-value"><?php echo $stats['for_rent'] ?? 0; ?></div>
-            <div class="stat-label">For Rent</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon primary">
-                <i class="fas fa-eye"></i>
+            <div class="kpi-value"><?php echo $tour_stats['total_tours'] ?? 0; ?></div>
+            <div class="kpi-sub">
+                <?php echo ($tour_stats['pending_tours'] ?? 0); ?> pending &bull; <?php echo ($tour_stats['confirmed_tours'] ?? 0); ?> confirmed
             </div>
-            <div class="stat-value"><?php echo number_format($stats['total_views'] ?? 0); ?></div>
-            <div class="stat-label">Total Views</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon success">
-                <i class="fas fa-heart"></i>
-            </div>
-            <div class="stat-value"><?php echo number_format($stats['total_likes'] ?? 0); ?></div>
-            <div class="stat-label">Total Likes</div>
         </div>
     </div>
 
     <!-- Quick Actions -->
-    <div class="section-card">
-        <div class="section-header">
-            <h2 class="section-title">
-                <i class="fas fa-bolt"></i>
-                Quick Actions
-            </h2>
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title"><i class="bi bi-lightning-charge-fill"></i> Quick Actions</div>
         </div>
-        <div class="quick-actions">
-            <a href="add_property.php" class="action-btn">
-                <i class="fas fa-plus-circle"></i>
-                <span>Add Property</span>
-            </a>
-            <a href="agent_property.php" class="action-btn">
-                <i class="fas fa-list"></i>
-                <span>View All Properties</span>
-            </a>
-            <a href="agent_profile.php" class="action-btn">
-                <i class="fas fa-user-edit"></i>
-                <span>Edit Profile</span>
-            </a>
-            <a href="agent_reports.php" class="action-btn">
-                <i class="fas fa-chart-bar"></i>
-                <span>View Reports</span>
-            </a>
+        <div class="panel-body">
+            <div class="quick-actions-grid">
+                <a href="add_property_process.php" class="qa-btn">
+                    <div class="qa-icon"><i class="bi bi-plus-lg"></i></div>
+                    Add New Listing
+                </a>
+                <a href="agent_property.php" class="qa-btn">
+                    <div class="qa-icon"><i class="bi bi-house-door"></i></div>
+                    My Properties
+                </a>
+                <a href="agent_tour_requests.php" class="qa-btn">
+                    <div class="qa-icon"><i class="bi bi-calendar-check"></i></div>
+                    Tour Requests
+                </a>
+                <a href="agent_commissions.php" class="qa-btn">
+                    <div class="qa-icon"><i class="bi bi-wallet2"></i></div>
+                    Commissions
+                </a>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Recent Properties -->
-        <div class="col-lg-7 mb-4">
-            <div class="section-card">
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-home"></i>
-                        Recent Properties
-                    </h2>
-                    <a href="agent_property.php" class="view-all-btn">
-                        View All <i class="fas fa-arrow-right ms-1"></i>
+    <!-- Two-Column Layout -->
+    <div class="row g-4">
+
+        <!-- Left Column -->
+        <div class="col-lg-8">
+
+            <!-- Upcoming Tours -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="bi bi-calendar2-week"></i> Upcoming Tours</div>
+                    <a href="agent_tour_requests.php" class="panel-action">
+                        View All <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
-
-                <?php if (empty($recent_properties)): ?>
-                    <div class="empty-state">
-                        <i class="fas fa-home"></i>
-                        <p>No properties yet. Add your first property to get started!</p>
-                        <a href="add_property.php" class="btn btn-primary mt-3">
-                            <i class="fas fa-plus me-2"></i>Add Property
-                        </a>
-                    </div>
-                <?php else: ?>
-                    <div class="property-grid">
-                        <?php foreach ($recent_properties as $property): ?>
-                            <div class="property-card">
-                                <img src="../<?php echo htmlspecialchars($property['image'] ?? 'https://via.placeholder.com/300x180'); ?>" 
-                                     alt="Property" class="property-image">
-                                <div class="property-body">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <div class="property-price">
-                                            ₱<?php echo number_format($property['ListingPrice'], 0); ?>
-                                        </div>
-                                        <span class="property-status status-<?php echo $property['approval_status']; ?>">
-                                            <?php echo ucfirst($property['approval_status']); ?>
-                                        </span>
+                <div class="panel-body">
+                    <?php if (empty($upcoming_tours)): ?>
+                        <div class="empty-state">
+                            <i class="bi bi-calendar-x"></i>
+                            <p>No upcoming tours scheduled</p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($upcoming_tours as $tour): ?>
+                            <div class="tour-item">
+                                <div class="tour-item-left">
+                                    <div class="tour-date-box">
+                                        <div class="day"><?php echo date('d', strtotime($tour['tour_date'])); ?></div>
+                                        <div class="month"><?php echo date('M', strtotime($tour['tour_date'])); ?></div>
                                     </div>
-                                    <div class="property-title"><?php echo htmlspecialchars($property['PropertyType']); ?></div>
-                                    <div class="property-location">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        <?php echo htmlspecialchars($property['City']); ?>
+                                    <div class="tour-details">
+                                        <div class="tour-prop"><?php echo htmlspecialchars($tour['StreetAddress']); ?></div>
+                                        <div class="tour-meta">
+                                            <i class="bi bi-geo-alt me-1"></i><?php echo htmlspecialchars($tour['City']); ?>
+                                            &bull; <?php echo htmlspecialchars($tour['user_name']); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="tour-time-badge">
+                                        <i class="bi bi-clock me-1"></i><?php echo date('g:i A', strtotime($tour['tour_time'])); ?>
+                                    </span>
+                                    <span class="tour-status-badge confirmed">Confirmed</span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Pending Tour Requests -->
+            <?php if (!empty($pending_tours)): ?>
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="bi bi-hourglass-split"></i> Pending Tour Requests</div>
+                    <a href="agent_tour_requests.php?status=Pending" class="panel-action">
+                        View All <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="panel-body">
+                    <?php foreach ($pending_tours as $pt): ?>
+                        <div class="tour-item">
+                            <div class="tour-item-left">
+                                <div class="tour-date-box">
+                                    <div class="day"><?php echo date('d', strtotime($pt['tour_date'])); ?></div>
+                                    <div class="month"><?php echo date('M', strtotime($pt['tour_date'])); ?></div>
+                                </div>
+                                <div class="tour-details">
+                                    <div class="tour-prop"><?php echo htmlspecialchars($pt['StreetAddress']); ?></div>
+                                    <div class="tour-meta">
+                                        <?php echo htmlspecialchars($pt['user_name']); ?> &bull;
+                                        <?php echo htmlspecialchars($pt['user_email']); ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="tour-time-badge">
+                                    <i class="bi bi-clock me-1"></i><?php echo date('g:i A', strtotime($pt['tour_time'])); ?>
+                                </span>
+                                <span class="tour-status-badge pending">Pending</span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Recent Active Listings -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="bi bi-house-door"></i> Active Listings</div>
+                    <a href="agent_property.php" class="panel-action">
+                        View All <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="panel-body">
+                    <?php if (empty($recent_properties)): ?>
+                        <div class="empty-state">
+                            <i class="bi bi-house-slash"></i>
+                            <p>No active listings yet. Add your first property to get started!</p>
+                            <a href="add_property_process.php" class="btn-gold">
+                                <i class="bi bi-plus-circle-fill"></i>
+                                <span>Add Property</span>
+                            </a>
+                        </div>
+                    <?php else: ?>
+                        <div class="row g-3">
+                            <?php foreach ($recent_properties as $property): ?>
+                                <div class="col-md-6">
+                                    <div class="prop-card">
+                                        <img src="../<?php echo htmlspecialchars($property['image'] ?? ''); ?>"
+                                             alt="Property" class="prop-card-img"
+                                             onerror="this.style.display='none'">
+                                        <div class="prop-card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <div class="prop-card-price">
+                                                    ₱<?php echo number_format($property['ListingPrice'], 0); ?>
+                                                </div>
+                                                <span class="prop-badge <?php echo $property['Status'] === 'For Sale' ? 'sale' : ($property['Status'] === 'Sold' ? 'sold' : 'rent'); ?>">
+                                                    <?php echo htmlspecialchars($property['Status']); ?>
+                                                </span>
+                                            </div>
+                                            <div class="prop-card-address">
+                                                <i class="bi bi-geo-alt me-1"></i>
+                                                <?php echo htmlspecialchars($property['StreetAddress'] . ', ' . $property['City']); ?>
+                                            </div>
+                                            <div class="prop-card-meta">
+                                                <?php if ($property['Bedrooms']): ?>
+                                                    <span><i class="bi bi-door-open"></i> <?php echo $property['Bedrooms']; ?> bd</span>
+                                                <?php endif; ?>
+                                                <?php if ($property['Bathrooms']): ?>
+                                                    <span><i class="bi bi-droplet"></i> <?php echo $property['Bathrooms']; ?> ba</span>
+                                                <?php endif; ?>
+                                                <?php if ($property['SquareFootage']): ?>
+                                                    <span><i class="bi bi-arrows-angle-expand"></i> <?php echo number_format($property['SquareFootage']); ?> sqft</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+
+            <!-- Portfolio Overview Mini Stats -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="bi bi-bar-chart-line"></i> Portfolio Overview</div>
+                </div>
+                <div class="panel-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3" style="border-bottom: 1px solid rgba(37,99,235,0.08);">
+                        <span style="color: var(--gray-400); font-size: 0.85rem;">Total Listings</span>
+                        <span style="font-weight: 700; color: var(--white);"><?php echo $stats['total_listings'] ?? 0; ?></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3" style="border-bottom: 1px solid rgba(37,99,235,0.08);">
+                        <span style="color: var(--gray-400); font-size: 0.85rem;">Properties Sold</span>
+                        <span style="font-weight: 700; color: #22c55e;"><?php echo $stats['total_sold'] ?? 0; ?></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3" style="border-bottom: 1px solid rgba(37,99,235,0.08);">
+                        <span style="color: var(--gray-400); font-size: 0.85rem;">Pending Approval</span>
+                        <span style="font-weight: 700; color: #f59e0b;"><?php echo $stats['pending_approval'] ?? 0; ?></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3" style="border-bottom: 1px solid rgba(37,99,235,0.08);">
+                        <span style="color: var(--gray-400); font-size: 0.85rem;">Total Views</span>
+                        <span style="font-weight: 700; color: var(--blue-light);"><?php echo number_format($stats['total_views'] ?? 0); ?></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3" style="border-bottom: 1px solid rgba(37,99,235,0.08);">
+                        <span style="color: var(--gray-400); font-size: 0.85rem;">Total Likes</span>
+                        <span style="font-weight: 700; color: #ef4444;"><?php echo number_format($stats['total_likes'] ?? 0); ?></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3" style="border-bottom: 1px solid rgba(37,99,235,0.08);">
+                        <span style="color: var(--gray-400); font-size: 0.85rem;">Avg. Listing Price</span>
+                        <span style="font-weight: 700; color: var(--gold);">₱<?php echo number_format($stats['avg_listing_price'] ?? 0, 0); ?></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span style="color: var(--gray-400); font-size: 0.85rem;">Completed Tours</span>
+                        <span style="font-weight: 700; color: #22c55e;"><?php echo $tour_stats['completed_tours'] ?? 0; ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Performing Properties -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="bi bi-trophy"></i> Top Performing</div>
+                </div>
+                <div class="panel-body">
+                    <?php if (empty($top_properties)): ?>
+                        <div class="empty-state">
+                            <i class="bi bi-trophy"></i>
+                            <p>No property data available yet</p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($top_properties as $idx => $tp): ?>
+                            <div class="top-prop-item">
+                                <img src="../<?php echo htmlspecialchars($tp['image'] ?? ''); ?>"
+                                     alt="" class="top-prop-img"
+                                     onerror="this.style.background='rgba(37,99,235,0.08)'; this.style.display='flex';">
+                                <div class="top-prop-info">
+                                    <div class="top-prop-title"><?php echo htmlspecialchars($tp['StreetAddress']); ?></div>
+                                    <div class="top-prop-loc"><?php echo htmlspecialchars($tp['City']); ?> &bull; <?php echo htmlspecialchars($tp['PropertyType']); ?></div>
+                                    <div class="top-prop-stats">
+                                        <span><i class="bi bi-eye"></i> <?php echo number_format($tp['ViewsCount']); ?></span>
+                                        <span><i class="bi bi-heart"></i> <?php echo number_format($tp['Likes']); ?></span>
+                                        <span style="color: var(--gold);"><i class="bi bi-tag"></i> ₱<?php echo number_format($tp['ListingPrice'], 0); ?></span>
                                     </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="col-lg-5">
-            <div class="section-card">
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-history"></i>
-                        Recent Activity
-                    </h2>
+                    <?php endif; ?>
                 </div>
+            </div>
 
-                <?php if (empty($recent_activity)): ?>
-                    <div class="empty-state">
-                        <i class="fas fa-history"></i>
-                        <p>No recent activity to display</p>
-                    </div>
-                <?php else: ?>
-                    <div class="activity-timeline">
+            <!-- Pending Sale Verifications -->
+            <?php if (!empty($pending_sales)): ?>
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="bi bi-clipboard-check"></i> Pending Sale Reviews</div>
+                </div>
+                <div class="panel-body">
+                    <?php foreach ($pending_sales as $ps): ?>
+                        <div class="sale-item">
+                            <div>
+                                <div class="sale-prop"><?php echo htmlspecialchars($ps['StreetAddress']); ?></div>
+                                <div class="sale-detail">
+                                    <?php echo htmlspecialchars($ps['City']); ?> &bull;
+                                    Buyer: <?php echo htmlspecialchars($ps['buyer_name']); ?>
+                                </div>
+                            </div>
+                            <div class="sale-price">₱<?php echo number_format($ps['sale_price'], 0); ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Recent Activity -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="bi bi-clock-history"></i> Recent Activity</div>
+                </div>
+                <div class="panel-body">
+                    <?php if (empty($recent_activity)): ?>
+                        <div class="empty-state">
+                            <i class="bi bi-clock-history"></i>
+                            <p>No recent activity to display</p>
+                        </div>
+                    <?php else: ?>
                         <?php foreach ($recent_activity as $activity): ?>
                             <div class="activity-item">
-                                <div class="activity-icon <?php echo strtolower($activity['action']); ?>">
-                                    <i class="fas fa-<?php echo $activity['action'] === 'CREATED' ? 'plus' : ($activity['action'] === 'UPDATED' ? 'edit' : 'trash'); ?>"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-title">
-                                        <?php echo ucfirst(strtolower($activity['action'])); ?> Property
+                                <div class="activity-dot <?php echo strtolower($activity['action']); ?>"></div>
+                                <div class="activity-info">
+                                    <div class="act-title">
+                                        <?php
+                                            $action_labels = [
+                                                'CREATED' => 'Listed new property',
+                                                'UPDATED' => 'Updated property',
+                                                'DELETED' => 'Removed property',
+                                                'SOLD' => 'Property sold',
+                                                'REJECTED' => 'Property rejected'
+                                            ];
+                                            echo $action_labels[$activity['action']] ?? ucfirst(strtolower($activity['action']));
+                                        ?>
                                     </div>
-                                    <div class="activity-meta">
-                                        <?php echo htmlspecialchars($activity['StreetAddress']) . ', ' . htmlspecialchars($activity['City']); ?>
-                                        <br>
-                                        <small><?php echo date('M d, Y g:i A', strtotime($activity['log_timestamp'])); ?></small>
+                                    <div class="act-desc">
+                                        <?php echo htmlspecialchars($activity['StreetAddress'] . ', ' . $activity['City']); ?>
+                                    </div>
+                                    <div class="act-time">
+                                        <?php echo date('M d, Y \a\t g:i A', strtotime($activity['log_timestamp'])); ?>
                                     </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </div>
+
         </div>
     </div>
+
 </div>
 
 <?php include 'logout_agent_modal.php'; ?>
@@ -670,43 +1418,57 @@ $conn->close();
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Animate stats on load
-    const statValues = document.querySelectorAll('.stat-value');
-    statValues.forEach(stat => {
-        const target = parseInt(stat.textContent.replace(/,/g, ''));
+    // Animate KPI values on load
+    document.querySelectorAll('.kpi-value').forEach(el => {
+        const text = el.textContent.trim();
+        const hasPrefix = text.startsWith('₱');
+        const numStr = text.replace(/[₱,]/g, '');
+        const target = parseInt(numStr) || 0;
+        if (target === 0) return;
+
         let current = 0;
-        const increment = target / 50;
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-                stat.textContent = target.toLocaleString();
-                clearInterval(timer);
+        const duration = 1200;
+        const startTime = performance.now();
+
+        function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            current = Math.floor(target * eased);
+
+            el.textContent = (hasPrefix ? '₱' : '') + current.toLocaleString();
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
             } else {
-                stat.textContent = Math.floor(current).toLocaleString();
+                el.textContent = (hasPrefix ? '₱' : '') + target.toLocaleString();
             }
-        }, 20);
+        }
+
+        requestAnimationFrame(animate);
     });
 
-    // Add animation to cards on scroll
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver(function(entries) {
+    // Intersection Observer for fade-in animations
+    const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.style.opacity = '1';
                 entry.target.style.transform = 'translateY(0)';
+                observer.unobserve(entry.target);
             }
         });
-    }, observerOptions);
+    }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
 
-    document.querySelectorAll('.stat-card, .property-card').forEach(card => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-        observer.observe(card);
+    document.querySelectorAll('.kpi-card, .panel, .prop-card').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(15px)';
+        el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        observer.observe(el);
+    });
+
+    // Staggered animation for KPI cards
+    document.querySelectorAll('.kpi-card').forEach((card, i) => {
+        card.style.transitionDelay = (i * 0.1) + 's';
     });
 });
 </script>

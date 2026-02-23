@@ -214,6 +214,17 @@ $days_on_market = $interval->days;
             color: var(--primary-dark);
             line-height: 1.6;
         }
+        
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(26, 26, 26, 0.4); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #d4af37, #b8941f);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #f4d03f, #d4af37);
+        }
 
         /* Enhanced Gallery Section */
         .gallery-wrapper {

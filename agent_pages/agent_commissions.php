@@ -50,6 +50,18 @@ $stmt->close();
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #111; color: #eee; }
+        
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(26, 26, 26, 0.4); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #d4af37, #b8941f);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #f4d03f, #d4af37);
+        }
+        
         .page-header { background: linear-gradient(135deg, #161209 0%, #2a2318 100%); color: #fff; border-radius: 12px; padding: 1.5rem; margin: 1rem 0 1.5rem; }
         .stat { background: #1a1a1a; border: 1px solid #2b2b2b; border-radius: 12px; padding: 1rem; }
         .stat h6 { color: #c9ab52; text-transform: uppercase; font-weight: 700; letter-spacing: .5px; }
@@ -63,7 +75,10 @@ $stmt->close();
     </style>
 </head>
 <body>
-<?php include __DIR__ . '/agent_navbar.php'; ?>
+    <?php 
+    $active_page = 'agent_commissions.php';
+    include __DIR__ . '/agent_navbar.php'; 
+    ?>
 <div class="container-fluid mt-3">
     <div class="page-header">
         <h3 class="mb-0"><i class="bi bi-wallet2 me-2"></i>Your Commissions</h3>
