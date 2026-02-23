@@ -35,12 +35,7 @@ if ($property_id <= 0) {
     if ($result->num_rows > 0) {
         $property_data = $result->fetch_assoc();
 
-        // Update view count
-        $update_views = "UPDATE property SET ViewsCount = COALESCE(ViewsCount, 0) + 1 WHERE property_ID = ?";
-        $stmt_update = $conn->prepare($update_views);
-        $stmt_update->bind_param("i", $property_id);
-        $stmt_update->execute();
-        $stmt_update->close();
+        // View count is now handled client-side via AJAX (one-time per user per property)
 
         // If rental, fetch rental details
         if (isset($property_data['Status']) && trim($property_data['Status']) === 'For Rent') {
@@ -129,6 +124,47 @@ if ($property_id <= 0) {
     }
 
     $stmt->close();
+
+    // Fetch similar properties (by type, price range, location, features)
+    $similar_properties = [];
+    if ($property_data) {
+        $price_min = $property_data['ListingPrice'] * 0.7; // 30% lower
+        $price_max = $property_data['ListingPrice'] * 1.3; // 30% higher
+        
+        $similar_sql = "
+            SELECT 
+                p.property_ID, p.StreetAddress, p.City, p.State, p.PropertyType,
+                p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice, p.Status,
+                p.ListingDate, COALESCE(p.ViewsCount, 0) AS ViewsCount, COALESCE(p.Likes, 0) AS Likes,
+                (SELECT pi.PhotoURL FROM property_images pi WHERE pi.property_ID = p.property_ID ORDER BY pi.SortOrder ASC LIMIT 1) AS PhotoURL
+            FROM property p
+            WHERE p.property_ID != ? 
+                AND p.approval_status = 'approved'
+                AND p.Status = ?
+            ORDER BY 
+                CASE WHEN p.PropertyType = ? THEN 0 ELSE 1 END,
+                CASE WHEN p.City = ? THEN 0 ELSE 1 END,
+                CASE WHEN p.ListingPrice BETWEEN ? AND ? THEN 0 ELSE 1 END,
+                CASE WHEN ABS(p.Bedrooms - ?) <= 1 THEN 0 ELSE 1 END,
+                RAND()
+            LIMIT 4
+        ";
+        $stmt6 = $conn->prepare($similar_sql);
+        $stmt6->bind_param(
+            "isssddi", 
+            $property_id, 
+            $property_data['Status'], 
+            $property_data['PropertyType'], 
+            $property_data['City'], 
+            $price_min, 
+            $price_max, 
+            $property_data['Bedrooms']
+        );
+        $stmt6->execute();
+        $similar_result = $stmt6->get_result();
+        $similar_properties = $similar_result->fetch_all(MYSQLI_ASSOC);
+        $stmt6->close();
+    }
 }
 
 $conn->close();
@@ -271,6 +307,8 @@ $conn->close();
             overflow: hidden;
             background: var(--black);
             cursor: pointer;
+            height: 100%;
+            width: 100%;
         }
 
         .gallery-item img {
@@ -282,6 +320,20 @@ $conn->close();
 
         .gallery-item:hover img {
             transform: scale(1.05);
+        }
+
+        .more-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.58);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: -0.5px;
+            pointer-events: none;
         }
 
         .view-all-photos {
@@ -929,6 +981,175 @@ $conn->close();
                 font-size: 24px;
             }
         }
+
+        /* Similar Properties Section */
+        .similar-properties-section {
+            padding: 60px 0;
+            border-top: 1px solid rgba(37, 99, 235, 0.15);
+        }
+
+        .similar-properties-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .similar-properties-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 8px;
+        }
+
+        .similar-properties-subtitle {
+            font-size: 1rem;
+            color: var(--gray-400);
+        }
+
+        .similar-properties-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .similar-property-card {
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(17, 17, 17, 0.98) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .similar-property-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(37, 99, 235, 0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .similar-property-img {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+            background: var(--black);
+        }
+
+        .similar-property-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.2s ease;
+        }
+
+        .similar-property-card:hover .similar-property-img img {
+            transform: scale(1.05);
+        }
+
+        .similar-property-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 6px 14px;
+            background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+            color: var(--white);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 2px;
+        }
+
+        .similar-property-badge.for-rent {
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+            color: var(--black);
+        }
+
+        .similar-property-stats {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .similar-stat-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 2px;
+            font-size: 0.75rem;
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .similar-stat-badge i {
+            font-size: 0.6875rem;
+        }
+
+        .similar-stat-badge.views i {
+            color: var(--blue-light);
+        }
+
+        .similar-stat-badge.likes i {
+            color: #ef4444;
+        }
+
+        .similar-property-body {
+            padding: 20px;
+        }
+
+        .similar-property-price {
+            font-size: 1.375rem;
+            font-weight: 800;
+            color: var(--gold);
+            margin-bottom: 8px;
+        }
+
+        .similar-property-address {
+            font-size: 0.875rem;
+            color: var(--gray-300);
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin-bottom: 14px;
+            line-height: 1.4;
+        }
+
+        .similar-property-address i {
+            color: var(--blue-light);
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .similar-property-features {
+            display: flex;
+            gap: 16px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .similar-feature {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8125rem;
+            color: var(--gray-400);
+            font-weight: 500;
+        }
+
+        .similar-feature i {
+            color: var(--blue-light);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .similar-properties-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -968,40 +1189,44 @@ $conn->close();
                 
                 <!-- Floor Navigation Pills -->
                 <div class="floor-pills">
-                    <button class="floor-pill active" data-type="featured" onclick="switchHeroView('featured')">
+                    <button class="floor-pill active" data-type="featured" onclick="event.stopPropagation(); switchHeroView('featured')">
                         <i class="bi bi-star-fill"></i>
                         Featured
                     </button>
                     <?php if (!empty($floor_images)): ?>
                         <?php foreach ($floor_images as $floor_num => $images): ?>
-                            <button class="floor-pill" data-type="floor" data-floor="<?php echo $floor_num; ?>" onclick="switchHeroView('floor', <?php echo $floor_num; ?>)">
+                            <button class="floor-pill" data-type="floor" data-floor="<?php echo $floor_num; ?>" onclick="event.stopPropagation(); switchHeroView('floor', <?php echo $floor_num; ?>)">
                                 <i class="bi bi-building"></i>
                                 Floor <?php echo $floor_num; ?>
                             </button>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
-                
-                <div class="view-all-photos" onclick="event.stopPropagation(); openLightbox(0)">
-                    <i class="bi bi-images"></i> View all <?php echo count($property_images); ?> photos
-                </div>
             </div>
             <div class="gallery-sidebar">
-                <?php for($i = 1; $i < min(3, count($property_images)); $i++): ?>
-                    <div class="gallery-item" onclick="openLightbox(<?php echo $i; ?>)">
-                        <img src="../<?php echo htmlspecialchars($property_images[$i]); ?>" alt="Property image <?php echo $i + 1; ?>">
+                <!-- Sidebar slot 1 (index 1) -->
+                <div class="gallery-item" id="sidebarItem0" <?php if(count($property_images) >= 2): ?>onclick="openLightbox(1)"<?php else: ?>style="cursor:default;"<?php endif; ?>>
+                    <?php if(count($property_images) >= 2): ?>
+                        <img src="../<?php echo htmlspecialchars($property_images[1]); ?>" alt="Property image 2">
+                    <?php else: ?>
+                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--black-lighter);">
+                            <i class="bi bi-image" style="font-size:3rem;color:var(--gray-600);"></i>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <!-- Sidebar slot 2 (index 2) with +N more overlay -->
+                <div class="gallery-item" id="sidebarItem1" <?php if(count($property_images) >= 3): ?>onclick="openLightbox(2)"<?php else: ?>style="cursor:default;"<?php endif; ?>>
+                    <?php if(count($property_images) >= 3): ?>
+                        <img src="../<?php echo htmlspecialchars($property_images[2]); ?>" alt="Property image 3">
+                    <?php else: ?>
+                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--black-lighter);">
+                            <i class="bi bi-image" style="font-size:3rem;color:var(--gray-600);"></i>
+                        </div>
+                    <?php endif; ?>
+                    <div class="more-overlay" <?php echo count($property_images) > 3 ? '' : 'style="display:none;"'; ?>>
+                        <?php if(count($property_images) > 3): ?>+<?php echo count($property_images) - 3; ?><?php endif; ?>
                     </div>
-                <?php endfor; ?>
-                <?php if(count($property_images) < 2): ?>
-                    <div class="gallery-item" style="background: var(--black-lighter); display: flex; align-items: center; justify-content: center;">
-                        <i class="bi bi-image" style="font-size: 3rem; color: var(--gray-600);"></i>
-                    </div>
-                <?php endif; ?>
-                <?php if(count($property_images) < 3): ?>
-                    <div class="gallery-item" style="background: var(--black-lighter); display: flex; align-items: center; justify-content: center;">
-                        <i class="bi bi-image" style="font-size: 3rem; color: var(--gray-600);"></i>
-                    </div>
-                <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -1244,6 +1469,63 @@ $conn->close();
         </aside>
     </div>
 </section>
+
+<!-- Similar Properties Section -->
+<?php if (!empty($similar_properties) && count($similar_properties) > 0): ?>
+<section class="similar-properties-section">
+    <div class="container">
+        <div class="similar-properties-header">
+            <h2 class="similar-properties-title">You Might Also Like</h2>
+            <p class="similar-properties-subtitle">Explore more properties similar to this one</p>
+        </div>
+
+        <div class="similar-properties-grid">
+            <?php foreach ($similar_properties as $sim_prop): ?>
+                <a href="property_details.php?id=<?php echo $sim_prop['property_ID']; ?>" class="similar-property-card">
+                    <div class="similar-property-img">
+                        <img src="../<?php echo htmlspecialchars($sim_prop['PhotoURL'] ?? 'images/placeholder.jpg'); ?>" 
+                             alt="Property" loading="lazy">
+                        <div class="similar-property-badge <?php echo $sim_prop['Status'] === 'For Rent' ? 'for-rent' : ''; ?>">
+                            <?php echo htmlspecialchars($sim_prop['Status']); ?>
+                        </div>
+                        <div class="similar-property-stats">
+                            <div class="similar-stat-badge views">
+                                <i class="bi bi-eye-fill"></i>
+                                <?php echo number_format($sim_prop['ViewsCount']); ?>
+                            </div>
+                            <div class="similar-stat-badge likes">
+                                <i class="bi bi-heart-fill"></i>
+                                <?php echo number_format($sim_prop['Likes']); ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="similar-property-body">
+                        <div class="similar-property-price">₱<?php echo number_format($sim_prop['ListingPrice']); ?></div>
+                        <div class="similar-property-address">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            <span><?php echo htmlspecialchars($sim_prop['StreetAddress']); ?>, <?php echo htmlspecialchars($sim_prop['City']); ?></span>
+                        </div>
+                        <div class="similar-property-features">
+                            <div class="similar-feature">
+                                <i class="bi bi-door-open-fill"></i>
+                                <?php echo $sim_prop['Bedrooms']; ?> Beds
+                            </div>
+                            <div class="similar-feature">
+                                <i class="bi bi-droplet-fill"></i>
+                                <?php echo $sim_prop['Bathrooms']; ?> Baths
+                            </div>
+                            <div class="similar-feature">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                                <?php echo number_format($sim_prop['SquareFootage']); ?> ft²
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- Floating Like Button -->
 <div class="like-button-container">
@@ -1615,6 +1897,59 @@ let currentImages = featuredImages;
 let currentHeroView = 'featured';
 let currentHeroFloor = null;
 
+// Update sidebar images and +N overlay
+function updateSidebar(images) {
+    const total = images.length;
+
+    // --- Slot 0: images[1] ---
+    const item0 = document.getElementById('sidebarItem0');
+    if (item0) {
+        if (total >= 2) {
+            let img = item0.querySelector('img');
+            if (img) {
+                img.src = '../' + images[1];
+            } else {
+                item0.innerHTML = '<img src="../' + images[1] + '" alt="Property image">';
+            }
+            item0.style.cursor = 'pointer';
+            item0.onclick = function() { openLightbox(1); };
+        } else {
+            item0.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--black-lighter);"><i class="bi bi-image" style="font-size:3rem;color:var(--gray-600);"></i></div>';
+            item0.style.cursor = 'default';
+            item0.onclick = null;
+        }
+    }
+
+    // --- Slot 1: images[2] + more-overlay ---
+    const item1 = document.getElementById('sidebarItem1');
+    if (item1) {
+        if (total >= 3) {
+            let img = item1.querySelector('img');
+            if (img) {
+                img.src = '../' + images[2];
+            } else {
+                item1.innerHTML = '<img src="../' + images[2] + '" alt="Property image"><div class="more-overlay" style="display:none;"></div>';
+            }
+            item1.style.cursor = 'pointer';
+            item1.onclick = function() { openLightbox(2); };
+        } else {
+            item1.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--black-lighter);"><i class="bi bi-image" style="font-size:3rem;color:var(--gray-600);"></i></div><div class="more-overlay" style="display:none;"></div>';
+            item1.style.cursor = 'default';
+            item1.onclick = null;
+        }
+        // Update +N overlay
+        const overlay = item1.querySelector('.more-overlay');
+        if (overlay) {
+            if (total > 3) {
+                overlay.textContent = '+' + (total - 3);
+                overlay.style.display = 'flex';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+    }
+}
+
 // Switch hero view between featured and floor images
 function switchHeroView(viewType, floorNum = null) {
     const mainImage = document.getElementById('mainHeroImage');
@@ -1646,6 +1981,9 @@ function switchHeroView(viewType, floorNum = null) {
     if (imagesToShow.length > 0) {
         mainImage.src = '../' + imagesToShow[0];
     }
+
+    // Sync sidebar and view-all button
+    updateSidebar(imagesToShow);
 }
 
 // Lightbox functionality
@@ -1953,6 +2291,32 @@ if (tourDateInput) {
     const today = new Date().toISOString().split('T')[0];
     tourDateInput.setAttribute('min', today);
 }
+
+// One-time view count increment per user per property
+(function() {
+    const viewedProperties = JSON.parse(localStorage.getItem('viewedProperties') || '[]');
+    const viewsDisplay = document.querySelector('.stat-item .stat-value');
+    
+    if (!viewedProperties.includes(propertyId)) {
+        // First time viewing - increment via AJAX
+        fetch('increment_property_view.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'property_id=' + propertyId
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Update displayed view count in real-time
+                if (viewsDisplay) viewsDisplay.textContent = data.views.toLocaleString();
+                // Mark as viewed so it won't increment again
+                viewedProperties.push(propertyId);
+                localStorage.setItem('viewedProperties', JSON.stringify(viewedProperties));
+            }
+        })
+        .catch(err => console.error('View count error:', err));
+    }
+})();
 
 </script>
 

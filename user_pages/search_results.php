@@ -1043,6 +1043,48 @@ $conn->close();
                 toggleDrawer();
             }
         });
+
+        // Real-time view count: intercept property card clicks
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('.property-card-link');
+            if (!link) return;
+            
+            e.preventDefault();
+            const href = link.getAttribute('href');
+            const match = href.match(/id=(\d+)/);
+            if (!match) { window.location.href = href; return; }
+            
+            const propId = parseInt(match[1]);
+            const viewedProperties = JSON.parse(localStorage.getItem('viewedProperties') || '[]');
+            
+            if (!viewedProperties.includes(propId)) {
+                // First time viewing - increment and update card in real-time
+                const viewsSpan = link.querySelector('.stat-badge.views span');
+                
+                fetch('increment_property_view.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'property_id=' + propId
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && viewsSpan) {
+                        viewsSpan.textContent = data.views.toLocaleString();
+                    }
+                    if (data.success) {
+                        viewedProperties.push(propId);
+                        localStorage.setItem('viewedProperties', JSON.stringify(viewedProperties));
+                    }
+                })
+                .catch(err => console.error('View count error:', err))
+                .finally(() => {
+                    setTimeout(() => { window.location.href = href; }, 200);
+                });
+            } else {
+                // Already viewed - just navigate
+                window.location.href = href;
+            }
+        });
     });
 </script>
 

@@ -1,9 +1,74 @@
 <?php
 include '../connection.php';
 
-// Fetch all approved agents
+// Get filter parameters
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$location_filter = isset($_GET['location']) ? trim($_GET['location']) : '';
+
+// Pagination settings
+$agents_per_page = 12;
+$current_page = isset($_GET['page']) && is_numeric($_GET['page']) && $_GET['page'] > 0 ? (int)$_GET['page'] : 1;
+$offset = ($current_page - 1) * $agents_per_page;
+
+// Fetch unique cities/locations from properties (where agents work)
+$locations_sql = "SELECT DISTINCT p.City 
+                 FROM property p 
+                 JOIN property_log pl ON p.property_ID = pl.property_id 
+                 WHERE pl.action = 'CREATED' AND p.City IS NOT NULL AND p.City != '' 
+                 ORDER BY p.City ASC";
+$loc_result = $conn->query($locations_sql);
+$locations = [];
+if ($loc_result) {
+    while ($row = $loc_result->fetch_assoc()) {
+        $locations[] = $row['City'];
+    }
+}
+
+// Count total agents (for pagination)
+$count_sql = "
+    SELECT COUNT(DISTINCT a.account_id) as total
+    FROM 
+        accounts a
+    JOIN 
+        user_roles ur ON a.role_id = ur.role_id
+    JOIN 
+        agent_information ai ON a.account_id = ai.account_id
+    WHERE 
+        ur.role_name = 'agent' 
+        AND ai.is_approved = 1 
+        AND ai.profile_completed = 1
+        AND a.is_active = 1
+";
+
+// Add search filter to count
+if (!empty($search)) {
+    $search_safe = $conn->real_escape_string($search);
+    $count_sql .= " AND (a.first_name LIKE '%$search_safe%' 
+                         OR a.last_name LIKE '%$search_safe%' 
+                         OR CONCAT(a.first_name, ' ', a.last_name) LIKE '%$search_safe%'
+                         OR ai.license_number LIKE '%$search_safe%'
+                         OR ai.years_experience LIKE '%$search_safe%')";
+}
+
+// Add location filter to count (join with property_log to find agents in specific cities)
+if (!empty($location_filter)) {
+    $loc_safe = $conn->real_escape_string($location_filter);
+    $count_sql .= " AND EXISTS (
+        SELECT 1 FROM property_log pl 
+        JOIN property p ON pl.property_id = p.property_ID 
+        WHERE pl.account_id = a.account_id 
+        AND pl.action = 'CREATED' 
+        AND p.City = '$loc_safe'
+    )";
+}
+
+$count_result = $conn->query($count_sql);
+$total_agents = $count_result->fetch_assoc()['total'];
+$total_pages = ceil($total_agents / $agents_per_page);
+
+// Build the agents query with filters
 $agents_sql = "
-    SELECT 
+    SELECT DISTINCT
         a.account_id,
         a.first_name,
         a.last_name,
@@ -25,9 +90,31 @@ $agents_sql = "
         AND ai.is_approved = 1 
         AND ai.profile_completed = 1
         AND a.is_active = 1
-    ORDER BY 
-        ai.years_experience DESC, a.first_name ASC
 ";
+
+// Add search filter
+if (!empty($search)) {
+    $search_safe = $conn->real_escape_string($search);
+    $agents_sql .= " AND (a.first_name LIKE '%$search_safe%' 
+                         OR a.last_name LIKE '%$search_safe%' 
+                         OR CONCAT(a.first_name, ' ', a.last_name) LIKE '%$search_safe%'
+                         OR ai.license_number LIKE '%$search_safe%'
+                         OR ai.years_experience LIKE '%$search_safe%')";
+}
+
+// Add location filter
+if (!empty($location_filter)) {
+    $loc_safe = $conn->real_escape_string($location_filter);
+    $agents_sql .= " AND EXISTS (
+        SELECT 1 FROM property_log pl 
+        JOIN property p ON pl.property_id = p.property_ID 
+        WHERE pl.account_id = a.account_id 
+        AND pl.action = 'CREATED' 
+        AND p.City = '$loc_safe'
+    )";
+}
+
+$agents_sql .= " ORDER BY ai.years_experience DESC, a.first_name ASC LIMIT $agents_per_page OFFSET $offset";
 
 $agents_result = $conn->query($agents_sql);
 $agents = $agents_result->fetch_all(MYSQLI_ASSOC);
@@ -159,10 +246,194 @@ $conn->close();
 
         /* Agents Section */
         .agents-section {
-            padding: 100px 20px;
+            padding: 60px 20px 100px;
             background: linear-gradient(180deg, var(--black-light) 0%, #0d0d0d 100%);
             position: relative;
         }
+
+        /* Search & Filter Bar */
+        .filter-section {
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(17, 17, 17, 0.98) 100%);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 4px;
+            padding: 32px;
+            margin-bottom: 48px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .filter-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--blue) 0%, var(--gold) 50%, var(--blue) 100%);
+            opacity: 0.6;
+        }
+
+        .filter-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-title i {
+            color: var(--blue-light);
+            font-size: 1.5rem;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-300);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-input,
+        .filter-select {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+            color: var(--white);
+            font-size: 0.9375rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .filter-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .filter-select {
+            cursor: pointer;
+        }
+
+        .filter-select option {
+            background: var(--black-lighter);
+            color: var(--white);
+            padding: 12px;
+        }
+
+        .clear-filters-btn {
+            padding: 14px 28px;
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 3px;
+            color: var(--blue-light);
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: fit-content;
+        }
+
+        .clear-filters-btn:hover {
+            background: rgba(37, 99, 235, 0.2);
+            border-color: var(--blue);
+            transform: translateY(-1px);
+        }
+
+        .results-count {
+            font-size: 0.9375rem;
+            color: var(--gray-400);
+            margin-bottom: 24px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 3px solid var(--gold);
+            border-radius: 2px;
+        }
+
+        .results-count strong {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        /* Pagination Styles */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 64px;
+            gap: 8px;
+        }
+
+        .pagination-btn {
+            padding: 12px 18px;
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+            color: var(--white);
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pagination-btn:hover:not(.disabled) {
+            background: rgba(37, 99, 235, 0.15);
+            border-color: var(--blue);
+            color: var(--blue-light);
+            transform: translateY(-1px);
+        }
+
+        .pagination-btn.active {
+            background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+            border-color: var(--blue);
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .pagination-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            padding: 12px 20px;
+            color: var(--gray-400);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        /* Agents Section */
 
         .section-header {
             text-align: center;
@@ -526,6 +797,14 @@ $conn->close();
                 gap: 24px;
             }
 
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-section {
+                padding: 24px;
+            }
+
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 24px;
@@ -587,12 +866,53 @@ $conn->close();
 <!-- Agents Section -->
 <section class="agents-section">
     <div class="container">
-        <div class="section-header">
-            <div class="section-badge">Our Team</div>
-            <h2 class="section-title">Browse Our Agents</h2>
-            <p class="section-description">
-                Find the perfect agent to guide you through your real estate journey.
-            </p>
+        <!-- Search & Filter Section -->
+        <div class="filter-section">
+            <h2 class="filter-title">
+                <i class="bi bi-funnel"></i>
+                Find Your Perfect Agent
+            </h2>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label class="filter-label" for="searchInput">
+                        <i class="bi bi-search"></i> Search by Name, License, or Experience
+                    </label>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        class="filter-input"
+                        placeholder="Search agent name, license number, or years of experience..."
+                        value="<?php echo htmlspecialchars($search); ?>"
+                    >
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="locationFilter">
+                        <i class="bi bi-geo-alt"></i> Location
+                    </label>
+                    <select id="locationFilter" class="filter-select">
+                        <option value="">All Locations</option>
+                        <?php foreach ($locations as $loc): ?>
+                            <option value="<?php echo htmlspecialchars($loc); ?>" <?php echo $location_filter === $loc ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($loc); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <?php if (!empty($search) || !empty($location_filter)): ?>
+                <button class="clear-filters-btn" onclick="clearFilters()" style="margin-top: 16px;">
+                    <i class="bi bi-x-circle"></i>
+                    Clear Filters
+                </button>
+            <?php endif; ?>
+        </div>
+
+        <!-- Results Count -->
+        <div class="results-count">
+            Showing <strong><?php echo count($agents); ?></strong> of <strong><?php echo $total_agents; ?></strong> agent<?php echo $total_agents !== 1 ? 's' : ''; ?>
+            <?php if ($total_pages > 1): ?>
+                (Page <?php echo $current_page; ?> of <?php echo $total_pages; ?>)
+            <?php endif; ?>
         </div>
 
         <?php if (count($agents) > 0): ?>
@@ -663,6 +983,57 @@ $conn->close();
                 </div>
                 <?php endforeach; ?>
             </div>
+
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+                <div class="pagination-container">
+                    <?php if ($current_page > 1): ?>
+                        <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page - 1])); ?>" class="pagination-btn">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </a>
+                    <?php else: ?>
+                        <span class="pagination-btn disabled">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </span>
+                    <?php endif; ?>
+
+                    <?php
+                    // Show page numbers with smart truncation
+                    $start_page = max(1, $current_page - 2);
+                    $end_page = min($total_pages, $current_page + 2);
+                    
+                    if ($start_page > 1): ?>
+                        <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" class="pagination-btn">1</a>
+                        <?php if ($start_page > 2): ?>
+                            <span class="pagination-info">...</span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                    <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                        <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>" 
+                           class="pagination-btn <?php echo $i === $current_page ? 'active' : ''; ?>">
+                            <?php echo $i; ?>
+                        </a>
+                    <?php endfor; ?>
+
+                    <?php if ($end_page < $total_pages): ?>
+                        <?php if ($end_page < $total_pages - 1): ?>
+                            <span class="pagination-info">...</span>
+                        <?php endif; ?>
+                        <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" class="pagination-btn"><?php echo $total_pages; ?></a>
+                    <?php endif; ?>
+
+                    <?php if ($current_page < $total_pages): ?>
+                        <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page + 1])); ?>" class="pagination-btn">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </a>
+                    <?php else: ?>
+                        <span class="pagination-btn disabled">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         <?php else: ?>
             <div class="empty-state">
                 <div class="empty-state-icon">
@@ -678,6 +1049,56 @@ $conn->close();
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Real-time search and filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const locationFilter = document.getElementById('locationFilter');
+    
+    // Debounce function for search input
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+    
+    // Apply filters function
+    function applyFilters() {
+        const search = searchInput.value.trim();
+        const location = locationFilter.value;
+        
+        // Build URL with query parameters (excluding page to reset to page 1)
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        if (location) params.set('location', location);
+        params.set('page', '1'); // Reset to page 1 on filter change
+        
+        // Reload page with filters
+        const url = params.toString() ? `?${params.toString()}` : window.location.pathname;
+        window.location.href = url;
+    }
+    
+    // Debounced search (triggers after 500ms of no typing)
+    const debouncedSearch = debounce(applyFilters, 500);
+    
+    // Event listeners
+    if (searchInput) {
+        searchInput.addEventListener('input', debouncedSearch);
+    }
+    
+    if (locationFilter) {
+        locationFilter.addEventListener('change', applyFilters);
+    }
+});
+
+// Clear all filters
+function clearFilters() {
+    window.location.href = window.location.pathname;
+}
+</script>
 
 </body>
 </html>
