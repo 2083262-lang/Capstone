@@ -448,6 +448,325 @@ $stmt_fetch_agent->close();
             border-radius: 0 0 16px 16px;
         }
 
+        /* ================================================
+           DISABLE AGENT MODAL - CUSTOM DESIGN
+           ================================================ */
+        
+        .disable-modal-content {
+            border: none;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(22, 18, 9, 0.3);
+        }
+
+        .disable-modal-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #2a2317 100%);
+            border: none;
+            padding: 2rem 2rem 1.5rem 2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            position: relative;
+        }
+
+        .disable-modal-header::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+        }
+
+        .disable-modal-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(188, 158, 66, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .disable-modal-icon i {
+            font-size: 1.5rem;
+            color: var(--secondary-color);
+        }
+
+        .disable-modal-header-text {
+            flex: 1;
+        }
+
+        .disable-modal-header-text .modal-title {
+            color: white;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        .disable-modal-subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.813rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 0.25rem;
+            display: block;
+        }
+
+        .disable-modal-header .btn-close {
+            filter: brightness(0) invert(1);
+            opacity: 0.8;
+            transition: all 0.2s ease;
+            margin: 0;
+            padding: 0;
+        }
+
+        .disable-modal-header .btn-close:hover {
+            opacity: 1;
+            transform: rotate(90deg);
+        }
+
+        .disable-modal-body {
+            padding: 2rem;
+            background: #ffffff;
+        }
+
+        .disable-warning-box {
+            background: linear-gradient(135deg, rgba(188, 158, 66, 0.08) 0%, rgba(160, 134, 54, 0.05) 100%);
+            border-left: 4px solid var(--secondary-color);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.75rem;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .disable-warning-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--secondary-color);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .disable-warning-icon i {
+            font-size: 1.25rem;
+            color: white;
+        }
+
+        .disable-warning-content {
+            flex: 1;
+        }
+
+        .disable-warning-content h6 {
+            font-size: 0.938rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin: 0 0 0.5rem 0;
+            letter-spacing: -0.01em;
+        }
+
+        .disable-warning-content p {
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: #4a4642;
+            margin: 0;
+        }
+
+        .disable-instructions {
+            padding: 0 0.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .disable-instructions p {
+            font-size: 0.906rem;
+            line-height: 1.7;
+            color: #6c757d;
+            margin: 0;
+        }
+
+        .disable-form-group {
+            margin-bottom: 0;
+        }
+
+        .disable-form-label {
+            font-size: 0.938rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.75rem;
+            display: block;
+            letter-spacing: -0.01em;
+        }
+
+        .disable-textarea {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            font-size: 0.938rem;
+            line-height: 1.6;
+            color: var(--primary-color);
+            transition: all 0.2s ease;
+            resize: vertical;
+            min-height: 110px;
+        }
+
+        .disable-textarea:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 4px rgba(188, 158, 66, 0.1);
+            outline: none;
+        }
+
+        .disable-textarea::placeholder {
+            color: #9ca3af;
+            opacity: 1;
+        }
+
+        .disable-helper-text {
+            font-size: 0.813rem;
+            color: #6c757d;
+            margin-top: 0.625rem;
+            display: flex;
+            align-items: center;
+            padding: 0 0.25rem;
+            line-height: 1.5;
+        }
+
+        .disable-helper-text i {
+            color: var(--secondary-color);
+            margin-right: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .disable-modal-footer {
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            padding: 1.25rem 2rem;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .disable-btn-cancel {
+            background: white;
+            color: #6c757d;
+            border: 2px solid #dee2e6;
+            padding: 0.75rem 1.75rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.938rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .disable-btn-cancel:hover {
+            background: #f8f9fa;
+            border-color: #adb5bd;
+            color: #495057;
+            transform: translateY(-1px);
+        }
+
+        .disable-btn-submit {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #2a2317 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.75rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.938rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(22, 18, 9, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .disable-btn-submit::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(188, 158, 66, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .disable-btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(22, 18, 9, 0.35);
+            color: white;
+        }
+
+        .disable-btn-submit:hover::before {
+            left: 100%;
+        }
+
+        .disable-btn-submit:active {
+            transform: translateY(0);
+        }
+
+        /* Responsive adjustments for disable modal */
+        @media (max-width: 576px) {
+            .disable-modal-header {
+                padding: 1.5rem 1.25rem 1.25rem 1.25rem;
+            }
+
+            .disable-modal-icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            .disable-modal-icon i {
+                font-size: 1.25rem;
+            }
+
+            .disable-modal-header-text .modal-title {
+                font-size: 1.15rem;
+            }
+
+            .disable-modal-subtitle {
+                font-size: 0.75rem;
+            }
+
+            .disable-modal-body {
+                padding: 1.5rem 1.25rem;
+            }
+
+            .disable-warning-box {
+                padding: 1rem 1.25rem;
+                gap: 0.75rem;
+            }
+
+            .disable-warning-icon {
+                width: 36px;
+                height: 36px;
+            }
+
+            .disable-modal-footer {
+                padding: 1rem 1.25rem;
+                flex-direction: column;
+            }
+
+            .disable-btn-cancel,
+            .disable-btn-submit {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
         /* Alert improvements */
         .alert {
             border: none;
@@ -934,36 +1253,52 @@ include 'admin_navbar.php';
 
 <!-- Disable Agent Modal -->
 <div class="modal fade" id="disableModal" tabindex="-1" aria-labelledby="disableModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content disable-modal-content">
             <form action="review_agent_details.php?account_id=<?php echo $account_id_to_review; ?>" method="POST">
-                <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
-                    <h5 class="modal-title" id="disableModalLabel">
-                        <i class="bi bi-ban me-2"></i>Disable Agent Account
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header disable-modal-header">
+                    <div class="disable-modal-icon">
+                        <i class="bi bi-ban"></i>
+                    </div>
+                    <div class="disable-modal-header-text">
+                        <h5 class="modal-title mb-0" id="disableModalLabel">Disable Agent Account</h5>
+                        <small class="disable-modal-subtitle">Account Deactivation</small>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-warning mb-3">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <strong>Warning:</strong> This will deactivate the agent's account and prevent them from logging in. The agent will be notified via email.
+                <div class="modal-body disable-modal-body">
+                    <div class="disable-warning-box">
+                        <div class="disable-warning-icon">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </div>
+                        <div class="disable-warning-content">
+                            <h6 class="mb-1">Important Notice</h6>
+                            <p class="mb-0">This action will deactivate the agent's account and prevent login access. The agent will be notified via email.</p>
+                        </div>
                     </div>
                     
-                    <p class="text-muted mb-3">Please provide a detailed reason for disabling this agent's account. This message will be sent to the agent's email and recorded in the system.</p>
+                    <div class="disable-instructions">
+                        <p>Please provide a detailed reason for disabling this agent's account. This message will be sent to the agent's email and recorded in the system.</p>
+                    </div>
                     
                     <input type="hidden" name="action" value="disable">
                     <input type="hidden" name="account_id" value="<?php echo $account_id_to_review; ?>">
                     
-                    <div class="mb-3">
-                        <label for="disable_reason" class="form-label">Reason for Disabling *</label>
-                        <textarea class="form-control" id="disable_reason" name="disable_reason" rows="4" 
-                                  placeholder="Please provide specific reasons for disabling this account..." required></textarea>
-                        <div class="form-text">Be clear and professional in explaining why this account is being disabled.</div>
+                    <div class="disable-form-group">
+                        <label for="disable_reason" class="disable-form-label">Reason for Disabling <span class="text-danger">*</span></label>
+                        <textarea class="form-control disable-textarea" id="disable_reason" name="disable_reason" rows="4" 
+                                  placeholder="Provide specific reasons for disabling this account..." required></textarea>
+                        <div class="disable-helper-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Be clear and professional in explaining why this account is being disabled.
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-modern btn-reject">
+                <div class="modal-footer disable-modal-footer">
+                    <button type="button" class="btn disable-btn-cancel" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn disable-btn-submit">
                         <i class="bi bi-ban me-2"></i>Disable Account
                     </button>
                 </div>

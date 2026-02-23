@@ -1275,86 +1275,148 @@ $conn->close();
 
 <!-- Request Tour Modal -->
 <div class="modal fade" id="requestTourModal" tabindex="-1" aria-labelledby="requestTourModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: linear-gradient(135deg, rgba(26, 26, 26, 0.98) 0%, rgba(10, 10, 10, 0.98) 100%); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 4px;">
-            <div class="modal-header" style="border-bottom: 1px solid rgba(37, 99, 235, 0.15); padding: 24px 32px;">
-                <h5 class="modal-title" id="requestTourModalLabel" style="color: var(--white); font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                    <i class="bi bi-calendar-check" style="color: var(--gold);"></i> Request a Tour
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1) brightness(2);"></button>
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 900px;">
+        <div class="modal-content" style="background: linear-gradient(135deg, rgba(26, 26, 26, 0.98) 0%, rgba(10, 10, 10, 0.98) 100%); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 8px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(37, 99, 235, 0.15); padding: 28px 40px; background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(212, 175, 55, 0.05) 100%);">
+                <div>
+                    <h5 class="modal-title" id="requestTourModalLabel" style="color: var(--white); font-weight: 700; font-size: 1.5rem; display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                        <i class="bi bi-calendar-check" style="color: var(--gold); font-size: 1.75rem;"></i> Request a Tour
+                    </h5>
+                    <p style="color: var(--gray-400); margin: 0; font-size: 0.9rem;">Select your preferred date and time - we'll confirm shortly</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1) brightness(2); opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'"></button>
             </div>
-            <div class="modal-body" style="padding: 32px;">
+            <div class="modal-body" style="padding: 32px 40px;">
                 <!-- Alert container -->
-                <div id="tourRequestAlert" class="alert d-none" role="alert"></div>
+                <div id="tourRequestAlert" class="alert d-none" role="alert" style="border-radius: 6px; margin-bottom: 24px;"></div>
 
                 <form id="tourRequestForm">
                     <input type="hidden" name="property_id" value="<?php echo $property_data['property_ID']; ?>">
-                    <p style="color: var(--gray-400); margin-bottom: 28px; font-size: 0.9375rem; line-height: 1.5;">Select your preferred date and time for a tour. An agent will contact you to confirm.</p>
                     
-                    <div class="mb-3">
-                        <label class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Tour Type</label>
-                        <div class="d-flex gap-3 align-items-center" style="flex-wrap: wrap;">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="tour_type" id="tourTypePrivate" value="private" checked>
-                                <label class="form-check-label" for="tourTypePrivate" style="color: var(--gray-300);">Private (1-on-1)</label>
+                    <!-- Tour Type Section -->
+                    <div style="background: rgba(37, 99, 235, 0.06); border: 1px solid rgba(37, 99, 235, 0.15); border-radius: 6px; padding: 20px; margin-bottom: 28px;">
+                        <label class="form-label" style="color: var(--white); font-weight: 700; font-size: 0.95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                            <i class="bi bi-people" style="color: var(--gold);"></i> Tour Type
+                        </label>
+                        <div class="d-flex gap-4 align-items-start">
+                            <label class="tour-type-option" style="flex: 1; cursor: pointer; position: relative;">
+                                <input class="form-check-input" type="radio" name="tour_type" id="tourTypePrivate" value="private" checked style="display: none;">
+                                <div class="tour-type-card" data-for="tourTypePrivate" style="background: rgba(255,255,255,0.05); border: 2px solid var(--gold); border-radius: 6px; padding: 16px; transition: all 0.2s; position: relative;">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                        <i class="bi bi-person-check" style="color: var(--gold); font-size: 1.5rem;"></i>
+                                        <span style="color: var(--white); font-weight: 600; font-size: 1rem;">Private (1-on-1)</span>
+                                        <i class="bi bi-check-circle-fill" style="color: var(--gold); font-size: 1.2rem; margin-left: auto;"></i>
+                                    </div>
+                                    <p style="color: var(--gray-400); font-size: 0.85rem; margin: 0; line-height: 1.4;">Personal tour with dedicated attention</p>
+                                </div>
+                            </label>
+                            <label class="tour-type-option" style="flex: 1; cursor: pointer; position: relative;">
+                                <input class="form-check-input" type="radio" name="tour_type" id="tourTypePublic" value="public" style="display: none;">
+                                <div class="tour-type-card" data-for="tourTypePublic" style="background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 16px; transition: all 0.2s; position: relative;">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                        <i class="bi bi-people" style="color: var(--blue-light); font-size: 1.5rem;"></i>
+                                        <span style="color: var(--white); font-weight: 600; font-size: 1rem;">Public (Group)</span>
+                                        <i class="bi bi-check-circle-fill" style="color: var(--gold); font-size: 1.2rem; margin-left: auto; display: none;"></i>
+                                    </div>
+                                    <p style="color: var(--gray-400); font-size: 0.85rem; margin: 0; line-height: 1.4;">Join other visitors at the same time</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Date & Time Section -->
+                    <div style="background: rgba(212, 175, 55, 0.06); border: 1px solid rgba(212, 175, 55, 0.15); border-radius: 6px; padding: 24px; margin-bottom: 28px;">
+                        <label class="form-label" style="color: var(--white); font-weight: 700; font-size: 0.95rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                            <i class="bi bi-calendar-event" style="color: var(--gold);"></i> Schedule
+                        </label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="tourDate" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-calendar3" style="color: var(--gold);"></i> Date <span style="color: #ff4444;">*</span>
+                                </label>
+                                <div style="position: relative;">
+                                    <i class="bi bi-calendar-event" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: white; font-size: 1.1rem; pointer-events: none; z-index: 10;"></i>
+                                    <input type="date" class="form-control" id="tourDate" name="tour_date" required style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--white); border-radius: 6px; padding: 13px 16px 13px 45px; width: 100%; font-size: 0.95rem; transition: all 0.2s; color-scheme: dark;">
+                                </div>
+                                <div class="invalid-feedback" id="tourDateFeedback" style="font-size: 0.875rem; margin-top: 6px;"></div>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="tour_type" id="tourTypePublic" value="public">
-                                <label class="form-check-label" for="tourTypePublic" style="color: var(--gray-300);">Public (Group)</label>
+                            <div class="col-md-6">
+                                <label for="tourTime" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-clock" style="color: var(--gold);"></i> Time <span style="color: #ff4444;">*</span>
+                                </label>
+                                <div style="position: relative;">
+                                    <i class="bi bi-clock-fill" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: white; font-size: 1.1rem; pointer-events: none; z-index: 10;"></i>
+                                    <select class="form-select" id="tourTime" name="time" required style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--white); border-radius: 6px; padding: 13px 16px 13px 45px; width: 100%; font-size: 0.95rem; transition: all 0.2s; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 12 12%27%3e%3cpath fill=%27white%27 d=%27M6 9L1 4h10z%27/%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 16px center;">
+                                        <option value="" style="background: var(--black);">Select a time</option>
+                                        <option value="09:00:00" style="background: var(--black);">9:00 AM</option>
+                                        <option value="10:00:00" style="background: var(--black);">10:00 AM</option>
+                                        <option value="11:00:00" style="background: var(--black);">11:00 AM</option>
+                                        <option value="13:00:00" style="background: var(--black);">1:00 PM</option>
+                                        <option value="14:00:00" style="background: var(--black);">2:00 PM</option>
+                                        <option value="15:00:00" style="background: var(--black);">3:00 PM</option>
+                                        <option value="16:00:00" style="background: var(--black);">4:00 PM</option>
+                                    </select>
+                                </div>
+                                <div class="invalid-feedback" id="tourTimeFeedback" style="font-size: 0.875rem; margin-top: 6px;"></div>
                             </div>
                         </div>
-                        <div style="color: var(--gray-500); font-size: 0.85rem; margin-top: 6px;">Public tours let the agent group multiple visitors for the same property and timeslot.</div>
                     </div>
                     
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label for="tourDate" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Date <span style="color: #ff4444;">*</span></label>
-                            <input type="date" class="form-control" id="tourDate" name="tour_date" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
-                            <div class="invalid-feedback" id="tourDateFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
+                    <!-- Contact Information Section -->
+                    <div style="background: rgba(37, 99, 235, 0.06); border: 1px solid rgba(37, 99, 235, 0.15); border-radius: 6px; padding: 24px; margin-bottom: 24px;">
+                        <label class="form-label" style="color: var(--white); font-weight: 700; font-size: 0.95rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                            <i class="bi bi-person-vcard" style="color: var(--gold);"></i> Your Information
+                        </label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="tourName" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-person" style="color: var(--blue-light);"></i> Full Name <span style="color: #ff4444;">*</span>
+                                </label>
+                                <div style="position: relative;">
+                                    <i class="bi bi-person-fill" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: white; font-size: 1.1rem; pointer-events: none; z-index: 10;"></i>
+                                    <input type="text" class="form-control" id="tourName" name="name" required placeholder="Enter your full name" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--white); border-radius: 6px; padding: 13px 16px 13px 45px; width: 100%; font-size: 0.95rem; transition: all 0.2s;">
+                                </div>
+                                <div class="invalid-feedback" id="tourNameFeedback" style="font-size: 0.875rem; margin-top: 6px;"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="tourPhone" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-telephone" style="color: var(--blue-light);"></i> Phone <span style="color: #ff4444;">*</span>
+                                </label>
+                                <div style="position: relative;">
+                                    <i class="bi bi-telephone-fill" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: white; font-size: 1.1rem; pointer-events: none; z-index: 10;"></i>
+                                    <input type="tel" class="form-control" id="tourPhone" name="phone" required placeholder="Enter your phone number" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--white); border-radius: 6px; padding: 13px 16px 13px 45px; width: 100%; font-size: 0.95rem; transition: all 0.2s;">
+                                </div>
+                                <div class="invalid-feedback" id="tourPhoneFeedback" style="font-size: 0.875rem; margin-top: 6px;"></div>
+                            </div>
+                            <div class="col-12">
+                                <label for="tourEmail" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-envelope" style="color: var(--blue-light);"></i> Email <span style="color: #ff4444;">*</span>
+                                </label>
+                                <div style="position: relative;">
+                                    <i class="bi bi-envelope-fill" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: white; font-size: 1.1rem; pointer-events: none; z-index: 10;"></i>
+                                    <input type="email" class="form-control" id="tourEmail" name="email" required placeholder="Enter your email address" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--white); border-radius: 6px; padding: 13px 16px 13px 45px; width: 100%; font-size: 0.95rem; transition: all 0.2s;">
+                                </div>
+                                <div class="invalid-feedback" id="tourEmailFeedback" style="font-size: 0.875rem; margin-top: 6px;"></div>
+                            </div>
+                            <div class="col-12">
+                                <label for="tourMessage" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-chat-left-text" style="color: var(--blue-light);"></i> Message <span style="color: var(--gray-500); font-weight: 400; font-size: 0.8rem;">(Optional)</span>
+                                </label>
+                                <div style="position: relative;">
+                                    <i class="bi bi-chat-left-text-fill" style="position: absolute; left: 16px; top: 20px; color: white; font-size: 1.1rem; pointer-events: none; z-index: 10;"></i>
+                                    <textarea class="form-control" id="tourMessage" name="message" rows="2" placeholder="Any specific requests or questions?" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--white); border-radius: 6px; padding: 13px 16px 13px 45px; width: 100%; font-size: 0.95rem; resize: vertical; transition: all 0.2s;"></textarea>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="tourTime" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Time <span style="color: #ff4444;">*</span></label>
-                            <select class="form-select" id="tourTime" name="time" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
-                                <option value="" style="background: var(--black);">Select a time</option>
-                                <option value="09:00:00" style="background: var(--black);">9:00 AM</option>
-                                <option value="10:00:00" style="background: var(--black);">10:00 AM</option>
-                                <option value="11:00:00" style="background: var(--black);">11:00 AM</option>
-                                <option value="13:00:00" style="background: var(--black);">1:00 PM</option>
-                                <option value="14:00:00" style="background: var(--black);">2:00 PM</option>
-                                <option value="15:00:00" style="background: var(--black);">3:00 PM</option>
-                                <option value="16:00:00" style="background: var(--black);">4:00 PM</option>
-                            </select>
-                            <div class="invalid-feedback" id="tourTimeFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
-                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="tourName" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Full Name <span style="color: #ff4444;">*</span></label>
-                        <input type="text" class="form-control" id="tourName" name="name" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
-                        <div class="invalid-feedback" id="tourNameFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="tourEmail" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Email <span style="color: #ff4444;">*</span></label>
-                        <input type="email" class="form-control" id="tourEmail" name="email" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
-                        <div class="invalid-feedback" id="tourEmailFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="tourPhone" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Phone <span style="color: #ff4444;">*</span></label>
-                        <input type="tel" class="form-control" id="tourPhone" name="phone" required style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem;">
-                        <div class="invalid-feedback" id="tourPhoneFeedback" style="font-size: 0.875rem; margin-top: 4px;"></div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="tourMessage" class="form-label" style="color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; display: block;">Message (Optional)</label>
-                        <textarea class="form-control" id="tourMessage" name="message" rows="3" placeholder="Any specific requests or questions?" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(37, 99, 235, 0.2); color: var(--white); border-radius: 2px; padding: 12px; width: 100%; font-size: 0.9375rem; resize: vertical;"></textarea>
-                    </div>
-                    
-                    <button type="submit" class="w-100" style="background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%); color: var(--black); border: none; padding: 14px; font-weight: 700; border-radius: 2px; cursor: pointer; transition: all 0.2s ease; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(212, 175, 55, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                        <i class="bi bi-calendar-check"></i>
+                    <button type="submit" class="w-100" style="background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%); color: var(--black); border: none; padding: 16px; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(212, 175, 55, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(212, 175, 55, 0.3)'">
+                        <i class="bi bi-send-fill" style="font-size: 1.1rem;"></i>
                         Submit Tour Request
                     </button>
+                    <p style="text-align: center; color: var(--gray-500); font-size: 0.8rem; margin: 12px 0 0 0;">
+                        <i class="bi bi-shield-check" style="color: var(--blue-light);"></i> Your information is secure and will only be used to coordinate your tour
+                    </p>
                 </form>
             </div>
         </div>
@@ -1362,7 +1424,78 @@ $conn->close();
 </div>
 
 <style>
-/* Tour Modal Input Placeholder Styling */
+/* Tour Modal Enhancements */
+#requestTourModal .modal-content {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Tour Type Card Styling */
+.tour-type-card {
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.tour-type-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tour-type-card:hover::before {
+    opacity: 1;
+}
+
+.tour-type-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+#tourTypePrivate:checked ~ .tour-type-card {
+    border-color: var(--gold) !important;
+    background: rgba(212, 175, 55, 0.1) !important;
+}
+
+#tourTypePublic:checked ~ .tour-type-card {
+    border-color: var(--gold) !important;
+    background: rgba(212, 175, 55, 0.1) !important;
+}
+
+/* Show/hide check icons */
+#tourTypePrivate:checked ~ .tour-type-card .bi-check-circle-fill {
+    display: inline-block !important;
+}
+
+#tourTypePrivate:not(:checked) ~ .tour-type-card .bi-check-circle-fill {
+    display: none !important;
+}
+
+#tourTypePublic:checked ~ .tour-type-card .bi-check-circle-fill {
+    display: inline-block !important;
+}
+
+#tourTypePublic:not(:checked) ~ .tour-type-card .bi-check-circle-fill {
+    display: none !important;
+}
+
+/* Input Placeholder Styling */
 #requestTourModal input::placeholder,
 #requestTourModal textarea::placeholder {
     color: rgba(255, 255, 255, 0.4) !important;
@@ -1385,28 +1518,87 @@ $conn->close();
     color: rgba(255, 255, 255, 0.4) !important;
 }
 
-/* Focus states for better UX */
+/* Enhanced Focus states */
 #requestTourModal input:focus,
 #requestTourModal select:focus,
 #requestTourModal textarea:focus {
     outline: none !important;
-    border-color: rgba(37, 99, 235, 0.5) !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15) !important;
+    background: rgba(0,0,0,0.4) !important;
+    transform: translateY(-1px);
 }
 
-/* Better alignment for form labels */
+#requestTourModal input:hover,
+#requestTourModal select:hover,
+#requestTourModal textarea:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Form Labels */
 #requestTourModal .form-label {
     font-weight: 600 !important;
+    transition: color 0.2s;
 }
 
 /* Invalid feedback styling */
 #requestTourModal .invalid-feedback {
     display: block;
     color: #ff4444;
+    font-weight: 500;
+    background: rgba(255, 68, 68, 0.1);
+    padding: 6px 10px;
+    border-radius: 4px;
+    margin-top: 8px;
 }
 
-#requestTourModal .form-control.is-invalid {
+#requestTourModal .form-control.is-invalid,
+#requestTourModal .form-select.is-invalid {
     border-color: #ff4444 !important;
+    box-shadow: 0 0 0 3px rgba(255, 68, 68, 0.15) !important;
+}
+
+/* Alert Styling */
+#requestTourModal .alert {
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#requestTourModal .alert-success {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.08));
+    color: #4ade80;
+    border-left: 3px solid #22c55e;
+}
+
+#requestTourModal .alert-danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08));
+    color: #ff6b6b;
+    border-left: 3px solid #ef4444;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #requestTourModal .modal-dialog {
+        max-width: 95% !important;
+        margin: 10px auto;
+    }
+    
+    #requestTourModal .modal-body {
+        padding: 24px !important;
+    }
+    
+    #requestTourModal .modal-header {
+        padding: 20px 24px !important;
+    }
+    
+    .tour-type-option {
+        flex-direction: column !important;
+    }
 }
 </style>
 
@@ -1593,6 +1785,68 @@ function saveLikeToDatabase() {
 
 // Initialize like status on page load
 checkLikeStatus();
+
+// Tour Type Card Selection Handler
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle tour type card clicks
+    const tourTypeCards = document.querySelectorAll('.tour-type-card');
+    tourTypeCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const radioId = this.getAttribute('data-for');
+            const radio = document.getElementById(radioId);
+            if (radio) {
+                radio.checked = true;
+                
+                // Update visual state for all cards
+                updateTourTypeCards();
+            }
+        });
+    });
+    
+    // Also handle radio button changes directly
+    const tourTypeRadios = document.querySelectorAll('input[name="tour_type"]');
+    tourTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            updateTourTypeCards();
+        });
+    });
+    
+    // Function to update tour type card appearances
+    function updateTourTypeCards() {
+        const privateRadio = document.getElementById('tourTypePrivate');
+        const publicRadio = document.getElementById('tourTypePublic');
+        const privateCard = document.querySelector('[data-for="tourTypePrivate"]');
+        const publicCard = document.querySelector('[data-for="tourTypePublic"]');
+        
+        // Reset all cards
+        [privateCard, publicCard].forEach(card => {
+            if (card) {
+                card.style.border = '2px solid rgba(255,255,255,0.1)';
+                card.style.background = 'rgba(255,255,255,0.05)';
+                const checkIcon = card.querySelector('.bi-check-circle-fill');
+                if (checkIcon) checkIcon.style.display = 'none';
+            }
+        });
+        
+        // Highlight selected card
+        if (privateRadio && privateRadio.checked && privateCard) {
+            privateCard.style.border = '2px solid var(--gold)';
+            privateCard.style.background = 'rgba(212, 175, 55, 0.1)';
+            const checkIcon = privateCard.querySelector('.bi-check-circle-fill');
+            if (checkIcon) checkIcon.style.display = 'inline-block';
+        }
+        
+        if (publicRadio && publicRadio.checked && publicCard) {
+            publicCard.style.border = '2px solid var(--gold)';
+            publicCard.style.background = 'rgba(212, 175, 55, 0.1)';
+            const checkIcon = publicCard.querySelector('.bi-check-circle-fill');
+            if (checkIcon) checkIcon.style.display = 'inline-block';
+        }
+    }
+    
+    // Initialize on page load
+    updateTourTypeCards();
+});
 
 // Tour Request Form Handler
 document.getElementById('tourRequestForm')?.addEventListener('submit', function(e) {

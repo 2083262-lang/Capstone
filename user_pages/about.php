@@ -692,16 +692,12 @@ $conn->close();
             <h2 class="cta-title">Start Exploring Properties Today</h2>
             <p class="cta-description">
                 Experience the power of our real estate management system. 
-                Browse available properties or register as an agent to start listing.
+                Browse available properties and find your dream home.
             </p>
             <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
                 <a href="index.php" class="btn-primary-gold">
                     Browse Properties
                     <i class="bi bi-arrow-right"></i>
-                </a>
-                <a href="../agent.php" class="btn-outline-gold" style="background: transparent; color: var(--gray-200); border: 1px solid rgba(37, 99, 235, 0.4); padding: 14px 40px; font-size: 16px; font-weight: 700; border-radius: 2px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
-                    Register as Agent
-                    <i class="bi bi-person-plus"></i>
                 </a>
             </div>
         </div>

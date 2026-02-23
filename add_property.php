@@ -188,17 +188,7 @@ unset($_SESSION['message']);
         }
 
         .input-group .form-control {
-            padding-left: 2.75rem;
-        }
-
-        .input-group-icon {
-            position: absolute;
-            left: 0.875rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            z-index: 3;
-            font-size: 1rem;
+            /* padding-left: 2.75rem; REMOVED GLOBAL PADDING */
         }
 
         /* Textarea */
@@ -206,7 +196,78 @@ unset($_SESSION['message']);
             resize: vertical;
             min-height: 120px;
             height: auto;
+            border-radius: 8px !important;
             padding: 0.75rem 0.875rem;
+        }
+
+        /* ===== CUSTOM PROPERTY INPUT GROUP STYLES - ISOLATED ===== */
+        
+        /* Container for input with left icon */
+        .property-input-group {
+            position: relative;
+            display: block; /* Not flex, to prevent layout shifts */
+        }
+
+        /* Input field inside property-input-group */
+        .property-input-group .property-form-input {
+            padding-left: 2.5rem !important; /* Space for left icon */
+            padding-right: calc(1.5em + 0.75rem) !important; /* Space for validation icon on right */
+            border-radius: 8px !important;
+            height: 42px !important; /* Fixed height to prevent shifts */
+            display: block;
+            width: 100%;
+        }
+
+        /* Icon positioned on the left - LOCKED positioning */
+        .property-input-group .property-input-icon {
+            position: absolute !important;
+            left: 0.875rem !important;
+            top: 11px !important; /* Fixed pixel value for consistent centering (42px height / 2 = 21px - icon height/2) */
+            display: inline-block !important;
+            color: var(--text-muted) !important;
+            pointer-events: none !important;
+            z-index: 100 !important; /* High z-index to stay on top */
+            line-height: 1 !important;
+            font-size: 1rem !important;
+        }
+
+        /* Ensure validation state doesn't affect our icon or input */
+        .property-input-group .property-form-input:invalid,
+        .property-input-group .property-form-input.is-invalid,
+        .was-validated .property-input-group .property-form-input:invalid {
+            padding-left: 2.5rem !important; /* Keep left padding for our icon */
+            padding-right: calc(1.5em + 0.75rem) !important; /* Keep right padding for validation icon */
+            border-radius: 8px !important;
+            height: 42px !important;
+            background-position: right calc(0.375em + 0.1875rem) center !important; /* Validation icon on right */
+        }
+
+        /* Ensure icon stays in place even on validation error */
+        .was-validated .property-input-group .property-input-icon,
+        .property-input-group .property-form-input:invalid ~ .property-input-icon,
+        .property-input-group .property-form-input.is-invalid ~ .property-input-icon {
+            top: 11px !important;
+            left: 0.875rem !important;
+            position: absolute !important;
+        }
+
+        /* Legacy input-group-icon class support (for backwards compatibility) */
+        .property-input-group .input-group-icon {
+            position: absolute !important;
+            left: 0.875rem !important;
+            top: 11px !important;
+            display: inline-block !important;
+            color: var(--text-muted) !important;
+            pointer-events: none !important;
+            z-index: 100 !important;
+            line-height: 1 !important;
+        }
+
+        /* ===== END CUSTOM PROPERTY INPUT GROUP STYLES ===== */
+        
+        /* Reset padding for inputs NOT in our custom group */
+        .form-control:not(.property-form-input) {
+            padding-left: 0.875rem;
         }
 
         /* Row spacing consistency */
@@ -228,23 +289,80 @@ unset($_SESSION['message']);
         /* Amenities Section */
         .amenities-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 0.75rem;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.5rem;
             margin-top: 1rem;
         }
 
+        .amenities-container {
+            max-height: 400px; /* Adjust height as needed */
+            overflow-y: auto;
+            padding-right: 0.5rem;
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            background-color: #fff;
+        }
+
+        /* Custom Scrollbar for Amenities */
+        .amenities-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .amenities-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .amenities-container::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        
+        .amenities-container::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        .amenities-search {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .amenities-search .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .amenities-search input {
+            padding-left: 2.5rem;
+            border-radius: 8px !important; 
+        }
+
+        /* Make amenity cards more compact for the scrollable list */
         .form-check {
             background: #f9fafb;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
             border: 1px solid var(--border-color);
             transition: all 0.15s ease;
             margin-bottom: 0;
+            display: flex;
+            align-items: center;
         }
 
         .form-check:hover {
             background: #fefcf3;
             border-color: var(--secondary-color);
+        }
+
+        .form-check-input {
+            border-radius: 4px !important;
+            margin-top: 0; /* Align checkbox vertically */
+            margin-right: 0.5rem;
         }
 
         .form-check-input:checked {
@@ -261,6 +379,28 @@ unset($_SESSION['message']);
             color: var(--primary-color);
             cursor: pointer;
             font-size: 0.9375rem;
+        }
+
+        /* Custom Property Form Inputs - Consistent Rounded Corners */
+        .property-form-input {
+            border-radius: 8px !important;
+        }
+
+        .property-form-select {
+            border-radius: 8px !important;
+        }
+
+        .property-input-group .form-control {
+            border-radius: 8px !important;
+        }
+
+        .property-input-group .input-group-text {
+            border-radius: 8px !important;
+        }
+
+        /* Ensure textarea maintains rounded corners */
+        .property-form-textarea {
+            border-radius: 8px !important;
         }
 
         /* Image Upload Section */
@@ -702,9 +842,9 @@ unset($_SESSION['message']);
                                 <label for="StreetAddress" class="form-label">
                                     Street Address <span class="required">*</span>
                                 </label>
-                                <div class="input-group">
-                                    <i class="bi bi-geo-alt input-group-icon"></i>
-                                    <input type="text" id="StreetAddress" name="StreetAddress" class="form-control" 
+                                <div class="property-input-group">
+                                    <i class="bi bi-geo-alt property-input-icon"></i>
+                                    <input type="text" id="StreetAddress" name="StreetAddress" class="form-control property-form-input" 
                                            placeholder="Enter street address" required>
                                 </div>
                             </div>
@@ -712,14 +852,14 @@ unset($_SESSION['message']);
                                 <label for="City" class="form-label">
                                     City <span class="required">*</span>
                                 </label>
-                                <input type="text" id="City" name="City" class="form-control" 
+                                <input type="text" id="City" name="City" class="form-control property-form-input" 
                                        placeholder="City name" required>
                             </div>
                             <div class="col-md-2">
                                 <label for="State" class="form-label">
                                     State <span class="required">*</span>
                                 </label>
-                                <input type="text" id="State" name="State" maxlength="2" class="form-control" 
+                                <input type="text" id="State" name="State" maxlength="2" class="form-control property-form-input" 
                                        placeholder="PH" pattern="[A-Za-z]{2}" 
                                        title="Please enter a 2-character state abbreviation" required>
                             </div>
@@ -727,19 +867,19 @@ unset($_SESSION['message']);
                                 <label for="ZIP" class="form-label">
                                     ZIP <span class="required">*</span>
                                 </label>
-                    <input type="text" id="ZIP" name="ZIP" class="form-control" 
+                    <input type="text" id="ZIP" name="ZIP" class="form-control property-form-input" 
                         placeholder="ZIP code" pattern="\d{4}" maxlength="4" inputmode="numeric" title="Enter a 4-digit PH postal code" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="County" class="form-label">County <span class="required">*</span></label>
-                                <input type="text" id="County" name="County" class="form-control" 
+                                <input type="text" id="County" name="County" class="form-control property-form-input" 
                                        placeholder="County name" required>
                             </div>
                             <div class="col-md-3">
                                 <label for="PropertyType" class="form-label">
                                     Property Type <span class="required">*</span>
                                 </label>
-                                <select id="PropertyType" name="PropertyType" class="form-select" required>
+                                <select id="PropertyType" name="PropertyType" class="form-select property-form-select" required>
                                     <option value="">Select Property Type</option>
                                     <option value="Single-Family Home">Single-Family Home</option>
                                     <option value="Condominium">Condominium</option>
@@ -753,7 +893,7 @@ unset($_SESSION['message']);
                                 <label for="Status" class="form-label">
                                     Status <span class="required">*</span>
                                 </label>
-                                <select id="Status" name="Status" class="form-select" required>
+                                <select id="Status" name="Status" class="form-select property-form-select" required>
                                     <option value="">Select Status</option>
                                     <option value="For Sale">For Sale</option>
                                     <option value="For Rent">For Rent</option>
@@ -774,35 +914,35 @@ unset($_SESSION['message']);
                             <div class="col">
                                 <div class="form-group">
                                     <label for="YearBuilt" class="form-label">Year Built <span class="required">*</span></label>
-                                    <input type="number" id="YearBuilt" name="YearBuilt" class="form-control" min="1800" max="<?php echo date("Y") + 5; ?>" placeholder="e.g., 2020" required>
+                                    <input type="number" id="YearBuilt" name="YearBuilt" class="form-control property-form-input" min="1800" max="<?php echo date("Y") + 5; ?>" placeholder="e.g., 2020" required>
                                 </div>
                             </div>
 
                             <div class="col">
                                 <div class="form-group">
                                     <label for="NumberOfFloors" class="form-label">Floors <span class="required">*</span></label>
-                                    <input type="number" id="NumberOfFloors" name="NumberOfFloors" class="form-control" min="1" max="10" placeholder="1-10" value="1" required>
+                                    <input type="number" id="NumberOfFloors" name="NumberOfFloors" class="form-control property-form-input" min="1" max="10" placeholder="1-10" value="1" required>
                                 </div>
                             </div>
 
                             <div class="col">
                                 <div class="form-group">
                                     <label for="Bedrooms" class="form-label">Bedrooms <span class="required">*</span></label>
-                                    <input type="number" id="Bedrooms" name="Bedrooms" class="form-control" min="0" placeholder="e.g., 3" required>
+                                    <input type="number" id="Bedrooms" name="Bedrooms" class="form-control property-form-input" min="0" placeholder="e.g., 3" required>
                                 </div>
                             </div>
 
                             <div class="col">
                                 <div class="form-group">
                                     <label for="Bathrooms" class="form-label">Bathrooms <span class="required">*</span></label>
-                                    <input type="number" step="0.5" id="Bathrooms" name="Bathrooms" class="form-control" min="0" placeholder="e.g., 2.5" required>
+                                    <input type="number" step="0.5" id="Bathrooms" name="Bathrooms" class="form-control property-form-input" min="0" placeholder="e.g., 2.5" required>
                                 </div>
                             </div>
 
                             <div class="col">
                                 <div class="form-group">
                                     <label for="ListingDate" class="form-label">Listing Date <span class="required">*</span></label>
-                                    <input type="date" id="ListingDate" name="ListingDate" class="form-control" value="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d'); ?>" required>
+                                    <input type="date" id="ListingDate" name="ListingDate" class="form-control property-form-input" value="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d'); ?>" required>
                                 </div>
                             </div>
                         </div>
@@ -812,9 +952,9 @@ unset($_SESSION['message']);
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="SquareFootage" class="form-label" id="SquareFootageLabel">Square Footage (ft²) <span class="required">*</span></label>
-                                    <div class="input-group">
-                                        <i class="bi bi-arrows-fullscreen input-group-icon"></i>
-                                        <input type="number" id="SquareFootage" name="SquareFootage" class="form-control" min="1" placeholder="e.g., 2500" required>
+                                    <div class="property-input-group">
+                                        <i class="bi bi-arrows-fullscreen property-input-icon"></i>
+                                        <input type="number" id="SquareFootage" name="SquareFootage" class="form-control property-form-input" min="1" placeholder="e.g., 2500" required>
                                     </div>
                                 </div>
                             </div>
@@ -822,23 +962,24 @@ unset($_SESSION['message']);
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="LotSize" class="form-label" id="LotSizeLabel">Lot Size (acres) <span class="required">*</span></label>
-                                    <input type="number" step="0.01" id="LotSize" name="LotSize" class="form-control" min="0" placeholder="e.g., 0.25" required>
+                                    <input type="number" step="0.01" id="LotSize" name="LotSize" class="form-control property-form-input" min="0" placeholder="e.g., 0.25" required>
                                 </div>
                             </div>
 
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="ParkingType" class="form-label">Parking Type <span class="required">*</span></label>
-                                    <input type="text" id="ParkingType" name="ParkingType" class="form-control" placeholder="e.g., Garage, Driveway" required>
+                                    <input type="text" id="ParkingType" name="ParkingType" class="form-control property-form-input" placeholder="e.g., Garage, Driveway" required>
                                 </div>
                             </div>
 
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="ListingPrice" class="form-label" id="priceLabel">Listing Price <span class="required">*</span></label>
-                                    <div class="input-group">
-                                        <i class="bi bi-currency-dollar input-group-icon"></i>
-                                        <input type="number" step="0.01" id="ListingPrice" name="ListingPrice" class="form-control" min="0.01" placeholder="e.g., 500000" required>
+                                    <div class="property-input-group">
+                                        <!-- Peso Icon (Text only, no Bootstrap Icon class) -->
+                                        <span class="property-input-icon fw-bold" style="font-size: 1.1rem;">₱</span>
+                                        <input type="number" step="0.01" id="ListingPrice" name="ListingPrice" class="form-control property-form-input" min="0.01" placeholder="e.g., 500,000" required>
                                     </div>
                                 </div>
                             </div>
@@ -855,14 +996,14 @@ unset($_SESSION['message']);
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label for="SecurityDeposit" class="form-label">Security Deposit</label>
-                                <div class="input-group">
-                                    <i class="bi bi-shield-lock input-group-icon"></i>
-                                    <input type="number" step="0.01" min="0" id="SecurityDeposit" name="SecurityDeposit" class="form-control" placeholder="e.g., 50000">
+                                <div class="property-input-group">
+                                    <i class="bi bi-shield-lock property-input-icon"></i>
+                                    <input type="number" step="0.01" min="0" id="SecurityDeposit" name="SecurityDeposit" class="form-control property-form-input" placeholder="e.g., 50000">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <label for="LeaseTermMonths" class="form-label">Lease Term (months)</label>
-                                <select id="LeaseTermMonths" name="LeaseTermMonths" class="form-select">
+                                <select id="LeaseTermMonths" name="LeaseTermMonths" class="form-select property-form-select">
                                     <option value="">Select Lease Term</option>
                                     <option value="6">6 months</option>
                                     <option value="12">12 months</option>
@@ -872,7 +1013,7 @@ unset($_SESSION['message']);
                             </div>
                             <div class="col-md-3">
                                 <label for="Furnishing" class="form-label">Furnishing</label>
-                                <select id="Furnishing" name="Furnishing" class="form-select">
+                                <select id="Furnishing" name="Furnishing" class="form-select property-form-select">
                                     <option value="">Select Furnishing</option>
                                     <option value="Unfurnished">Unfurnished</option>
                                     <option value="Semi-Furnished">Semi-Furnished</option>
@@ -881,7 +1022,7 @@ unset($_SESSION['message']);
                             </div>
                             <div class="col-md-3">
                                 <label for="AvailableFrom" class="form-label">Available From</label>
-                                <input type="date" id="AvailableFrom" name="AvailableFrom" class="form-control" min="<?php echo date('Y-m-d'); ?>">
+                                <input type="date" id="AvailableFrom" name="AvailableFrom" class="form-control property-form-input" min="<?php echo date('Y-m-d'); ?>">
                             </div>
                         </div>
                     </div>
@@ -895,12 +1036,12 @@ unset($_SESSION['message']);
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="Source" class="form-label">Source (MLS Name) <span class="required">*</span></label>
-                                <input type="text" id="Source" name="Source" class="form-control" 
+                                <input type="text" id="Source" name="Source" class="form-control property-form-input" 
                                        placeholder="e.g., Regional MLS" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="MLSNumber" class="form-label">MLS Number <span class="required">*</span></label>
-                                <input type="text" id="MLSNumber" name="MLSNumber" class="form-control" 
+                                <input type="text" id="MLSNumber" name="MLSNumber" class="form-control property-form-input" 
                                        placeholder="e.g., MLS123456" required>
                             </div>
                         </div>
@@ -915,7 +1056,7 @@ unset($_SESSION['message']);
                         <div class="row">
                             <div class="col-12">
                                 <label for="ListingDescription" class="form-label">Description <span class="required">*</span></label>
-                                <textarea id="ListingDescription" name="ListingDescription" class="form-control" 
+                                <textarea id="ListingDescription" name="ListingDescription" class="form-control property-form-textarea" 
                                           rows="6" placeholder="Describe the property features, location benefits, and unique selling points..." required></textarea>
                                 <div class="form-text">Provide a detailed description to attract potential buyers or renters.</div>
                             </div>
@@ -924,22 +1065,40 @@ unset($_SESSION['message']);
 
                     <!-- Amenities Section -->
                     <div class="form-section">
-                        <h3 class="section-title">
-                            <i class="bi bi-star"></i>
-                            Amenities & Features
-                        </h3>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="section-title mb-0">
+                                <i class="bi bi-star"></i>
+                                Amenities & Features
+                            </h3>
+                            <div class="text-muted small">
+                                <span id="selectedCount">0</span> selected
+                            </div>
+                        </div>
+
                         <?php if ($amenities_result && $amenities_result->num_rows > 0) : ?>
-                            <div class="amenities-grid">
-                                <?php while ($amenity = $amenities_result->fetch_assoc()) : ?>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="amenities[]" 
-                                               value="<?php echo htmlspecialchars($amenity['amenity_id']); ?>" 
-                                               id="amenity_<?php echo htmlspecialchars($amenity['amenity_id']); ?>">
-                                        <label class="form-check-label" for="amenity_<?php echo htmlspecialchars($amenity['amenity_id']); ?>">
-                                            <?php echo htmlspecialchars($amenity['amenity_name']); ?>
-                                        </label>
-                                    </div>
-                                <?php endwhile; ?>
+                            <!-- Search Filter -->
+                            <div class="amenities-search position-relative">
+                                <i class="bi bi-search search-icon"></i>
+                                <input type="text" id="amenitySearch" class="form-control property-form-input" placeholder="Search amenities...">
+                            </div>
+
+                            <div class="amenities-container">
+                                <div class="amenities-grid" id="amenitiesList">
+                                    <?php while ($amenity = $amenities_result->fetch_assoc()) : ?>
+                                        <div class="form-check amenity-item" data-name="<?php echo strtolower(htmlspecialchars($amenity['amenity_name'])); ?>">
+                                            <input class="form-check-input amenity-checkbox" type="checkbox" name="amenities[]" 
+                                                   value="<?php echo htmlspecialchars($amenity['amenity_id']); ?>" 
+                                                   id="amenity_<?php echo htmlspecialchars($amenity['amenity_id']); ?>">
+                                            <label class="form-check-label w-100" for="amenity_<?php echo htmlspecialchars($amenity['amenity_id']); ?>">
+                                                <?php echo htmlspecialchars($amenity['amenity_name']); ?>
+                                            </label>
+                                        </div>
+                                    <?php endwhile; ?>
+                                </div>
+                                <div id="noResults" class="text-center py-4 text-muted d-none">
+                                    <i class="bi bi-emoji-frown mb-2" style="font-size: 1.5rem;"></i>
+                                    <p class="mb-0">No amenities found matching your search.</p>
+                                </div>
                             </div>
                         <?php else : ?>
                             <div class="text-center py-4">
@@ -1384,6 +1543,70 @@ document.addEventListener('DOMContentLoaded', function(){
         statusSelect.addEventListener('change', toggleRentalFields);
         // initialize on load (handles preselected value)
         toggleRentalFields();
+    }
+
+    // Amenities Search & Filter Logic
+    const amenitySearch = document.getElementById('amenitySearch');
+    const amenitiesList = document.getElementById('amenitiesList');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const noResultsMsg = document.getElementById('noResults');
+
+    if (amenitySearch && amenitiesList) {
+        const amenityItems = amenitiesList.querySelectorAll('.amenity-item');
+        const checkboxes = amenitiesList.querySelectorAll('.amenity-checkbox');
+
+        // Filter function
+        amenitySearch.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            let hasVisibleItems = false;
+            
+            // Loop through all items and hide/show based on search
+            const items = amenitiesList.querySelectorAll('.amenity-item');
+            
+            items.forEach(item => {
+                const name = item.getAttribute('data-name');
+                // Check if the amenity name STARTS with the search term
+                if (name.startsWith(searchTerm)) {
+                    item.style.display = 'flex'; // Restore flex display
+                    hasVisibleItems = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            if (noResultsMsg) {
+                if (hasVisibleItems) {
+                    noResultsMsg.classList.add('d-none');
+                } else {
+                    noResultsMsg.classList.remove('d-none');
+                }
+            }
+        });
+
+        // Update count function
+        function updateSelectedCount() {
+            const count = Array.from(checkboxes).filter(cb => cb.checked).length;
+            if (selectedCountSpan) selectedCountSpan.textContent = count;
+        }
+
+        // Add listeners to checkboxes
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateSelectedCount);
+        });
+
+        // Make the whole item clickable
+        amenityItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                // If the click is on the input or label, let them handle it
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
+                
+                const checkbox = this.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    updateSelectedCount();
+                }
+            });
+        });
     }
 });
 </script>
