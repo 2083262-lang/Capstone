@@ -57,50 +57,68 @@ $completedAt = isset($req['completed_at']) && $req['completed_at'] ? date('F j, 
 $decisionAt  = isset($req['decision_at']) && $req['decision_at'] ? date('F j, Y g:i A', strtotime($req['decision_at'])) : null;
 $decisionBy  = isset($req['decision_by']) ? trim((string)$req['decision_by']) : '';
 
+$tourType = htmlspecialchars($req['tour_type'] ?? 'private');
+$tourTypeBadge = $tourType === 'public'
+  ? "<span class='type-badge type-public'><i class='fas fa-users'></i> Public Tour</span>"
+  : "<span class='type-badge type-private'><i class='fas fa-user'></i> Private Tour</span>";
+
 $html = "
-  <div class='card border-0 mb-3'>
-    <div class='card-body p-0'>
-      <h6 class='text-muted mb-2'><i class='fas fa-home me-2'></i>PROPERTY</h6>
-      <p class='mb-3 fw-semibold'>{$address}</p>
-      
-      <h6 class='text-muted mb-2'><i class='fas fa-user me-2'></i>CLIENT</h6>
-      <div class='d-flex flex-column mb-3'>
-        <span class='fw-semibold'>{$user_name}</span>
-        <span><a href='mailto:{$user_email}' class='text-decoration-none'>{$user_email}</a></span>
-        " . ($user_phone?"<span><a href='tel:{$user_phone}' class='text-decoration-none'>{$user_phone}</a></span>":"") . "
-      </div>
-      
-      <h6 class='text-muted mb-2'><i class='fas fa-calendar me-2'></i>REQUESTED SCHEDULE</h6>
-      <p class='mb-3 fw-semibold'>{$date} at {$time}</p>
-      
-  <h6 class='text-muted mb-2'><i class='fas fa-tag me-2'></i>STATUS</h6>
-      <p class='mb-3'>" . (
+  <div class='detail-section'>
+    <div class='detail-section-label'><i class='fas fa-home'></i> Property</div>
+    <div class='detail-section-value'>{$address}</div>
+  </div>
+
+  <div class='detail-section'>
+    <div class='detail-section-label'><i class='fas fa-user'></i> Client</div>
+    <div class='detail-section-value'>
+      <div style='font-size:1.05rem;'>{$user_name}</div>
+      <div style='margin-top:0.25rem;'><a href='mailto:{$user_email}'><i class='fas fa-envelope me-1' style='font-size:0.75rem;'></i>{$user_email}</a></div>
+      " . ($user_phone ? "<div style='margin-top:0.15rem;'><a href='tel:{$user_phone}'><i class='fas fa-phone me-1' style='font-size:0.75rem;'></i>{$user_phone}</a></div>" : "") . "
+    </div>
+  </div>
+
+  <div class='detail-section'>
+    <div class='detail-section-label'><i class='fas fa-calendar'></i> Requested Schedule</div>
+    <div class='detail-section-value'>{$date} at {$time}</div>
+  </div>
+
+  <div class='detail-section'>
+    <div class='detail-section-label'><i class='fas fa-route'></i> Tour Type</div>
+    <div class='detail-section-value'>{$tourTypeBadge}</div>
+  </div>
+
+  <div class='detail-section'>
+    <div class='detail-section-label'><i class='fas fa-tag'></i> Status</div>
+    <div class='detail-section-value'>" . (
   $status === 'Confirmed' ? "<span class='status-badge status-confirmed'><i class=\"fas fa-check me-1\"></i>Confirmed</span>" :
   ($status === 'Cancelled' ? "<span class='status-badge status-cancelled'><i class=\"fas fa-ban me-1\"></i>Cancelled</span>" :
   ($status === 'Rejected' ? "<span class='status-badge status-rejected'><i class=\"fas fa-ban me-1\"></i>Rejected</span>" :
   ($status === 'Completed' ? "<span class='status-badge status-completed'><i class=\"fas fa-clipboard-check me-1\"></i>Completed</span>" :
         "<span class='status-badge status-pending'><i class=\"fas fa-clock me-1\"></i>Pending</span>")))
-      ) . "</p>
+      ) . "</div>
+  </div>
 
   " . ($confirmedAt && ($status === 'Confirmed' || $status === 'Completed')
-    ? "<div class='mb-3 small text-muted'><i class='far fa-clock me-1'></i>Confirmed at <strong>{$confirmedAt}</strong></div>"
+    ? "<div class='timestamp-info mb-3'><i class='far fa-clock me-1'></i>Confirmed at <strong>{$confirmedAt}</strong></div>"
     : "") . "
   " . ($completedAt && $status === 'Completed'
-    ? "<div class='mb-3 small text-muted'><i class='far fa-clock me-1'></i>Completed at <strong>{$completedAt}</strong></div>"
+    ? "<div class='timestamp-info mb-3'><i class='far fa-clock me-1'></i>Completed at <strong>{$completedAt}</strong></div>"
     : "") . "
       
   " . ((($status === 'Cancelled') || ($status === 'Rejected')) && $reason !== ''
-            ? "<h6 class='text-muted mb-2'><i class='fas fa-exclamation-triangle me-2'></i>REASON</h6>
-               <div class='p-3 bg-light rounded'><em>" . nl2br(htmlspecialchars($reason)) . "</em></div>"
+            ? "<div class='detail-section'>
+                 <div class='detail-section-label'><i class='fas fa-exclamation-triangle'></i> Reason</div>
+                 <div class='reason-box'><em>" . nl2br(htmlspecialchars($reason)) . "</em></div>
+               </div>"
             : "") . "
 
   " . ((($status === 'Cancelled') || ($status === 'Rejected')) && $decisionAt
-    ? "<div class='mt-2 small text-muted'><i class='far fa-clock me-1'></i>Decision at <strong>{$decisionAt}</strong>" . ($decisionBy ? " by <strong>" . htmlspecialchars(ucfirst($decisionBy)) . "</strong>" : "") . "</div>"
+    ? "<div class='timestamp-info mb-3'><i class='far fa-clock me-1'></i>Decision at <strong>{$decisionAt}</strong>" . ($decisionBy ? " by <strong>" . htmlspecialchars(ucfirst($decisionBy)) . "</strong>" : "") . "</div>"
     : "") . "
 
-      <h6 class='text-muted mb-2'><i class='fas fa-comment me-2'></i>MESSAGE</h6>
-      <div class='p-3 bg-light rounded'>{$message}</div>
-    </div>
+  <div class='detail-section'>
+    <div class='detail-section-label'><i class='fas fa-comment'></i> Client Message</div>
+    <div class='message-box'>{$message}</div>
   </div>
 ";
 

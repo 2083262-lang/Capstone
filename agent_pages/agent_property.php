@@ -4,14 +4,15 @@ include '../connection.php';
 
 // Check if the user is logged in AND their role is 'agent'
 if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'agent') {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 $agent_account_id = $_SESSION['account_id'];
+$agent_username = $_SESSION['username'];
 
-// --- PHP code to fetch agent info ---
+// --- Fetch Agent Info ---
 $agent_info_sql = "
-    SELECT a.first_name, a.username, ai.profile_picture_url
+    SELECT a.first_name, a.last_name, a.username, ai.profile_picture_url
     FROM accounts a 
     JOIN agent_information ai ON a.account_id = ai.account_id
     WHERE a.account_id = ?";
@@ -21,14 +22,16 @@ $stmt_agent_info->execute();
 $agent = $stmt_agent_info->get_result()->fetch_assoc();
 $stmt_agent_info->close();
 
-// --- SQL QUERY: Using property_log to fetch agent's properties ---
+// --- Fetch All Agent Properties with Stats ---
 $properties_sql = "
     SELECT p.*, pi.PhotoURL,
            rd.monthly_rent AS rd_monthly_rent,
            rd.security_deposit AS rd_security_deposit,
            rd.lease_term_months AS rd_lease_term_months,
            rd.furnishing AS rd_furnishing,
-           rd.available_from AS rd_available_from
+           rd.available_from AS rd_available_from,
+           (SELECT COUNT(*) FROM tour_requests tr WHERE tr.property_id = p.property_ID) as tour_count,
+           (SELECT COUNT(*) FROM property_images pimg WHERE pimg.property_ID = p.property_ID) as photo_count
     FROM property p
     JOIN property_log pl ON p.property_ID = pl.property_id
     LEFT JOIN property_images pi ON p.property_ID = pi.property_ID AND pi.SortOrder = 1
@@ -51,6 +54,11 @@ $rejected_properties = array_filter($all_properties, fn($p) => $p['approval_stat
 $pending_sold_properties = array_filter($all_properties, fn($p) => $p['Status'] == 'Pending Sold');
 $sold_properties = array_filter($all_properties, fn($p) => $p['Status'] == 'Sold');
 
+// Portfolio stats
+$total_value = array_sum(array_map(fn($p) => $p['ListingPrice'], array_filter($all_properties, fn($p) => $p['approval_status'] == 'approved' && $p['Status'] != 'Sold')));
+$total_views = array_sum(array_column($all_properties, 'ViewsCount'));
+$total_likes = array_sum(array_column($all_properties, 'Likes'));
+
 // Fetch amenities for the modal form
 $amenities_result = $conn->query("SELECT * FROM amenities ORDER BY amenity_name");
 $amenities = $amenities_result->fetch_all(MYSQLI_ASSOC);
@@ -62,210 +70,1069 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Dashboard - Your Real Estate</title>
+    <title>My Properties - HomeEstate Realty</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
     <style>
         :root {
-            --primary-color: #161209;
-            --secondary-color: #bc9e42;
-            --background-color: #f8f4f4;
-            --card-bg-color: #ffffff;
-            --border-color: #e6e6e6;
-            --text-muted: #6c757d;
-            --shadow-light: 0 2px 8px rgba(0,0,0,0.05);
-            --shadow-medium: 0 4px 12px rgba(0,0,0,0.1);
-            --shadow-heavy: 0 8px 32px rgba(0,0,0,0.15);
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --gold-dark: #b8941f;
+            --blue: #2563eb;
+            --blue-light: #3b82f6;
+            --blue-dark: #1e40af;
+
+            --black: #0a0a0a;
+            --black-light: #111111;
+            --black-lighter: #1a1a1a;
+            --black-border: #1f1f1f;
+            --white: #ffffff;
+
+            --gray-50: #f8f9fa;
+            --gray-100: #e8e9eb;
+            --gray-200: #d1d4d7;
+            --gray-300: #b8bec4;
+            --gray-400: #9ca4ab;
+            --gray-500: #7a8a99;
+            --gray-600: #5d6d7d;
+            --gray-700: #3f4b56;
+            --gray-800: #2a3138;
+            --gray-900: #1a1f24;
+
+            --card-bg: linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%);
+            --card-border: rgba(37, 99, 235, 0.15);
+            --card-hover-border: rgba(37, 99, 235, 0.35);
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--background-color);
-            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--black);
+            color: var(--white);
+            line-height: 1.6;
+            overflow-x: hidden;
         }
 
-        /* Main Content */
-        .container {
-            max-width: 1600px;
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(26, 26, 26, 0.4); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+            border-radius: 4px;
         }
-        
-        .btn-brand {
-            background-color: var(--secondary-color);
-            border-color: var(--secondary-color);
-            color: var(--primary-color);
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--gold-light), var(--gold));
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .property-content {
+            padding: 2rem;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* ===== PAGE HEADER ===== */
+        .page-header {
+            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at top right, rgba(37, 99, 235, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom left, rgba(212, 175, 55, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .page-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+        }
+
+        .page-header-inner {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--white) 0%, var(--gray-100) 50%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.25rem;
+        }
+
+        .page-header .subtitle {
+            color: var(--gray-400);
+            font-size: 0.95rem;
+        }
+
+        /* ===== KPI STAT CARDS ===== */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            padding: 1.25rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--blue), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            border-color: var(--card-hover-border);
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12),
+                        inset 0 0 20px rgba(37, 99, 235, 0.03);
+            transform: translateY(-3px);
+        }
+
+        .kpi-card:hover::before { opacity: 1; }
+
+        .kpi-card .kpi-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .kpi-icon.gold {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.2) 100%);
+            color: var(--gold);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .kpi-icon.blue {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.2) 100%);
+            color: var(--blue-light);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .kpi-icon.green {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.2) 100%);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .kpi-icon.red {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.2) 100%);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .kpi-icon.amber {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.2) 100%);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .kpi-icon.cyan {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.2) 100%);
+            color: #06b6d4;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+
+        .kpi-card .kpi-label {
+            font-size: 0.7rem;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray-400);
+            margin-bottom: 0.25rem;
         }
 
-        .btn-brand:hover {
-            background-color: #a98f3a;
-            border-color: #a98f3a;
-            color: var(--primary-color);
+        .kpi-card .kpi-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--white);
+            line-height: 1.2;
         }
 
-        .btn-primary {
-            background-color: var(--secondary-color);
-            border-color: var(--secondary-color);
-            color: var(--primary-color);
-            font-weight: 600;
+        /* ===== ALERT ===== */
+        .alert-dark-custom {
+            background: rgba(34, 197, 94, 0.06);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border-radius: 4px;
         }
-
-        .btn-primary:hover {
-            background-color: #a98f3a;
-            border-color: #a98f3a;
-            color: var(--primary-color);
+        .alert-dark-custom .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
         }
-
-        .modal-header {
-            background-color: var(--primary-color);
-            color: #fff;
+        .alert-danger-custom {
+            background: rgba(239, 68, 68, 0.06);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border-radius: 4px;
         }
-
-        .modal-header .btn-close {
+        .alert-danger-custom .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        .alert-warning-custom {
+            background: rgba(245, 158, 11, 0.06);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border-radius: 4px;
+        }
+        .alert-warning-custom .btn-close {
             filter: invert(1) grayscale(100%) brightness(200%);
         }
 
-        .form-label {
-            font-weight: 500;
-        }
-        
-        /* Box Layout Styles */
-        .stat-card {
-            background-color: var(--card-bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            display: flex;
-            align-items: center;
-        }
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.07);
-        }
-        .stat-card .icon {
-            font-size: 2.2rem;
-            padding: 1rem;
-            border-radius: 50%;
-            margin-right: 1.5rem;
-            color: var(--secondary-color);
-            background-color: rgba(188, 158, 66, 0.1);
-        }
-        .stat-card .stat-title {
-            font-size: 0.9rem;
-            color: #6c757d;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-        .stat-card .stat-number {
-            font-size: 2.25rem;
-            font-weight: 700;
-            color: var(--primary-color);
+        /* ===== TABS ===== */
+        .property-tabs {
+            margin-bottom: 2rem;
         }
 
-        .listings-tabs .nav-link { color: var(--text-color); font-weight: 600; border-bottom: 3px solid transparent; }
-        .listings-tabs .nav-link.active { color: var(--secondary-color); border-bottom-color: var(--secondary-color); background-color: transparent; }
-        
-        /* Property Card styles remain the same */
-        .property-card {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
+        .property-tabs .nav-tabs {
+            border-bottom: 1px solid rgba(37, 99, 235, 0.1);
+            gap: 0.25rem;
+        }
+
+        .property-tabs .nav-link {
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: transparent;
+            color: var(--gray-400);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.85rem 1.25rem;
+            transition: all 0.3s ease;
+            border-radius: 0;
+        }
+
+        .property-tabs .nav-link:hover {
+            color: var(--white);
+            background: rgba(37, 99, 235, 0.04);
+            border-bottom-color: rgba(37, 99, 235, 0.3);
+        }
+
+        .property-tabs .nav-link.active {
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.04);
+            border-bottom-color: var(--gold);
+        }
+
+        .property-tabs .tab-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 0.4rem;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+
+        .tab-count.green { background: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2); }
+        .tab-count.amber { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .tab-count.red { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .tab-count.cyan { background: rgba(6, 182, 212, 0.1); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.2); }
+        .tab-count.dark { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); }
+
+        /* ===== PROPERTY CARD (Dark Theme) ===== */
+        .prop-card {
+            background: rgba(26, 26, 26, 0.6);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
             overflow: hidden;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: all 0.3s ease;
             height: 100%;
-            background-color: var(--card-bg-color);
+            display: flex;
+            flex-direction: column;
         }
-        .property-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+
+        .prop-card:hover {
+            border-color: rgba(37, 99, 235, 0.3);
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12);
+            transform: translateY(-4px);
         }
-        .property-card-img-container {
+
+        .prop-card-img-wrap {
             position: relative;
             height: 200px;
+            overflow: hidden;
         }
-        .property-card-img {
+
+        .prop-card-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .prop-card:hover .prop-card-img-wrap img {
+            transform: scale(1.05);
+        }
+
+        .prop-card-img-wrap .overlay-gradient {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 60%;
+            background: linear-gradient(to top, rgba(10, 10, 10, 0.9) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .prop-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: inline-block;
+            padding: 0.25rem 0.65rem;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 2;
+        }
+
+        .prop-badge.live { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .prop-badge.pending { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .prop-badge.rejected { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .prop-badge.pending-sold { background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); }
+        .prop-badge.sold { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+        .prop-type-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 0.2rem 0.6rem;
+            border-radius: 2px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 2;
+            background: rgba(10, 10, 10, 0.7);
+            color: var(--gray-300);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+        }
+
+        .prop-price-overlay {
+            position: absolute;
+            bottom: 12px;
+            left: 14px;
+            z-index: 2;
+        }
+
+        .prop-price-overlay .price {
+            font-size: 1.3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .prop-price-overlay .price-suffix {
+            font-size: 0.75rem;
+            color: var(--gray-400);
+            font-weight: 600;
+            -webkit-text-fill-color: var(--gray-400);
+        }
+
+        .prop-card-body {
+            padding: 1.25rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .prop-card-body .prop-address {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--white);
+            margin-bottom: 0.2rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .prop-card-body .prop-location {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            margin-bottom: 0.75rem;
+        }
+        
+        .prop-card-body .prop-location i {
+            color: var(--blue-light);
+            margin-right: 0.3rem;
+        }
+
+        .prop-details-row {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-top: 1px solid rgba(37, 99, 235, 0.08);
+            border-bottom: 1px solid rgba(37, 99, 235, 0.08);
+            margin-bottom: 0.75rem;
+        }
+
+        .prop-details-row .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8rem;
+            color: var(--gray-400);
+        }
+
+        .prop-details-row .detail-item i {
+            color: var(--gold);
+            font-size: 0.75rem;
+        }
+
+        .prop-details-row .detail-item strong {
+            color: var(--white);
+            font-weight: 700;
+        }
+
+        .prop-stats-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .prop-stats-row span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .prop-stats-row span i {
+            font-size: 0.7rem;
+        }
+
+        /* Rental Info */
+        .rental-info {
+            background: rgba(37, 99, 235, 0.04);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--gray-400);
+        }
+
+        .rental-info .rental-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .rental-info .rental-tag + .rental-tag::before {
+            content: '•';
+            margin-right: 0.3rem;
+            color: var(--gray-600);
+        }
+
+        .prop-card-footer {
+            margin-top: auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .prop-card-footer .btn-view {
+            flex: 1;
+            background: transparent;
+            color: var(--blue-light);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 4px;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+
+        .prop-card-footer .btn-view:hover {
+            background: rgba(37, 99, 235, 0.08);
+            border-color: var(--blue);
+            color: var(--white);
+        }
+
+        .prop-card-footer .btn-sold {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 4px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+
+        .prop-card-footer .btn-sold:hover {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: #22c55e;
+            color: #22c55e;
+        }
+
+        .prop-card-footer .sale-badge {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 4px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+
+        .sale-badge.verifying { background: rgba(6, 182, 212, 0.08); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.2); }
+        .sale-badge.completed { background: rgba(148, 163, 184, 0.08); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); }
+
+        /* ===== ADD PROPERTY BUTTON ===== */
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+            color: var(--white);
+            border: none;
+            padding: 12px 28px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3),
+                        0 0 0 1px rgba(212, 175, 55, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-gold::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 28px rgba(212, 175, 55, 0.5),
+                        0 0 0 1px rgba(212, 175, 55, 0.5),
+                        0 0 40px rgba(212, 175, 55, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            color: var(--white);
+        }
+
+        .btn-gold:hover::before { left: 100%; }
+
+        .btn-gold i {
+            font-size: 1rem;
+            color: var(--white);
+            display: inline-flex;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+
+        .btn-gold:hover i { transform: rotate(90deg); }
+
+        .btn-gold span { display: inline-flex; align-items: center; }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--gray-500);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: rgba(37, 99, 235, 0.2);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        /* ===== DARK MODAL ===== */
+        .modal-dark .modal-content {
+            background: linear-gradient(180deg, #141414 0%, #0f0f0f 100%);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            color: var(--white);
+        }
+
+        .modal-dark .modal-header {
+            background: linear-gradient(180deg, #141414 0%, #111111 100%);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .modal-dark .modal-title {
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-dark .modal-title i { color: var(--gold); }
+
+        .modal-dark .modal-header .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        .modal-dark .modal-body { 
+            padding: 1.5rem; 
+            overflow-y: auto;
+            max-height: calc(100vh - 210px);
+        }
+
+        /* Custom Scrollbar for Modal */
+        .modal-dark .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .modal-dark .modal-body::-webkit-scrollbar-track {
+            background: rgba(26, 26, 26, 0.4);
+            border-radius: 4px;
+        }
+        
+        .modal-dark .modal-body::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dark) 100%);
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        
+        .modal-dark .modal-body::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold) 100%);
+        }
+
+        .modal-dark .modal-footer {
+            border-top: 1px solid rgba(37, 99, 235, 0.1);
+            padding: 1rem 1.5rem;
+        }
+
+        /* Modal form controls */
+        .modal-dark .form-label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--gray-300);
+        }
+
+        .modal-dark .form-control,
+        .modal-dark .form-select {
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            color: var(--white);
+            border-radius: 4px;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .modal-dark .form-control:focus,
+        .modal-dark .form-select:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            background: rgba(26, 26, 26, 0.95);
+        }
+
+        .modal-dark .form-control::placeholder { color: var(--gray-600); }
+        .modal-dark .form-text { color: var(--gray-500); }
+
+        .modal-dark .form-control.is-invalid {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+        }
+
+        .modal-dark .input-group-text {
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        /* Modal tabs */
+        .modal-dark .nav-tabs {
+            border-bottom: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        .modal-dark .nav-tabs .nav-link {
+            color: var(--gray-400);
+            border: none;
+            border-bottom: 2px solid transparent;
+            background: transparent;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.65rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .modal-dark .nav-tabs .nav-link:hover { color: var(--white); }
+
+        .modal-dark .nav-tabs .nav-link.active {
+            color: var(--gold);
+            border-bottom-color: var(--gold);
+            background: transparent;
+        }
+
+        .modal-dark .form-section-title {
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 1.25rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-dark .form-section-title::before {
+            content: '';
+            width: 3px;
+            height: 18px;
+            background: var(--gold);
+            border-radius: 2px;
+        }
+
+        .modal-dark hr { border-color: rgba(37, 99, 235, 0.1); }
+
+        /* Amenity grid */
+        .modal-dark .amenity-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .modal-dark .amenity-item .form-check-input { display: none; }
+
+        .modal-dark .amenity-item .form-check-label {
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            padding: 0.375rem 0.85rem;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 0.8rem;
+            color: var(--gray-400);
+        }
+
+        .modal-dark .amenity-item .form-check-label:hover {
+            border-color: rgba(212, 175, 55, 0.3);
+            color: var(--gold);
+        }
+
+        .modal-dark .amenity-item .form-check-input:checked + .form-check-label {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.1) 100%);
+            color: var(--gold);
+            border-color: rgba(212, 175, 55, 0.4);
+        }
+
+        /* Image preview */
+        .modal-dark .image-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .modal-dark .preview-image {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        /* Modal buttons */
+        .modal-dark .btn-secondary {
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            color: var(--gray-300);
+        }
+        .modal-dark .btn-secondary:hover {
+            background: rgba(37, 99, 235, 0.15);
+            border-color: rgba(37, 99, 235, 0.3);
+            color: var(--white);
+        }
+
+        .modal-dark .btn-brand {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            border: none;
+            color: var(--white);
+            font-weight: 700;
+        }
+        .modal-dark .btn-brand:hover {
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
+        }
+
+        .modal-dark .btn-success {
+            background: linear-gradient(135deg, #15803d, #22c55e);
+            border: none;
+            color: var(--white);
+            font-weight: 700;
+        }
+        .modal-dark .btn-success:hover {
+            box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+        }
+
+        .modal-dark .btn-outline-secondary {
+            background: transparent;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            color: var(--gray-300);
+        }
+        .modal-dark .btn-outline-secondary:hover {
+            background: rgba(37, 99, 235, 0.08);
+            border-color: rgba(37, 99, 235, 0.3);
+            color: var(--white);
+        }
+
+        .modal-dark .alert-info {
+            background: rgba(37, 99, 235, 0.06);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            color: var(--blue-light);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1400px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (max-width: 992px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .property-content { padding: 1rem; }
+            .page-header { padding: 1.5rem; }
+            .page-header-inner { flex-direction: column; text-align: center; }
+            .page-header h1 { font-size: 1.3rem; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 576px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ===== RENTAL DETAILS SECTION ===== */
+        .rental-section-modal {
+            background: rgba(37, 99, 235, 0.04);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 4px;
+            padding: 1.25rem;
+            margin-top: 1rem;
+        }
+        .rental-section-modal .rental-section-label {
+            color: var(--gold);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* ===== FLOOR IMAGES ===== */
+        .floor-upload-card {
+            background: rgba(26, 26, 26, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .floor-upload-card.error {
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        .floor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .floor-title {
+            color: var(--white);
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .floor-title i { color: var(--blue-light); }
+        .floor-badge {
+            background: rgba(37, 99, 235, 0.12);
+            color: var(--blue-light);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+        .floor-upload-area {
+            border: 2px dashed rgba(37, 99, 235, 0.25);
+            border-radius: 4px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .floor-upload-area:hover {
+            border-color: var(--blue);
+            background: rgba(37, 99, 235, 0.04);
+        }
+        .floor-upload-area.has-files {
+            border-color: rgba(34, 197, 94, 0.3);
+            background: rgba(34, 197, 94, 0.04);
+        }
+        .floor-upload-icon {
+            color: var(--blue-light);
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .floor-upload-text {
+            color: var(--gray-300);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .floor-upload-subtext {
+            color: var(--gray-500);
+            font-size: 0.75rem;
+        }
+        .floor-preview-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .floor-preview-item {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+        }
+        .floor-preview-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-        .approval-status-badge {
+        .floor-image-info {
+            display: none;
+        }
+        .remove-floor-image {
             position: absolute;
-            top: 12px;
-            right: 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            padding: 0.4em 0.8em;
-            border-radius: 50px;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
-        .property-card-body {
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-        }
-        .property-title {
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 0.25rem;
-        }
-        .property-location {
-            color: #6c757d;
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-        .property-price {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--secondary-color);
-            margin-bottom: 1rem;
-        }
-        .property-footer {
-            margin-top: auto;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border-color);
-            font-size: 0.85rem;
-            color: #6c757d;
-        }
-        .empty-tab-message {
-            background-color: var(--card-bg-color);
-            padding: 3rem;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .add-property-icon {
+            top: 2px;
+            right: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.8);
+            color: white;
+            border: none;
+            font-size: 0.7rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(45deg, var(--secondary-color-light), var(--secondary-color));
-            color: #161209;
-            font-size: 1.75rem;
-            border-radius: 50%;
-            text-decoration: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            transition: all 0.3s ease;
+            cursor: pointer;
+            padding: 0;
         }
-        .add-property-icon:hover {
-            transform: translateY(-4px) scale(1.05);
-            box-shadow: 0 8px 25px rgba(188, 158, 66, 0.4);
-            color: #a98f3a;
+        .remove-floor-image:hover {
+            background: #ef4444;
         }
-        
-        /* Redesigned Modal Styles */
-        .modal-header.modal-header-custom { background-color: var(--primary-color); color: #fff; border-bottom: 3px solid var(--secondary-color); }
-        .modal-header-custom .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
-        .nav-tabs .nav-link { color: #6c757d; border: none; border-bottom: 2px solid transparent; }
-        .nav-tabs .nav-link.active { color: var(--primary-color); border-bottom-color: var(--secondary-color); background-color: transparent; font-weight: 600; }
-        .form-section-title { font-weight: 600; color: var(--primary-color); margin-bottom: 1.5rem; }
-        .amenity-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-        .amenity-item .form-check-input { display: none; }
-        .amenity-item .form-check-label { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 0.375rem 1rem; border-radius: 50px; cursor: pointer; transition: all 0.2s ease-in-out; font-weight: 500; }
-        .amenity-item .form-check-input:checked + .form-check-label { background-color: var(--secondary-color); color: var(--primary-color); border-color: var(--secondary-color); }
-        .image-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem; }
-        .preview-image { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); }
-        .modal-footer { border-top: 1px solid var(--border-color); }
+
+        /* Featured image upload area in modal */
+        .featured-upload-area {
+            border: 2px dashed rgba(212, 175, 55, 0.25);
+            border-radius: 4px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .featured-upload-area:hover {
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.04);
+        }
+        .featured-upload-area i {
+            color: var(--gold);
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .featured-upload-area .upload-text {
+            color: var(--gray-300);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .featured-upload-area .upload-subtext {
+            color: var(--gray-500);
+            font-size: 0.8rem;
+        }
+
+        /* Label required/optional markers */
+        .form-label .required { color: #ef4444; }
+        .form-label .optional { color: #f59e0b; font-weight: 400; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -274,7 +1141,9 @@ $conn->close();
 // Prepare variables for navbar
 $agent_username = $agent['username'] ?? 'Agent';
 $agent_info = [
-    'profile_picture_url' => $agent['profile_picture_url'] ?? 'https://via.placeholder.com/40'
+    'first_name' => $agent['first_name'] ?? '',
+    'last_name' => $agent['last_name'] ?? '',
+    'profile_picture_url' => $agent['profile_picture_url'] ?? ''
 ];
 
 // Set this file as active in navbar
@@ -282,115 +1151,103 @@ $active_page = 'agent_property.php';
 include 'agent_navbar.php';
 ?>
 
-<main class="container py-4">
-        <div class="d-flex justify-content-end align-items-center mb-4">
-            <a href="#" class="add-property-icon" data-bs-toggle="modal" data-bs-target="#addPropertyModal" title="Add New Property">
-                <i class="bi bi-house-add-fill"></i>
+<main class="property-content">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-inner">
+            <div>
+                <h1><i class="bi bi-buildings me-2" style="font-size:1.5rem;"></i>My Properties</h1>
+                <p class="subtitle">Manage your property listings, track performance, and handle sales</p>
+            </div>
+            <a href="#" class="btn-gold" data-bs-toggle="modal" data-bs-target="#addPropertyModal">
+                <i class="bi bi-plus-circle-fill"></i>
+                <span>Add New Property</span>
             </a>
         </div>
-    
-    <!-- Stat Box Layout -->
-    <div class="row">
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="stat-card">
-                <div class="icon"><i class="bi bi-patch-check-fill"></i></div>
-                <div>
-                    <div class="stat-title">Active Listings</div>
-                    <div class="stat-number text-success"><?php echo count($approved_properties); ?></div>
-                </div>
-            </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon green"><i class="bi bi-patch-check-fill"></i></div>
+            <div class="kpi-label">Active Listings</div>
+            <div class="kpi-value"><?php echo count($approved_properties); ?></div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="stat-card">
-                <div class="icon"><i class="bi bi-hourglass-split"></i></div>
-                <div>
-                    <div class="stat-title">Pending Review</div>
-                    <div class="stat-number text-warning"><?php echo count($pending_properties); ?></div>
-                </div>
-            </div>
+        <div class="kpi-card">
+            <div class="kpi-icon amber"><i class="bi bi-hourglass-split"></i></div>
+            <div class="kpi-label">Pending Review</div>
+            <div class="kpi-value"><?php echo count($pending_properties); ?></div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="stat-card">
-                <div class="icon"><i class="bi bi-currency-exchange"></i></div>
-                <div>
-                    <div class="stat-title">Pending Sold</div>
-                    <div class="stat-number text-info"><?php echo count($pending_sold_properties); ?></div>
-                </div>
-            </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><i class="bi bi-x-circle-fill"></i></div>
+            <div class="kpi-label">Rejected</div>
+            <div class="kpi-value"><?php echo count($rejected_properties); ?></div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="stat-card">
-                <div class="icon"><i class="bi bi-trophy-fill"></i></div>
-                <div>
-                    <div class="stat-title">Sold Properties</div>
-                    <div class="stat-number text-dark"><?php echo count($sold_properties); ?></div>
-                </div>
-            </div>
+        <div class="kpi-card">
+            <div class="kpi-icon cyan"><i class="bi bi-currency-exchange"></i></div>
+            <div class="kpi-label">Pending Sold</div>
+            <div class="kpi-value"><?php echo count($pending_sold_properties); ?></div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon gold"><i class="bi bi-trophy-fill"></i></div>
+            <div class="kpi-label">Sold</div>
+            <div class="kpi-value"><?php echo count($sold_properties); ?></div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><i class="bi bi-collection-fill"></i></div>
+            <div class="kpi-label">Total</div>
+            <div class="kpi-value"><?php echo count($all_properties); ?></div>
         </div>
     </div>
-    
-    <div class="row mb-4">
-        <div class="col-lg-6 col-md-12">
-            <div class="stat-card">
-                <div class="icon"><i class="bi bi-x-circle-fill"></i></div>
-                <div>
-                    <div class="stat-title">Rejected Listings</div>
-                    <div class="stat-number text-danger"><?php echo count($rejected_properties); ?></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6 col-md-12">
-            <div class="stat-card">
-                <div class="icon"><i class="bi bi-collection-fill"></i></div>
-                <div>
-                    <div class="stat-title">Total Properties</div>
-                    <div class="stat-number"><?php echo count($all_properties); ?></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
+
+    <!-- Session Alert -->
     <?php if (isset($_SESSION['message'])): ?>
-        <div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
+        <div class="alert <?php echo $_SESSION['message_type'] === 'success' ? 'alert-dark-custom' : ($_SESSION['message_type'] === 'danger' ? 'alert-danger-custom' : 'alert-warning-custom'); ?> alert-dismissible fade show mb-4" role="alert">
+            <i class="bi <?php echo $_SESSION['message_type'] === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'; ?> me-2"></i>
             <?php echo $_SESSION['message']; ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         <?php unset($_SESSION['message'], $_SESSION['message_type']); ?>
     <?php endif; ?>
 
-    <div class="listings-tabs">
-        <ul class="nav nav-tabs mb-4" id="propertyStatusTabs" role="tablist">
+    <!-- Tabbed Listings -->
+    <div class="property-tabs">
+        <ul class="nav nav-tabs" id="propertyStatusTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-content" type="button" role="tab">
-                    Active <span class="badge bg-success-subtle text-success-emphasis rounded-pill"><?php echo count($approved_properties); ?></span>
+                    Active <span class="tab-count green"><?php echo count($approved_properties); ?></span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-content" type="button" role="tab">
-                    Pending Review <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill"><?php echo count($pending_properties); ?></span>
+                    Pending Review <span class="tab-count amber"><?php echo count($pending_properties); ?></span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected-content" type="button" role="tab">
-                    Rejected <span class="badge bg-danger-subtle text-danger-emphasis rounded-pill"><?php echo count($rejected_properties); ?></span>
+                    Rejected <span class="tab-count red"><?php echo count($rejected_properties); ?></span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="pending-sold-tab" data-bs-toggle="tab" data-bs-target="#pending-sold-content" type="button" role="tab">
-                    Pending Sold <span class="badge bg-info-subtle text-info-emphasis rounded-pill"><?php echo count($pending_sold_properties); ?></span>
+                    Pending Sold <span class="tab-count cyan"><?php echo count($pending_sold_properties); ?></span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="sold-tab" data-bs-toggle="tab" data-bs-target="#sold-content" type="button" role="tab">
-                    Sold <span class="badge bg-dark-subtle text-dark-emphasis rounded-pill"><?php echo count($sold_properties); ?></span>
+                    Sold <span class="tab-count dark"><?php echo count($sold_properties); ?></span>
                 </button>
             </li>
         </ul>
 
-        <div class="tab-content" id="propertyStatusTabsContent">
+        <div class="tab-content pt-4" id="propertyStatusTabsContent">
+            <!-- Active Tab -->
             <div class="tab-pane fade show active" id="approved-content" role="tabpanel">
                 <?php if (empty($approved_properties)): ?>
-                    <div class="empty-tab-message"><p class="mb-0 text-muted">No approved properties found.</p></div>
+                    <div class="empty-state">
+                        <i class="bi bi-buildings"></i>
+                        <p>No active listings yet. Start by adding your first property.</p>
+                    </div>
                 <?php else: ?>
                     <div class="row g-4">
                         <?php foreach ($approved_properties as $property): ?>
@@ -400,9 +1257,13 @@ include 'agent_navbar.php';
                 <?php endif; ?>
             </div>
 
+            <!-- Pending Tab -->
             <div class="tab-pane fade" id="pending-content" role="tabpanel">
-                 <?php if (empty($pending_properties)): ?>
-                    <div class="empty-tab-message"><p class="mb-0 text-muted">You have no properties pending review.</p></div>
+                <?php if (empty($pending_properties)): ?>
+                    <div class="empty-state">
+                        <i class="bi bi-hourglass"></i>
+                        <p>No properties pending review at this time.</p>
+                    </div>
                 <?php else: ?>
                     <div class="row g-4">
                         <?php foreach ($pending_properties as $property): ?>
@@ -412,9 +1273,13 @@ include 'agent_navbar.php';
                 <?php endif; ?>
             </div>
 
+            <!-- Rejected Tab -->
             <div class="tab-pane fade" id="rejected-content" role="tabpanel">
-                 <?php if (empty($rejected_properties)): ?>
-                    <div class="empty-tab-message"><p class="mb-0 text-muted">No rejected properties found.</p></div>
+                <?php if (empty($rejected_properties)): ?>
+                    <div class="empty-state">
+                        <i class="bi bi-x-octagon"></i>
+                        <p>No rejected properties.</p>
+                    </div>
                 <?php else: ?>
                     <div class="row g-4">
                         <?php foreach ($rejected_properties as $property): ?>
@@ -423,10 +1288,14 @@ include 'agent_navbar.php';
                     </div>
                 <?php endif; ?>
             </div>
-            
+
+            <!-- Pending Sold Tab -->
             <div class="tab-pane fade" id="pending-sold-content" role="tabpanel">
-                 <?php if (empty($pending_sold_properties)): ?>
-                    <div class="empty-tab-message"><p class="mb-0 text-muted">No properties with pending sale.</p></div>
+                <?php if (empty($pending_sold_properties)): ?>
+                    <div class="empty-state">
+                        <i class="bi bi-shield-check"></i>
+                        <p>No properties with pending sale verification.</p>
+                    </div>
                 <?php else: ?>
                     <div class="row g-4">
                         <?php foreach ($pending_sold_properties as $property): ?>
@@ -435,10 +1304,14 @@ include 'agent_navbar.php';
                     </div>
                 <?php endif; ?>
             </div>
-            
+
+            <!-- Sold Tab -->
             <div class="tab-pane fade" id="sold-content" role="tabpanel">
-                 <?php if (empty($sold_properties)): ?>
-                    <div class="empty-tab-message"><p class="mb-0 text-muted">No sold properties found.</p></div>
+                <?php if (empty($sold_properties)): ?>
+                    <div class="empty-state">
+                        <i class="bi bi-trophy"></i>
+                        <p>No sold properties yet. Your first sale will appear here.</p>
+                    </div>
                 <?php else: ?>
                     <div class="row g-4">
                         <?php foreach ($sold_properties as $property): ?>
@@ -451,61 +1324,188 @@ include 'agent_navbar.php';
     </div>
 </main>
 
-<div class="modal fade" id="addPropertyModal" tabindex="-1" aria-labelledby="addPropertyModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+<!-- ===== ADD PROPERTY MODAL ===== -->
+<div class="modal fade modal-dark" id="addPropertyModal" tabindex="-1" aria-labelledby="addPropertyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header modal-header-custom">
-                <h5 class="modal-title" id="addPropertyModalLabel"><i class="bi bi-house-add-fill me-2"></i>Create New Property Listing</h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="addPropertyModalLabel"><i class="bi bi-house-add-fill"></i> Create New Listing</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="add_property_process.php" method="POST" enctype="multipart/form-data">
+            <form action="add_property_process.php" method="POST" enctype="multipart/form-data" id="addPropertyForm">
                 <div class="modal-body">
                     <ul class="nav nav-tabs" id="addPropertyTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1-content" type="button" role="tab"><b>Step 1:</b> Details</button>
+                            <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1-content" type="button" role="tab"><b>Step 1:</b> Basic Info</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2-content" type="button" role="tab"><b>Step 2:</b> Features</button>
+                            <button class="nav-link" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2-content" type="button" role="tab"><b>Step 2:</b> Details</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3-content" type="button" role="tab"><b>Step 3:</b> Media</button>
+                            <button class="nav-link" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3-content" type="button" role="tab"><b>Step 3:</b> Features</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="step4-tab" data-bs-toggle="tab" data-bs-target="#step4-content" type="button" role="tab"><b>Step 4:</b> Media</button>
                         </li>
                     </ul>
 
                     <div class="tab-content py-4" id="addPropertyTabsContent">
+
+                        <!-- ========== STEP 1: BASIC INFORMATION ========== -->
                         <div class="tab-pane fade show active" id="step1-content" role="tabpanel">
                             <h5 class="form-section-title">Property Location</h5>
                             <div class="row g-3">
-                                <div class="col-12"><label class="form-label">Street Address *</label><input type="text" class="form-control" name="StreetAddress" required></div>
-                                <div class="col-md-4"><label class="form-label">City *</label><input type="text" class="form-control" name="City" required></div>
-                                <div class="col-md-4"><label class="form-label">County</label><input type="text" class="form-control" name="County"></div>
-                                <div class="col-md-2"><label class="form-label">State (2-char) *</label><input type="text" class="form-control" name="State" required maxlength="2"></div>
-                                <div class="col-md-2"><label class="form-label">ZIP *</label><input type="text" class="form-control" name="ZIP" required></div>
-                            </div>
-                            <hr class="my-4">
-                            <h5 class="form-section-title">Listing Information</h5>
-                            <div class="row g-3">
-                                <div class="col-md-4"><label class="form-label">Property Type *</label><select class="form-select" name="PropertyType" required><option selected disabled value="">Choose...</option><option>Single-Family Home</option><option>Condominium</option><option>Townhouse</option><option>Multi-Family</option><option>Commercial</option><option>Land</option></select></div>
-                                <div class="col-md-4"><label class="form-label">Listing Price (PHP) *</label><input type="number" class="form-control" name="ListingPrice" step="0.01" min="0" required></div>
-                                <div class="col-md-4"><label class="form-label">Listing Status *</label><select class="form-select" name="Status" required><option selected disabled value="">Choose...</option><option>For Sale</option><option>For Rent</option></select></div>
-                                
-                                <!-- ADDED MISSING INPUTS HERE -->
-                                <div class="col-md-6"><label class="form-label">Source (e.g., Local MLS)*</label><input type="text" class="form-control" name="Source" required></div>
-                                <div class="col-md-6"><label class="form-label">MLS Number*</label><input type="text" class="form-control" name="MLSNumber" required></div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Street Address <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="StreetAddress" placeholder="e.g. 123 Main Street" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">City <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="City" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">State (2-char) <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="State" required maxlength="2" pattern="[A-Za-z]{2}" title="Enter a 2-character state abbreviation" placeholder="PH">
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label">ZIP <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="ZIP" required pattern="\d{4}" maxlength="4" inputmode="numeric" title="Enter a 4-digit PH postal code" placeholder="ZIP">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">County <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="County" placeholder="County name" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Property Type <span class="required">*</span></label>
+                                    <select class="form-select" name="PropertyType" id="modalPropertyType" required>
+                                        <option selected disabled value="">Select Property Type</option>
+                                        <option value="Single-Family Home">Single-Family Home</option>
+                                        <option value="Condominium">Condominium</option>
+                                        <option value="Townhouse">Townhouse</option>
+                                        <option value="Multi-Family">Multi-Family</option>
+                                        <option value="Commercial">Commercial</option>
+                                        <option value="Land">Land</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Status <span class="required">*</span></label>
+                                    <select class="form-select" name="Status" id="modalStatus" required>
+                                        <option selected disabled value="">Select Status</option>
+                                        <option value="For Sale">For Sale</option>
+                                        <option value="For Rent">For Rent</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- ========== STEP 2: PROPERTY DETAILS ========== -->
                         <div class="tab-pane fade" id="step2-content" role="tabpanel">
-                            <h5 class="form-section-title">Property Specifications</h5>
+                            <h5 class="form-section-title">Property Details</h5>
                             <div class="row g-3">
-                                <div class="col-md-3"><label class="form-label">Bedrooms</label><input type="number" class="form-control" name="Bedrooms" min="0" value="0"></div>
-                                <div class="col-md-3"><label class="form-label">Bathrooms</label><input type="number" class="form-control" name="Bathrooms" step="0.5" min="0" value="0"></div>
-                                <div class="col-md-3"><label class="form-label">Square Footage</label><input type="number" class="form-control" name="SquareFootage" min="0"></div>
-                                <div class="col-md-3"><label class="form-label">Lot Size (acres)</label><input type="number" class="form-control" name="LotSize" step="0.01" min="0"></div>
-                                <div class="col-md-6"><label class="form-label">Year Built</label><input type="number" class="form-control" name="YearBuilt" min="1800" max="<?php echo date('Y'); ?>"></div>
-                                <div class="col-md-6"><label class="form-label">Parking Type</label><input type="text" class="form-control" name="ParkingType"></div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Year Built <span class="required">*</span></label>
+                                    <input type="number" class="form-control" name="YearBuilt" min="1800" max="<?php echo date('Y') + 5; ?>" placeholder="e.g., 2020" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Floors <span class="required">*</span></label>
+                                    <input type="number" class="form-control" name="NumberOfFloors" id="modalNumberOfFloors" min="1" max="10" value="1" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Bedrooms <span class="required">*</span></label>
+                                    <input type="number" class="form-control" name="Bedrooms" min="0" placeholder="e.g., 3" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Bathrooms <span class="required">*</span></label>
+                                    <input type="number" class="form-control" name="Bathrooms" step="0.5" min="0" placeholder="e.g., 2.5" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Listing Date <span class="required">*</span></label>
+                                    <input type="date" class="form-control" name="ListingDate" value="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d'); ?>" required>
+                                </div>
+                            </div>
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-3">
+                                    <label class="form-label" id="modalSquareFootageLabel">Square Footage (ft²) <span class="required">*</span></label>
+                                    <input type="number" class="form-control" name="SquareFootage" id="modalSquareFootage" min="1" placeholder="e.g., 2500" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label" id="modalLotSizeLabel">Lot Size (acres) <span class="required">*</span></label>
+                                    <input type="number" class="form-control" name="LotSize" id="modalLotSize" step="0.01" min="0" placeholder="e.g., 0.25" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Parking Type <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="ParkingType" placeholder="e.g., Garage, Driveway" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label" id="modalPriceLabel">Listing Price <span class="required">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₱</span>
+                                        <input type="number" class="form-control" name="ListingPrice" id="modalListingPrice" step="0.01" min="0.01" placeholder="e.g., 500000" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+                            <h5 class="form-section-title">MLS Information</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Source (MLS Name) <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="Source" placeholder="e.g., Regional MLS" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">MLS Number <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="MLSNumber" placeholder="e.g., MLS123456" required>
+                                </div>
+                            </div>
+
+                            <!-- Rental Details (shown when Status = For Rent) -->
+                            <div class="rental-section-modal d-none" id="modalRentalSection">
+                                <div class="rental-section-label"><i class="bi bi-key-fill"></i> Rental Details</div>
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Security Deposit</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">₱</span>
+                                            <input type="number" class="form-control" name="SecurityDeposit" id="modalSecurityDeposit" step="0.01" min="0" placeholder="e.g., 50000">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Lease Term (months)</label>
+                                        <select class="form-select" name="LeaseTermMonths" id="modalLeaseTermMonths">
+                                            <option value="">Select Lease Term</option>
+                                            <option value="6">6 months</option>
+                                            <option value="12">12 months</option>
+                                            <option value="18">18 months</option>
+                                            <option value="24">24 months</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Furnishing</label>
+                                        <select class="form-select" name="Furnishing" id="modalFurnishing">
+                                            <option value="">Select Furnishing</option>
+                                            <option value="Unfurnished">Unfurnished</option>
+                                            <option value="Semi-Furnished">Semi-Furnished</option>
+                                            <option value="Fully Furnished">Fully Furnished</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Available From</label>
+                                        <input type="date" class="form-control" name="AvailableFrom" id="modalAvailableFrom" min="<?php echo date('Y-m-d'); ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ========== STEP 3: DESCRIPTION & AMENITIES ========== -->
+                        <div class="tab-pane fade" id="step3-content" role="tabpanel">
+                            <h5 class="form-section-title">Property Description</h5>
+                            <div class="mb-4">
+                                <label class="form-label">Listing Description <span class="required">*</span></label>
+                                <textarea class="form-control" name="ListingDescription" rows="5" placeholder="Describe the property features, location benefits, and unique selling points..." required></textarea>
+                                <div class="form-text">Provide a detailed description to attract potential buyers or renters.</div>
                             </div>
                             <hr class="my-4">
-                            <h5 class="form-section-title">Amenities</h5>
+                            <h5 class="form-section-title">Amenities & Features</h5>
                             <div class="amenity-grid">
                                 <?php if (!empty($amenities)): ?>
                                     <?php foreach ($amenities as $amenity): ?>
@@ -515,112 +1515,116 @@ include 'agent_navbar.php';
                                         </div>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <p class="text-muted">No amenities available to select.</p>
+                                    <p style="color: var(--gray-500);">No amenities available to select.</p>
                                 <?php endif; ?>
                             </div>
                         </div>
 
-                        <div class="tab-pane fade" id="step3-content" role="tabpanel">
-                            <h5 class="form-section-title">Property Description</h5>
-                            <div class="mb-4">
-                                <label class="form-label">Listing Description *</label>
-                                <textarea class="form-control" name="ListingDescription" rows="5" placeholder="Describe the key features and highlights of the property..." required></textarea>
+                        <!-- ========== STEP 4: MEDIA ========== -->
+                        <div class="tab-pane fade" id="step4-content" role="tabpanel">
+                            <h5 class="form-section-title"><i class="bi bi-images me-2" style="color: var(--gold);"></i>Featured Property Photos</h5>
+                            <p class="form-text mb-3">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Upload general property images (exterior, interior, backyard, frontyard, etc.). Maximum 10 images, 10MB per file.
+                            </p>
+                            <div class="featured-upload-area" id="featuredUploadArea" onclick="document.getElementById('property_photos').click()">
+                                <i class="bi bi-cloud-upload"></i>
+                                <div class="upload-text">Click to upload featured images</div>
+                                <div class="upload-subtext">JPG, PNG, GIF supported &bull; Max 10 images</div>
                             </div>
+                            <input type="file" id="property_photos" name="property_photos[]" class="d-none" accept="image/jpeg,image/png,image/gif" multiple required>
+                            <div class="image-preview-grid mt-3" id="featuredPreviewContainer"></div>
+
                             <hr class="my-4">
-                            <h5 class="form-section-title">Property Photos</h5>
-                            <div>
-                                <label for="propertyImages" class="form-label">Upload Images *</label>
-                                <input class="form-control" type="file" id="propertyImages" name="propertyImages[]" multiple required accept="image/*">
-                                <div class="form-text">You can select multiple images. The first image selected will be the main photo.</div>
-                                <div class="image-preview-grid mt-3" id="imagePreviewContainer"></div>
+                            <h5 class="form-section-title"><i class="bi bi-layers me-2" style="color: var(--blue-light);"></i>Floor Images</h5>
+                            <p class="form-text mb-3">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Upload images for each floor of the property. The number of floors is based on the "Floors" field in Step 2.
+                            </p>
+                            <div id="modalFloorImagesContainer"></div>
+                            <div class="text-center mt-3" id="modalNoFloorsMessage" style="display:none;">
+                                <i class="bi bi-building" style="font-size: 1.5rem; color: var(--gray-500);"></i>
+                                <p style="color: var(--gray-500);" class="mt-2 mb-0">Set the number of floors in Step 2 to enable floor-specific image uploads.</p>
                             </div>
                         </div>
+
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-outline-secondary btn-prev d-none">Previous</button>
                     <button type="button" class="btn btn-brand btn-next">Next</button>
-                    <button type="submit" class="btn btn-success btn-submit d-none">Submit for Approval</button>
+                    <button type="submit" class="btn btn-success btn-submit d-none"><i class="bi bi-send-fill me-1"></i>Submit for Approval</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Mark as Sold Modal -->
-<div class="modal fade" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
+<!-- ===== MARK AS SOLD MODAL ===== -->
+<div class="modal fade modal-dark" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header modal-header-custom">
-                <h5 class="modal-title" id="markSoldModalLabel">
-                    <i class="fas fa-check-circle me-2"></i>Mark Property as Sold
-                </h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="markSoldModalLabel"><i class="bi bi-check-circle-fill"></i> Mark Property as Sold</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="markSoldForm" enctype="multipart/form-data">
                 <div class="modal-body">
                     <div class="alert alert-info mb-4">
-                        <i class="fas fa-info-circle me-2"></i>
+                        <i class="bi bi-info-circle-fill me-2"></i>
                         <strong>Sale Verification Process:</strong> Submit documents for admin review. Your property will be marked as sold once verified.
                     </div>
                     
                     <input type="hidden" id="propertyId" name="property_id">
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Property:</label>
-                        <p id="propertyTitle" class="mb-0 text-muted"></p>
+                        <label class="form-label">Property</label>
+                        <p id="propertyTitle" class="mb-0" style="color: var(--gold); font-weight: 600;"></p>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="salePrice" class="form-label">Final Sale Price <span class="text-danger">*</span></label>
+                            <label for="salePrice" class="form-label">Final Sale Price <span style="color: #ef4444;">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
-                                <input type="number" class="form-control" id="salePrice" name="sale_price" 
-                                       step="0.01" min="0" required>
+                                <input type="number" class="form-control" id="salePrice" name="sale_price" step="0.01" min="0" required>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="saleDate" class="form-label">Sale Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="saleDate" name="sale_date" 
-                                   max="<?php echo date('Y-m-d'); ?>" required>
+                            <label for="saleDate" class="form-label">Sale Date <span style="color: #ef4444;">*</span></label>
+                            <input type="date" class="form-control" id="saleDate" name="sale_date" max="<?php echo date('Y-m-d'); ?>" required>
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="buyerName" class="form-label">Buyer Name <span class="text-danger">*</span></label>
+                        <label for="buyerName" class="form-label">Buyer Name <span style="color: #ef4444;">*</span></label>
                         <input type="text" class="form-control" id="buyerName" name="buyer_name" required>
                     </div>
                     
                     <div class="mb-3">
                         <label for="buyerContact" class="form-label">Buyer Contact</label>
-                        <input type="text" class="form-control" id="buyerContact" name="buyer_contact" 
-                               placeholder="Phone number or email">
+                        <input type="text" class="form-control" id="buyerContact" name="buyer_contact" placeholder="Phone number or email">
                     </div>
                     
                     <div class="mb-3">
                         <label for="saleDocuments" class="form-label">
-                            Sale Documents <span class="text-danger">*</span>
-                            <small class="text-muted d-block">Upload deed of sale, contracts, or other proof documents</small>
+                            Sale Documents <span style="color: #ef4444;">*</span>
+                            <small class="d-block" style="color: var(--gray-500); font-weight:400;">Upload deed of sale, contracts, or other proof documents</small>
                         </label>
-                        <input type="file" class="form-control" id="saleDocuments" name="sale_documents[]" 
-                               multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required>
-                        <div class="form-text">
-                            Allowed formats: PDF, Images (JPG, PNG), Word documents. Max 10MB per file.
-                        </div>
+                        <input type="file" class="form-control" id="saleDocuments" name="sale_documents[]" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required>
+                        <div class="form-text">Allowed formats: PDF, Images (JPG, PNG), Word documents. Max 10MB per file.</div>
                     </div>
                     
                     <div class="mb-3">
                         <label for="additionalNotes" class="form-label">Additional Notes</label>
-                        <textarea class="form-control" id="additionalNotes" name="additional_notes" 
-                                  rows="3" placeholder="Any additional information about the sale..."></textarea>
+                        <textarea class="form-control" id="additionalNotes" name="additional_notes" rows="3" placeholder="Any additional information about the sale..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-success">
-                        <i class="fas fa-upload me-1"></i>Submit for Verification
+                        <i class="bi bi-upload me-1"></i>Submit for Verification
                     </button>
                 </div>
             </form>
@@ -629,9 +1633,11 @@ include 'agent_navbar.php';
 </div>
 
 <?php include 'logout_agent_modal.php'; ?>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // ===== ADD PROPERTY MODAL =====
     const addPropertyModal = document.getElementById('addPropertyModal');
     if (addPropertyModal) {
         const tabTriggers = addPropertyModal.querySelectorAll('#addPropertyTabs button');
@@ -641,14 +1647,165 @@ document.addEventListener('DOMContentLoaded', function () {
         const btnSubmit = addPropertyModal.querySelector('.btn-submit');
         let currentTab = 0;
 
+        // --- Status / Rental Toggle ---
+        const statusSelect = document.getElementById('modalStatus');
+        const rentalSection = document.getElementById('modalRentalSection');
+        const priceLabel = document.getElementById('modalPriceLabel');
+        const priceInput = document.getElementById('modalListingPrice');
+        const sqftInput = document.getElementById('modalSquareFootage');
+        const lotInput = document.getElementById('modalLotSize');
+        const sqftLabel = document.getElementById('modalSquareFootageLabel');
+        const lotLabel = document.getElementById('modalLotSizeLabel');
+        const rentalFields = [
+            document.getElementById('modalSecurityDeposit'),
+            document.getElementById('modalLeaseTermMonths'),
+            document.getElementById('modalFurnishing'),
+            document.getElementById('modalAvailableFrom')
+        ];
+
+        function toggleRentalFields() {
+            const isForRent = statusSelect && statusSelect.value === 'For Rent';
+            if (isForRent) {
+                rentalSection.classList.remove('d-none');
+                if (priceLabel) priceLabel.innerHTML = 'Monthly Rent <span class="required">*</span>';
+                if (priceInput) priceInput.placeholder = 'e.g., 25000';
+                rentalFields.forEach(el => { if (el) el.setAttribute('required', 'required'); });
+                // Make sqft and lot optional for rentals
+                if (sqftInput) { sqftInput.removeAttribute('required'); }
+                if (lotInput) { lotInput.removeAttribute('required'); }
+                if (sqftLabel) sqftLabel.innerHTML = 'Square Footage (ft²) <span class="optional">(Optional)</span>';
+                if (lotLabel) lotLabel.innerHTML = 'Lot Size (acres) <span class="optional">(Optional)</span>';
+            } else {
+                rentalSection.classList.add('d-none');
+                if (priceLabel) priceLabel.innerHTML = 'Listing Price <span class="required">*</span>';
+                if (priceInput) priceInput.placeholder = 'e.g., 500000';
+                rentalFields.forEach(el => { if (el) el.removeAttribute('required'); });
+                if (sqftInput) { sqftInput.setAttribute('required', 'required'); }
+                if (lotInput) { lotInput.setAttribute('required', 'required'); }
+                if (sqftLabel) sqftLabel.innerHTML = 'Square Footage (ft²) <span class="required">*</span>';
+                if (lotLabel) lotLabel.innerHTML = 'Lot Size (acres) <span class="required">*</span>';
+            }
+        }
+        if (statusSelect) {
+            statusSelect.addEventListener('change', toggleRentalFields);
+            toggleRentalFields();
+        }
+
+        // --- Floor Images Management ---
+        const floorsInput = document.getElementById('modalNumberOfFloors');
+        const floorContainer = document.getElementById('modalFloorImagesContainer');
+        const noFloorsMsg = document.getElementById('modalNoFloorsMessage');
+        let floorFileInputs = {};
+
+        function getFloorLabel(n) {
+            const labels = {1:'First Floor',2:'Second Floor',3:'Third Floor',4:'Fourth Floor',5:'Fifth Floor',6:'Sixth Floor',7:'Seventh Floor',8:'Eighth Floor',9:'Ninth Floor',10:'Tenth Floor'};
+            return labels[n] || ('Floor ' + n);
+        }
+
+        function generateFloorSections(count) {
+            floorContainer.innerHTML = '';
+            floorFileInputs = {};
+            if (count < 1) { noFloorsMsg.style.display = 'block'; return; }
+            noFloorsMsg.style.display = 'none';
+            for (let i = 1; i <= count; i++) {
+                const card = document.createElement('div');
+                card.className = 'floor-upload-card';
+                card.innerHTML = `
+                    <div class="floor-header">
+                        <div class="floor-title"><i class="bi bi-building"></i>${getFloorLabel(i)}</div>
+                        <div class="floor-badge">Floor ${i}</div>
+                    </div>
+                    <div class="floor-upload-area" id="floorUploadArea_${i}" onclick="document.getElementById('floor_images_${i}').click()">
+                        <i class="bi bi-cloud-arrow-up floor-upload-icon"></i>
+                        <div class="floor-upload-text">Click to upload images for ${getFloorLabel(i)}</div>
+                        <div class="floor-upload-subtext">Max 10 images per floor &bull; JPG, PNG, GIF (10MB each)</div>
+                    </div>
+                    <input type="file" id="floor_images_${i}" name="floor_images_${i}[]" class="d-none" accept="image/jpeg,image/png,image/gif" multiple>
+                    <div class="floor-preview-grid" id="floorPreviewGrid_${i}"></div>
+                `;
+                floorContainer.appendChild(card);
+                const input = document.getElementById('floor_images_' + i);
+                floorFileInputs[i] = input;
+                input.addEventListener('change', function(e) { handleFloorUpload(i, e.target.files); });
+            }
+        }
+
+        function handleFloorUpload(floor, files) {
+            const area = document.getElementById('floorUploadArea_' + floor);
+            const grid = document.getElementById('floorPreviewGrid_' + floor);
+            if (!files || files.length === 0) return;
+            if (files.length > 10) alert('Maximum 10 images per floor. Only the first 10 will be used.');
+            area.classList.add('has-files');
+            grid.innerHTML = '';
+            Array.from(files).slice(0, 10).forEach((file, idx) => {
+                if (file.size > 10 * 1024 * 1024) { alert(file.name + ' exceeds 10MB.'); return; }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const item = document.createElement('div');
+                    item.className = 'floor-preview-item';
+                    item.innerHTML = `<img src="${e.target.result}" class="floor-preview-image" alt=""><button type="button" class="remove-floor-image" onclick="removeFloorImage(${floor},${idx})" title="Remove"><i class="bi bi-x"></i></button>`;
+                    grid.appendChild(item);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        window.removeFloorImage = function(floor, idx) {
+            const input = floorFileInputs[floor];
+            if (!input) return;
+            const dt = new DataTransfer();
+            Array.from(input.files).forEach((f, i) => { if (i !== idx) dt.items.add(f); });
+            input.files = dt.files;
+            handleFloorUpload(floor, input.files);
+            if (dt.files.length === 0) {
+                document.getElementById('floorUploadArea_' + floor).classList.remove('has-files');
+            }
+        };
+
+        if (floorsInput) {
+            floorsInput.addEventListener('input', function() {
+                const c = parseInt(this.value) || 0;
+                if (c >= 1 && c <= 10) generateFloorSections(c);
+                else if (c > 10) { this.value = 10; generateFloorSections(10); }
+                else generateFloorSections(0);
+            });
+            generateFloorSections(parseInt(floorsInput.value) || 1);
+        }
+
+        // --- Featured Photos Preview ---
+        const featuredInput = document.getElementById('property_photos');
+        const featuredPreview = document.getElementById('featuredPreviewContainer');
+        const featuredArea = document.getElementById('featuredUploadArea');
+        featuredInput.addEventListener('change', function(e) {
+            featuredPreview.innerHTML = '';
+            if (e.target.files && e.target.files.length > 0) {
+                featuredArea.style.display = 'none';
+                Array.from(e.target.files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(ev) {
+                        const img = document.createElement('img');
+                        img.src = ev.target.result;
+                        img.classList.add('preview-image');
+                        featuredPreview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                featuredArea.style.display = '';
+            }
+        });
+
+        // --- Step Validation ---
         function validateStep(stepIndex) {
             let isValid = true;
-            const currentPane = tabPanes[stepIndex];
-            const requiredInputs = currentPane.querySelectorAll('[required]');
-            
-            requiredInputs.forEach(input => {
+            const pane = tabPanes[stepIndex];
+            // Only validate visible required inputs (skip hidden rental fields)
+            pane.querySelectorAll('[required]').forEach(input => {
                 input.classList.remove('is-invalid');
-                if (!input.value.trim()) {
+                // Skip if parent section is hidden
+                const rentalParent = input.closest('.rental-section-modal');
+                if (rentalParent && rentalParent.classList.contains('d-none')) return;
+                if (!input.value || !input.value.trim()) {
                     isValid = false;
                     input.classList.add('is-invalid');
                 }
@@ -663,7 +1820,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         btnNext.addEventListener('click', function () {
-            if (!validateStep(currentTab)) { return; }
+            if (!validateStep(currentTab)) return;
             if (currentTab < tabTriggers.length - 1) {
                 currentTab++;
                 new bootstrap.Tab(tabTriggers[currentTab]).show();
@@ -684,43 +1841,86 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
-        const imageInput = document.getElementById('propertyImages');
-        const previewContainer = document.getElementById('imagePreviewContainer');
-        
-        imageInput.addEventListener('change', function(event) {
-            previewContainer.innerHTML = '';
-            if (event.target.files) {
-                Array.from(event.target.files).forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.classList.add('preview-image');
-                        previewContainer.appendChild(img);
-                    }
-                    reader.readAsDataURL(file);
-                });
+        // --- Form Submit Validation ---
+        const addForm = document.getElementById('addPropertyForm');
+        addForm.addEventListener('submit', function(e) {
+            // Remove previous alerts
+            addPropertyModal.querySelectorAll('.alert-modal-error').forEach(a => a.remove());
+
+            const errors = [];
+
+            // Check featured photos
+            if (!featuredInput.files || featuredInput.files.length === 0) {
+                errors.push('Please upload at least one featured property photo.');
+            }
+
+            // Check rental fields client-side
+            const isRental = statusSelect && statusSelect.value === 'For Rent';
+            if (isRental) {
+                const dep = document.getElementById('modalSecurityDeposit');
+                const lease = document.getElementById('modalLeaseTermMonths');
+                const furn = document.getElementById('modalFurnishing');
+                const avail = document.getElementById('modalAvailableFrom');
+                const rent = document.getElementById('modalListingPrice');
+
+                if (!dep.value || parseFloat(dep.value) < 0) errors.push('Security Deposit must be 0 or more.');
+                if (!lease.value) errors.push('Lease Term is required for rentals.');
+                if (!furn.value) errors.push('Furnishing is required for rentals.');
+                if (!avail.value) errors.push('Available From date is required for rentals.');
+
+                // Deposit cap
+                const rentVal = parseFloat(rent.value) || 0;
+                const depVal = parseFloat(dep.value) || 0;
+                if (rentVal > 0 && depVal > rentVal * 12) {
+                    errors.push('Security Deposit cannot exceed 12 months of rent (₱' + (rentVal * 12).toFixed(2) + ').');
+                }
+            }
+
+            // Check floor images
+            const floorCount = parseInt(floorsInput.value) || 0;
+            if (floorCount > 0) {
+                const missing = [];
+                for (let i = 1; i <= floorCount; i++) {
+                    const fi = document.getElementById('floor_images_' + i);
+                    if (!fi || !fi.files || fi.files.length === 0) missing.push(getFloorLabel(i));
+                }
+                if (missing.length > 0) errors.push('Please upload at least one image for: ' + missing.join(', ') + '.');
+            }
+
+            if (errors.length > 0) {
+                e.preventDefault();
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-danger-custom alert-dismissible fade show alert-modal-error';
+                alert.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>' + errors.map(x => '&bull; ' + x).join('<br>') + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                const body = addPropertyModal.querySelector('.modal-body');
+                body.insertBefore(alert, body.firstChild);
+                alert.scrollIntoView({behavior: 'smooth', block: 'center'});
             }
         });
 
+        // --- Modal Reset ---
         addPropertyModal.addEventListener('hidden.bs.modal', function () {
-            // Reset form and tabs when modal is closed
-            addPropertyModal.querySelector('form').reset();
-            previewContainer.innerHTML = '';
+            addForm.reset();
+            featuredPreview.innerHTML = '';
+            featuredArea.style.display = '';
+            generateFloorSections(1);
+            addPropertyModal.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            addPropertyModal.querySelectorAll('.alert-modal-error').forEach(a => a.remove());
+            toggleRentalFields();
+            currentTab = 0;
             new bootstrap.Tab(tabTriggers[0]).show();
         });
 
         updateButtons();
     }
 
-    // Mark as Sold Modal Functionality
+    // ===== MARK AS SOLD MODAL =====
     const markSoldModal = document.getElementById('markSoldModal');
     if (markSoldModal) {
         markSoldModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const propertyId = button.getAttribute('data-property-id');
             const propertyTitle = button.getAttribute('data-property-title');
-            
             document.getElementById('propertyId').value = propertyId;
             document.getElementById('propertyTitle').textContent = propertyTitle;
         });
@@ -732,7 +1932,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Submitting...';
+            submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i>Submitting...';
             
             const formData = new FormData(this);
             
@@ -743,38 +1943,28 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Show success message
                     const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.className = 'alert alert-dark-custom alert-dismissible fade show';
                     alertDiv.innerHTML = `
-                        <i class="fas fa-check-circle me-2"></i>
+                        <i class="bi bi-check-circle-fill me-2"></i>
                         ${data.message}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     `;
-                    
-                    // Insert alert at top of page (robust container selection)
-                    const container = document.querySelector('main.container') || document.querySelector('.container') || document.body;
+                    const container = document.querySelector('main.property-content') || document.body;
                     container.insertBefore(alertDiv, container.firstChild);
                     
-                    // Close modal and reset form
                     bootstrap.Modal.getInstance(markSoldModal).hide();
                     markSoldForm.reset();
                     
-                    // Reload page after short delay to show updated status
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
+                    setTimeout(() => window.location.reload(), 2000);
                 } else {
-                    // Show error message
                     const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                    alertDiv.className = 'alert alert-danger-custom alert-dismissible fade show';
                     alertDiv.innerHTML = `
-                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
                         ${data.message}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     `;
-                    
-                    // Insert alert in modal body
                     const modalBody = markSoldModal.querySelector('.modal-body');
                     modalBody.insertBefore(alertDiv, modalBody.firstChild);
                 }
@@ -782,13 +1972,12 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 console.error('Error:', error);
                 const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                alertDiv.className = 'alert alert-danger-custom alert-dismissible fade show';
                 alertDiv.innerHTML = `
-                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     An error occurred while submitting. Please try again.
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 `;
-                
                 const modalBody = markSoldModal.querySelector('.modal-body');
                 modalBody.insertBefore(alertDiv, modalBody.firstChild);
             })
@@ -799,7 +1988,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         markSoldModal.addEventListener('hidden.bs.modal', function () {
-            // Clear any alerts and reset form
             const alerts = this.querySelectorAll('.alert');
             alerts.forEach(alert => alert.remove());
             markSoldForm.reset();
