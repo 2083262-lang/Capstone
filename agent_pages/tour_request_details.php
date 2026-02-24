@@ -54,6 +54,7 @@ $reason = isset($req['decision_reason']) ? trim($req['decision_reason']) : '';
 
 $confirmedAt = isset($req['confirmed_at']) && $req['confirmed_at'] ? date('F j, Y g:i A', strtotime($req['confirmed_at'])) : null;
 $completedAt = isset($req['completed_at']) && $req['completed_at'] ? date('F j, Y g:i A', strtotime($req['completed_at'])) : null;
+$expiredAt   = isset($req['expired_at']) && $req['expired_at'] ? date('F j, Y g:i A', strtotime($req['expired_at'])) : null;
 $decisionAt  = isset($req['decision_at']) && $req['decision_at'] ? date('F j, Y g:i A', strtotime($req['decision_at'])) : null;
 $decisionBy  = isset($req['decision_by']) ? trim((string)$req['decision_by']) : '';
 
@@ -67,7 +68,8 @@ $statusIcon = (
   $status === 'Confirmed' ? 'fa-check-circle' :
   ($status === 'Cancelled' ? 'fa-times-circle' :
   ($status === 'Rejected' ? 'fa-ban' :
-  ($status === 'Completed' ? 'fa-clipboard-check' : 'fa-clock')))
+  ($status === 'Completed' ? 'fa-clipboard-check' :
+  ($status === 'Expired' ? 'fa-hourglass-end' : 'fa-clock'))))
 );
 
 $html = "
@@ -81,7 +83,8 @@ $html = "
   ($status === 'Cancelled' ? "<span class='status-badge status-cancelled'><i class='fas fa-ban me-1'></i>Cancelled</span>" :
   ($status === 'Rejected' ? "<span class='status-badge status-rejected'><i class='fas fa-ban me-1'></i>Rejected</span>" :
   ($status === 'Completed' ? "<span class='status-badge status-completed'><i class='fas fa-clipboard-check me-1'></i>Completed</span>" :
-        "<span class='status-badge status-pending'><i class='fas fa-clock me-1'></i>Pending Response</span>")))
+  ($status === 'Expired' ? "<span class='status-badge status-expired'><i class='fas fa-hourglass-end me-1'></i>Expired</span>" :
+        "<span class='status-badge status-pending'><i class='fas fa-clock me-1'></i>Pending Response</span>"))))
       ) . "</div>
       <div>{$tourTypeBadge}</div>
     </div>
@@ -90,6 +93,9 @@ $html = "
     : "") . "
     " . ($completedAt && $status === 'Completed'
     ? "<div class='timestamp-badge'><i class='far fa-clock'></i>Completed at <strong>{$completedAt}</strong></div>"
+    : "") . "
+    " . ($expiredAt && $status === 'Expired'
+    ? "<div class='timestamp-badge mt-2'><i class='far fa-clock'></i>Expired at <strong>{$expiredAt}</strong></div>"
     : "") . "
   </div>
 
@@ -149,17 +155,33 @@ $html = "
     </div>
   </div>
 
-  " . ((($status === 'Cancelled') || ($status === 'Rejected')) && $reason !== ''
+  " . ((($status === 'Cancelled') || ($status === 'Rejected') || ($status === 'Expired')) && $reason !== ''
             ? "<div class='section-divider'></div>
                <div class='detail-card full-width'>
                  <div class='detail-card-header'>
-                   <div class='detail-card-icon' style='background: rgba(239, 68, 68, 0.1); color: var(--danger);'><i class='fas fa-exclamation-triangle'></i></div>
-                   <div class='detail-card-label'>Reason for " . ($status === 'Cancelled' ? 'Cancellation' : 'Rejection') . "</div>
+                   <div class='detail-card-icon' style='background: rgba(" . ($status === 'Expired' ? '156, 163, 175' : '239, 68, 68') . ", 0.1); color: " . ($status === 'Expired' ? '#9ca3af' : 'var(--danger)') . ";'><i class='fas " . ($status === 'Expired' ? 'fa-hourglass-end' : 'fa-exclamation-triangle') . "'></i></div>
+                   <div class='detail-card-label'>" . ($status === 'Expired' ? 'Expiration Reason' : ($status === 'Cancelled' ? 'Reason for Cancellation' : 'Reason for Rejection')) . "</div>
                  </div>
                  <div class='detail-card-content'>
                    <div class='reason-box'>" . nl2br(htmlspecialchars($reason)) . "</div>
                    " . ($decisionAt
-    ? "<div class='timestamp-badge'><i class='far fa-clock'></i>Decision made at <strong>{$decisionAt}</strong>" . ($decisionBy ? " by <strong>" . htmlspecialchars(ucfirst($decisionBy)) . "</strong>" : "") . "</div>"
+    ? "<div class='timestamp-badge'><i class='far fa-clock'></i>" . ($status === 'Expired' ? 'Expired' : 'Decision made') . " at <strong>{$decisionAt}</strong>" . ($decisionBy ? " by <strong>" . htmlspecialchars(ucfirst($decisionBy)) . "</strong>" : "") . "</div>"
+    : "") . "
+                 </div>
+               </div>"
+            : "") . "
+
+  " . ($status === 'Expired'
+            ? "<div class='section-divider'></div>
+               <div class='detail-card full-width'>
+                 <div class='detail-card-header'>
+                   <div class='detail-card-icon' style='background: rgba(156, 163, 175, 0.1); color: #9ca3af;'><i class='fas fa-hourglass-end'></i></div>
+                   <div class='detail-card-label'>Expiration Notice</div>
+                 </div>
+                 <div class='detail-card-content'>
+                   <div class='reason-box' style='border-left-color: #9ca3af;'>This tour request expired automatically because the scheduled date and time passed without a response from the agent. The client has been notified via email.</div>
+                   " . ($expiredAt
+    ? "<div class='timestamp-badge'><i class='far fa-clock'></i>Auto-expired at <strong>{$expiredAt}</strong> <span style='color:#9ca3af;'>(Philippine Time)</span></div>"
     : "") . "
                  </div>
                </div>"

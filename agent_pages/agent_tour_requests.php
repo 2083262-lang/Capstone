@@ -10,13 +10,155 @@ if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'agent') {
 $agent_account_id = $_SESSION['account_id'];
 $agent_username = $_SESSION['username'];
 
+// ===== AUTO-EXPIRE PENDING TOUR REQUESTS =====
+// Use Philippine Time (Asia/Manila, UTC+8) for all date/time comparisons
+date_default_timezone_set('Asia/Manila');
+$now_ph = date('Y-m-d H:i:s'); // Current Philippine date/time
+
+// Find all Pending requests for this agent where the tour date+time has already passed
+$expire_find_sql = "
+    SELECT tr.tour_id, tr.user_name, tr.user_email, tr.tour_date, tr.tour_time,
+           p.StreetAddress, p.City, p.State
+    FROM tour_requests tr
+    JOIN property p ON tr.property_id = p.property_ID
+    WHERE tr.agent_account_id = ?
+      AND tr.request_status = 'Pending'
+      AND CONCAT(tr.tour_date, ' ', tr.tour_time) < ?";
+$stmt = $conn->prepare($expire_find_sql);
+$stmt->bind_param('is', $agent_account_id, $now_ph);
+$stmt->execute();
+$expired_tours = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+if (!empty($expired_tours)) {
+    require_once __DIR__ . '/../mail_helper.php';
+    
+    // Batch update all expired tour requests
+    $expire_ids = array_column($expired_tours, 'tour_id');
+    $placeholders = implode(',', array_fill(0, count($expire_ids), '?'));
+    $types = str_repeat('i', count($expire_ids));
+    
+    $expire_sql = "UPDATE tour_requests 
+                   SET request_status = 'Expired', 
+                       expired_at = ?,
+                       decision_reason = 'This tour request expired automatically because the scheduled date/time passed without a response.',
+                       decision_at = ?
+                   WHERE tour_id IN ($placeholders)";
+    $stmt = $conn->prepare($expire_sql);
+    $params = array_merge([$now_ph, $now_ph], $expire_ids);
+    $stmt->bind_param('ss' . $types, ...$params);
+    $stmt->execute();
+    $stmt->close();
+    
+    // Send expiry notification email to each user
+    foreach ($expired_tours as $exp) {
+        $property_address = $exp['StreetAddress'] . ', ' . $exp['City'] . ', ' . $exp['State'];
+        $formattedDate = date('F j, Y', strtotime($exp['tour_date']));
+        $formattedTime = date('g:i A', strtotime($exp['tour_time']));
+        
+        try {
+            $subject = 'Tour Request Expired - ' . $property_address;
+            $body = '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tour Request Expired</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Helvetica Neue\',Arial,sans-serif;background-color:#0a0a0a;line-height:1.6;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:60px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
+                    <tr>
+                        <td style="background:linear-gradient(90deg,#f59e0b 0%,#d97706 50%,#f59e0b 100%);height:3px;"></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:48px 48px 32px 48px;text-align:center;border-bottom:1px solid #1f1f1f;">
+                            <div style="width:56px;height:56px;border-radius:50%;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+                                <span style="font-size:24px;">⏰</span>
+                            </div>
+                            <h1 style="margin:0 0 12px 0;color:#f59e0b;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Tour Request Expired</h1>
+                            <p style="margin:0;color:#666666;font-size:15px;font-weight:400;">Your scheduled tour date has passed</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:48px 48px 40px 48px;">
+                            <p style="margin:0 0 24px 0;color:#999999;font-size:15px;">
+                                Hi <strong style="color:#ffffff;">' . htmlspecialchars($exp['user_name']) . '</strong>,
+                            </p>
+                            <p style="margin:0 0 32px 0;color:#999999;font-size:14px;line-height:1.8;">
+                                We\'re sorry to inform you that your tour request was not confirmed before the scheduled date. The request has been automatically marked as <strong style="color:#f59e0b;">expired</strong>.
+                            </p>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.15);border-radius:4px;margin-bottom:32px;">
+                                <tr>
+                                    <td style="padding:28px 24px;">
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding:0 0 16px 0;border-bottom:1px solid #1f1f1f;">
+                                                    <span style="color:#666666;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Property</span><br>
+                                                    <span style="color:#ffffff;font-size:14px;font-weight:500;line-height:1.8;">' . htmlspecialchars($property_address) . '</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:16px 0 0 0;">
+                                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                                        <tr>
+                                                            <td width="50%">
+                                                                <span style="color:#666666;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Date</span><br>
+                                                                <span style="color:#ffffff;font-size:14px;font-weight:500;line-height:1.8;">' . $formattedDate . '</span>
+                                                            </td>
+                                                            <td width="50%">
+                                                                <span style="color:#666666;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Time</span><br>
+                                                                <span style="color:#ffffff;font-size:14px;font-weight:500;line-height:1.8;">' . $formattedTime . '</span>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.15);border-radius:4px;">
+                                <tr>
+                                    <td style="padding:24px;">
+                                        <p style="margin:0 0 8px 0;color:#3b82f6;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">💡 What You Can Do</p>
+                                        <ul style="margin:0;padding:0 0 0 20px;color:#999999;font-size:13px;line-height:2;">
+                                            <li>Submit a <strong style="color:#ffffff;">new tour request</strong> with a future date</li>
+                                            <li>Try selecting a <strong style="color:#ffffff;">different time slot</strong> that may be more convenient</li>
+                                            <li>Contact the agent directly for availability</li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:24px 48px;background:#0d0d0d;border-top:1px solid #1f1f1f;text-align:center;">
+                            <p style="margin:0;color:#444444;font-size:12px;">HomeEstate Realty &bull; Automated Notification</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
+            sendSystemMail($exp['user_email'], $exp['user_name'], $subject, $body);
+        } catch (Exception $e) {
+            // Silently log email failure - don't block page load
+            error_log("Failed to send expiry email for tour #{$exp['tour_id']}: " . $e->getMessage());
+        }
+    }
+}
+
 // Get agent info for navbar
-$agent_info_sql = "
-    SELECT a.first_name, a.last_name, a.username, ai.profile_picture_url
-    FROM accounts a 
-    JOIN agent_information ai ON a.account_id = ai.account_id
-    WHERE a.account_id = ?";
-$stmt = $conn->prepare($agent_info_sql);
+$agent_info_query = "SELECT ai.*, a.first_name, a.last_name, a.email, a.phone_number, a.date_registered
+                     FROM agent_information ai 
+                     JOIN accounts a ON ai.account_id = a.account_id 
+                     WHERE ai.account_id = ?";
+$stmt = $conn->prepare($agent_info_query);
 $stmt->bind_param('i', $agent_account_id);
 $stmt->execute();
 $agent_info = $stmt->get_result()->fetch_assoc();
@@ -49,7 +191,7 @@ $tour_requests = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
 // Status filtering
-$valid_statuses = ['All','Pending','Confirmed','Completed','Cancelled','Rejected'];
+$valid_statuses = ['All','Pending','Confirmed','Completed','Cancelled','Rejected','Expired'];
 $active_status = isset($_GET['status']) ? ucfirst(strtolower(trim($_GET['status']))) : 'All';
 if (!in_array($active_status, $valid_statuses, true)) {
   $active_status = 'All';
@@ -62,6 +204,7 @@ $requests_by_status = [
   'Completed' => [],
   'Cancelled' => [],
   'Rejected' => [],
+  'Expired' => [],
 ];
 foreach ($tour_requests as $req) {
   $st = $req['request_status'];
@@ -77,6 +220,7 @@ $counts = [
   'Completed' => count($requests_by_status['Completed']),
   'Cancelled' => count($requests_by_status['Cancelled']),
   'Rejected' => count($requests_by_status['Rejected']),
+  'Expired' => count($requests_by_status['Expired']),
 ];
 
 // Decide which list to display
@@ -86,6 +230,7 @@ switch ($active_status) {
   case 'Completed':
   case 'Cancelled':
   case 'Rejected':
+  case 'Expired':
     $display_requests = $requests_by_status[$active_status];
     break;
   default:
@@ -264,7 +409,7 @@ $conn->close();
     /* ===== KPI STAT CARDS ===== */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 1rem;
       margin-bottom: 2rem;
     }
@@ -738,6 +883,12 @@ $conn->close();
       border-color: rgba(239, 68, 68, 0.25);
     }
 
+    .status-expired {
+      background: rgba(156, 163, 175, 0.1);
+      color: #9ca3af;
+      border-color: rgba(156, 163, 175, 0.25);
+    }
+
     /* ===== TOUR TYPE BADGES ===== */
     .type-badge {
       font-size: 0.65rem;
@@ -903,6 +1054,11 @@ $conn->close();
     .modal-status-header.status-rejected {
       background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%);
       border-left-color: var(--danger);
+    }
+
+    .modal-status-header.status-expired {
+      background: linear-gradient(135deg, rgba(156, 163, 175, 0.08) 0%, rgba(156, 163, 175, 0.02) 100%);
+      border-left-color: #9ca3af;
     }
 
     .modal-status-row {
@@ -1409,6 +1565,7 @@ $conn->close();
     .calendar-day.has-cancelled::after { background: var(--gray-500); }
     .calendar-day.has-rejected::after { background: var(--danger); }
     .calendar-day.has-completed::after { background: var(--info); }
+    .calendar-day.has-expired::after { background: #9ca3af; }
 
     .calendar-legend {
       display: flex;
@@ -1498,6 +1655,7 @@ $conn->close();
     .tour-item.status-cancelled { border-left-color: var(--gray-500); opacity: 0.65; }
     .tour-item.status-rejected { border-left-color: var(--danger); opacity: 0.65; }
     .tour-item.status-completed { border-left-color: var(--info); opacity: 0.75; }
+    .tour-item.status-expired { border-left-color: #9ca3af; opacity: 0.5; }
 
     .tour-item-header {
       display: flex;
@@ -1640,6 +1798,11 @@ include 'agent_navbar.php';
       <div class="kpi-label">Cancelled / Rejected</div>
       <div class="kpi-value"><?php echo $counts['Cancelled'] + $counts['Rejected']; ?></div>
     </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:rgba(156,163,175,0.08);border-color:rgba(156,163,175,0.2);color:#9ca3af;"><i class="fas fa-hourglass-end"></i></div>
+      <div class="kpi-label">Expired</div>
+      <div class="kpi-value"><?php echo $counts['Expired']; ?></div>
+    </div>
   </div>
 
   <!-- Filter Results Count - Shown in main area -->
@@ -1650,7 +1813,7 @@ include 'agent_navbar.php';
   <!-- STATUS TABS -->
   <div class="status-tabs">
     <ul class="nav nav-tabs">
-      <?php foreach (['All','Pending','Confirmed','Completed','Cancelled','Rejected'] as $tab): 
+      <?php foreach (['All','Pending','Confirmed','Completed','Cancelled','Rejected','Expired'] as $tab): 
             $active = $active_status === $tab ? 'active' : ''; 
             $count = $counts[$tab];
       ?>
@@ -1679,6 +1842,8 @@ include 'agent_navbar.php';
             No confirmed tours scheduled at the moment.
           <?php elseif ($active_status === 'Completed'): ?>
             No completed tours to display.
+          <?php elseif ($active_status === 'Expired'): ?>
+            No expired tour requests. Great job staying on top of your responses!
           <?php else: ?>
             When clients request property tours, they'll appear here for your review.
           <?php endif; ?>
@@ -1748,6 +1913,8 @@ include 'agent_navbar.php';
                   $cls = 'status-cancelled'; $label = 'Cancelled'; $icon = '<i class="fas fa-ban"></i>';
                 } elseif ($status === 'Rejected') {
                   $cls = 'status-rejected'; $label = 'Rejected'; $icon = '<i class="fas fa-times"></i>';
+                } elseif ($status === 'Expired') {
+                  $cls = 'status-expired'; $label = 'Expired'; $icon = '<i class="fas fa-hourglass-end"></i>';
                 } else {
                   $cls = 'status-pending'; $label = 'Pending'; $icon = '<i class="fas fa-clock"></i>';
                 }
@@ -1986,6 +2153,10 @@ include 'agent_navbar.php';
             <span class="legend-dot" style="background: var(--info);"></span>
             <span>Completed</span>
           </div>
+          <div class="legend-item debug-only" style="display: none;">
+            <span class="legend-dot" style="background: #9ca3af;"></span>
+            <span>Expired</span>
+          </div>
         </div>
       </div>
       
@@ -2152,9 +2323,11 @@ include 'agent_navbar.php';
           const hasCancelled = tours.some(t => t.request_status === 'Cancelled');
           const hasRejected = tours.some(t => t.request_status === 'Rejected');
           const hasCompleted = tours.some(t => t.request_status === 'Completed');
+          const hasExpired = tours.some(t => t.request_status === 'Expired');
           if (hasCancelled) day.classList.add('has-cancelled');
           if (hasRejected) day.classList.add('has-rejected');
           if (hasCompleted) day.classList.add('has-completed');
+          if (hasExpired) day.classList.add('has-expired');
         }
       }
       
@@ -2243,6 +2416,7 @@ include 'agent_navbar.php';
       else if (status === 'Cancelled') { statusClass = 'status-cancelled'; statusIcon = 'fa-ban'; }
       else if (status === 'Rejected') { statusClass = 'status-rejected'; statusIcon = 'fa-times'; }
       else if (status === 'Completed') { statusClass = 'status-completed'; statusIcon = 'fa-check-double'; }
+      else if (status === 'Expired') { statusClass = 'status-expired'; statusIcon = 'fa-hourglass-end'; }
       
       const timeKey = `${tour.tour_date}_${tour.tour_time}`;
       let hasConflict = false;
@@ -2547,6 +2721,14 @@ include 'agent_navbar.php';
               btn.classList.remove('btn-gold');
               btn.classList.add('btn-dark-outline');
               btn.style.color = '';
+              cancelBtn.classList.add('d-none');
+              rejectBtn.classList.add('d-none');
+            } else if (data.status && data.status === 'Expired') {
+              btn.disabled = true;
+              btn.innerHTML = '<i class="fas fa-hourglass-end me-2"></i>Expired';
+              btn.classList.remove('btn-gold');
+              btn.classList.add('btn-dark-outline');
+              btn.style.color = '#9ca3af';
               cancelBtn.classList.add('d-none');
               rejectBtn.classList.add('d-none');
             } else {

@@ -10,6 +10,104 @@ if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'admin') {
 
 $error_message = '';
 $tour_requests = [];
+
+// ===== AUTO-EXPIRE PENDING TOURS FOR ADMIN PROPERTIES =====
+// Use Philippine Time (Asia/Manila, UTC+8)
+date_default_timezone_set('Asia/Manila');
+$now_ph = date('Y-m-d H:i:s');
+
+// Find Pending requests for admin-listed properties where tour date/time has passed
+$expire_find_sql = "
+    SELECT tr.tour_id, tr.user_name, tr.user_email, tr.tour_date, tr.tour_time,
+           p.StreetAddress, p.City, p.State
+    FROM tour_requests tr
+    JOIN property p ON tr.property_id = p.property_ID
+    JOIN property_log pl ON pl.property_id = p.property_ID AND pl.action = 'CREATED'
+    JOIN accounts u ON u.account_id = pl.account_id
+    JOIN user_roles ur ON ur.role_id = u.role_id
+    WHERE ur.role_name = 'admin'
+      AND tr.request_status = 'Pending'
+      AND CONCAT(tr.tour_date, ' ', tr.tour_time) < ?";
+$stmt = $conn->prepare($expire_find_sql);
+$stmt->bind_param('s', $now_ph);
+$stmt->execute();
+$expired_tours = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+if (!empty($expired_tours)) {
+    require_once __DIR__ . '/mail_helper.php';
+    
+    $expire_ids = array_column($expired_tours, 'tour_id');
+    $placeholders = implode(',', array_fill(0, count($expire_ids), '?'));
+    $types = str_repeat('i', count($expire_ids));
+    
+    $expire_sql = "UPDATE tour_requests 
+                   SET request_status = 'Expired', 
+                       expired_at = ?,
+                       decision_reason = 'This tour request expired automatically because the scheduled date/time passed without a response.',
+                       decision_at = ?
+                   WHERE tour_id IN ($placeholders)";
+    $stmt = $conn->prepare($expire_sql);
+    $params = array_merge([$now_ph, $now_ph], $expire_ids);
+    $stmt->bind_param('ss' . $types, ...$params);
+    $stmt->execute();
+    $stmt->close();
+    
+    foreach ($expired_tours as $exp) {
+        $property_address = $exp['StreetAddress'] . ', ' . $exp['City'] . ', ' . $exp['State'];
+        $formattedDate = date('F j, Y', strtotime($exp['tour_date']));
+        $formattedTime = date('g:i A', strtotime($exp['tour_time']));
+        
+        try {
+            $subject = 'Tour Request Expired - ' . $property_address;
+            $body = '<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Tour Request Expired</title></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Helvetica Neue\',Arial,sans-serif;background-color:#0a0a0a;line-height:1.6;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:60px 20px;">
+        <tr><td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
+                    <tr><td style="background:linear-gradient(90deg,#f59e0b 0%,#d97706 50%,#f59e0b 100%);height:3px;"></td></tr>
+                    <tr><td style="padding:48px 48px 32px 48px;text-align:center;border-bottom:1px solid #1f1f1f;">
+                            <div style="width:56px;height:56px;border-radius:50%;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;"><span style="font-size:24px;">⏰</span></div>
+                            <h1 style="margin:0 0 12px 0;color:#f59e0b;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Tour Request Expired</h1>
+                            <p style="margin:0;color:#666666;font-size:15px;">Your scheduled tour date has passed</p>
+                    </td></tr>
+                    <tr><td style="padding:48px 48px 40px 48px;">
+                            <p style="margin:0 0 24px 0;color:#999999;font-size:15px;">Hi <strong style="color:#ffffff;">' . htmlspecialchars($exp['user_name']) . '</strong>,</p>
+                            <p style="margin:0 0 32px 0;color:#999999;font-size:14px;line-height:1.8;">We\'re sorry — your tour request was not confirmed before the scheduled date. It has been automatically marked as <strong style="color:#f59e0b;">expired</strong>.</p>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.15);border-radius:4px;margin-bottom:32px;">
+                                <tr><td style="padding:28px 24px;">
+                                    <span style="color:#666666;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Property</span><br>
+                                    <span style="color:#ffffff;font-size:14px;font-weight:500;line-height:1.8;">' . htmlspecialchars($property_address) . '</span><br><br>
+                                    <span style="color:#666666;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Date</span>: <span style="color:#ffffff;font-size:14px;">' . $formattedDate . '</span> &nbsp;&bull;&nbsp;
+                                    <span style="color:#666666;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Time</span>: <span style="color:#ffffff;font-size:14px;">' . $formattedTime . '</span>
+                                </td></tr>
+                            </table>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.15);border-radius:4px;">
+                                <tr><td style="padding:24px;">
+                                    <p style="margin:0 0 8px 0;color:#3b82f6;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">💡 What You Can Do</p>
+                                    <ul style="margin:0;padding:0 0 0 20px;color:#999999;font-size:13px;line-height:2;">
+                                        <li>Submit a <strong style="color:#ffffff;">new tour request</strong> with a future date</li>
+                                        <li>Try selecting a <strong style="color:#ffffff;">different time slot</strong></li>
+                                    </ul>
+                                </td></tr>
+                            </table>
+                    </td></tr>
+                    <tr><td style="padding:24px 48px;background:#0d0d0d;border-top:1px solid #1f1f1f;text-align:center;">
+                            <p style="margin:0;color:#444444;font-size:12px;">HomeEstate Realty &bull; Automated Notification</p>
+                    </td></tr>
+                </table>
+        </td></tr>
+    </table>
+</body></html>';
+            sendSystemMail($exp['user_email'], $exp['user_name'], $subject, $body);
+        } catch (Exception $e) {
+            error_log("Failed to send expiry email for tour #{$exp['tour_id']}: " . $e->getMessage());
+        }
+    }
+}
+
 $status_counts = [
     'All' => 0,
     'Pending' => 0,
@@ -17,6 +115,7 @@ $status_counts = [
     'Completed' => 0,
     'Cancelled' => 0,
     'Rejected' => 0,
+    'Expired' => 0,
 ];
 
 // Fetch tour requests with property images
@@ -44,7 +143,8 @@ $sql = "
             WHEN 'Completed' THEN 3
             WHEN 'Cancelled' THEN 4
             WHEN 'Rejected' THEN 5
-            ELSE 6
+            WHEN 'Expired' THEN 6
+            ELSE 7
         END,
         tr.requested_at DESC
 ";
@@ -358,6 +458,11 @@ $stmt->close();
         .status-rejected { 
             background: #f8d7da; 
             color: #842029;
+        }
+        
+        .status-expired { 
+            background: #e9ecef; 
+            color: #6c757d;
         }
         
         /* Tour Type Badge */
@@ -998,6 +1103,10 @@ $stmt->close();
             background: #17a2b8;
         }
         
+        .calendar-day.has-expired::after {
+            background: #9ca3af;
+        }
+        
         .calendar-legend {
             display: flex;
             gap: 1rem;
@@ -1108,6 +1217,11 @@ $stmt->close();
             opacity: 0.8;
         }
         
+        .tour-item.status-expired {
+            border-left-color: #9ca3af;
+            opacity: 0.5;
+        }
+        
         .tour-item-header {
             display: flex;
             align-items: center;
@@ -1192,6 +1306,7 @@ $stmt->close();
                     <option value="Completed">Completed</option>
                     <option value="Cancelled">Cancelled</option>
                     <option value="Rejected">Rejected</option>
+                    <option value="Expired">Expired</option>
                 </select>
                 <button class="calendar-btn" id="openCalendarBtn">
                     <i class="bi bi-calendar3"></i>
@@ -1231,6 +1346,7 @@ $stmt->close();
                                             case 'Completed': $status_class = 'status-completed'; break;
                                             case 'Cancelled': $status_class = 'status-cancelled'; break;
                                             case 'Rejected': $status_class = 'status-rejected'; break;
+                                            case 'Expired': $status_class = 'status-expired'; break;
                                         }
                                     ?>
                                     <span class="status-badge <?php echo $status_class; ?>">
@@ -1523,7 +1639,8 @@ function displayTourDetails(tour) {
         'Confirmed': { class: 'status-confirmed', icon: 'bi-check-circle-fill' },
         'Completed': { class: 'status-completed', icon: 'bi-flag-fill' },
         'Cancelled': { class: 'status-cancelled', icon: 'bi-x-circle-fill' },
-        'Rejected': { class: 'status-rejected', icon: 'bi-slash-circle-fill' }
+        'Rejected': { class: 'status-rejected', icon: 'bi-slash-circle-fill' },
+        'Expired': { class: 'status-expired', icon: 'bi-hourglass-bottom' }
     };
     
     const config = statusConfig[tour.status] || statusConfig['Pending'];
@@ -2040,6 +2157,10 @@ function showNotification(message, type = 'info') {
                         <span class="legend-dot" style="background: #17a2b8;"></span>
                         <span>Completed</span>
                     </div>
+                    <div class="legend-item debug-only" style="display: none;">
+                        <span class="legend-dot" style="background: #9ca3af;"></span>
+                        <span>Expired</span>
+                    </div>
                 </div>
             </div>
             
@@ -2211,10 +2332,12 @@ function renderCalendar() {
                 const hasCancelled = tours.some(t => t.request_status === 'Cancelled');
                 const hasRejected = tours.some(t => t.request_status === 'Rejected');
                 const hasCompleted = tours.some(t => t.request_status === 'Completed');
+                const hasExpired = tours.some(t => t.request_status === 'Expired');
                 
                 if (hasCancelled) day.classList.add('has-cancelled');
                 if (hasRejected) day.classList.add('has-rejected');
                 if (hasCompleted) day.classList.add('has-completed');
+                if (hasExpired) day.classList.add('has-expired');
             }
         }
         
@@ -2321,6 +2444,9 @@ function renderScheduledTours() {
         } else if (status === 'Completed') {
             statusClass = 'status-completed';
             statusIcon = 'check-all';
+        } else if (status === 'Expired') {
+            statusClass = 'status-expired';
+            statusIcon = 'hourglass-bottom';
         }
         
         const timeKey = `${tour.tour_date}_${tour.tour_time}`;

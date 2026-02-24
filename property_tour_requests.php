@@ -19,6 +19,7 @@ $status_counts = [
     'Completed' => 0,
     'Cancelled' => 0,
     'Rejected' => 0,
+    'Expired' => 0,
 ];
 
 if ($property_id <= 0) {
@@ -66,6 +67,7 @@ if ($property_id <= 0) {
                 tr.decision_reason,
                 tr.decision_by,
                 tr.decision_at,
+                tr.expired_at,
                 a.first_name AS agent_first_name,
                 a.last_name AS agent_last_name
             FROM tour_requests tr
@@ -78,7 +80,8 @@ if ($property_id <= 0) {
                     WHEN 'Completed' THEN 3
                     WHEN 'Cancelled' THEN 4
                     WHEN 'Rejected' THEN 5
-                    ELSE 6
+                    WHEN 'Expired' THEN 6
+                    ELSE 7
                 END,
                 tr.requested_at DESC
         ";
@@ -167,7 +170,7 @@ if ($property_id <= 0) {
                     <?php endif; ?>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <?php foreach (['All','Pending','Confirmed','Completed','Cancelled','Rejected'] as $st): ?>
+                    <?php foreach (['All','Pending','Confirmed','Completed','Cancelled','Rejected','Expired'] as $st): ?>
                         <button type="button" class="btn btn-outline-secondary filter-btn" data-filter="<?php echo $st; ?>" onclick="setFilter('<?php echo $st; ?>')">
                             <?php echo $st; ?>
                             <span class="badge bg-secondary ms-1"><?php echo (int)($status_counts[$st] ?? 0); ?></span>
@@ -208,6 +211,9 @@ if ($property_id <= 0) {
                                                 <?php if (!empty($r['decision_at_fmt']) && in_array($r['request_status'], ['Cancelled','Rejected'])): ?>
                                                     <div class="small text-muted"><?php echo htmlspecialchars($r['request_status']); ?>: <?php echo htmlspecialchars($r['decision_at_fmt']); ?></div>
                                                 <?php endif; ?>
+                                                <?php if ($r['request_status']==='Expired' && !empty($r['expired_at'])): ?>
+                                                    <div class="small text-muted">Expired: <?php echo date('F j, Y g:i A', strtotime($r['expired_at'])); ?></div>
+                                                <?php endif; ?>
                                             </td>
                                             <td>
                                                 <div class="fw-semibold"><?php echo htmlspecialchars($r['user_name']); ?></div>
@@ -232,13 +238,14 @@ if ($property_id <= 0) {
                                                         case 'Completed': $badge = 'bg-success'; break;
                                                         case 'Cancelled': $badge = 'bg-dark'; break;
                                                         case 'Rejected': $badge = 'bg-danger'; break;
+                                                        case 'Expired': $badge = 'bg-secondary'; break;
                                                     }
                                                 ?>
                                                 <span class="badge <?php echo $badge; ?> status-badge"><?php echo htmlspecialchars($r['request_status']); ?></span>
                                             </td>
                                             <td class="truncate" title="<?php echo htmlspecialchars($r['message']); ?>">
                                                 <?php echo htmlspecialchars($r['message'] ?: '—'); ?>
-                                                <?php if (!empty($r['decision_reason']) && in_array($r['request_status'], ['Cancelled','Rejected'])): ?>
+                                                <?php if (!empty($r['decision_reason']) && in_array($r['request_status'], ['Cancelled','Rejected','Expired'])): ?>
                                                     <div class="small text-muted mt-1">Reason: <?php echo htmlspecialchars($r['decision_reason']); ?></div>
                                                 <?php endif; ?>
                                             </td>
