@@ -577,6 +577,7 @@ $active_page = 'agent_profile.php';
             line-height: 1.8;
             color: var(--gray-200);
             font-weight: 400;
+            text-align: justify;
         }
 
         .bio-text::first-letter {
