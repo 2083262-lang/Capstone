@@ -133,5 +133,157 @@ if (!$stmt->execute()) {
 }
 $stmt->close();
 
+// Update amenities if provided
+if (isset($_POST['amenities']) && is_array($_POST['amenities'])) {
+    // Delete existing amenities
+    $del_am = $conn->prepare("DELETE FROM property_amenities WHERE property_id = ?");
+    $del_am->bind_param('i', $pid);
+    $del_am->execute();
+    $del_am->close();
+
+    // Insert new amenities
+    $ins_am = $conn->prepare("INSERT INTO property_amenities (property_id, amenity_id) VALUES (?, ?)");
+    foreach ($_POST['amenities'] as $amenity_id) {
+        $aid = (int)$amenity_id;
+        if ($aid > 0) {
+            $ins_am->bind_param('ii', $pid, $aid);
+            $ins_am->execute();
+        }
+    }
+    $ins_am->close();
+} else {
+    // No amenities selected — clear all
+    $del_am = $conn->prepare("DELETE FROM property_amenities WHERE property_id = ?");
+    $del_am->bind_param('i', $pid);
+    $del_am->execute();
+    $del_am->close();
+}
+
+// ========================================================================
+// Process photo and floor image deletions (deferred from frontend)
+// ========================================================================
+
+// Handle deleted featured photos
+if (isset($_POST['deleted_photos']) && !empty($_POST['deleted_photos'])) {
+    $deletedPhotos = json_decode($_POST['deleted_photos'], true);
+    if (is_array($deletedPhotos) && count($deletedPhotos) > 0) {
+        foreach ($deletedPhotos as $photoUrl) {
+            if (empty($photoUrl)) continue;
+            
+            // Delete from database
+            $del_photo = $conn->prepare("DELETE FROM property_images WHERE property_ID = ? AND PhotoURL = ?");
+            $del_photo->bind_param('is', $pid, $photoUrl);
+            $del_photo->execute();
+            $del_photo->close();
+            
+            // Delete physical file
+            $fsPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $photoUrl);
+            if (is_file($fsPath)) {
+                @unlink($fsPath);
+            }
+        }
+        
+        // Re-normalize sort order for remaining photos
+        $photos_list = $conn->prepare('SELECT PhotoID FROM property_images WHERE property_ID = ? ORDER BY SortOrder ASC');
+        $photos_list->bind_param('i', $pid);
+        $photos_list->execute();
+        $photo_rows = $photos_list->get_result()->fetch_all(MYSQLI_ASSOC);
+        $photos_list->close();
+        
+        $order = 1;
+        foreach ($photo_rows as $pr) {
+            $upd_order = $conn->prepare('UPDATE property_images SET SortOrder = ? WHERE PhotoID = ?');
+            $upd_order->bind_param('ii', $order, $pr['PhotoID']);
+            $upd_order->execute();
+            $upd_order->close();
+            $order++;
+        }
+    }
+}
+
+// Handle deleted floor images
+if (isset($_POST['deleted_floor_images']) && !empty($_POST['deleted_floor_images'])) {
+    $deletedFloorImages = json_decode($_POST['deleted_floor_images'], true);
+    if (is_array($deletedFloorImages) && count($deletedFloorImages) > 0) {
+        foreach ($deletedFloorImages as $floorImg) {
+            if (!isset($floorImg['floor_number']) || !isset($floorImg['photo_url'])) continue;
+            
+            $floorNum = (int)$floorImg['floor_number'];
+            $photoUrl = trim($floorImg['photo_url']);
+            if ($floorNum < 1 || empty($photoUrl)) continue;
+            
+            // Normalize path
+            $photoUrl = str_replace(['../', './'], '', $photoUrl);
+            $photoUrl = ltrim($photoUrl, '/');
+            
+            // Delete from database (use LIKE for flexible matching)
+            $likePattern = '%' . basename($photoUrl);
+            $del_floor = $conn->prepare("DELETE FROM property_floor_images WHERE property_id = ? AND floor_number = ? AND (photo_url = ? OR photo_url LIKE ?)");
+            $del_floor->bind_param('iiss', $pid, $floorNum, $photoUrl, $likePattern);
+            $del_floor->execute();
+            $del_floor->close();
+            
+            // Delete physical file
+            $fsPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $photoUrl);
+            if (is_file($fsPath)) {
+                @unlink($fsPath);
+            }
+            
+            // Re-normalize sort order for this floor
+            $floor_imgs = $conn->prepare('SELECT id FROM property_floor_images WHERE property_id = ? AND floor_number = ? ORDER BY sort_order ASC');
+            $floor_imgs->bind_param('ii', $pid, $floorNum);
+            $floor_imgs->execute();
+            $floor_list = $floor_imgs->get_result()->fetch_all(MYSQLI_ASSOC);
+            $floor_imgs->close();
+            
+            $i = 1;
+            foreach ($floor_list as $item) {
+                $upd_floor = $conn->prepare('UPDATE property_floor_images SET sort_order = ? WHERE id = ?');
+                $upd_floor->bind_param('ii', $i, $item['id']);
+                $upd_floor->execute();
+                $upd_floor->close();
+                $i++;
+            }
+        }
+    }
+}
+
+// Handle removed entire floors
+if (isset($_POST['removed_floors']) && !empty($_POST['removed_floors'])) {
+    $removedFloors = json_decode($_POST['removed_floors'], true);
+    if (is_array($removedFloors) && count($removedFloors) > 0) {
+        foreach ($removedFloors as $floorNum) {
+            $floorNum = (int)$floorNum;
+            if ($floorNum < 1) continue;
+            
+            // Get all images for this floor to delete physical files
+            $get_imgs = $conn->prepare('SELECT photo_url FROM property_floor_images WHERE property_id = ? AND floor_number = ?');
+            $get_imgs->bind_param('ii', $pid, $floorNum);
+            $get_imgs->execute();
+            $imgs_result = $get_imgs->get_result();
+            
+            while ($img_row = $imgs_result->fetch_assoc()) {
+                $fsPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $img_row['photo_url']);
+                if (is_file($fsPath)) {
+                    @unlink($fsPath);
+                }
+            }
+            $get_imgs->close();
+            
+            // Delete all images for this floor from database
+            $del_floor_all = $conn->prepare('DELETE FROM property_floor_images WHERE property_id = ? AND floor_number = ?');
+            $del_floor_all->bind_param('ii', $pid, $floorNum);
+            $del_floor_all->execute();
+            $del_floor_all->close();
+            
+            // Try to remove the floor directory if empty
+            $floorDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'floors' . DIRECTORY_SEPARATOR . $pid . DIRECTORY_SEPARATOR . 'floor_' . $floorNum;
+            if (is_dir($floorDir)) {
+                @rmdir($floorDir);
+            }
+        }
+    }
+}
+
 echo json_encode(['success' => true, 'message' => 'Property updated successfully.']);
 ?>

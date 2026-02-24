@@ -1,0 +1,364 @@
+/* ===================================================================
+   Agent Property Modals – Extracted Styles
+   Used by: view_agent_property.php modals
+   =================================================================== */
+
+/* === PERFORMANCE: GPU-accelerated scrolling === */
+.modal-dark .modal-dialog-scrollable .modal-body {
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+.modal-dark .modal-content {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* === MODAL STYLES (Dark Theme) === */
+.modal-dark .modal-content {
+    background: #111111;
+    border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 8px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.modal-dark .modal-header {
+    border-bottom: 1px solid rgba(37, 99, 235, 0.15); padding: 24px 32px;
+    background: rgba(37, 99, 235, 0.06);
+}
+.modal-dark .modal-header .modal-title {
+    color: var(--white); font-weight: 700; font-size: 1.25rem;
+    display: flex; align-items: center; gap: 10px;
+}
+.modal-dark .modal-header .modal-title i { color: var(--gold); font-size: 1.5rem; }
+.modal-dark .modal-body { padding: 32px 36px; color: var(--gray-300); }
+.modal-dark .modal-footer { border-top: 1px solid rgba(37, 99, 235, 0.15); padding: 16px 32px; }
+.modal-dark .btn-close { filter: invert(1) brightness(2); opacity: 0.7; }
+.modal-dark .btn-close:hover { opacity: 1; }
+
+/* Modal form inputs */
+.modal-dark .form-control, .modal-dark .form-select, .modal-dark textarea.form-control {
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--white); border-radius: 4px; padding: 12px 16px; transition: all 0.2s;
+}
+.modal-dark .form-control:focus, .modal-dark .form-select:focus, .modal-dark textarea.form-control:focus {
+    outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    background: rgba(0,0,0,0.4);
+}
+.modal-dark .form-label {
+    color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 6px;
+}
+.modal-dark .form-text { color: var(--gray-500); }
+.modal-dark input::placeholder, .modal-dark textarea::placeholder { color: rgba(255,255,255,0.3) !important; }
+
+/* Modal Buttons */
+.btn-gold {
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+    color: var(--black); border: none; font-weight: 700; border-radius: 4px; padding: 12px 24px;
+    transition: all 0.2s; cursor: pointer;
+}
+.btn-gold:hover { box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3); color: var(--black); }
+.btn-dark-outline {
+    background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--gray-300);
+    font-weight: 600; border-radius: 4px; padding: 12px 24px; transition: all 0.2s; cursor: pointer;
+}
+.btn-dark-outline:hover { background: rgba(255,255,255,0.05); color: var(--white); }
+.btn-blue {
+    background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
+    color: var(--white); border: none; font-weight: 700; border-radius: 4px; padding: 12px 24px;
+    transition: all 0.2s; cursor: pointer;
+}
+.btn-blue:hover { box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3); color: var(--white); }
+
+/* Edit Modal Form Cards */
+.edit-form-card {
+    background: rgba(37, 99, 235, 0.04); border: 1px solid rgba(37, 99, 235, 0.12);
+    border-radius: 8px; padding: 28px; margin-bottom: 32px;
+}
+.edit-form-card.h-100 {
+    margin-bottom: 0;
+}
+.modal-dark .row.g-4 {
+    margin-bottom: 32px;
+}
+.edit-form-card h6 {
+    font-size: 0.95rem; font-weight: 700; color: var(--white); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+}
+.edit-form-card h6 i { color: var(--gold); }
+
+/* Photo Grid in Edit Modal */
+.edit-photos-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px;
+}
+.edit-photo-item { position: relative; border-radius: 6px; overflow: hidden; }
+.edit-photo-item img {
+    width: 100%; aspect-ratio: 1; object-fit: cover; display: block;
+    border-radius: 6px;
+}
+.edit-photo-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6); opacity: 0;
+    transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.edit-photo-item:hover .edit-photo-overlay { opacity: 1; }
+.edit-photo-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.9); color: var(--black); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+    transition: all 0.2s;
+}
+.edit-photo-btn:hover { background: var(--gold); color: var(--black); transform: scale(1.1); }
+.edit-photo-btn.btn-delete:hover { background: #ef4444; color: white; }
+.cover-badge-small {
+    position: absolute; top: 6px; left: 6px;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    color: var(--black); padding: 3px 8px; border-radius: 10px;
+    font-size: 0.65rem; font-weight: 700; z-index: 3;
+}
+.upload-area {
+    border: 2px dashed rgba(212, 175, 55, 0.3); border-radius: 6px;
+    padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s;
+    background: rgba(212, 175, 55, 0.03);
+}
+.upload-area:hover { border-color: var(--gold); background: rgba(212, 175, 55, 0.08); }
+.upload-area i { font-size: 2rem; color: var(--gold); margin-bottom: 8px; }
+
+/* Price Update Modal */
+.current-price-display {
+    background: rgba(212, 175, 55, 0.08); border: 2px solid rgba(212, 175, 55, 0.3);
+    border-radius: 6px; padding: 20px; text-align: center; margin-bottom: 20px;
+}
+.current-price-display .label { font-size: 0.8rem; color: var(--gray-400); text-transform: uppercase; letter-spacing: 1px; }
+.current-price-display .price-amount {
+    font-size: 2rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.price-preview {
+    background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 6px; padding: 14px; text-align: center; margin-top: 12px;
+}
+.price-preview.decrease { background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2); }
+
+/* ===================================================================
+   Floor Images Manager (Edit Modal)
+   =================================================================== */
+
+/* Floor tabs/pills inside modal */
+.floor-manager-tabs {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.floor-manager-tab {
+    padding: 8px 16px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px; color: var(--gray-400); font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+}
+.floor-manager-tab:hover {
+    background: rgba(37, 99, 235, 0.15); border-color: rgba(37, 99, 235, 0.3); color: var(--white);
+}
+.floor-manager-tab.active {
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+    border-color: var(--gold); color: var(--black);
+}
+.floor-manager-tab .floor-count {
+    background: rgba(255, 255, 255, 0.2); padding: 1px 6px; border-radius: 8px;
+    font-size: 0.7rem; font-weight: 700;
+}
+.floor-manager-tab.active .floor-count {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Floor panel content */
+.floor-panel {
+    display: none; animation: fadeInPanel 0.2s ease;
+}
+.floor-panel.active { display: block; }
+
+@keyframes fadeInPanel {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Flash Alert Animations */
+.flash-alert {
+    padding: 14px 18px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideInDown 0.3s ease-out;
+}
+.flash-alert i {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.flash-alert.alert-success {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+}
+.flash-alert.alert-danger {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Floor image grid */
+.floor-photos-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;
+}
+.floor-photo-item {
+    position: relative; border-radius: 6px; overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.floor-photo-item img {
+    width: 100%; aspect-ratio: 1; object-fit: cover; display: block;
+    border-radius: 6px;
+}
+.floor-photo-item .floor-photo-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6); opacity: 0;
+    transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.floor-photo-item:hover .floor-photo-overlay { opacity: 1; }
+
+/* Floor upload area */
+.floor-upload-area {
+    border: 2px dashed rgba(37, 99, 235, 0.3); border-radius: 6px;
+    padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s;
+    background: rgba(37, 99, 235, 0.03); margin-top: 12px;
+}
+.floor-upload-area:hover { border-color: var(--blue); background: rgba(37, 99, 235, 0.08); }
+.floor-upload-area i { font-size: 1.5rem; color: var(--blue-light); margin-bottom: 4px; }
+
+/* Add floor button */
+.add-floor-btn {
+    padding: 8px 16px; background: rgba(34, 197, 94, 0.08); border: 1px dashed rgba(34, 197, 94, 0.3);
+    border-radius: 4px; color: #4ade80; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+}
+.add-floor-btn:hover {
+    background: rgba(34, 197, 94, 0.15); border-color: rgba(34, 197, 94, 0.5);
+}
+
+/* Remove floor button */
+.remove-floor-btn {
+    padding: 4px 10px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 4px; color: #ef4444; font-size: 0.75rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+}
+.remove-floor-btn:hover {
+    background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Floor empty state */
+.floor-empty-state {
+    text-align: center; padding: 24px; color: var(--gray-500); font-size: 0.875rem;
+}
+.floor-empty-state i {
+    font-size: 2rem; color: var(--gray-600); margin-bottom: 8px; display: block;
+}
+
+/* Section separator inside modal */
+.modal-section-divider {
+    border: none; border-top: 1px solid rgba(37, 99, 235, 0.12);
+    margin: 8px 0 20px;
+}
+
+/* ===================================================================
+   Section Headers (improved typography)
+   =================================================================== */
+.edit-section-header {
+    display: flex; align-items: flex-start; gap: 14px;
+    margin-bottom: 22px; padding-bottom: 16px;
+    border-bottom: 1px solid rgba(37, 99, 235, 0.1);
+}
+.edit-section-header > i {
+    font-size: 1.4rem; color: var(--gold);
+    margin-top: 2px; flex-shrink: 0;
+}
+.edit-section-header h6 {
+    font-size: 1rem; font-weight: 700; color: var(--white);
+    margin: 0; line-height: 1.3;
+}
+.edit-section-header p {
+    font-size: 0.78rem; color: var(--gray-500);
+    margin: 2px 0 0; line-height: 1.3;
+}
+
+/* Input group icons */
+.edit-input-icon {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--blue-light);
+}
+
+/* Modal form footer (sticky) */
+.modal-form-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 28px; padding-top: 24px;
+    border-top: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+/* ===================================================================
+   Amenity Checkbox Grid
+   =================================================================== */
+.amenity-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+}
+.amenity-checkbox-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer; transition: all 0.15s ease;
+    user-select: none;
+}
+.amenity-checkbox-item:hover {
+    background: rgba(37, 99, 235, 0.08);
+    border-color: rgba(37, 99, 235, 0.25);
+}
+.amenity-checkbox-item.selected {
+    background: rgba(212, 175, 55, 0.08);
+    border-color: rgba(212, 175, 55, 0.3);
+}
+.amenity-checkbox-item input[type="checkbox"] {
+    width: 16px; height: 16px; flex-shrink: 0;
+    accent-color: var(--gold);
+    cursor: pointer;
+}
+.amenity-checkbox-label {
+    font-size: 0.8rem; color: var(--gray-300);
+    font-weight: 500; line-height: 1.2;
+}
+.amenity-checkbox-item.selected .amenity-checkbox-label {
+    color: var(--white);
+}
+
+/* ===================================================================
+   Responsive adjustments
+   =================================================================== */
+@media (max-width: 991px) {
+    .amenity-checkbox-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    .edit-photos-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    }
+    .floor-photos-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+}

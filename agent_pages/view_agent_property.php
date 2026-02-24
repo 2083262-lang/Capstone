@@ -155,18 +155,27 @@ while ($row = $floor_result->fetch_assoc()) {
 }
 $stmt_floor->close();
 
-// Fetch property amenities
-$sql_amenities = "SELECT am.amenity_name FROM property_amenities pa
+// Fetch property amenities (names for display)
+$sql_amenities = "SELECT am.amenity_id, am.amenity_name FROM property_amenities pa
                   JOIN amenities am ON pa.amenity_id = am.amenity_id
                   WHERE pa.property_id = ? ORDER BY am.amenity_name ASC";
 $stmt_amenities = $conn->prepare($sql_amenities);
 $stmt_amenities->bind_param("i", $property_id);
 $stmt_amenities->execute();
 $result_amenities = $stmt_amenities->get_result();
+$property_amenity_ids = [];
 while ($row = $result_amenities->fetch_assoc()) {
     $amenities[] = $row['amenity_name'];
+    $property_amenity_ids[] = (int)$row['amenity_id'];
 }
 $stmt_amenities->close();
+
+// Fetch ALL amenities for edit modal checkboxes
+$all_amenities = [];
+$all_amenities_result = $conn->query("SELECT amenity_id, amenity_name FROM amenities ORDER BY amenity_name ASC");
+if ($all_amenities_result) {
+    $all_amenities = $all_amenities_result->fetch_all(MYSQLI_ASSOC);
+}
 
 // Check for sale verification submissions
 $sql_sale_verification = "SELECT status FROM sale_verifications WHERE property_id = ? ORDER BY submitted_at DESC LIMIT 1";
@@ -201,6 +210,7 @@ $days_on_market = $interval->days;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../css/agent_property_modals.css">
     <style>
         :root {
             --gold: #d4af37;
@@ -571,124 +581,6 @@ $days_on_market = $interval->days;
         }
         .rental-item .rental-label { font-size: 0.75rem; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
         .rental-item .rental-value { font-size: 1.1rem; font-weight: 700; color: var(--white); }
-
-        /* === MODAL STYLES (Dark Theme) === */
-        .modal-dark .modal-content {
-            background: linear-gradient(135deg, rgba(26, 26, 26, 0.98) 0%, rgba(10, 10, 10, 0.98) 100%);
-            border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 8px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-        .modal-dark .modal-header {
-            border-bottom: 1px solid rgba(37, 99, 235, 0.15); padding: 24px 32px;
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(212, 175, 55, 0.05) 100%);
-        }
-        .modal-dark .modal-header .modal-title {
-            color: var(--white); font-weight: 700; font-size: 1.25rem;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .modal-dark .modal-header .modal-title i { color: var(--gold); font-size: 1.5rem; }
-        .modal-dark .modal-body { padding: 28px 32px; color: var(--gray-300); }
-        .modal-dark .modal-footer { border-top: 1px solid rgba(37, 99, 235, 0.15); padding: 16px 32px; }
-        .modal-dark .btn-close { filter: invert(1) brightness(2); opacity: 0.7; }
-        .modal-dark .btn-close:hover { opacity: 1; }
-
-        /* Modal form inputs */
-        .modal-dark .form-control, .modal-dark .form-select, .modal-dark textarea.form-control {
-            background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.15);
-            color: var(--white); border-radius: 4px; padding: 12px 16px; transition: all 0.2s;
-        }
-        .modal-dark .form-control:focus, .modal-dark .form-select:focus, .modal-dark textarea.form-control:focus {
-            outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
-            background: rgba(0,0,0,0.4);
-        }
-        .modal-dark .form-label {
-            color: var(--gray-300); font-weight: 600; font-size: 0.875rem; margin-bottom: 6px;
-        }
-        .modal-dark .form-text { color: var(--gray-500); }
-        .modal-dark input::placeholder, .modal-dark textarea::placeholder { color: rgba(255,255,255,0.3) !important; }
-
-        /* Modal Buttons */
-        .btn-gold {
-            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
-            color: var(--black); border: none; font-weight: 700; border-radius: 4px; padding: 12px 24px;
-            transition: all 0.2s; cursor: pointer;
-        }
-        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3); color: var(--black); }
-        .btn-dark-outline {
-            background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--gray-300);
-            font-weight: 600; border-radius: 4px; padding: 12px 24px; transition: all 0.2s; cursor: pointer;
-        }
-        .btn-dark-outline:hover { background: rgba(255,255,255,0.05); color: var(--white); }
-        .btn-blue {
-            background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
-            color: var(--white); border: none; font-weight: 700; border-radius: 4px; padding: 12px 24px;
-            transition: all 0.2s; cursor: pointer;
-        }
-        .btn-blue:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3); color: var(--white); }
-
-        /* Edit Modal Form Cards */
-        .edit-form-card {
-            background: rgba(37, 99, 235, 0.04); border: 1px solid rgba(37, 99, 235, 0.12);
-            border-radius: 6px; padding: 20px; margin-bottom: 20px;
-        }
-        .edit-form-card h6 {
-            font-size: 0.95rem; font-weight: 700; color: var(--white); margin-bottom: 16px;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .edit-form-card h6 i { color: var(--gold); }
-
-        /* Photo Grid in Edit Modal */
-        .edit-photos-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;
-        }
-        .edit-photo-item { position: relative; border-radius: 6px; overflow: hidden; }
-        .edit-photo-item img {
-            width: 100%; aspect-ratio: 1; object-fit: cover; display: block;
-            border-radius: 6px; transition: transform 0.2s;
-        }
-        .edit-photo-item:hover img { transform: scale(1.05); }
-        .edit-photo-overlay {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.6); opacity: 0;
-            transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-        .edit-photo-item:hover .edit-photo-overlay { opacity: 1; }
-        .edit-photo-btn {
-            width: 34px; height: 34px; border-radius: 50%; border: none;
-            background: rgba(255,255,255,0.9); color: var(--black); cursor: pointer;
-            display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
-            transition: all 0.2s;
-        }
-        .edit-photo-btn:hover { background: var(--gold); color: var(--black); transform: scale(1.1); }
-        .edit-photo-btn.btn-delete:hover { background: #ef4444; color: white; }
-        .cover-badge-small {
-            position: absolute; top: 6px; left: 6px;
-            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-            color: var(--black); padding: 3px 8px; border-radius: 10px;
-            font-size: 0.65rem; font-weight: 700; z-index: 3;
-        }
-        .upload-area {
-            border: 2px dashed rgba(212, 175, 55, 0.3); border-radius: 6px;
-            padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s;
-            background: rgba(212, 175, 55, 0.03);
-        }
-        .upload-area:hover { border-color: var(--gold); background: rgba(212, 175, 55, 0.08); }
-        .upload-area i { font-size: 2rem; color: var(--gold); margin-bottom: 8px; }
-
-        /* Price Update Modal */
-        .current-price-display {
-            background: rgba(212, 175, 55, 0.08); border: 2px solid rgba(212, 175, 55, 0.3);
-            border-radius: 6px; padding: 20px; text-align: center; margin-bottom: 20px;
-        }
-        .current-price-display .label { font-size: 0.8rem; color: var(--gray-400); text-transform: uppercase; letter-spacing: 1px; }
-        .current-price-display .price-amount {
-            font-size: 2rem; font-weight: 800;
-            background: linear-gradient(135deg, var(--gold), var(--gold-light));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-        }
-        .price-preview {
-            background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2);
-            border-radius: 6px; padding: 14px; text-align: center; margin-top: 12px;
-        }
-        .price-preview.decrease { background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2); }
 
         /* Responsive */
         @media (max-width: 1024px) {
@@ -1099,182 +991,8 @@ $days_on_market = $interval->days;
         <div class="lightbox-counter" id="lightboxCounter"></div>
     </div>
 
-    <!-- Edit/Update Property Modal -->
-    <div class="modal fade modal-dark" id="editPropertyModal" tabindex="-1" aria-labelledby="editPropertyModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editPropertyModalLabel"><i class="bi bi-pencil-square"></i> Update Property Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="updateAlert" class="flash-alert d-none" role="alert"></div>
-                    <form id="editPropertyForm" novalidate>
-                        <input type="hidden" name="property_id" value="<?php echo (int)$property_id; ?>" />
-                        <div class="row g-4">
-                            <div class="col-lg-6">
-                                <!-- Basic Information -->
-                                <div class="edit-form-card">
-                                    <h6><i class="bi bi-house-door"></i> Basic Information</h6>
-                                    <div class="mb-3">
-                                        <label class="form-label">Street Address</label>
-                                        <input type="text" class="form-control" name="StreetAddress" value="<?php echo htmlspecialchars($property_data['StreetAddress']); ?>" required>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">City</label>
-                                            <input type="text" class="form-control" name="City" value="<?php echo htmlspecialchars($property_data['City']); ?>" required>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label">State</label>
-                                            <input type="text" class="form-control" name="State" value="<?php echo htmlspecialchars($property_data['State']); ?>" required>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label">ZIP</label>
-                                            <input type="text" class="form-control" name="ZIP" value="<?php echo htmlspecialchars($property_data['ZIP']); ?>" required>
-                                        </div>
-                                    </div>
-                                    <div class="row g-3 mt-1">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Listing Price (₱)</label>
-                                            <input type="number" min="0" step="0.01" class="form-control" name="ListingPrice" value="<?php echo htmlspecialchars($property_data['ListingPrice']); ?>" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Listing Date</label>
-                                            <input type="date" class="form-control" name="ListingDate" value="<?php echo htmlspecialchars(date('Y-m-d', strtotime($property_data['ListingDate']))); ?>" max="<?php echo date('Y-m-d'); ?>" required style="color-scheme: dark;">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Specifications -->
-                                <div class="edit-form-card">
-                                    <h6><i class="bi bi-rulers"></i> Specifications</h6>
-                                    <div class="row g-3">
-                                        <div class="col-md-4">
-                                            <label class="form-label">Bedrooms</label>
-                                            <input type="number" min="0" class="form-control" name="Bedrooms" value="<?php echo (int)$property_data['Bedrooms']; ?>" required>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label">Bathrooms</label>
-                                            <input type="number" min="0" step="0.5" class="form-control" name="Bathrooms" value="<?php echo htmlspecialchars($property_data['Bathrooms']); ?>" required>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label">Sq Footage</label>
-                                            <input type="number" min="0" class="form-control" name="SquareFootage" value="<?php echo (int)$property_data['SquareFootage']; ?>" required>
-                                        </div>
-                                    </div>
-                                    <div class="row g-3 mt-1">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Year Built</label>
-                                            <input type="number" min="1800" max="<?php echo date('Y'); ?>" class="form-control" name="YearBuilt" value="<?php echo (int)$property_data['YearBuilt']; ?>">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Lot Size (acres)</label>
-                                            <input type="number" min="0" step="0.01" class="form-control" name="LotSize" value="<?php echo htmlspecialchars($property_data['LotSize'] ?? ''); ?>">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-6">
-                                <!-- Classification -->
-                                <div class="edit-form-card">
-                                    <h6><i class="bi bi-tags"></i> Classification & Details</h6>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Property Type</label>
-                                            <select class="form-select" name="PropertyType" required>
-                                                <?php
-                                                    $types = ['House','Condo','Townhouse','Apartment','Land','Other'];
-                                                    $cur = trim((string)$property_data['PropertyType']);
-                                                    foreach ($types as $t) {
-                                                        $sel = strcasecmp($cur,$t)===0 ? 'selected' : '';
-                                                        echo '<option value="'.htmlspecialchars($t).'" '.$sel.'>'.htmlspecialchars($t).'</option>';
-                                                    }
-                                                ?>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Parking Type</label>
-                                            <select class="form-select" name="ParkingType">
-                                                <?php
-                                                    $parks = ['Garage','Street','Driveway','Carport','None','Other'];
-                                                    $curP = trim((string)($property_data['ParkingType'] ?? ''));
-                                                    foreach ($parks as $p) {
-                                                        $sel = strcasecmp($curP,$p)===0 ? 'selected' : '';
-                                                        echo '<option value="'.htmlspecialchars($p).'" '.$sel.'>'.htmlspecialchars($p).'</option>';
-                                                    }
-                                                ?>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="row g-3 mt-1">
-                                        <div class="col-md-6">
-                                            <label class="form-label">MLS Number</label>
-                                            <input type="text" class="form-control" name="MLSNumber" value="<?php echo htmlspecialchars($property_data['MLSNumber'] ?? ''); ?>">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">County</label>
-                                            <input type="text" class="form-control" name="County" value="<?php echo htmlspecialchars($property_data['County'] ?? ''); ?>">
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <label class="form-label">Source</label>
-                                        <input type="text" class="form-control" name="Source" value="<?php echo htmlspecialchars($property_data['Source'] ?? ''); ?>">
-                                    </div>
-                                </div>
-
-                                <!-- Photo Manager -->
-                                <div class="edit-form-card">
-                                    <h6><i class="bi bi-images"></i> Photo Gallery Manager</h6>
-                                    <label for="photoUploadInput" class="upload-area w-100 mb-3">
-                                        <i class="bi bi-cloud-arrow-up d-block"></i>
-                                        <div style="font-weight: 600; color: var(--white);">Click to upload photos</div>
-                                        <div style="font-size: 0.8rem; color: var(--gray-500);">JPEG, PNG, GIF up to 5MB each</div>
-                                    </label>
-                                    <input type="file" id="photoUploadInput" accept="image/*" multiple style="display: none;">
-                                    <div id="photosAlert" class="flash-alert d-none" role="alert"></div>
-                                    <div id="photosGrid" class="edit-photos-grid">
-                                        <?php foreach ($property_images as $idx => $img): ?>
-                                            <div class="edit-photo-item" data-url="<?php echo htmlspecialchars($img); ?>">
-                                                <img src="../<?php echo htmlspecialchars($img); ?>" alt="Photo <?php echo $idx+1; ?>">
-                                                <?php if ($idx === 0): ?>
-                                                    <div class="cover-badge-small"><i class="bi bi-star-fill"></i> Cover</div>
-                                                <?php endif; ?>
-                                                <div class="edit-photo-overlay">
-                                                    <button type="button" class="edit-photo-btn btn-move-left" title="Move left"><i class="bi bi-arrow-left"></i></button>
-                                                    <button type="button" class="edit-photo-btn btn-set-cover" title="Set as cover"><i class="bi bi-star"></i></button>
-                                                    <button type="button" class="edit-photo-btn btn-move-right" title="Move right"><i class="bi bi-arrow-right"></i></button>
-                                                    <button type="button" class="edit-photo-btn btn-delete btn-delete-photo" title="Delete"><i class="bi bi-trash"></i></button>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                    <div class="d-flex justify-content-end mt-3">
-                                        <button type="button" id="savePhotoOrderBtn" class="btn btn-sm btn-dark-outline">
-                                            <i class="bi bi-save me-1"></i> Save Photo Order
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Description -->
-                                <div class="edit-form-card">
-                                    <h6><i class="bi bi-text-paragraph"></i> Property Description</h6>
-                                    <textarea class="form-control" name="ListingDescription" rows="6" minlength="20" placeholder="Describe property features, highlights..." required><?php echo htmlspecialchars($property_data['ListingDescription']); ?></textarea>
-                                    <div style="text-align: right; font-size: 0.75rem; color: var(--gray-500); margin-top: 4px;">
-                                        <span id="charCount">0</span> / 1000 characters
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-end gap-2 mt-3 pt-3" style="border-top: 1px solid rgba(37,99,235,0.15);">
-                            <button type="button" class="btn btn-dark-outline" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i> Cancel</button>
-                            <button type="submit" class="btn btn-gold"><i class="bi bi-check-lg me-1"></i> Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Edit/Update Property Modal (external include) -->
+    <?php include 'modals/edit_property_modal.php'; ?>
 
     <!-- Mark as Sold Modal -->
     <div class="modal fade modal-dark" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
@@ -1387,6 +1105,11 @@ $days_on_market = $interval->days;
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    // ── Global data passed from PHP to JS ──
+    window._propertyId = <?php echo (int)$property_id; ?>;
+    window._currentListingPrice = <?php echo (float)$property_data['ListingPrice']; ?>;
+    window._floorImagesData = <?php echo json_encode($floor_images); ?>;
+
     // Image data from PHP
     const featuredImages = <?php echo json_encode($property_images); ?>;
     const floorImagesRaw = <?php echo json_encode($floor_images); ?>;
@@ -1398,8 +1121,6 @@ $days_on_market = $interval->days;
             floorImages[parseInt(key)] = floorImagesRaw[key];
         });
     }
-    
-
 
     let currentImageIndex = 0;
     let currentImages = featuredImages;
@@ -1415,93 +1136,51 @@ $days_on_market = $interval->days;
         if (item0) {
             if (total >= 2) {
                 let img = item0.querySelector('img');
-                if (img) { 
-                    img.src = '../' + images[1]; 
-                    img.alt = 'Property image 2';
-                } else { 
-                    item0.innerHTML = '<img src="../' + images[1] + '" alt="Property image 2" id="agentPropSideImg0">'; 
-                }
+                if (img) { img.src = '../' + images[1]; img.alt = 'Property image 2'; }
+                else { item0.innerHTML = '<img src="../' + images[1] + '" alt="Property image 2" id="agentPropSideImg0">'; }
                 item0.style.cursor = 'pointer';
                 item0.onclick = function() { openLightbox(1); };
             } else {
                 item0.innerHTML = '<div class="agent-prop-gallery-placeholder"><i class="bi bi-image"></i></div>';
-                item0.style.cursor = 'default';
-                item0.onclick = null;
+                item0.style.cursor = 'default'; item0.onclick = null;
             }
         }
 
         if (item1) {
             if (total >= 3) {
                 let img = item1.querySelector('img');
-                if (img) { 
-                    img.src = '../' + images[2]; 
-                    img.alt = 'Property image 3';
-                } else { 
-                    item1.innerHTML = '<img src="../' + images[2] + '" alt="Property image 3" id="agentPropSideImg1">'; 
-                }
+                if (img) { img.src = '../' + images[2]; img.alt = 'Property image 3'; }
+                else { item1.innerHTML = '<img src="../' + images[2] + '" alt="Property image 3" id="agentPropSideImg1">'; }
                 item1.style.cursor = 'pointer';
                 item1.onclick = function() { openLightbox(2); };
             } else {
                 item1.innerHTML = '<div class="agent-prop-gallery-placeholder"><i class="bi bi-image"></i></div>';
-                item1.style.cursor = 'default';
-                item1.onclick = null;
+                item1.style.cursor = 'default'; item1.onclick = null;
             }
-            
-            // Update or create +N overlay
             let overlay = item1.querySelector('.agent-prop-more-overlay');
             if (total > 3) {
-                if (!overlay) {
-                    overlay = document.createElement('div');
-                    overlay.className = 'agent-prop-more-overlay';
-                    overlay.id = 'agentPropMoreOverlay';
-                    item1.appendChild(overlay);
-                }
-                overlay.textContent = '+' + (total - 3);
-                overlay.style.display = 'flex';
-            } else if (overlay) {
-                overlay.style.display = 'none';
-            }
+                if (!overlay) { overlay = document.createElement('div'); overlay.className = 'agent-prop-more-overlay'; overlay.id = 'agentPropMoreOverlay'; item1.appendChild(overlay); }
+                overlay.textContent = '+' + (total - 3); overlay.style.display = 'flex';
+            } else if (overlay) { overlay.style.display = 'none'; }
         }
     }
 
     // Switch hero view between featured and floor images
     function switchHeroView(viewType, floorNum = null) {
         const mainImage = document.getElementById('agentPropMainImage');
-        
-        if (!mainImage) {
-            console.error('Main image element not found');
-            return;
-        }
-        
-        // Update active pill styling
+        if (!mainImage) return;
         document.querySelectorAll('.agent-prop-floor-pill').forEach(pill => {
-            if (viewType === 'featured' && pill.dataset.type === 'featured') {
-                pill.classList.add('active');
-            } else if (viewType === 'floor' && pill.dataset.type === 'floor' && parseInt(pill.dataset.floor) === floorNum) {
-                pill.classList.add('active');
-            } else {
-                pill.classList.remove('active');
-            }
+            if (viewType === 'featured' && pill.dataset.type === 'featured') pill.classList.add('active');
+            else if (viewType === 'floor' && pill.dataset.type === 'floor' && parseInt(pill.dataset.floor) === floorNum) pill.classList.add('active');
+            else pill.classList.remove('active');
         });
-
-        currentHeroView = viewType;
-        currentHeroFloor = floorNum;
-
-        // Switch to appropriate image set
-        if (viewType === 'featured') {
-            currentImages = featuredImages;
-        } else if (viewType === 'floor') {
+        currentHeroView = viewType; currentHeroFloor = floorNum;
+        if (viewType === 'featured') { currentImages = featuredImages; }
+        else if (viewType === 'floor') {
             const floorKey = parseInt(floorNum);
-            
-            if (floorImages[floorKey] && Array.isArray(floorImages[floorKey]) && floorImages[floorKey].length > 0) {
-                currentImages = floorImages[floorKey];
-            } else {
-                alert('No images available for Floor ' + floorKey);
-                return;
-            }
+            if (floorImages[floorKey] && Array.isArray(floorImages[floorKey]) && floorImages[floorKey].length > 0) { currentImages = floorImages[floorKey]; }
+            else { alert('No images available for Floor ' + floorKey); return; }
         }
-
-        // Update main image and sidebar
         if (currentImages && currentImages.length > 0) {
             mainImage.src = '../' + currentImages[0];
             mainImage.alt = viewType === 'featured' ? 'Featured property image' : 'Floor ' + floorNum + ' image';
@@ -1510,336 +1189,13 @@ $days_on_market = $interval->days;
     }
 
     // Lightbox
-    function openLightbox(index) {
-        currentImageIndex = index;
-        updateLightboxImage();
-        document.getElementById('lightbox').classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeLightbox(event) {
-        if (event.target.id === 'lightbox' || event.target.closest('.lightbox-close')) {
-            event.stopPropagation();
-            document.getElementById('lightbox').classList.remove('active');
-            document.body.style.overflow = 'auto';
-        }
-    }
-
-    function changeImage(direction, event) {
-        event.stopPropagation();
-        currentImageIndex += direction;
-        if (currentImageIndex < 0) currentImageIndex = currentImages.length - 1;
-        if (currentImageIndex >= currentImages.length) currentImageIndex = 0;
-        updateLightboxImage();
-    }
-
-    function updateLightboxImage() {
-        document.getElementById('lightboxImage').src = '../' + currentImages[currentImageIndex];
-        document.getElementById('lightboxCounter').textContent = (currentImageIndex + 1) + ' / ' + currentImages.length;
-        const label = currentHeroView === 'featured' ? 'Featured Photos' : 'Floor ' + currentHeroFloor + ' Photos';
-        document.getElementById('lightboxLabel').textContent = label;
-    }
-
-    // Keyboard navigation
-    document.addEventListener('keydown', function(e) {
-        const lightbox = document.getElementById('lightbox');
-        if (lightbox.classList.contains('active')) {
-            if (e.key === 'Escape') closeLightbox({ target: lightbox });
-            if (e.key === 'ArrowLeft') changeImage(-1, e);
-            if (e.key === 'ArrowRight') changeImage(1, e);
-        }
-    });
-
-    // Mark as Sold Modal handler
-    document.getElementById('markSoldModal')?.addEventListener('show.bs.modal', function(event) {
-        const button = event.relatedTarget;
-        if (button) {
-            const propertyId = button.getAttribute('data-property-id');
-            const propertyTitle = button.getAttribute('data-property-title');
-            if (propertyId) document.getElementById('propertyId').value = propertyId;
-            if (propertyTitle) document.getElementById('propertyTitle').textContent = propertyTitle;
-        }
-    });
-
-    // Edit Property Form
-    (function(){
-        const form = document.getElementById('editPropertyForm');
-        if (!form) return;
-        const alertBox = document.getElementById('updateAlert');
-        const descTextarea = form.querySelector('[name="ListingDescription"]');
-        const charCountEl = document.getElementById('charCount');
-
-        function showAlert(ok, msg) {
-            alertBox.classList.remove('d-none','alert-success','alert-danger');
-            alertBox.classList.add(ok ? 'alert-success' : 'alert-danger');
-            alertBox.innerHTML = '<i class="bi bi-' + (ok ? 'check-circle-fill' : 'exclamation-triangle-fill') + '"></i> ' + msg;
-        }
-
-        if (descTextarea && charCountEl) {
-            descTextarea.addEventListener('input', function() {
-                charCountEl.textContent = this.value.length;
-                charCountEl.style.color = this.value.length > 1000 ? '#ef4444' : this.value.length > 800 ? '#fbbf24' : 'var(--gray-500)';
-            });
-            charCountEl.textContent = descTextarea.value.length;
-        }
-
-        form.addEventListener('submit', function(e){
-            e.preventDefault();
-            if (!form.checkValidity()) { form.classList.add('was-validated'); showAlert(false, 'Please fill in all required fields.'); return; }
-            const fd = new FormData(form);
-            const price = parseFloat(fd.get('ListingPrice')||'0');
-            const desc = String(fd.get('ListingDescription')||'');
-            const dateStr = String(fd.get('ListingDate')||'');
-            const today = new Date().toISOString().slice(0,10);
-            let msg = '';
-            if (price < 0 || isNaN(price)) msg = 'Price must be positive.';
-            else if (!dateStr || dateStr > today) msg = 'Date cannot be in the future.';
-            else if (desc.trim().length < 20) msg = 'Description must be at least 20 characters.';
-            if (msg) { showAlert(false, msg); return; }
-
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const origHtml = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
-
-            fetch('update_property_process.php', {
-                method: 'POST',
-                body: new URLSearchParams(Array.from(fd.entries())),
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data?.success) { showAlert(true, data.message || 'Updated! Reloading...'); setTimeout(() => window.location.reload(), 900); }
-                else { showAlert(false, data?.message || 'Update failed.'); }
-            })
-            .catch(() => showAlert(false, 'Unexpected error.'))
-            .finally(() => { submitBtn.disabled = false; submitBtn.innerHTML = origHtml; });
-        });
-    })();
-
-    // Photos management
-    (function(){
-        const propId = <?php echo (int)$property_id; ?>;
-        const grid = document.getElementById('photosGrid');
-        const uploadInput = document.getElementById('photoUploadInput');
-        const orderBtn = document.getElementById('savePhotoOrderBtn');
-        const alertEl = document.getElementById('photosAlert');
-
-        function showPhotosAlert(ok, msg){
-            alertEl.classList.remove('d-none','alert-success','alert-danger');
-            alertEl.classList.add(ok ? 'alert-success' : 'alert-danger');
-            alertEl.innerHTML = '<i class="bi bi-' + (ok ? 'check-circle-fill' : 'exclamation-triangle-fill') + '"></i> ' + msg;
-        }
-
-        function getOrder(){ return Array.from(grid.querySelectorAll('[data-url]')).map(el => el.getAttribute('data-url')); }
-
-        function reflow(){
-            const items = Array.from(grid.querySelectorAll('[data-url]'));
-            items.forEach((wrap, idx) => {
-                const left = wrap.querySelector('.btn-move-left');
-                const right = wrap.querySelector('.btn-move-right');
-                if(left) left.disabled = (idx===0);
-                if(right) right.disabled = (idx===items.length-1);
-                // Update cover badge
-                wrap.querySelectorAll('.cover-badge-small').forEach(b => b.remove());
-                if(idx === 0){
-                    const badge = document.createElement('div');
-                    badge.className = 'cover-badge-small';
-                    badge.innerHTML = '<i class="bi bi-star-fill"></i> Cover';
-                    wrap.appendChild(badge);
-                }
-            });
-        }
-
-        if(grid){
-            grid.addEventListener('click', function(e){
-                const col = e.target.closest('[data-url]');
-                if(!col) return;
-                const url = col.getAttribute('data-url');
-                if(e.target.closest('.btn-move-left')){
-                    const prev = col.previousElementSibling;
-                    if(prev){ col.parentNode.insertBefore(col, prev); reflow(); }
-                } else if(e.target.closest('.btn-move-right')){
-                    const next = col.nextElementSibling;
-                    if(next){ col.parentNode.insertBefore(next, col); reflow(); }
-                } else if(e.target.closest('.btn-set-cover')){
-                    const first = grid.querySelector('[data-url]');
-                    if(first !== col){ grid.insertBefore(col, first); reflow(); saveOrder('Cover photo set.'); }
-                } else if(e.target.closest('.btn-delete-photo')){
-                    if(confirm('Delete this photo?')) deletePhoto(url, col);
-                }
-            });
-            reflow();
-        }
-
-        function saveOrder(successMsg){
-            fetch('reorder_property_images.php', {
-                method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({ property_id: String(propId), order: JSON.stringify(getOrder()) })
-            }).then(r=>r.json()).then(data=>{
-                if(data?.success){ showPhotosAlert(true, successMsg || 'Photo order saved.'); reflow(); }
-                else { showPhotosAlert(false, data?.message || 'Failed to save order.'); }
-            }).catch(()=> showPhotosAlert(false, 'Network error.'));
-        }
-
-        function deletePhoto(url, node){
-            fetch('delete_property_image.php', {
-                method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({ property_id: String(propId), photo_url: url })
-            }).then(r=>r.json()).then(data=>{
-                if(data?.success){ node.remove(); showPhotosAlert(true, 'Photo deleted.'); reflow(); }
-                else { showPhotosAlert(false, data?.message || 'Failed to delete.'); }
-            }).catch(()=> showPhotosAlert(false, 'Network error.'));
-        }
-
-        if(orderBtn) orderBtn.addEventListener('click', ()=> saveOrder());
-
-        if(uploadInput){
-            uploadInput.addEventListener('change', function(){
-                const files = Array.from(this.files||[]);
-                if(!files.length) return;
-                const fd = new FormData();
-                fd.append('property_id', String(propId));
-                files.forEach(f=> fd.append('images[]', f));
-                fetch('upload_property_image.php', { method:'POST', body: fd })
-                .then(r=>r.json()).then(data=>{
-                    if(data?.success && Array.isArray(data.photos)){
-                        data.photos.forEach(photo => {
-                            const item = document.createElement('div');
-                            item.className = 'edit-photo-item';
-                            item.setAttribute('data-url', photo.url);
-                            item.innerHTML = `
-                                <img src="../${photo.url}" alt="Photo">
-                                <div class="edit-photo-overlay">
-                                    <button type="button" class="edit-photo-btn btn-move-left" title="Move left"><i class="bi bi-arrow-left"></i></button>
-                                    <button type="button" class="edit-photo-btn btn-set-cover" title="Set as cover"><i class="bi bi-star"></i></button>
-                                    <button type="button" class="edit-photo-btn btn-move-right" title="Move right"><i class="bi bi-arrow-right"></i></button>
-                                    <button type="button" class="edit-photo-btn btn-delete btn-delete-photo" title="Delete"><i class="bi bi-trash"></i></button>
-                                </div>`;
-                            grid.appendChild(item);
-                        });
-                        showPhotosAlert(true, data.photos.length + ' photo(s) uploaded.');
-                        reflow();
-                        uploadInput.value = '';
-                    } else { showPhotosAlert(false, data?.message || 'Upload failed.'); }
-                }).catch(()=> showPhotosAlert(false, 'Network error.'));
-            });
-        }
-    })();
-
-    // Update Price
-    (function(){
-        const form = document.getElementById('updatePriceForm');
-        const newPriceInput = document.getElementById('newPriceInput');
-        const currentPrice = <?php echo (float)$property_data['ListingPrice']; ?>;
-        const previewBox = document.getElementById('priceChangePreview');
-        const alertBox = document.getElementById('priceUpdateAlert');
-
-        function showPriceAlert(ok, msg){
-            alertBox.classList.remove('d-none','alert-success','alert-danger');
-            alertBox.classList.add(ok ? 'alert-success' : 'alert-danger');
-            alertBox.innerHTML = '<i class="bi bi-' + (ok ? 'check-circle-fill' : 'exclamation-triangle-fill') + '"></i> ' + msg;
-        }
-
-        if (newPriceInput) {
-            newPriceInput.addEventListener('input', function(){
-                const newPrice = parseFloat(this.value) || 0;
-                if (newPrice > 0 && newPrice !== currentPrice) {
-                    const diff = newPrice - currentPrice;
-                    const percent = ((diff / currentPrice) * 100).toFixed(2);
-                    const isIncrease = diff > 0;
-                    const color = isIncrease ? '#4ade80' : '#ef4444';
-                    const icon = isIncrease ? 'arrow-up' : 'arrow-down';
-                    const sign = isIncrease ? '+' : '';
-                    previewBox.style.display = 'block';
-                    previewBox.innerHTML = `<div class="price-preview ${isIncrease ? '' : 'decrease'}">
-                        <div style="font-size:0.8rem;color:var(--gray-400);margin-bottom:4px;">Price Change</div>
-                        <div style="font-size:1.25rem;font-weight:700;color:${color};display:flex;align-items:center;justify-content:center;gap:6px;">
-                            <i class="bi bi-${icon}"></i> ${sign}₱${Math.abs(diff).toLocaleString('en-US',{minimumFractionDigits:2})} (${sign}${percent}%)
-                        </div></div>`;
-                } else { previewBox.style.display = 'none'; }
-            });
-        }
-
-        if (form) {
-            form.addEventListener('submit', function(e){
-                e.preventDefault();
-                const fd = new FormData(form);
-                const newPrice = parseFloat(fd.get('new_price')) || 0;
-                if (newPrice <= 0) { showPriceAlert(false, 'Enter a valid price.'); return; }
-                if (newPrice === currentPrice) { showPriceAlert(false, 'New price is the same as current.'); return; }
-
-                const submitBtn = form.querySelector('button[type="submit"]');
-                const origHtml = submitBtn.innerHTML;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
-
-                fetch('update_price_process.php', {
-                    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams(Array.from(fd.entries()))
-                })
-                .then(async r => { const t = await r.text(); try { return JSON.parse(t); } catch(e){ throw e; } })
-                .then(data => {
-                    if (data?.success) { showPriceAlert(true, data.message || 'Price updated! Reloading...'); setTimeout(() => window.location.reload(), 1200); }
-                    else { showPriceAlert(false, data?.message || 'Failed to update.'); }
-                })
-                .catch(() => showPriceAlert(false, 'Network error.'))
-                .finally(() => { submitBtn.disabled = false; submitBtn.innerHTML = origHtml; });
-            });
-        }
-    })();
-
-    // Tour Requests
-    (function(){
-        const modal = document.getElementById('tourRequestsModal');
-        const content = document.getElementById('tourRequestsContent');
-        const propertyId = <?php echo (int)$property_id; ?>;
-
-        if (modal) {
-            modal.addEventListener('show.bs.modal', function(){
-                fetch(`get_property_tour_requests.php?property_id=${propertyId}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data?.success && data.requests?.length > 0) {
-                        let html = '';
-                        const statusColors = {
-                            'Pending': 'badge-pending', 'Confirmed': 'badge-sale-pending',
-                            'Completed': 'badge-live', 'Cancelled': '', 'Rejected': 'badge-rejected'
-                        };
-                        data.requests.forEach(req => {
-                            const badgeClass = statusColors[req.request_status] || '';
-                            const initials = (req.user_name || 'U').charAt(0).toUpperCase();
-                            html += `
-                            <div style="background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.12);border-radius:6px;padding:20px;margin-bottom:12px;">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dark),var(--gold));display:flex;align-items:center;justify-content:center;color:var(--black);font-weight:700;font-size:1.1rem;">${initials}</div>
-                                        <div>
-                                            <div style="font-weight:700;color:var(--white);">${req.user_name || 'User'}</div>
-                                            <div style="font-size:0.8rem;color:var(--gray-400);">${req.user_email || ''} ${req.user_phone ? '• ' + req.user_phone : ''}</div>
-                                        </div>
-                                    </div>
-                                    <span class="agent-status-badge ${badgeClass}">${req.request_status}</span>
-                                </div>
-                                <div class="d-flex gap-4 flex-wrap" style="font-size:0.875rem;color:var(--gray-300);margin-top:12px;">
-                                    <div><i class="bi bi-calendar3 me-1" style="color:var(--blue-light);"></i> ${req.preferred_date || 'Not set'}</div>
-                                    <div><i class="bi bi-clock me-1" style="color:var(--blue-light);"></i> ${req.preferred_time || 'Not set'}</div>
-                                </div>
-                                ${req.message ? '<div style="margin-top:10px;padding:10px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:0.85rem;color:var(--gray-400);"><i class="bi bi-chat-left-text me-1"></i> ' + req.message + '</div>' : ''}
-                                <div style="margin-top:8px;font-size:0.75rem;color:var(--gray-500);"><i class="bi bi-info-circle me-1"></i> Requested on ${req.request_date || 'N/A'}</div>
-                            </div>`;
-                        });
-                        content.innerHTML = html;
-                    } else if (data?.success) {
-                        content.innerHTML = '<div class="text-center py-5"><i class="bi bi-calendar-x" style="font-size:3rem;color:var(--gray-600);opacity:0.4;"></i><p style="color:var(--gray-500);margin-top:12px;">No tour requests for this property yet.</p></div>';
-                    } else {
-                        content.innerHTML = '<div class="flash-alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> ' + (data?.message || 'Failed to load.') + '</div>';
-                    }
-                })
-                .catch(() => { content.innerHTML = '<div class="flash-alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> Network error.</div>'; });
-            });
-        }
-    })();
+    function openLightbox(index) { currentImageIndex = index; updateLightboxImage(); document.getElementById('lightbox').classList.add('active'); document.body.style.overflow = 'hidden'; }
+    function closeLightbox(event) { if (event.target.id === 'lightbox' || event.target.closest('.lightbox-close')) { event.stopPropagation(); document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = 'auto'; } }
+    function changeImage(direction, event) { event.stopPropagation(); currentImageIndex += direction; if (currentImageIndex < 0) currentImageIndex = currentImages.length - 1; if (currentImageIndex >= currentImages.length) currentImageIndex = 0; updateLightboxImage(); }
+    function updateLightboxImage() { document.getElementById('lightboxImage').src = '../' + currentImages[currentImageIndex]; document.getElementById('lightboxCounter').textContent = (currentImageIndex + 1) + ' / ' + currentImages.length; document.getElementById('lightboxLabel').textContent = currentHeroView === 'featured' ? 'Featured Photos' : 'Floor ' + currentHeroFloor + ' Photos'; }
+    document.addEventListener('keydown', function(e) { const lb = document.getElementById('lightbox'); if (lb.classList.contains('active')) { if (e.key === 'Escape') closeLightbox({ target: lb }); if (e.key === 'ArrowLeft') changeImage(-1, e); if (e.key === 'ArrowRight') changeImage(1, e); } });
     </script>
+    <!-- Modal logic (separated for performance) -->
+    <script src="../script/agent_property_modals.js"></script>
 </body>
 </html>
