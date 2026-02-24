@@ -444,22 +444,22 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
             <ul class="navbar-nav navbar-center">
                 <li class="nav-item">
                     <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'agent_dashboard.php' || !isset($active_page) ? 'active' : ''; ?>" href="agent_dashboard.php">
-                        <i class="fas fa-th-large me-1 d-lg-none"></i>Dashboard
+                        <i class="bi bi-speedometer2 me-1 d-lg-none"></i>Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'agent_property.php' || (isset($active_page) && $active_page == 'agent_property.php') ? 'active' : ''; ?>" href="agent_property.php">
-                        <i class="fas fa-building me-1 d-lg-none"></i>My Properties
+                        <i class="bi bi-building me-1 d-lg-none"></i>My Properties
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'agent_tour_requests.php' || (isset($active_page) && $active_page == 'agent_tour_requests.php') ? 'active' : ''; ?>" href="agent_tour_requests.php">
-                        <i class="fas fa-calendar-alt me-1 d-lg-none"></i>Tour Requests
+                        <i class="bi bi-calendar-check me-1 d-lg-none"></i>Tour Requests
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'agent_commissions.php' || (isset($active_page) && $active_page == 'agent_commissions.php') ? 'active' : ''; ?>" href="agent_commissions.php">
-                        <i class="fas fa-wallet me-1 d-lg-none"></i>Commissions
+                        <i class="bi bi-wallet2 me-1 d-lg-none"></i>Commissions
                     </a>
                 </li>
             </ul>
@@ -468,32 +468,33 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
             <div class="navbar-actions">
                 <!-- Notification Button -->
                 <button class="notification-btn" type="button" title="Notifications">
-                    <i class="fas fa-bell"></i>
+                    <i class="bi bi-bell-fill"></i>
                     <span class="notification-badge"></span>
                 </button>
 
                 <!-- Profile Dropdown -->
                 <div class="dropdown profile-dropdown">
-                    <button class="profile-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <img src="<?php echo htmlspecialchars($profile_image_src); ?>" alt="Profile" onerror="this.onerror=null;this.src='https://via.placeholder.com/40';">
+                    <button class="profile-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <img src="<?php echo htmlspecialchars($profile_image_src); ?>" alt="Profile" onerror="this.onerror=null;this.src='https://via.placeholder.com/40';"> 
                         <span><?php echo htmlspecialchars($navbar_display_name); ?></span>
-                        <span class="agent-role-badge">Agent</span>
+                        <span class="agent-role-badge">AGENT</span>
+                        <i class="bi bi-chevron-down dropdown-arrow"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
                             <a class="dropdown-item" href="agent_dashboard.php">
-                                <i class="fas fa-th-large"></i>Dashboard
+                                <i class="bi bi-speedometer2"></i>Dashboard
                             </a>
                         </li>
                         <li>
                             <a class="dropdown-item" href="agent_profile.php">
-                                <i class="fas fa-user"></i>My Profile
+                                <i class="bi bi-person-circle"></i>My Profile
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <a class="logout-custom dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
-                                <i class="fas fa-sign-out-alt"></i>Logout
+                                <i class="bi bi-box-arrow-right"></i>Logout
                             </a>
                         </li>
                     </ul>
