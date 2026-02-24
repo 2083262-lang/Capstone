@@ -85,27 +85,89 @@ $formattedTime = date('g:i A', strtotime($tour['tour_time']));
 try {
     $subject = 'Tour Schedule Cancelled by Agent';
 
-    $body = "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;'>
-      <div style='background:#161209;color:#fff;padding:16px 20px;'>
-        <h2 style='margin:0;font-weight:700;'>Tour Cancelled</h2>
-      </div>
-      <div style='padding:20px;background:#f9f9f9;border:1px solid #e6e6e6;'>
-        <p style='font-size:15px;color:#161209;'>Hello " . htmlspecialchars($tour['user_name']) . ",</p>
-        <p style='font-size:15px;color:#161209;'>This is to notify you that your previously accepted tour has been cancelled by the agent.</p>
-        <div style='background:#fff;border-left:4px solid #bc9e42;padding:12px 16px;margin:16px 0;'>
-          <p style='margin:0;'><strong>Property:</strong> " . htmlspecialchars($property_address) . "</p>
-          <p style='margin:0;'><strong>Original Schedule:</strong> $formattedDate at $formattedTime</p>
-        </div>
-        <div style='background:#fff;border:1px dashed #e6e6e6;padding:12px 16px;border-radius:8px;'>
-          <p style='margin:0 0 6px 0;'><strong>Reason provided by agent:</strong></p>
-          <p style='margin:0;font-style:italic;color:#555;'>" . nl2br(htmlspecialchars($reason)) . "</p>
-        </div>
-        <p style='margin-top:18px;color:#555;'>You may request a new schedule if you still wish to tour this property.</p>
-      </div>
-      <div style='text-align:center;padding:12px;background:#f0f0f0;color:#666;font-size:12px;'>
-        <p style='margin:0;'>This is an automated message from the Real Estate System.</p>
-      </div>
-    </div>";
+    $body = '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tour Cancelled</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Helvetica Neue\',Arial,sans-serif;background-color:#0a0a0a;line-height:1.6;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:60px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
+                    <tr>
+                        <td style="background:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#ef4444 100%);height:3px;"></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:48px 48px 32px 48px;text-align:center;border-bottom:1px solid #1f1f1f;">
+                            <h1 style="margin:0 0 12px 0;color:#ef4444;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Tour Cancelled</h1>
+                            <p style="margin:0;color:#666666;font-size:15px;font-weight:400;">Your tour schedule has been cancelled</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:48px 48px 40px 48px;">
+                            <p style="margin:0 0 24px 0;font-size:14px;color:#999999;line-height:1.7;">
+                                Hello <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($tour['user_name']) . '</span>,
+                            </p>
+                            <p style="margin:0 0 32px 0;font-size:15px;color:#cccccc;line-height:1.8;">
+                                We regret to inform you that your previously confirmed tour has been cancelled by the property agent.
+                            </p>
+                            <div style="height:1px;background-color:#1f1f1f;margin:0 0 32px 0;"></div>
+                            <div style="background-color:#0d1117;border-left:2px solid #d4af37;padding:20px 24px;margin:0 0 24px 0;">
+                                <p style="margin:0 0 12px 0;font-size:13px;color:#d4af37;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Cancellation Details</p>
+                                <p style="margin:0 0 8px 0;font-size:14px;color:#999999;"><strong style="color:#cccccc;">Property:</strong> ' .htmlspecialchars($property_address) . '</p>
+                                <p style="margin:0;font-size:14px;color:#999999;"><strong style="color:#cccccc;">Original Schedule:</strong> ' . $formattedDate . ' at ' . $formattedTime . '</p>
+                            </div>
+                            <div style="background-color:#0d1117;border-left:2px solid #ef4444;padding:16px 20px;margin:0 0 24px 0;">
+                                <p style="margin:0;font-size:13px;color:#999999;line-height:1.6;">
+                                    <strong style="color:#ef4444;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Reason for Cancellation</strong>
+                                    ' . nl2br(htmlspecialchars($reason)) . '
+                                </p>
+                            </div>
+                            <div style="background-color:#0d1117;border-left:2px solid #2563eb;padding:16px 20px;margin:0 0 24px 0;">
+                                <p style="margin:0;font-size:13px;color:#999999;line-height:1.6;">
+                                    <strong style="color:#2563eb;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">What You Can Do</strong>
+                                    You may submit a new tour request if you are still interested in viewing this property. We apologize for any inconvenience.
+                                </p>
+                            </div>
+                            <p style="margin:0;font-size:13px;color:#666666;line-height:1.6;text-align:center;">
+                                We appreciate your understanding and look forward to serving you.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="text-align:center;">
+                                        <p style="margin:0 0 8px 0;font-size:13px;color:#666666;">
+                                            <strong style="color:#d4af37;">HomeEstate Realty</strong>
+                                        </p>
+                                        <p style="margin:0;font-size:11px;color:#444444;">
+                                            © ' . date('Y') . ' All rights reserved
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;margin-top:32px;">
+                    <tr>
+                        <td style="text-align:center;">
+                            <p style="margin:0;font-size:12px;color:#444444;">
+                                Need assistance? <a href="#" style="color:#2563eb;text-decoration:none;font-weight:500;">Contact Support</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
 
     $res = sendSystemMail($tour['user_email'], $tour['user_name'], $subject, $body, 'Your tour schedule was cancelled.');
     if (!empty($res['success'])) {

@@ -331,7 +331,7 @@ $agents_rejected = array_filter($all_agents, fn($agent) => !$agent['is_active'] 
     <div class="content-wrapper">
         <div class="page-banner">
                 <h1><i class="fas fa-user-tie me-2"></i>Agent Management</h1>
-                <p>Review new agent applications and manage all active agents in your real estate system.</p>
+                <p>Review new agent applications and manage all active agents in your HomeEstate Realty system.</p>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mb-4">

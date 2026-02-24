@@ -62,63 +62,120 @@ $tourTypeBadge = $tourType === 'public'
   ? "<span class='type-badge type-public'><i class='fas fa-users'></i> Public Tour</span>"
   : "<span class='type-badge type-private'><i class='fas fa-user'></i> Private Tour</span>";
 
+$statusClass = strtolower($status);
+$statusIcon = (
+  $status === 'Confirmed' ? 'fa-check-circle' :
+  ($status === 'Cancelled' ? 'fa-times-circle' :
+  ($status === 'Rejected' ? 'fa-ban' :
+  ($status === 'Completed' ? 'fa-clipboard-check' : 'fa-clock')))
+);
+
 $html = "
-  <div class='detail-section'>
-    <div class='detail-section-label'><i class='fas fa-home'></i> Property</div>
-    <div class='detail-section-value'>{$address}</div>
+  <!-- Status Header -->
+  <div class='modal-status-header status-{$statusClass}'>
+    <div class='modal-status-label'>Current Status</div>
+    <div class='modal-status-row'>
+      <div class='modal-status-value'>
+        " . (
+  $status === 'Confirmed' ? "<span class='status-badge status-confirmed'><i class='fas fa-check me-1'></i>Confirmed</span>" :
+  ($status === 'Cancelled' ? "<span class='status-badge status-cancelled'><i class='fas fa-ban me-1'></i>Cancelled</span>" :
+  ($status === 'Rejected' ? "<span class='status-badge status-rejected'><i class='fas fa-ban me-1'></i>Rejected</span>" :
+  ($status === 'Completed' ? "<span class='status-badge status-completed'><i class='fas fa-clipboard-check me-1'></i>Completed</span>" :
+        "<span class='status-badge status-pending'><i class='fas fa-clock me-1'></i>Pending Response</span>")))
+      ) . "</div>
+      <div>{$tourTypeBadge}</div>
+    </div>
+    " . ($confirmedAt && ($status === 'Confirmed' || $status === 'Completed')
+    ? "<div class='timestamp-badge mt-2'><i class='far fa-clock'></i>Confirmed at <strong>{$confirmedAt}</strong></div>"
+    : "") . "
+    " . ($completedAt && $status === 'Completed'
+    ? "<div class='timestamp-badge'><i class='far fa-clock'></i>Completed at <strong>{$completedAt}</strong></div>"
+    : "") . "
   </div>
 
-  <div class='detail-section'>
-    <div class='detail-section-label'><i class='fas fa-user'></i> Client</div>
-    <div class='detail-section-value'>
-      <div style='font-size:1.05rem;'>{$user_name}</div>
-      <div style='margin-top:0.25rem;'><a href='mailto:{$user_email}'><i class='fas fa-envelope me-1' style='font-size:0.75rem;'></i>{$user_email}</a></div>
-      " . ($user_phone ? "<div style='margin-top:0.15rem;'><a href='tel:{$user_phone}'><i class='fas fa-phone me-1' style='font-size:0.75rem;'></i>{$user_phone}</a></div>" : "") . "
+  <!-- Details Grid -->
+  <div class='details-grid'>
+    <!-- Property Card -->
+    <div class='detail-card full-width'>
+      <div class='detail-card-header'>
+        <div class='detail-card-icon'><i class='fas fa-home'></i></div>
+        <div class='detail-card-label'>Property Location</div>
+      </div>
+      <div class='detail-card-content'>
+        <strong>{$address}</strong>
+      </div>
+    </div>
+
+    <!-- Client Card -->
+    <div class='detail-card'>
+      <div class='detail-card-header'>
+        <div class='detail-card-icon'><i class='fas fa-user'></i></div>
+        <div class='detail-card-label'>Client Information</div>
+      </div>
+      <div class='detail-card-content'>
+        <div style='font-size:1.05rem; font-weight: 600; margin-bottom: 0.75rem;'>{$user_name}</div>
+        <div class='contact-links'>
+          <a href='mailto:{$user_email}' class='contact-link'>
+            <i class='fas fa-envelope'></i>
+            <span>{$user_email}</span>
+          </a>
+          " . ($user_phone ? "<a href='tel:{$user_phone}' class='contact-link'>
+            <i class='fas fa-phone'></i>
+            <span>{$user_phone}</span>
+          </a>" : "") . "
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule Card -->
+    <div class='detail-card'>
+      <div class='detail-card-header'>
+        <div class='detail-card-icon'><i class='fas fa-calendar-check'></i></div>
+        <div class='detail-card-label'>Requested Schedule</div>
+      </div>
+      <div class='detail-card-content'>
+        <div class='schedule-display'>
+          <div class='schedule-item'>
+            <i class='fas fa-calendar-day'></i>
+            <strong>{$date}</strong>
+          </div>
+          <div class='schedule-divider'></div>
+          <div class='schedule-item'>
+            <i class='fas fa-clock'></i>
+            <strong>{$time}</strong>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class='detail-section'>
-    <div class='detail-section-label'><i class='fas fa-calendar'></i> Requested Schedule</div>
-    <div class='detail-section-value'>{$date} at {$time}</div>
-  </div>
-
-  <div class='detail-section'>
-    <div class='detail-section-label'><i class='fas fa-route'></i> Tour Type</div>
-    <div class='detail-section-value'>{$tourTypeBadge}</div>
-  </div>
-
-  <div class='detail-section'>
-    <div class='detail-section-label'><i class='fas fa-tag'></i> Status</div>
-    <div class='detail-section-value'>" . (
-  $status === 'Confirmed' ? "<span class='status-badge status-confirmed'><i class=\"fas fa-check me-1\"></i>Confirmed</span>" :
-  ($status === 'Cancelled' ? "<span class='status-badge status-cancelled'><i class=\"fas fa-ban me-1\"></i>Cancelled</span>" :
-  ($status === 'Rejected' ? "<span class='status-badge status-rejected'><i class=\"fas fa-ban me-1\"></i>Rejected</span>" :
-  ($status === 'Completed' ? "<span class='status-badge status-completed'><i class=\"fas fa-clipboard-check me-1\"></i>Completed</span>" :
-        "<span class='status-badge status-pending'><i class=\"fas fa-clock me-1\"></i>Pending</span>")))
-      ) . "</div>
-  </div>
-
-  " . ($confirmedAt && ($status === 'Confirmed' || $status === 'Completed')
-    ? "<div class='timestamp-info mb-3'><i class='far fa-clock me-1'></i>Confirmed at <strong>{$confirmedAt}</strong></div>"
-    : "") . "
-  " . ($completedAt && $status === 'Completed'
-    ? "<div class='timestamp-info mb-3'><i class='far fa-clock me-1'></i>Completed at <strong>{$completedAt}</strong></div>"
-    : "") . "
-      
   " . ((($status === 'Cancelled') || ($status === 'Rejected')) && $reason !== ''
-            ? "<div class='detail-section'>
-                 <div class='detail-section-label'><i class='fas fa-exclamation-triangle'></i> Reason</div>
-                 <div class='reason-box'><em>" . nl2br(htmlspecialchars($reason)) . "</em></div>
+            ? "<div class='section-divider'></div>
+               <div class='detail-card full-width'>
+                 <div class='detail-card-header'>
+                   <div class='detail-card-icon' style='background: rgba(239, 68, 68, 0.1); color: var(--danger);'><i class='fas fa-exclamation-triangle'></i></div>
+                   <div class='detail-card-label'>Reason for " . ($status === 'Cancelled' ? 'Cancellation' : 'Rejection') . "</div>
+                 </div>
+                 <div class='detail-card-content'>
+                   <div class='reason-box'>" . nl2br(htmlspecialchars($reason)) . "</div>
+                   " . ($decisionAt
+    ? "<div class='timestamp-badge'><i class='far fa-clock'></i>Decision made at <strong>{$decisionAt}</strong>" . ($decisionBy ? " by <strong>" . htmlspecialchars(ucfirst($decisionBy)) . "</strong>" : "") . "</div>"
+    : "") . "
+                 </div>
                </div>"
             : "") . "
 
-  " . ((($status === 'Cancelled') || ($status === 'Rejected')) && $decisionAt
-    ? "<div class='timestamp-info mb-3'><i class='far fa-clock me-1'></i>Decision at <strong>{$decisionAt}</strong>" . ($decisionBy ? " by <strong>" . htmlspecialchars(ucfirst($decisionBy)) . "</strong>" : "") . "</div>"
-    : "") . "
+  <div class='section-divider'></div>
 
-  <div class='detail-section'>
-    <div class='detail-section-label'><i class='fas fa-comment'></i> Client Message</div>
-    <div class='message-box'>{$message}</div>
+  <!-- Message Card -->
+  <div class='detail-card full-width'>
+    <div class='detail-card-header'>
+      <div class='detail-card-icon'><i class='fas fa-comment-dots'></i></div>
+      <div class='detail-card-label'>Client Message</div>
+    </div>
+    <div class='detail-card-content'>
+      <div class='message-box'>{$message}</div>
+    </div>
   </div>
 ";
 

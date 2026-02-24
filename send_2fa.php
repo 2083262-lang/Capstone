@@ -161,7 +161,7 @@ $html = '
                                 <tr>
                                     <td style="text-align:center;">
                                         <p style="margin:0 0 8px 0;font-size:13px;color:#666666;">
-                                            <strong style="color:#d4af37;">Real Estate System</strong>
+                                            <strong style="color:#d4af37;">HomeEstate Realty</strong>
                                         </p>
                                         <p style="margin:0;font-size:11px;color:#444444;">
                                             © ' . date('Y') . ' All rights reserved

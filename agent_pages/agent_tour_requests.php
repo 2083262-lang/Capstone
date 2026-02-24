@@ -876,60 +876,248 @@ $conn->close();
     }
 
     /* Detail card inside modal */
-    .detail-section {
-      margin-bottom: 1.25rem;
+    .modal-status-header {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.02) 100%);
+      border-left: 3px solid var(--gold);
+      padding: 1.25rem 1.5rem;
+      margin: -1rem -1rem 1.5rem -1rem;
+      border-radius: 4px 4px 0 0;
     }
 
-    .detail-section-label {
+    .modal-status-header.status-pending {
+      background: linear-gradient(135deg, rgba(251, 146, 60, 0.08) 0%, rgba(251, 146, 60, 0.02) 100%);
+      border-left-color: var(--warning);
+    }
+
+    .modal-status-header.status-confirmed {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.02) 100%);
+      border-left-color: var(--success);
+    }
+
+    .modal-status-header.status-completed {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%);
+      border-left-color: var(--info);
+    }
+
+    .modal-status-header.status-cancelled,
+    .modal-status-header.status-rejected {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%);
+      border-left-color: var(--danger);
+    }
+
+    .modal-status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .modal-status-label {
       font-size: 0.7rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--gold);
-      margin-bottom: 0.4rem;
+      letter-spacing: 1.5px;
+      color: var(--gray-500);
+      margin-bottom: 0.25rem;
+    }
+
+    .modal-status-value {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
+      gap: 0.5rem;
     }
 
-    .detail-section-value {
-      color: var(--white);
-      font-weight: 600;
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .details-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+    }
+
+    .detail-card {
+      background: rgba(17, 17, 17, 0.6);
+      border: 1px solid rgba(212, 175, 55, 0.1);
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      transition: all 0.2s ease;
+    }
+
+    .detail-card:hover {
+      background: rgba(17, 17, 17, 0.8);
+      border-color: rgba(212, 175, 55, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .detail-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+    }
+
+    .detail-card-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(212, 175, 55, 0.1);
+      border-radius: 4px;
+      color: var(--gold);
+      font-size: 0.875rem;
+    }
+
+    .detail-card-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--gray-400);
+    }
+
+    .detail-card-content {
+      color: var(--gray-100);
       font-size: 0.95rem;
+      line-height: 1.6;
     }
 
-    .detail-section-value a {
+    .detail-card-content strong {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .detail-card-content a {
       color: var(--blue-light);
       text-decoration: none;
+      transition: color 0.2s ease;
     }
 
-    .detail-section-value a:hover {
+    .detail-card-content a:hover {
       color: var(--gold);
-      text-decoration: underline;
+    }
+
+    .detail-card.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .contact-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .contact-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: rgba(212, 175, 55, 0.05);
+      border-radius: 4px;
+      font-size: 0.875rem;
+      transition: all 0.2s ease;
+    }
+
+    .contact-link:hover {
+      background: rgba(212, 175, 55, 0.12);
+      transform: translateX(3px);
+    }
+
+    .contact-link i {
+      color: var(--gold);
+      font-size: 0.75rem;
+      width: 16px;
+    }
+
+    .schedule-display {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%);
+      border-left: 2px solid var(--blue-light);
+      border-radius: 4px;
+      margin-top: 0.5rem;
+    }
+
+    .schedule-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .schedule-item i {
+      color: var(--blue-light);
+      font-size: 0.875rem;
+    }
+
+    .schedule-divider {
+      width: 1px;
+      height: 20px;
+      background: rgba(212, 175, 55, 0.2);
     }
 
     .reason-box {
-      background: rgba(239, 68, 68, 0.06);
-      border: 1px solid rgba(239, 68, 68, 0.15);
+      background: rgba(239, 68, 68, 0.08);
+      border-left: 3px solid var(--danger);
+      padding: 1rem 1.25rem;
       border-radius: 4px;
-      padding: 0.75rem 1rem;
-      color: var(--gray-200);
-      font-style: italic;
-      font-size: 0.9rem;
+      color: var(--gray-300);
+      line-height: 1.6;
     }
 
     .message-box {
-      background: rgba(37, 99, 235, 0.06);
-      border: 1px solid rgba(37, 99, 235, 0.15);
+      background: rgba(17, 17, 17, 0.6);
+      border: 1px solid rgba(212, 175, 55, 0.15);
+      padding: 1rem 1.25rem;
       border-radius: 4px;
-      padding: 0.75rem 1rem;
-      color: var(--gray-200);
-      font-size: 0.9rem;
+      color: var(--gray-300);
+      line-height: 1.7;
+      min-height: 80px;
     }
 
-    .timestamp-info {
-      font-size: 0.8rem;
+    .message-box:empty::before {
+      content: 'No message provided';
       color: var(--gray-500);
+      font-style: italic;
+    }
+
+    .timestamp-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.875rem;
+      background: rgba(212, 175, 55, 0.08);
+      border: 1px solid rgba(212, 175, 55, 0.15);
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: var(--gray-300);
+      margin-top: 0.5rem;
+    }
+
+    .timestamp-badge i {
+      color: var(--gold);
+      font-size: 0.75rem;
+    }
+
+    .timestamp-badge strong {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.2) 50%, transparent 100%);
+      margin: 1.5rem 0;
     }
 
     /* Reason modal textarea */
@@ -1597,16 +1785,13 @@ include 'agent_navbar.php';
         <div id="tourDetailsAlert" class="alert d-none mt-3" role="alert"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-dark-outline" data-bs-dismiss="modal">
-          <i class="fas fa-times me-2"></i>Close
-        </button>
-        <button type="button" class="btn btn-sm d-none" id="rejectTourBtn" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:var(--danger);font-weight:600;">
+        <button type="button" class="btn d-none" id="rejectTourBtn" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:var(--danger);font-weight:600;padding:0.6rem 1.25rem;font-size:0.875rem;border-radius:4px;">
           <i class="fas fa-ban me-2"></i>Reject
         </button>
-        <button type="button" class="btn btn-sm d-none" id="cancelTourBtn" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:var(--danger);font-weight:600;">
+        <button type="button" class="btn d-none" id="cancelTourBtn" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:var(--danger);font-weight:600;padding:0.6rem 1.25rem;font-size:0.875rem;border-radius:4px;">
           <i class="fas fa-xmark me-2"></i>Cancel Tour
         </button>
-        <button type="button" class="btn btn-sm d-none" id="completeTourBtn" style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:var(--success);font-weight:600;">
+        <button type="button" class="btn d-none" id="completeTourBtn" style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:var(--success);font-weight:600;padding:0.6rem 1.25rem;font-size:0.875rem;border-radius:4px;">
           <i class="fas fa-clipboard-check me-2"></i>Mark Completed
         </button>
         <button type="button" class="btn btn-gold" id="acceptTourBtn" data-tour-id="">

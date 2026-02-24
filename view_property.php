@@ -113,30 +113,129 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
                                         $price   = '₱' . number_format((float)$agentRow['ListingPrice'], 2);
 
                                         $subject = '✅ Listing Approved — ' . $ptype;
-                                        $body = "<!DOCTYPE html><html><head><meta charset='UTF-8'>
-                                                <style>body{font-family:Inter,Arial,sans-serif;background:#f6f6f6;color:#111}
-                                                .wrap{max-width:640px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.08)}
-                                                .hd{background:#161209;color:#fff;padding:18px 24px;font-weight:700}
-                                                .bd{padding:24px}
-                                                .cta{display:inline-block;margin-top:14px;padding:10px 16px;background:#bc9e42;color:#161209;text-decoration:none;border-radius:8px;font-weight:600}
-                                                .meta{margin-top:12px;padding:12px;background:#f8f9fa;border:1px solid #e9ecef;border-radius:8px}
-                                                </style></head><body>
-                                                <div class='wrap'>
-                                                    <div class='hd'>Listing Approved</div>
-                                                    <div class='bd'>
-                                                        <p>Hi " . htmlspecialchars($toName) . ",</p>
-                                                        <p>Great news! Your property listing has been approved by the admin and is now live.</p>
-                                                        <div class='meta'>
-                                                            <div><strong>Property:</strong> " . htmlspecialchars($ptype) . "</div>
-                                                            <div><strong>Address:</strong> " . htmlspecialchars($addr) . "</div>
-                                                            <div><strong>Listing Price:</strong> " . htmlspecialchars($price) . "</div>
-                                                            <div><strong>Approved On:</strong> " . htmlspecialchars($current_datetime->format('F j, Y g:i A')) . "</div>
-                                                        </div>
-                                                        <p class='mt-3' style='margin-top:12px'>You can manage this listing from your Agent Dashboard.</p>
-                                                        <p style='margin-top:18px'>— Real Estate System</p>
-                                                    </div>
-                                                </div>
-                                            </body></html>";
+                                        $body = '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listing Approved</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Helvetica Neue\',Arial,sans-serif;background-color:#0a0a0a;line-height:1.6;">
+    
+    <!-- Email Container -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:60px 20px;">
+        <tr>
+            <td align="center">
+                
+                <!-- Content Card -->
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
+                    
+                    <!-- Success Accent Line -->
+                    <tr>
+                        <td style="background:linear-gradient(90deg,#10b981 0%,#059669 100%);height:3px;"></td>
+                    </tr>
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding:48px 48px 32px 48px;text-align:center;border-bottom:1px solid #1f1f1f;">
+                            <div style="font-size:48px;margin-bottom:16px;">✅</div>
+                            <h1 style="margin:0 0 12px 0;color:#10b981;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Listing Approved</h1>
+                            <p style="margin:0;color:#666666;font-size:15px;font-weight:400;">Your property is now live on the platform</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding:48px 48px 40px 48px;">
+                            
+                            <!-- Greeting -->
+                            <p style="margin:0 0 24px 0;font-size:14px;color:#999999;line-height:1.7;">
+                                Hello <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($toName) . '</span>,
+                            </p>
+                            
+                            <p style="margin:0 0 32px 0;font-size:14px;color:#999999;line-height:1.7;">
+                                Great news! Your property listing has been approved by our admin team and is now live on the platform. Potential buyers can now view and inquire about your property.
+                            </p>
+                            
+                            <!-- Property Details Card -->
+                            <div style="background-color:#0d1117;border:1px solid #2563eb;border-radius:2px;padding:24px;margin:0 0 32px 0;">
+                                <p style="margin:0 0 16px 0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:#2563eb;">Property Details</p>
+                                <table width="100%" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td style="padding:8px 0;font-size:13px;color:#666666;vertical-align:top;width:35%;">Property Type</td>
+                                        <td style="padding:8px 0;font-size:13px;color:#ffffff;font-weight:500;">' . htmlspecialchars($ptype) . '</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:8px 0;font-size:13px;color:#666666;vertical-align:top;">Address</td>
+                                        <td style="padding:8px 0;font-size:13px;color:#ffffff;font-weight:500;">' . htmlspecialchars($addr) . '</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:8px 0;font-size:13px;color:#666666;vertical-align:top;">Listing Price</td>
+                                        <td style="padding:8px 0;font-size:15px;color:#10b981;font-weight:600;">' . htmlspecialchars($price) . '</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:8px 0;font-size:13px;color:#666666;vertical-align:top;">Approved On</td>
+                                        <td style="padding:8px 0;font-size:13px;color:#ffffff;font-weight:500;">' . htmlspecialchars($current_datetime->format('F j, Y g:i A')) . '</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <!-- Divider -->
+                            <div style="height:1px;background-color:#1f1f1f;margin:0 0 32px 0;"></div>
+                            
+                            <!-- Next Steps -->
+                            <div style="background-color:#0d1117;border-left:2px solid #d4af37;padding:16px 20px;margin:0 0 24px 0;">
+                                <p style="margin:0;font-size:13px;color:#999999;line-height:1.6;">
+                                    <strong style="color:#d4af37;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Next Steps</strong>
+                                    You can now manage this listing from your Agent Dashboard. Monitor inquiries, schedule tours, and update property information as needed.
+                                </p>
+                            </div>
+                            
+                            <!-- Footer Message -->
+                            <p style="margin:0;font-size:13px;color:#666666;line-height:1.6;text-align:center;">
+                                Thank you for using our platform to showcase your property.
+                            </p>
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="text-align:center;">
+                                        <p style="margin:0 0 8px 0;font-size:13px;color:#666666;">
+                                            <strong style="color:#d4af37;">HomeEstate Realty</strong>
+                                        </p>
+                                        <p style="margin:0;font-size:11px;color:#444444;">
+                                            © ' . date('Y') . ' All rights reserved
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                </table>
+                
+                <!-- Support Link -->
+                <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;margin-top:32px;">
+                    <tr>
+                        <td style="text-align:center;">
+                            <p style="margin:0;font-size:12px;color:#444444;">
+                                Need assistance? <a href="#" style="color:#2563eb;text-decoration:none;font-weight:500;">Contact Support</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                
+            </td>
+        </tr>
+    </table>
+    
+</body>
+</html>';
 
                                         // Send email (best-effort; do not block approval)
                                         try { sendSystemMail($toEmail, $toName, $subject, $body); } catch (Throwable $t) { /* ignore */ }
@@ -196,32 +295,134 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
                                         $price   = '₱' . number_format((float)$agentRow['ListingPrice'], 2);
 
                                                             $subject = '❗ Listing Rejected — ' . $ptype;
-                                                            $reasonBlock = $reject_reason !== '' ? ("<p style='margin-top:12px'><strong>Reason:</strong> " . htmlspecialchars($reject_reason) . "</p>") : '';
-                                                            $body = "<!DOCTYPE html><html><head><meta charset='UTF-8'>
-                                                <style>body{font-family:Inter,Arial,sans-serif;background:#f6f6f6;color:#111}
-                                                .wrap{max-width:640px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.08)}
-                                                .hd{background:#dc3545;color:#fff;padding:18px 24px;font-weight:700}
-                                                .bd{padding:24px}
-                                                .meta{margin-top:12px;padding:12px;background:#f8f9fa;border:1px solid #e9ecef;border-radius:8px}
-                                                .cta{display:inline-block;margin-top:14px;padding:10px 16px;background:#161209;color:#fff;text-decoration:none;border-radius:8px;font-weight:600}
-                                                </style></head><body>
-                                                <div class='wrap'>
-                                                    <div class='hd'>Listing Rejected</div>
-                                                    <div class='bd'>
-                                                        <p>Hi " . htmlspecialchars($toName) . ",</p>
-                                                        <p>We reviewed your property submission, but we couldn't approve it at this time.</p>
-                                                        <div class='meta'>
-                                                            <div><strong>Property:</strong> " . htmlspecialchars($ptype) . "</div>
-                                                            <div><strong>Address:</strong> " . htmlspecialchars($addr) . "</div>
-                                                            <div><strong>Listing Price:</strong> " . htmlspecialchars($price) . "</div>
-                                                            <div><strong>Reviewed On:</strong> " . htmlspecialchars($current_datetime->format('F j, Y g:i A')) . "</div>
-                                                        </div>
-                                                                            " . $reasonBlock . "
-                                                                            <p style='margin-top:12px'>You can revise the details and resubmit. If you have questions, please contact support.</p>
-                                                        <p style='margin-top:18px'>— Real Estate System</p>
-                                                    </div>
-                                                </div>
-                                            </body></html>";
+                                                            $reasonBlock = $reject_reason !== '' ? ("<tr>
+                                        <td style=\"padding:8px 0;font-size:13px;color:#666666;vertical-align:top;width:35%;\">Rejection Reason</td>
+                                        <td style=\"padding:8px 0;font-size:13px;color:#ef4444;font-weight:500;\">" . htmlspecialchars($reject_reason) . "</td>
+                                    </tr>") : '';
+                                                            $body = '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listing Rejected</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Helvetica Neue\',Arial,sans-serif;background-color:#0a0a0a;line-height:1.6;">
+    
+    <!-- Email Container -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:60px 20px;">
+        <tr>
+            <td align="center">
+                
+                <!-- Content Card -->
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
+                    
+                    <!-- Error Accent Line -->
+                    <tr>
+                        <td style="background:linear-gradient(90deg,#ef4444 0%,#dc2626 100%);height:3px;"></td>
+                    </tr>
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding:48px 48px 32px 48px;text-align:center;border-bottom:1px solid #1f1f1f;">
+                            <div style="font-size:48px;margin-bottom:16px;">❗</div>
+                            <h1 style="margin:0 0 12px 0;color:#ef4444;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Listing Rejected</h1>
+                            <p style="margin:0;color:#666666;font-size:15px;font-weight:400;">Your property submission requires attention</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding:48px 48px 40px 48px;">
+                            
+                            <!-- Greeting -->
+                            <p style="margin:0 0 24px 0;font-size:14px;color:#999999;line-height:1.7;">
+                                Hello <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($toName) . '</span>,
+                            </p>
+                            
+                            <p style="margin:0 0 32px 0;font-size:14px;color:#999999;line-height:1.7;">
+                                We have reviewed your property submission, but unfortunately we cannot approve it at this time. Please review the details below and make the necessary changes.
+                            </p>
+                            
+                            <!-- Property Details Card -->
+                            <div style="background-color:#0d1117;border:1px solid #ef4444;border-radius:2px;padding:24px;margin:0 0 32px 0;">
+                                <p style="margin:0 0 16px 0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:#ef4444;">Property Details</p>
+                                <table width="100%" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td style="padding:8px 0;font-size:13px;color:#666666;vertical-align:top;width:35%;">Property Type</td>
+                                        <td style="padding:8px 0;font-size:13px;color:#ffffff;font-weight:500;">' . htmlspecialchars($ptype) . '</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:8px 0;font-size:13px;color:#666666;vertical-align:top;">Address</td>
+                                        <td style="padding:8px 0;font-size:13px;color:#ffffff;font-weight:500;">' . htmlspecialchars($addr) . '</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:8px 0;font-size:13px;color:#666666;vertical-align:top;">Listing Price</td>
+                                        <td style="padding:8px 0;font-size:13px;color:#ffffff;font-weight:500;">' . htmlspecialchars($price) . '</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:8px 0;font-size:13px;color:#666666;vertical-align:top;">Reviewed On</td>
+                                        <td style="padding:8px 0;font-size:13px;color:#ffffff;font-weight:500;">' . htmlspecialchars($current_datetime->format('F j, Y g:i A')) . '</td>
+                                    </tr>
+                                    ' . $reasonBlock . '
+                                </table>
+                            </div>
+                            
+                            <!-- Divider -->
+                            <div style="height:1px;background-color:#1f1f1f;margin:0 0 32px 0;"></div>
+                            
+                            <!-- Next Steps -->
+                            <div style="background-color:#0d1117;border-left:2px solid #d4af37;padding:16px 20px;margin:0 0 24px 0;">
+                                <p style="margin:0;font-size:13px;color:#999999;line-height:1.6;">
+                                    <strong style="color:#d4af37;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">What You Can Do</strong>
+                                    You can revise the property details and resubmit for review. Please address the issues mentioned above and ensure all information is accurate and complete. If you have any questions, please contact our support team.
+                                </p>
+                            </div>
+                            
+                            <!-- Footer Message -->
+                            <p style="margin:0;font-size:13px;color:#666666;line-height:1.6;text-align:center;">
+                                We appreciate your understanding and look forward to your resubmission.
+                            </p>
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="text-align:center;">
+                                        <p style="margin:0 0 8px 0;font-size:13px;color:#666666;">
+                                            <strong style="color:#d4af37;">HomeEstate Realty</strong>
+                                        </p>
+                                        <p style="margin:0;font-size:11px;color:#444444;">
+                                            © ' . date('Y') . ' All rights reserved
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                </table>
+                
+                <!-- Support Link -->
+                <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;margin-top:32px;">
+                    <tr>
+                        <td style="text-align:center;">
+                            <p style="margin:0;font-size:12px;color:#444444;">
+                                Need assistance? <a href="#" style="color:#2563eb;text-decoration:none;font-weight:500;">Contact Support</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                
+            </td>
+        </tr>
+    </table>
+    
+</body>
+</html>';
 
                                         try { sendSystemMail($toEmail, $toName, $subject, $body); } catch (Throwable $t) { /* ignore */ }
                                 }

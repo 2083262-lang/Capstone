@@ -11,7 +11,7 @@ define('MAIL_SMTP_USERNAME',  'real.estate.system.noreply@gmail.com');
 define('MAIL_SMTP_PASSWORD',  'bcbhsvmxwkxmlqyn');
 
 define('MAIL_FROM_EMAIL',     'real.estate.system.noreply@gmail.com');
-define('MAIL_FROM_NAME',      'Real Estate System');
+define('MAIL_FROM_NAME',      'HomeEstate Realty');
 
 // Production defaults
 // Disable verbose SMTP debug to clients; optional server-side log path
