@@ -2567,8 +2567,27 @@ include 'agent_navbar.php';
           }
           modal.show();
 
+          // Update read status in real-time
           const dot = row.querySelector('.unread-dot');
-          if (dot) dot.remove();
+          if (dot) {
+            // Remove unread visual indicators
+            dot.remove();
+            row.classList.remove('unread');
+            
+            // Add placeholder space where dot was
+            const placeholder = document.createElement('div');
+            placeholder.style.width = '14px';
+            dot.parentElement.appendChild(placeholder);
+            
+            // Update allTourData array
+            const tourDataIndex = allTourData.findIndex(t => String(t.tour_id) === String(tourId));
+            if (tourDataIndex !== -1) {
+              allTourData[tourDataIndex].is_read_by_agent = 1;
+            }
+            
+            // Reapply filters to update filtered view
+            applyFilters();
+          }
         })
         .catch(err => console.error(err));
     });
