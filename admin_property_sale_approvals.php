@@ -335,6 +335,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt->execute();
         $stmt->close();
 
+        // Agent notification — sale approved
+        require_once __DIR__ . '/agent_pages/agent_notification_helper.php';
+        createAgentNotification(
+            $conn,
+            (int)$verification['agent_id'],
+            'sale_approved',
+            'Sale Approved',
+            "Your sale for Property #{$property_id} has been approved! Sale price: ₱" . number_format($verification['sale_price'], 2) . ". Commission will be processed shortly.",
+            $verification_id
+        );
+
         // Agent performance is now tracked via finalized_sales and agent_commissions tables
         // No need for separate agent_performance table
 
@@ -616,6 +627,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         
         // ===== END REJECTION EMAIL NOTIFICATIONS =====
         
+        // Agent notification — sale rejected
+        if (!function_exists('createAgentNotification')) {
+            require_once __DIR__ . '/agent_pages/agent_notification_helper.php';
+        }
+        if (!empty($rejectionData['agent_id'])) {
+            createAgentNotification(
+                $conn,
+                (int)$rejectionData['agent_id'],
+                'sale_rejected',
+                'Sale Rejected',
+                "Your sale verification for {$propertyAddress} was rejected. Reason: {$reason}",
+                $verification_id
+            );
+        }
+
         // Redirect back with success message
         header('Location: ' . $_SERVER['PHP_SELF'] . '?success=rejected');
         exit;

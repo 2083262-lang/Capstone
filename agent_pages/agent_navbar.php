@@ -223,14 +223,221 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
 
     .agent-navbar .notification-badge {
         position: absolute;
-        top: 4px;
-        right: 4px;
-        width: 8px;
-        height: 8px;
+        top: 2px;
+        right: 2px;
+        min-width: 18px;
+        height: 18px;
         background: #ef4444;
-        border-radius: 50%;
+        border-radius: 9px;
         border: 2px solid #111111;
         box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #fff;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+        line-height: 1;
+    }
+
+    .agent-navbar .notification-badge.has-unread {
+        display: flex;
+    }
+
+    /* ===== Notification Dropdown Panel ===== */
+    .notif-dropdown-panel {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        width: 400px;
+        max-height: 520px;
+        background: linear-gradient(180deg, #141414 0%, #111111 100%);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        border-radius: 6px;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(37, 99, 235, 0.1);
+        z-index: 2000;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .notif-dropdown-panel.show {
+        display: flex;
+    }
+
+    .notif-dropdown-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+    }
+
+    .notif-dropdown-header h6 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #d4af37;
+    }
+
+    .notif-mark-all-btn {
+        background: none;
+        border: none;
+        color: #3b82f6;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .notif-mark-all-btn:hover {
+        background: rgba(37, 99, 235, 0.1);
+        color: #60a5fa;
+    }
+
+    .notif-dropdown-body {
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(212,175,55,0.3) transparent;
+    }
+
+    .notif-dropdown-body::-webkit-scrollbar { width: 5px; }
+    .notif-dropdown-body::-webkit-scrollbar-track { background: transparent; }
+    .notif-dropdown-body::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 3px; }
+
+    .notif-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px 18px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        cursor: pointer;
+        transition: background 0.15s ease;
+        align-items: flex-start;
+    }
+
+    .notif-item:hover {
+        background: rgba(37, 99, 235, 0.06);
+    }
+
+    .notif-item.unread {
+        background: rgba(212, 175, 55, 0.04);
+        border-left: 3px solid #d4af37;
+    }
+
+    .notif-item.unread:hover {
+        background: rgba(212, 175, 55, 0.08);
+    }
+
+    .notif-item-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+
+    .notif-item-icon.tour       { background: rgba(13, 202, 240, 0.12); color: #0dcaf0; }
+    .notif-item-icon.approved   { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
+    .notif-item-icon.rejected   { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+    .notif-item-icon.cancelled  { background: rgba(249, 115, 22, 0.12); color: #f97316; }
+    .notif-item-icon.completed  { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
+    .notif-item-icon.sale       { background: rgba(212, 175, 55, 0.12); color: #d4af37; }
+    .notif-item-icon.commission { background: rgba(168, 85, 247, 0.12); color: #a855f7; }
+    .notif-item-icon.general    { background: rgba(37, 99, 235, 0.12); color: #3b82f6; }
+
+    .notif-item-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .notif-item-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .notif-item.unread .notif-item-title { color: #ffffff; }
+
+    .notif-item-msg {
+        font-size: 0.78rem;
+        color: #9ca3af;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .notif-item-time {
+        font-size: 0.7rem;
+        color: #6b7280;
+        margin-top: 3px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .notif-item-dot {
+        width: 7px;
+        height: 7px;
+        background: #d4af37;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+
+    .notif-dropdown-footer {
+        padding: 10px 18px;
+        border-top: 1px solid rgba(212, 175, 55, 0.15);
+        text-align: center;
+    }
+
+    .notif-dropdown-footer a {
+        color: #3b82f6;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .notif-dropdown-footer a:hover {
+        color: #60a5fa;
+    }
+
+    .notif-empty {
+        padding: 40px 20px;
+        text-align: center;
+        color: #6b7280;
+    }
+
+    .notif-empty i {
+        font-size: 2.5rem;
+        color: #374151;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .notif-empty p {
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    @media (max-width: 480px) {
+        .notif-dropdown-panel {
+            width: calc(100vw - 24px);
+            right: -60px;
+        }
     }
 
     /* Profile Dropdown */
@@ -466,11 +673,30 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
 
             <!-- Right Side Actions -->
             <div class="navbar-actions">
-                <!-- Notification Button -->
-                <button class="notification-btn" type="button" title="Notifications">
-                    <i class="bi bi-bell-fill"></i>
-                    <span class="notification-badge"></span>
-                </button>
+                <!-- Notification Button + Dropdown -->
+                <div class="position-relative" id="notifDropdownWrapper">
+                    <button class="notification-btn" type="button" title="Notifications" id="notifToggleBtn">
+                        <i class="bi bi-bell-fill"></i>
+                        <span class="notification-badge" id="notifBadge"></span>
+                    </button>
+                    <div class="notif-dropdown-panel" id="notifDropdownPanel">
+                        <div class="notif-dropdown-header">
+                            <h6><i class="bi bi-bell me-2"></i>Notifications</h6>
+                            <button class="notif-mark-all-btn" id="notifMarkAllBtn" title="Mark all as read">
+                                <i class="bi bi-check2-all me-1"></i>Mark all read
+                            </button>
+                        </div>
+                        <div class="notif-dropdown-body" id="notifDropdownBody">
+                            <div class="notif-empty">
+                                <i class="bi bi-bell-slash"></i>
+                                <p>Loading...</p>
+                            </div>
+                        </div>
+                        <div class="notif-dropdown-footer">
+                            <a href="agent_notifications.php">View All Notifications <i class="bi bi-arrow-right ms-1"></i></a>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Profile Dropdown -->
                 <div class="dropdown profile-dropdown">
@@ -516,4 +742,133 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
             }
         }
     });
+</script>
+
+<!-- Notification Dropdown Logic -->
+<script>
+(function() {
+    const toggleBtn   = document.getElementById('notifToggleBtn');
+    const panel       = document.getElementById('notifDropdownPanel');
+    const badge       = document.getElementById('notifBadge');
+    const body        = document.getElementById('notifDropdownBody');
+    const markAllBtn  = document.getElementById('notifMarkAllBtn');
+    const wrapper     = document.getElementById('notifDropdownWrapper');
+    const API_URL     = 'agent_notifications_api.php';
+
+    let isOpen = false;
+
+    // Toggle dropdown
+    toggleBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        isOpen = !isOpen;
+        panel.classList.toggle('show', isOpen);
+        if (isOpen) fetchNotifications();
+    });
+
+    // Close on outside click
+    document.addEventListener('click', function(e) {
+        if (isOpen && !wrapper.contains(e.target)) {
+            isOpen = false;
+            panel.classList.remove('show');
+        }
+    });
+
+    // Mark all read
+    markAllBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fetch(API_URL + '?action=mark_all', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => { if (d.success) fetchNotifications(); });
+    });
+
+    // Fetch notifications
+    function fetchNotifications() {
+        fetch(API_URL + '?action=fetch')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+
+                // Update badge
+                if (data.unread > 0) {
+                    badge.textContent = data.unread > 99 ? '99+' : data.unread;
+                    badge.classList.add('has-unread');
+                } else {
+                    badge.textContent = '';
+                    badge.classList.remove('has-unread');
+                }
+
+                // Render items
+                if (data.notifications.length === 0) {
+                    body.innerHTML = '<div class="notif-empty"><i class="bi bi-bell-slash"></i><p>No notifications yet</p></div>';
+                    return;
+                }
+
+                let html = '';
+                data.notifications.forEach(n => {
+                    html += `
+                        <div class="notif-item ${n.is_read ? '' : 'unread'}" data-id="${n.id}" onclick="window.__notifMarkRead(${n.id}, '${n.type}', ${n.ref_id || 'null'})">
+                            <div class="notif-item-icon ${n.color}"><i class="${n.icon}"></i></div>
+                            ${!n.is_read ? '<div class="notif-item-dot"></div>' : ''}
+                            <div class="notif-item-body">
+                                <div class="notif-item-title">${escHtml(n.title)}</div>
+                                <div class="notif-item-msg">${escHtml(n.message)}</div>
+                                <div class="notif-item-time"><i class="bi bi-clock"></i>${n.time_ago}</div>
+                            </div>
+                        </div>`;
+                });
+                body.innerHTML = html;
+            })
+            .catch(() => {
+                body.innerHTML = '<div class="notif-empty"><i class="bi bi-exclamation-triangle"></i><p>Failed to load</p></div>';
+            });
+    }
+
+    // Mark single as read + navigate
+    window.__notifMarkRead = function(id, type, refId) {
+        fetch(API_URL + '?action=mark_read', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'notification_id=' + id
+        }).then(() => {
+            // Navigate based on type
+            const routes = {
+                'tour_new': 'agent_tour_requests.php',
+                'tour_cancelled': 'agent_tour_requests.php',
+                'tour_completed': 'agent_tour_requests.php',
+                'property_approved': 'agent_property.php',
+                'property_rejected': 'agent_property.php',
+                'sale_approved': 'agent_commissions.php',
+                'sale_rejected': 'agent_property.php',
+                'commission_paid': 'agent_commissions.php',
+            };
+            window.location.href = routes[type] || 'agent_notifications.php';
+        });
+    };
+
+    function escHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // Auto-poll badge every 30 seconds
+    function pollBadge() {
+        fetch(API_URL + '?action=fetch')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                if (data.unread > 0) {
+                    badge.textContent = data.unread > 99 ? '99+' : data.unread;
+                    badge.classList.add('has-unread');
+                } else {
+                    badge.textContent = '';
+                    badge.classList.remove('has-unread');
+                }
+            }).catch(() => {});
+    }
+
+    // Initial badge load + poll
+    pollBadge();
+    setInterval(pollBadge, 30000);
+})();
 </script>

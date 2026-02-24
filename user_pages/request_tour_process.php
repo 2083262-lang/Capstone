@@ -113,6 +113,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
         $stmt->close();
 
+        // 4b. Agent notification — new tour request
+        require_once __DIR__ . '/../agent_pages/agent_notification_helper.php';
+        createAgentNotification(
+            $conn,
+            $agent_info['id'],
+            'tour_new',
+            'New Tour Request',
+            "You have a new " . ($tour_type === 'public' ? 'public (group)' : 'private') . " tour request from {$user_name} for property #{$property_id} on " . date('M d, Y', strtotime($tour_date)) . " at " . date('g:i A', strtotime($tour_time)) . ".",
+            $tour_id
+        );
+
         // 5. Send Email using PHPMailer
         $mail = new PHPMailer(true);
         

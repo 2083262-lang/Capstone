@@ -93,7 +93,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
 
                                 // Fetch agent (creator) and property info for email notification
                                 $infoSql = "SELECT p.StreetAddress, p.City, p.PropertyType, p.ListingPrice,
-                                                                     a.first_name, a.last_name, a.email
+                                                                     a.first_name, a.last_name, a.email, a.account_id AS agent_account_id
                                                         FROM property p
                                                         JOIN property_log pl ON pl.property_id = p.property_ID AND pl.action = 'CREATED'
                                                         JOIN accounts a ON a.account_id = pl.account_id
@@ -104,6 +104,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
                                 $info->execute();
                                 $agentRow = $info->get_result()->fetch_assoc();
                                 $info->close();
+
+                                // Agent notification — property approved
+                                if ($agentRow && !empty($agentRow['agent_account_id'])) {
+                                    require_once __DIR__ . '/agent_pages/agent_notification_helper.php';
+                                    $addr_notif = trim(($agentRow['StreetAddress'] ?? '') . ', ' . ($agentRow['City'] ?? ''));
+                                    createAgentNotification(
+                                        $conn,
+                                        (int)$agentRow['agent_account_id'],
+                                        'property_approved',
+                                        'Property Approved',
+                                        "Your listing at {$addr_notif} ({$agentRow['PropertyType']}) has been approved and is now live.",
+                                        $posted_property_id
+                                    );
+                                }
 
                                 if ($agentRow && !empty($agentRow['email'])) {
                                         $toEmail = $agentRow['email'];
@@ -275,7 +289,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
 
                                 // Notify the listing agent via email
                                 $infoSql = "SELECT p.StreetAddress, p.City, p.PropertyType, p.ListingPrice,
-                                                                     a.first_name, a.last_name, a.email
+                                                                     a.first_name, a.last_name, a.email, a.account_id AS agent_account_id
                                                         FROM property p
                                                         JOIN property_log pl ON pl.property_id = p.property_ID AND pl.action = 'CREATED'
                                                         JOIN accounts a ON a.account_id = pl.account_id
@@ -286,6 +300,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
                                 $info->execute();
                                 $agentRow = $info->get_result()->fetch_assoc();
                                 $info->close();
+
+                                // Agent notification — property rejected
+                                if ($agentRow && !empty($agentRow['agent_account_id'])) {
+                                    if (!function_exists('createAgentNotification')) {
+                                        require_once __DIR__ . '/agent_pages/agent_notification_helper.php';
+                                    }
+                                    $addr_notif = trim(($agentRow['StreetAddress'] ?? '') . ', ' . ($agentRow['City'] ?? ''));
+                                    $reason_text = $reject_reason !== '' ? " Reason: {$reject_reason}" : '';
+                                    createAgentNotification(
+                                        $conn,
+                                        (int)$agentRow['agent_account_id'],
+                                        'property_rejected',
+                                        'Property Rejected',
+                                        "Your listing at {$addr_notif} ({$agentRow['PropertyType']}) was rejected.{$reason_text}",
+                                        $posted_property_id
+                                    );
+                                }
 
                                 if ($agentRow && !empty($agentRow['email'])) {
                                         $toEmail = $agentRow['email'];
