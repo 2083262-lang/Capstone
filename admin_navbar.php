@@ -1084,39 +1084,6 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
             });
         });
 
-        // Add notification sound on new notification
-        function playNotificationSound() {
-            // Create audio context for notification sound
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                gainNode.gain.value = 0.1;
-                
-                oscillator.start();
-                oscillator.stop(audioContext.currentTime + 0.2);
-            } catch (e) {
-                console.log('Audio notification not supported');
-            }
-        }
-
-        // Simulate real-time notification updates
-        setInterval(function() {
-            // This would normally come from a WebSocket or polling mechanism
-            const badge = document.querySelector('.notification-badge');
-            if (badge && Math.random() < 0.01) { // 1% chance per check
-                const currentCount = parseInt(badge.textContent) || 0;
-                badge.textContent = currentCount + 1;
-                playNotificationSound();
-            }
-        }, 5000);
-
         // Auto-hide navbar on scroll (optional)
         let lastScrollTop = 0;
         const navbar = document.querySelector('.admin-navbar');
