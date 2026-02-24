@@ -82,40 +82,38 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
-        :root {
-            --primary-color: #161209;
-            --secondary-color: #bc9e42;
-            --background-color: #f8f9fa;
-            --card-bg-color: #ffffff;
-            --border-color: #e9ecef;
-            --text-muted: #6c757d;
-            --shadow-light: 0 2px 8px rgba(0,0,0,0.08);
-            --shadow-medium: 0 4px 20px rgba(0,0,0,0.12);
-            --shadow-heavy: 0 8px 32px rgba(0,0,0,0.15);
-        }
-        
+        /* ================================================
+           ADMIN PROPERTY PAGE - LIGHT THEME
+           Matches agent/user design language with white admin styling
+           ================================================ */
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background-color: var(--background-color);
-            color: var(--primary-color);
+            color: var(--text-primary);
+            line-height: 1.6;
         }
 
-        /* Main Content Styling */
-        .main-content { 
-            margin-left: var(--sidebar-width); 
-            padding: var(--content-padding); 
-            background-color: var(--background-color);
-            min-height: 100vh;
-            transition: margin-left 0.3s ease;
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--gold-light), var(--gold));
         }
 
-        /* Page Header */
+        /* ===== PAGE HEADER ===== */
         .page-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #2c241a 100%);
-            border-radius: 20px;
-            padding: 3rem 2rem;
-            margin-bottom: 2rem;
-            color: #fff;
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 1.5rem;
             position: relative;
             overflow: hidden;
         }
@@ -123,55 +121,188 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
         .page-header::before {
             content: '';
             position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(188, 158, 66, 0.1) 0%, transparent 70%);
-            border-radius: 50%;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at top right, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom left, rgba(212, 175, 55, 0.03) 0%, transparent 50%);
+            pointer-events: none;
         }
 
-        .page-header-content {
+        .page-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+        }
+
+        .page-header-inner {
             position: relative;
             z-index: 2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
         }
 
-        .page-title {
-            font-size: 2.5rem;
+        .page-header h1 {
+            font-size: 1.75rem;
             font-weight: 800;
-            margin-bottom: 0.5rem;
+            color: var(--text-primary, #0f172a);
+            margin-bottom: 0.25rem;
         }
 
-        .page-subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 0;
+        .page-header .subtitle {
+            color: var(--text-secondary, #64748b);
+            font-size: 0.95rem;
         }
 
-        /* Action Bar */
+        .page-header .header-badge {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.3rem 0.85rem;
+            border-radius: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== KPI STAT CARDS ===== */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 1.25rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--blue), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            border-color: rgba(37, 99, 235, 0.25);
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.08);
+            transform: translateY(-3px);
+        }
+
+        .kpi-card:hover::before { opacity: 1; }
+
+        .kpi-card .kpi-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .kpi-icon.gold {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.15) 100%);
+            color: var(--gold-dark);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .kpi-icon.blue {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.06) 0%, rgba(37, 99, 235, 0.12) 100%);
+            color: var(--blue);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+        }
+
+        .kpi-icon.green {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.06) 0%, rgba(34, 197, 94, 0.12) 100%);
+            color: #16a34a;
+            border: 1px solid rgba(34, 197, 94, 0.15);
+        }
+
+        .kpi-icon.red {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(239, 68, 68, 0.12) 100%);
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        .kpi-icon.amber {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0.12) 100%);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        .kpi-icon.cyan {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.06) 0%, rgba(6, 182, 212, 0.12) 100%);
+            color: #0891b2;
+            border: 1px solid rgba(6, 182, 212, 0.15);
+        }
+
+        .kpi-card .kpi-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary, #64748b);
+            margin-bottom: 0.25rem;
+        }
+
+        .kpi-card .kpi-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary, #0f172a);
+            line-height: 1.2;
+        }
+
+        /* ===== ACTION BAR ===== */
         .action-bar {
-            background: var(--card-bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 1.5rem 2rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--shadow-light);
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-bar::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
         }
 
         .action-title {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 700;
-            color: var(--primary-color);
+            color: var(--text-primary, #0f172a);
             margin: 0;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
+
+        .action-title i { color: var(--gold-dark); }
 
         .action-buttons {
             display: flex;
@@ -179,233 +310,519 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
             flex-wrap: wrap;
         }
 
-        .btn-modern {
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.95rem;
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+            color: #fff;
             border: none;
+            padding: 0.6rem 1.25rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
             transition: all 0.3s ease;
-            display: flex;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-gold::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+            color: #fff;
+        }
+
+        .btn-gold:hover::before { left: 100%; }
+
+        .btn-outline-admin {
+            background: var(--card-bg);
+            color: var(--text-secondary, #64748b);
+            border: 1px solid #e2e8f0;
+            padding: 0.6rem 1.25rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 4px;
+            display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-        }
-
-        .btn-primary-modern {
-            background: linear-gradient(135deg, var(--secondary-color), #a08636);
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(188, 158, 66, 0.3);
-        }
-
-        .btn-primary-modern:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(188, 158, 66, 0.4);
-            background: linear-gradient(135deg, #a08636, var(--secondary-color));
-        }
-
-        .btn-secondary-modern {
-            background: #fff;
-            color: var(--text-muted);
-            border: 2px solid var(--border-color);
-        }
-
-        .btn-secondary-modern:hover {
-            border-color: var(--secondary-color);
-            color: var(--secondary-color);
-            background: rgba(188, 158, 66, 0.05);
-        }
-
-        /* Tabs Styling */
-        .property-tabs {
-            background: var(--card-bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            box-shadow: var(--shadow-light);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-
-        .nav-tabs {
-            border-bottom: none;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 0.5rem;
-        }
-
-        .nav-tabs .nav-item {
-            margin-bottom: 0;
-        }
-
-        .nav-tabs .nav-link {
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 1rem;
-            padding: 1rem 1.5rem;
-            border: none;
-            border-radius: 12px;
-            margin-right: 0.5rem;
             transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn-outline-admin:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+            background: rgba(37, 99, 235, 0.03);
+        }
+
+        .filter-count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            background: var(--blue);
+            color: #fff;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        /* ===== TABS ===== */
+        .property-tabs {
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
             position: relative;
         }
 
-        .nav-tabs .nav-link:hover {
-            background: rgba(188, 158, 66, 0.1);
-            color: var(--secondary-color);
+        .property-tabs::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+            z-index: 5;
         }
 
-        .nav-tabs .nav-link.active {
-            background: var(--secondary-color);
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(188, 158, 66, 0.3);
+        .property-tabs .nav-tabs {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.25rem 0.5rem 0;
+            gap: 0.25rem;
+            background: linear-gradient(180deg, #fafbfc 0%, var(--card-bg) 100%);
+        }
+
+        .property-tabs .nav-item {
+            margin-bottom: 0;
+        }
+
+        .property-tabs .nav-link {
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: transparent;
+            color: var(--text-secondary, #64748b);
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.85rem 1.25rem;
+            border-radius: 0;
+        }
+
+        .property-tabs .nav-link:hover {
+            color: var(--text-primary, #0f172a);
+            background: rgba(37, 99, 235, 0.03);
+            border-bottom-color: rgba(37, 99, 235, 0.2);
+        }
+
+        .property-tabs .nav-link.active {
+            color: var(--gold-dark);
+            background: rgba(212, 175, 55, 0.03);
+            border-bottom-color: var(--gold);
         }
 
         .tab-badge {
-            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 0.4rem;
+            border-radius: 2px;
+            font-size: 0.7rem;
             font-weight: 700;
-            padding: 0.25rem 0.6rem;
-            border-radius: 12px;
             margin-left: 0.5rem;
         }
 
-        .badge-pending {
-            background: linear-gradient(135deg, #ffc107, #ffb300);
-            color: #000;
-        }
+        .badge-approved { background: rgba(34, 197, 94, 0.1); color: #16a34a; border: 1px solid rgba(34, 197, 94, 0.15); }
+        .badge-pending { background: rgba(245, 158, 11, 0.1); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.15); }
+        .badge-rejected { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.15); }
+        .badge-sold { background: rgba(100, 116, 139, 0.1); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.15); }
+        .badge-pending-sold { background: rgba(6, 182, 212, 0.1); color: #0891b2; border: 1px solid rgba(6, 182, 212, 0.15); }
 
-        .badge-approved {
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: #fff;
-        }
-
-        .badge-rejected {
-            background: linear-gradient(135deg, #dc3545, #c82333);
-            color: #fff;
-        }
-
-        /* Tab Content */
-        .tab-content {
-            padding: 2rem;
-        }
+        .tab-content { padding: 1.5rem; }
 
         .properties-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
 
-        /* Empty State */
+        /* ===== ADMIN PROPERTY CARD ===== */
+        .admin-prop-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .admin-prop-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--gold), var(--blue));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 5;
+        }
+
+        .admin-prop-card:hover {
+            border-color: rgba(37, 99, 235, 0.25);
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.08);
+            transform: translateY(-4px);
+        }
+
+        .admin-prop-card:hover::before { opacity: 1; }
+
+        /* Card Image */
+        .admin-prop-card .card-img-wrap {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+            background: #f1f5f9;
+        }
+
+        .admin-prop-card .card-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .admin-prop-card:hover .card-img-wrap img {
+            transform: scale(1.05);
+        }
+
+        .admin-prop-card .img-overlay {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 60%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.65) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        /* Badges */
+        .admin-prop-card .status-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 3;
+        }
+
+        .status-badge.approved { background: rgba(34, 197, 94, 0.9); color: #fff; }
+        .status-badge.pending { background: rgba(245, 158, 11, 0.9); color: #fff; }
+        .status-badge.rejected { background: rgba(239, 68, 68, 0.9); color: #fff; }
+        .status-badge.pending-sold { background: rgba(6, 182, 212, 0.9); color: #fff; }
+        .status-badge.sold { background: rgba(100, 116, 139, 0.9); color: #fff; }
+
+        .admin-prop-card .listing-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 3;
+        }
+
+        .listing-badge.for-sale { background: rgba(37, 99, 235, 0.9); color: #fff; }
+        .listing-badge.for-rent { background: rgba(212, 175, 55, 0.9); color: #fff; }
+        .listing-badge.is-sold { background: rgba(100, 116, 139, 0.8); color: #fff; }
+
+        .admin-prop-card .type-badge {
+            position: absolute;
+            bottom: 12px;
+            left: 14px;
+            padding: 0.2rem 0.6rem;
+            border-radius: 2px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 3;
+            background: rgba(0, 0, 0, 0.7);
+            color: #e2e8f0;
+            backdrop-filter: blur(4px);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .admin-prop-card .price-overlay {
+            position: absolute;
+            bottom: 12px;
+            right: 14px;
+            z-index: 3;
+        }
+
+        .admin-prop-card .price-overlay .price {
+            font-size: 1.3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+        }
+
+        .admin-prop-card .price-overlay .price-suffix {
+            font-size: 0.7rem;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        /* Card Body */
+        .admin-prop-card .card-body-content {
+            padding: 1.25rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-prop-card .prop-address {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-primary, #0f172a);
+            margin-bottom: 0.2rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .admin-prop-card .prop-location {
+            font-size: 0.8rem;
+            color: var(--text-secondary, #64748b);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .admin-prop-card .prop-location i {
+            color: var(--blue);
+            font-size: 0.75rem;
+        }
+
+        /* Stats Row */
+        .admin-prop-card .stats-row {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-top: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 0.75rem;
+        }
+
+        .admin-prop-card .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary, #64748b);
+        }
+
+        .admin-prop-card .stat-item i {
+            color: var(--gold);
+            font-size: 0.75rem;
+        }
+
+        .admin-prop-card .stat-item strong {
+            color: var(--text-primary, #0f172a);
+            font-weight: 700;
+        }
+
+        /* Meta Row */
+        .admin-prop-card .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary, #64748b);
+        }
+
+        .admin-prop-card .meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: #f8fafc;
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+            border: 1px solid #e2e8f0;
+            font-weight: 500;
+        }
+
+        .admin-prop-card .meta-item i {
+            color: #94a3b8;
+            font-size: 0.7rem;
+        }
+
+        /* Rental Info */
+        .admin-prop-card .rental-info-section {
+            background: #fffbeb;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 4px;
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.75rem;
+            color: #92400e;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .admin-prop-card .rental-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: #fff;
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+            border: 1px solid rgba(212, 175, 55, 0.15);
+        }
+
+        .admin-prop-card .rental-tag i {
+            color: #d97706;
+        }
+
+        /* Footer */
+        .admin-prop-card .card-footer-section {
+            margin-top: auto;
+            padding-top: 0.75rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .admin-prop-card .posted-by {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 0.75rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+        }
+
+        .admin-prop-card .posted-by i { color: #cbd5e1; }
+
+        .admin-prop-card .btn-manage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
+            color: #fff;
+            border: none;
+            padding: 0.6rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border-radius: 4px;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+        }
+
+        .admin-prop-card .btn-manage:hover {
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+            transform: translateY(-1px);
+            color: #fff;
+        }
+
+        /* ===== EMPTY STATE ===== */
         .empty-state {
             text-align: center;
-            padding: 4rem 2rem;
-            color: var(--text-muted);
+            padding: 3rem 1rem;
+            color: var(--text-secondary, #64748b);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: rgba(37, 99, 235, 0.15);
+            margin-bottom: 1rem;
+            display: block;
         }
 
         .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 1.5rem;
-            opacity: 0.5;
+            font-size: 3rem;
+            color: rgba(37, 99, 235, 0.15);
+            margin-bottom: 1rem;
         }
 
         .empty-state h4 {
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--primary-color);
-        }
-
-        .empty-state p {
-            font-size: 1.1rem;
-            margin-bottom: 0;
-        }
-
-        /* Stats Cards */
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--card-bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: var(--shadow-light);
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-medium);
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--secondary-color);
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
             margin-bottom: 0.5rem;
         }
 
-        .stat-label {
-            font-weight: 600;
-            color: var(--text-muted);
+        .empty-state p {
             font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: #94a3b8;
         }
 
-        /* Responsive Design */
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1400px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
         @media (max-width: 992px) {
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-            }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .properties-grid { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 768px) {
-            .main-content {
-                padding-top: 90px;
-            }
-            
-            .page-header {
-                padding: 2rem 1rem;
-            }
-            
-            .page-title {
-                font-size: 2rem;
-            }
-            
-            .action-bar {
-                padding: 1rem;
-                text-align: center;
-            }
-            
-            .action-buttons {
-                justify-content: center;
-                width: 100%;
-            }
-            
-            .properties-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .stats-row {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            .page-header { padding: 1.5rem; }
+            .page-header h1 { font-size: 1.4rem; }
+            .page-header-inner { flex-direction: column; align-items: flex-start; }
+            .action-bar { flex-direction: column; align-items: flex-start; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .property-tabs .nav-link { padding: 0.65rem 0.75rem; font-size: 0.8rem; }
         }
 
         @media (max-width: 576px) {
-            .nav-tabs .nav-link {
-                padding: 0.75rem 1rem;
-                font-size: 0.9rem;
-            }
-            
-            .stats-row {
-                grid-template-columns: 1fr;
-            }
+            .kpi-grid { grid-template-columns: 1fr 1fr; }
+            .property-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; }
+            .property-tabs .nav-link { white-space: nowrap; }
         }
 
-        /* Filter Sidebar Styles - Optimized & Professional */
+        /* ===== FILTER SIDEBAR ===== */
         .filter-sidebar {
             position: fixed;
             top: 0;
@@ -415,215 +832,198 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
             z-index: 9999;
             pointer-events: none;
         }
-        
-        .filter-sidebar.active {
-            pointer-events: all;
-        }
-        
+
+        .filter-sidebar.active { pointer-events: all; }
+
         .filter-sidebar-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4);
             opacity: 0;
             transition: opacity 0.2s ease;
             pointer-events: none;
         }
-        
+
         .filter-sidebar.active .filter-sidebar-overlay {
             opacity: 1;
             pointer-events: all;
         }
-        
+
         .filter-sidebar-content {
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 500px;
+            top: 0; right: 0;
+            width: 480px;
             max-width: 90vw;
             height: 100%;
             background: #ffffff;
-            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+            border-left: 1px solid rgba(37, 99, 235, 0.15);
+            box-shadow: -8px 0 32px rgba(15, 23, 42, 0.1);
             transform: translateX(100%);
             transition: transform 0.25s ease;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
-        
+
         .filter-sidebar.active .filter-sidebar-content {
             transform: translateX(0);
         }
-        
+
         .filter-header {
-            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-            color: #ffffff;
-            padding: 1.75rem 2rem;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #fff;
+            padding: 1.5rem 2rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 2px solid var(--secondary-color);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
         }
-        
+
+        .filter-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--gold), var(--blue));
+        }
+
         .filter-header h4 {
             font-weight: 700;
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             display: flex;
             align-items: center;
             gap: 0.75rem;
             margin: 0;
-            letter-spacing: -0.01em;
         }
-        
+
         .filter-header h4 i {
-            color: var(--secondary-color);
-            font-size: 1.5rem;
+            color: var(--gold);
+            font-size: 1.3rem;
         }
-        
+
         .btn-close-filter {
             background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: background-color 0.2s ease, border-color 0.2s ease;
-            font-size: 1.125rem;
+            transition: all 0.2s ease;
+            font-size: 1rem;
         }
-        
+
         .btn-close-filter:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: var(--secondary-color);
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
         }
-        
+
         .filter-body {
             flex: 1;
             overflow-y: auto;
-            padding: 2rem;
-            background: #f8f9fa;
-        }
-        
-        .filter-body::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        .filter-body::-webkit-scrollbar-track {
-            background: #e5e7eb;
-            border-radius: 10px;
-        }
-        
-        .filter-body::-webkit-scrollbar-thumb {
-            background: var(--secondary-color);
-            border-radius: 10px;
-        }
-        
-        .filter-body::-webkit-scrollbar-thumb:hover {
-            background: #a08636;
-        }
-        
-        .filter-section {
-            background: #ffffff;
-            border-radius: 12px;
             padding: 1.5rem;
-            margin-bottom: 1.25rem;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            background: #f8fafc;
         }
-        
-        .filter-section:last-child {
-            margin-bottom: 0;
+
+        .filter-body::-webkit-scrollbar { width: 6px; }
+        .filter-body::-webkit-scrollbar-track { background: transparent; }
+        .filter-body::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 3px;
         }
-        
+        .filter-body::-webkit-scrollbar-thumb:hover {
+            background: var(--gold-dark);
+        }
+
+        .filter-section {
+            background: #fff;
+            border-radius: 4px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .filter-section:last-child { margin-bottom: 0; }
+
         .filter-section-title {
             font-weight: 700;
-            font-size: 0.875rem;
-            color: #111827;
-            margin-bottom: 1.25rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 2px solid #f3f4f6;
+            font-size: 0.8rem;
+            color: var(--text-primary, #0f172a);
+            margin-bottom: 1rem;
+            padding-bottom: 0.6rem;
+            border-bottom: 1px solid #f1f5f9;
             display: flex;
             align-items: center;
-            gap: 0.625rem;
+            gap: 0.5rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
-        
+
         .filter-section-title i {
-            color: var(--secondary-color);
-            font-size: 1.125rem;
-            flex-shrink: 0;
+            color: var(--gold);
+            font-size: 1rem;
         }
-        
-        .filter-search-box {
-            position: relative;
-        }
-        
+
+        .filter-search-box { position: relative; }
+
         .filter-search-box input {
             width: 100%;
-            padding: 0.875rem 1rem 0.875rem 3rem;
-            border-radius: 10px;
-            border: 2px solid #e5e7eb;
-            background: #ffffff;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            font-size: 0.9375rem;
-            color: #111827;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            color: var(--text-primary, #0f172a);
         }
-        
-        .filter-search-box input::placeholder {
-            color: #9ca3af;
-        }
-        
+
+        .filter-search-box input::placeholder { color: #94a3b8; }
+
         .filter-search-box input:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(188, 158, 66, 0.1);
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
             outline: none;
         }
-        
+
         .filter-search-box i {
             position: absolute;
-            left: 1rem;
+            left: 0.85rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #6b7280;
-            font-size: 1.125rem;
+            color: #94a3b8;
+            font-size: 1rem;
         }
-        
+
+        /* Price Slider */
         .price-slider-container {
             position: relative;
-            height: 50px;
-            margin-bottom: 1.5rem;
+            height: 40px;
+            margin-bottom: 1.25rem;
         }
-        
+
         .price-slider-track {
             position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 8px;
-            background: #e5e7eb;
-            border-radius: 9999px;
+            top: 50%; left: 0; right: 0;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
             transform: translateY(-50%);
         }
-        
+
         .price-slider-range {
             position: absolute;
             height: 100%;
-            background: linear-gradient(90deg, var(--secondary-color), #d4b555);
-            border-radius: 9999px;
-            transition: left 0.1s ease, width 0.1s ease;
+            background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+            border-radius: 3px;
         }
-        
+
         .price-range-slider {
             position: absolute;
-            width: 100%;
-            height: 8px;
+            width: 100%; height: 6px;
             top: 50%;
             transform: translateY(-50%);
             background: transparent;
@@ -631,323 +1031,289 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
             -webkit-appearance: none;
             appearance: none;
         }
-        
+
         .price-range-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            appearance: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 9999px;
-            background: #ffffff;
-            border: 4px solid var(--secondary-color);
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid var(--gold);
             cursor: pointer;
             pointer-events: all;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         }
-        
+
         .price-range-slider::-webkit-slider-thumb:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 3px 10px rgba(212, 175, 55, 0.3);
         }
-        
-        .price-range-slider::-webkit-slider-thumb:active {
-            border-width: 5px;
-        }
-        
+
         .price-range-slider::-moz-range-thumb {
-            width: 24px;
-            height: 24px;
-            border-radius: 9999px;
-            background: #ffffff;
-            border: 4px solid var(--secondary-color);
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid var(--gold);
             cursor: pointer;
             pointer-events: all;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         }
-        
-        .price-range-slider::-moz-range-thumb:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-        
-        .price-range-slider::-moz-range-thumb:active {
-            border-width: 5px;
-        }
-        
+
         .price-range-inputs {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
-            gap: 1rem;
+            gap: 0.75rem;
             align-items: center;
         }
-        
-        .price-input {
-            position: relative;
-        }
-        
+
+        .price-input { position: relative; }
+
         .price-input input {
             width: 100%;
-            padding: 0.75rem 1rem 0.75rem 2.25rem;
-            border-radius: 10px;
-            border: 2px solid #e5e7eb;
-            background: #ffffff;
-            font-size: 0.9375rem;
+            padding: 0.6rem 0.75rem 0.6rem 2rem;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            font-size: 0.85rem;
             font-weight: 600;
-            color: #111827;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            color: var(--text-primary, #0f172a);
+            transition: all 0.2s ease;
         }
-        
+
         .price-input input:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(188, 158, 66, 0.1);
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
             outline: none;
         }
-        
+
         .price-input .currency-symbol {
             position: absolute;
-            left: 0.75rem;
+            left: 0.65rem;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--text-muted);
-            font-weight: 600;
+            color: var(--gold-dark);
+            font-weight: 700;
+            font-size: 0.8rem;
         }
-        
+
         .range-divider {
-            color: var(--text-muted);
+            color: #94a3b8;
             font-weight: 600;
         }
-        
+
+        /* Filter Chips */
         .filter-chips {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.625rem;
+            gap: 0.5rem;
         }
-        
+
         .filter-chip {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.625rem 1.125rem;
-            background: #ffffff;
-            border: 2px solid #e5e7eb;
-            border-radius: 9999px;
+            gap: 0.4rem;
+            padding: 0.5rem 0.85rem;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 2px;
             cursor: pointer;
-            transition: border-color 0.2s ease, background-color 0.2s ease;
-            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            font-size: 0.8125rem;
             font-weight: 500;
-            color: #111827;
+            color: var(--text-primary, #0f172a);
         }
-        
+
         .filter-chip:hover {
-            background: #f9fafb;
-            border-color: var(--secondary-color);
+            background: #f8fafc;
+            border-color: var(--gold);
         }
-        
+
         .filter-chip.active {
-            background: var(--secondary-color);
-            color: #ffffff;
-            border-color: var(--secondary-color);
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            color: #fff;
+            border-color: var(--gold);
             font-weight: 600;
         }
-        
+
         .filter-chip input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             cursor: pointer;
+            accent-color: var(--gold);
         }
-        
-        .filter-range-slider {
-            margin-top: 1rem;
-        }
-        
-        .filter-range-slider input[type="range"] {
-            width: 100%;
-            height: 6px;
-            border-radius: 10px;
-            background: linear-gradient(to right, var(--secondary-color), var(--secondary-color));
-            outline: none;
-            -webkit-appearance: none;
-        }
-        
-        .filter-range-slider input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--secondary-color);
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-        
-        .filter-range-slider input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--secondary-color);
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-            border: none;
-        }
-        
-        .range-values {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-        
-        .filter-footer {
-            padding: 1.5rem 2rem;
-            background: #ffffff;
-            border-top: 2px solid #e5e7eb;
-            display: flex;
-            gap: 1rem;
-        }
-        
-        .filter-footer .btn {
-            flex: 1;
-            padding: 0.875rem 1.5rem;
-            font-weight: 600;
-            border-radius: 10px;
-            transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-            font-size: 0.9375rem;
-        }
-        
-        .filter-footer .btn:hover {
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        .filter-results-summary {
-            background: linear-gradient(135deg, rgba(188, 158, 66, 0.1), rgba(188, 158, 66, 0.05));
-            border: 2px solid rgba(188, 158, 66, 0.3);
-            border-radius: 12px;
-            padding: 1rem 1.25rem;
-            margin-top: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .filter-results-summary i {
-            color: var(--secondary-color);
-            font-size: 1.5rem;
-        }
-        
-        .filter-results-text {
-            flex: 1;
-        }
-        
-        .filter-results-count {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--secondary-color);
-        }
-        
-        .filter-results-label {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            margin-top: 0.25rem;
-        }
-        
-        .filter-count-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 20px;
-            height: 20px;
-            padding: 0 6px;
-            background: #dc3545;
-            color: white;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            margin-left: 0.5rem;
-        }
-        
+
         .filter-select {
             width: 100%;
-            padding: 0.75rem 1rem;
-            border-radius: 10px;
-            border: 2px solid #e5e7eb;
-            background: #ffffff;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            font-size: 0.9375rem;
+            padding: 0.6rem 0.85rem;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            font-size: 0.85rem;
             font-weight: 500;
-            color: #111827;
+            color: var(--text-primary, #0f172a);
+            transition: all 0.2s ease;
         }
-        
+
         .filter-select:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(188, 158, 66, 0.1);
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
             outline: none;
         }
-        
+
         .year-inputs {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
-            gap: 0.75rem;
+            gap: 0.6rem;
             align-items: center;
         }
-        
+
         .year-inputs input,
         .year-inputs input[type="date"] {
             width: 100%;
             min-width: 0;
-            padding: 0.75rem 0.875rem;
-            border-radius: 10px;
-            border: 2px solid #e5e7eb;
-            background: #ffffff;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #111827;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        .year-inputs input:focus,
-        .year-inputs input[type="date"]:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(188, 158, 66, 0.1);
-            outline: none;
-        }
-        
-        .year-inputs .range-divider {
-            color: #6b7280;
-            font-weight: 600;
-            font-size: 1.125rem;
-            padding: 0 0.25rem;
-        }
-        
-        .quick-filters {
-            display: flex;
-            gap: 0.625rem;
-            margin-top: 0.75rem;
-            flex-wrap: wrap;
-        }
-        
-        .quick-filter-btn {
-            padding: 0.5rem 1rem;
-            border: 2px solid #e5e7eb;
-            background: #ffffff;
-            border-radius: 9999px;
+            padding: 0.6rem 0.75rem;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
             font-size: 0.8125rem;
             font-weight: 500;
+            color: var(--text-primary, #0f172a);
+            transition: all 0.2s ease;
+        }
+
+        .year-inputs input:focus,
+        .year-inputs input[type="date"]:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+            outline: none;
+        }
+
+        .year-inputs .range-divider {
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .quick-filters {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-filter-btn {
+            padding: 0.4rem 0.85rem;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            border-radius: 2px;
+            font-size: 0.75rem;
+            font-weight: 500;
             cursor: pointer;
-            transition: border-color 0.2s ease, background-color 0.2s ease;
-            color: #111827;
+            transition: all 0.2s ease;
+            color: var(--text-primary, #0f172a);
         }
-        
+
         .quick-filter-btn:hover {
-            border-color: var(--secondary-color);
-            background: #f9fafb;
+            border-color: var(--gold);
+            background: #fffbeb;
         }
-        
+
         .quick-filter-btn.active {
-            background: var(--secondary-color);
-            color: #ffffff;
-            border-color: var(--secondary-color);
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            color: #fff;
+            border-color: var(--gold);
             font-weight: 600;
         }
+
+        .filter-footer {
+            padding: 1.25rem 1.5rem;
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .filter-footer .btn {
+            flex: 1;
+            padding: 0.7rem 1.25rem;
+            font-weight: 600;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+        }
+
+        .filter-footer .btn:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .filter-footer .btn-outline-secondary {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            color: var(--text-secondary, #64748b);
+        }
+
+        .filter-footer .btn-outline-secondary:hover {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #dc2626;
+            background: rgba(239, 68, 68, 0.03);
+        }
+
+        .filter-footer .btn-primary {
+            background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+            border: none;
+            color: #fff;
+        }
+
+        .filter-footer .btn-primary:hover {
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        .filter-results-summary {
+            background: rgba(37, 99, 235, 0.04);
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            border-radius: 4px;
+            padding: 0.85rem 1rem;
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .filter-results-summary i {
+            color: var(--blue);
+            font-size: 1.25rem;
+        }
+
+        .filter-results-text { flex: 1; }
+
+        .filter-results-count {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--blue);
+        }
+
+        .filter-results-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary, #64748b);
+        }
+
+        .filter-range-slider { margin-top: 0.75rem; }
+
+        .filter-range-slider input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .range-values {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.4rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary, #64748b);
+            font-weight: 600;
+        }
+
     </style>
 </head>
 <body>
@@ -961,6 +1327,53 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
     <!-- Main Content Area -->
     <div class="admin-content">
 
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-inner">
+                <div>
+                    <h1><i class="bi bi-building me-2" style="color: var(--gold);"></i>Property Management</h1>
+                    <p class="subtitle">Monitor, review, and manage all property listings across the platform</p>
+                </div>
+                <div>
+                    <span class="header-badge"><i class="bi bi-shield-check me-1"></i> Admin Control Panel</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Stat Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon gold"><i class="bi bi-buildings"></i></div>
+                <div class="kpi-label">Total Listings</div>
+                <div class="kpi-value"><?php echo count($properties); ?></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon amber"><i class="bi bi-clock-history"></i></div>
+                <div class="kpi-label">Pending Review</div>
+                <div class="kpi-value"><?php echo count($pending_properties); ?></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon green"><i class="bi bi-check-circle"></i></div>
+                <div class="kpi-label">Approved</div>
+                <div class="kpi-value"><?php echo count($approved_properties); ?></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon red"><i class="bi bi-x-circle"></i></div>
+                <div class="kpi-label">Rejected</div>
+                <div class="kpi-value"><?php echo count($rejected_properties); ?></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon cyan"><i class="bi bi-hourglass-split"></i></div>
+                <div class="kpi-label">Pending Sold</div>
+                <div class="kpi-value"><?php echo count($pending_sold_properties); ?></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon blue"><i class="bi bi-tag-fill"></i></div>
+                <div class="kpi-label">Sold</div>
+                <div class="kpi-value"><?php echo count($sold_properties); ?></div>
+            </div>
+        </div>
+
         <!-- Action Bar -->
         <div class="action-bar">
             <h2 class="action-title">
@@ -968,61 +1381,61 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                 All Listings
             </h2>
             <div class="action-buttons">
-                <button type="button" class="btn btn-modern btn-secondary-modern" id="openFilterSidebar">
+                <button type="button" class="btn-outline-admin" id="openFilterSidebar">
                     <i class="bi bi-funnel"></i>
                     Filter Properties
                     <span class="filter-count-badge" id="filterCountBadge" style="display:none;">0</span>
                 </button>
-                <a href="add_property.php" class="btn btn-modern btn-primary-modern">
+                <a href="add_property.php" class="btn-gold">
                     <i class="bi bi-plus-circle"></i>
                     Add New Property
                 </a>
             </div>
         </div>
-        
+
         <!-- Property Tabs -->
         <div class="property-tabs">
             <ul class="nav nav-tabs" id="propertyStatusTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-content" type="button" role="tab">
-                        <i class="bi bi-list-ul me-2"></i>
-                        All Listings
+                        <i class="bi bi-grid-3x3-gap me-1"></i>
+                        All
                         <span class="tab-badge badge-approved"><?php echo count($properties); ?></span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-content" type="button" role="tab">
-                        <i class="bi bi-clock-history me-2"></i>
-                        Pending Review
+                        <i class="bi bi-clock-history me-1"></i>
+                        Pending
                         <span class="tab-badge badge-pending"><?php echo count($pending_properties); ?></span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="pending-sold-tab" data-bs-toggle="tab" data-bs-target="#pending-sold-content" type="button" role="tab">
-                        <i class="bi bi-hourglass-split me-2"></i>
+                        <i class="bi bi-hourglass-split me-1"></i>
                         Pending Sold
-                        <span class="tab-badge badge-pending"><?php echo count($pending_sold_properties); ?></span>
+                        <span class="tab-badge badge-pending-sold"><?php echo count($pending_sold_properties); ?></span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-content" type="button" role="tab">
-                        <i class="bi bi-check-circle me-2"></i>
+                        <i class="bi bi-check-circle me-1"></i>
                         Approved
                         <span class="tab-badge badge-approved"><?php echo count($approved_properties); ?></span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected-content" type="button" role="tab">
-                        <i class="bi bi-x-circle me-2"></i>
+                        <i class="bi bi-x-circle me-1"></i>
                         Rejected
                         <span class="tab-badge badge-rejected"><?php echo count($rejected_properties); ?></span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="sold-tab" data-bs-toggle="tab" data-bs-target="#sold-content" type="button" role="tab">
-                        <i class="bi bi-tag-fill me-2"></i>
+                        <i class="bi bi-tag-fill me-1"></i>
                         Sold
-                        <span class="tab-badge" style="background: linear-gradient(135deg,#6c757d,#495057); color:#fff"><?php echo count($sold_properties); ?></span>
+                        <span class="tab-badge badge-sold"><?php echo count($sold_properties); ?></span>
                     </button>
                 </li>
             </ul>
@@ -1036,17 +1449,14 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                 <div class="tab-pane fade" id="pending-content" role="tabpanel">
                     <div class="properties-grid" id="pending-grid"></div>
                 </div>
-
                 <!-- Pending Sold Properties -->
                 <div class="tab-pane fade" id="pending-sold-content" role="tabpanel">
                     <div class="properties-grid" id="pending-sold-grid"></div>
                 </div>
-
                 <!-- Approved Properties -->
                 <div class="tab-pane fade" id="approved-content" role="tabpanel">
                     <div class="properties-grid" id="approved-grid"></div>
                 </div>
-
                 <!-- Rejected Properties -->
                 <div class="tab-pane fade" id="rejected-content" role="tabpanel">
                     <div class="properties-grid" id="rejected-grid"></div>
@@ -1072,7 +1482,8 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
         </div>
     </div>
 
-    <!-- Filter Sidebar -->
+
+        <!-- Filter Sidebar -->
     <div class="filter-sidebar" id="filterSidebar">
         <div class="filter-sidebar-overlay" id="filterOverlay"></div>
         <div class="filter-sidebar-content">
