@@ -29,7 +29,7 @@ if ($new_price <= 0) {
 }
 
 // Verify property ownership through property_log (align with schema: property_ID)
-$check_query = "SELECT p.property_ID, p.ListingPrice 
+$check_query = "SELECT p.property_ID, p.ListingPrice, p.Status 
                 FROM property p 
                 INNER JOIN property_log pl ON p.property_ID = pl.property_id 
                 WHERE p.property_ID = ? AND pl.account_id = ?";

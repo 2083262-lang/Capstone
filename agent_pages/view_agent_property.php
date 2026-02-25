@@ -91,7 +91,7 @@ if (isset($property_data['Status']) && trim($property_data['Status']) === 'For R
 }
 
 // Fetch price history
-$sql_history = "SELECT event_date, event_type, price FROM price_history WHERE property_id = ? ORDER BY event_date DESC";
+$sql_history = "SELECT event_date, event_type, price FROM price_history WHERE property_id = ? ORDER BY event_date DESC, history_id DESC";
 $stmt_history = $conn->prepare($sql_history);
 $stmt_history->bind_param("i", $property_id);
 $stmt_history->execute();
@@ -509,6 +509,20 @@ $days_on_market = $interval->days;
         }
         .price-change-badge.text-success { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
         .price-change-badge.text-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        
+        /* Price History Expand/Collapse Animation */
+        .price-history-extra {
+            transition: all 0.3s ease-out;
+            overflow: hidden;
+        }
+        
+        /* Price History See More Button */
+        #priceHistorySeeMoreBtn:hover {
+            background: rgba(212, 175, 55, 0.12) !important;
+            border-color: rgba(212, 175, 55, 0.5) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15);
+        }
 
         /* Quick Action Buttons */
         .action-list { display: flex; flex-direction: column; gap: 10px; }
@@ -918,8 +932,13 @@ $days_on_market = $interval->days;
                         </div>
                     <?php else: ?>
                         <div class="price-timeline">
-                            <?php foreach (array_reverse($price_history) as $history): ?>
-                                <div class="timeline-item">
+                            <?php 
+                            $total_count = count($price_history);
+                            $initial_display = 3;
+                            foreach ($price_history as $index => $history): 
+                                $is_hidden = ($index >= $initial_display && $total_count > $initial_display);
+                            ?>
+                                <div class="timeline-item <?php echo $is_hidden ? 'price-history-extra' : ''; ?>" <?php echo $is_hidden ? 'style="display: none; opacity: 0; max-height: 0;"' : ''; ?>>
                                     <div class="timeline-marker"></div>
                                     <div class="timeline-content">
                                         <div class="timeline-header">
@@ -931,7 +950,10 @@ $days_on_market = $interval->days;
                                             <?php if ($history['change_percentage'] !== null): ?>
                                                 <span class="price-change-badge <?php echo $history['change_class']; ?>">
                                                     <i class="bi bi-<?php echo $history['change_percentage'] > 0 ? 'arrow-up' : 'arrow-down'; ?>"></i>
-                                                    <?php echo abs($history['change_percentage']); ?>%
+                                                    <?php 
+                                                        $display_percentage = abs($history['change_percentage']);
+                                                        echo number_format($display_percentage, 2);
+                                                    ?>%
                                                 </span>
                                             <?php endif; ?>
                                         </div>
@@ -939,6 +961,13 @@ $days_on_market = $interval->days;
                                 </div>
                             <?php endforeach; ?>
                         </div>
+                        <?php if ($total_count > $initial_display): ?>
+                            <div style="text-align: center; margin-top: 16px;">
+                                <button type="button" id="priceHistorySeeMoreBtn" class="btn btn-sm" style="padding: 8px 20px; font-size: 0.875rem; border: 1px solid rgba(212, 175, 55, 0.3); background: rgba(212, 175, 55, 0.05); color: var(--gold); transition: all 0.2s ease;">
+                                    <i class="bi bi-chevron-down"></i> See More (<?php echo $total_count - $initial_display; ?> older)
+                                </button>
+                            </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
 
@@ -1194,6 +1223,40 @@ $days_on_market = $interval->days;
     function changeImage(direction, event) { event.stopPropagation(); currentImageIndex += direction; if (currentImageIndex < 0) currentImageIndex = currentImages.length - 1; if (currentImageIndex >= currentImages.length) currentImageIndex = 0; updateLightboxImage(); }
     function updateLightboxImage() { document.getElementById('lightboxImage').src = '../' + currentImages[currentImageIndex]; document.getElementById('lightboxCounter').textContent = (currentImageIndex + 1) + ' / ' + currentImages.length; document.getElementById('lightboxLabel').textContent = currentHeroView === 'featured' ? 'Featured Photos' : 'Floor ' + currentHeroFloor + ' Photos'; }
     document.addEventListener('keydown', function(e) { const lb = document.getElementById('lightbox'); if (lb.classList.contains('active')) { if (e.key === 'Escape') closeLightbox({ target: lb }); if (e.key === 'ArrowLeft') changeImage(-1, e); if (e.key === 'ArrowRight') changeImage(1, e); } });
+
+    // Price History See More/See Less
+    const priceHistorySeeMoreBtn = document.getElementById('priceHistorySeeMoreBtn');
+    if (priceHistorySeeMoreBtn) {
+        let isExpanded = false;
+        priceHistorySeeMoreBtn.addEventListener('click', function() {
+            const extraItems = document.querySelectorAll('.price-history-extra');
+            isExpanded = !isExpanded;
+            
+            extraItems.forEach(item => {
+                if (isExpanded) {
+                    item.style.display = 'block';
+                    // Trigger animation
+                    setTimeout(() => {
+                        item.style.opacity = '1';
+                        item.style.maxHeight = '300px';
+                    }, 10);
+                } else {
+                    item.style.opacity = '0';
+                    item.style.maxHeight = '0';
+                    setTimeout(() => {
+                        item.style.display = 'none';
+                    }, 300);
+                }
+            });
+            
+            if (isExpanded) {
+                this.innerHTML = '<i class="bi bi-chevron-up"></i> See Less';
+            } else {
+                const hiddenCount = extraItems.length;
+                this.innerHTML = '<i class="bi bi-chevron-down"></i> See More (' + hiddenCount + ' older)';
+            }
+        });
+    }
     </script>
     <!-- Modal logic (separated for performance) -->
     <script src="../script/agent_property_modals.js"></script>
