@@ -54,7 +54,16 @@ $tours = (int)($property['tour_count'] ?? 0);
 $photos = (int)($property['photo_count'] ?? 0);
 ?>
 
-<div class="col-lg-4 col-md-6 mb-4">
+<div class="col-lg-4 col-md-6 mb-4"
+     data-property-type="<?php echo htmlspecialchars($property['PropertyType'] ?? ''); ?>"
+     data-status="<?php echo htmlspecialchars($property['Status'] ?? ''); ?>"
+     data-city="<?php echo htmlspecialchars($property['City'] ?? ''); ?>"
+     data-price="<?php echo $property['ListingPrice']; ?>"
+     data-bedrooms="<?php echo (int)($property['Bedrooms'] ?? 0); ?>"
+     data-bathrooms="<?php echo (float)($property['Bathrooms'] ?? 0); ?>"
+     data-listing-date="<?php echo htmlspecialchars($property['ListingDate'] ?? ''); ?>"
+     data-views="<?php echo $views; ?>"
+     data-likes="<?php echo $likes; ?>">
     <div class="prop-card">
         <!-- Image Section -->
         <div class="prop-card-img-wrap">

@@ -708,11 +708,6 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
-                            <a class="dropdown-item" href="agent_dashboard.php">
-                                <i class="bi bi-speedometer2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li>
                             <a class="dropdown-item" href="agent_profile.php">
                                 <i class="bi bi-person-circle"></i>My Profile
                             </a>

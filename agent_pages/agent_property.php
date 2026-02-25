@@ -189,6 +189,24 @@ $conn->close();
             font-size: 0.95rem;
         }
 
+        .page-header .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
         /* ===== KPI STAT CARDS ===== */
         .kpi-grid {
             display: grid;
@@ -1133,6 +1151,334 @@ $conn->close();
         /* Label required/optional markers */
         .form-label .required { color: #ef4444; }
         .form-label .optional { color: #f59e0b; font-weight: 400; font-size: 0.8rem; }
+
+        /* ===== PROPERTY FILTER SYSTEM ===== */
+        .filter-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9998;
+            pointer-events: none;
+        }
+
+        .filter-sidebar.active { pointer-events: all; }
+
+        .filter-sidebar-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .filter-sidebar.active .filter-sidebar-overlay {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .filter-sidebar-content {
+            position: absolute;
+            top: 0; right: 0;
+            width: 420px;
+            max-width: 90vw;
+            height: 100%;
+            background: var(--black-light);
+            border-left: 1px solid var(--card-border);
+            box-shadow: -4px 0 40px rgba(0, 0, 0, 0.5);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .filter-sidebar.active .filter-sidebar-content {
+            transform: translateX(0);
+        }
+
+        /* Open Filter Button */
+        .btn-dark-outline {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--gray-300);
+            font-weight: 500;
+            font-size: 0.875rem;
+            padding: 0.6rem 1.25rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .btn-dark-outline:hover {
+            border-color: var(--blue);
+            color: var(--white);
+            background: rgba(37, 99, 235, 0.06);
+        }
+
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 0.4rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+            color: #000;
+            margin-left: 0.5rem;
+        }
+
+        .filter-header {
+            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
+            padding: 1.25rem 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+            position: relative;
+        }
+
+        .filter-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+        }
+
+        .filter-header h4 {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            margin-bottom: 0;
+        }
+
+        .filter-header h4 i {
+            color: var(--gold);
+        }
+
+        .btn-close-sidebar {
+            background: transparent;
+            border: none;
+            color: var(--gray-400);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-close-sidebar:hover {
+            color: var(--white);
+            transform: rotate(90deg);
+        }
+
+        .filter-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .filter-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .filter-body::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .filter-body::-webkit-scrollbar-thumb {
+            background: rgba(212, 175, 55, 0.4);
+            border-radius: 3px;
+        }
+
+        .filter-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(212, 175, 55, 0.6);
+        }
+
+        .filter-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-input,
+        .filter-select {
+            background-color: var(--black-lighter);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--white);
+            border-radius: 4px;
+            padding: 0.7rem 1rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+            background-color: var(--black-lighter);
+            color: var(--white);
+            outline: none;
+        }
+
+        .filter-select option {
+            background-color: var(--black-lighter);
+            color: var(--white);
+        }
+
+        .filter-input::placeholder {
+            color: var(--gray-600);
+            font-style: italic;
+        }
+
+        .filter-input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        .price-range-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .bed-bath-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .filter-section-divider {
+            margin: 2rem 0 1.5rem 0;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-400);
+        }
+
+        .filter-section-divider i {
+            color: var(--blue-light);
+        }
+
+        .filter-footer {
+            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
+            padding: 1.2rem 1.5rem;
+            border-top: 1px solid rgba(212, 175, 55, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .filter-footer .btn {
+            padding: 0.6rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-clear-filters {
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            color: #ef4444;
+        }
+
+        .btn-clear-filters:hover {
+            background: rgba(220, 38, 38, 0.2);
+            border-color: rgba(220, 38, 38, 0.5);
+            color: #ef4444;
+        }
+
+        .filter-result-count {
+            font-size: 0.85rem;
+            color: var(--gray-400);
+        }
+
+        .filter-result-count strong {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .btn-dark-outline {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            color: var(--white);
+            padding: 0.7rem 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-dark-outline:hover {
+            background: rgba(37, 99, 235, 0.2);
+            border-color: rgba(37, 99, 235, 0.5);
+            color: var(--white);
+            transform: translateY(-1px);
+        }
+
+        .filter-sort {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-sort label {
+            font-size: 0.75rem;
+            color: var(--gray-400);
+            margin: 0;
+        }
+
+        .filter-sort select {
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 3px;
+            color: var(--white);
+            padding: 0.4rem 0.6rem;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .filter-sidebar-content {
+                width: 100%;
+                max-width: 100vw;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1159,10 +1505,16 @@ include 'agent_navbar.php';
                 <h1><i class="bi bi-buildings me-2" style="font-size:1.5rem;"></i>My Properties</h1>
                 <p class="subtitle">Manage your property listings, track performance, and handle sales</p>
             </div>
-            <a href="#" class="btn-gold" data-bs-toggle="modal" data-bs-target="#addPropertyModal">
-                <i class="bi bi-plus-circle-fill"></i>
-                <span>Add New Property</span>
-            </a>
+            <div class="header-actions">
+                <button class="btn btn-dark-outline" id="openFiltersBtn">
+                    <i class="fas fa-filter me-2"></i>Filters & Search
+                    <span class="filter-badge" id="activeFilterBadge" style="display: none;">0</span>
+                </button>
+                <a href="#" class="btn-gold" data-bs-toggle="modal" data-bs-target="#addPropertyModal">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Add New Property</span>
+                </a>
+            </div>
         </div>
     </div>
 
@@ -1239,6 +1591,184 @@ include 'agent_navbar.php';
                 </button>
             </li>
         </ul>
+
+        <!-- ===== FILTER SIDEBAR ===== -->
+        <div class="filter-sidebar" id="filterSidebar">
+            <div class="filter-sidebar-overlay" id="filterOverlay"></div>
+            <div class="filter-sidebar-content">
+                <div class="filter-header">
+                    <h4>
+                        <i class="fas fa-filter me-2"></i>Filters & Search
+                    </h4>
+                    <button class="btn-close-sidebar" id="closeFiltersBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="filter-body">
+                    <!-- Search Bar -->
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-search me-2"></i> Search
+                        </label>
+                        <input 
+                            type="text" 
+                            id="filterSearch" 
+                            class="filter-input" 
+                            placeholder="Search by address, city, or property type..."
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <!-- Property Type Filter -->
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-home me-2"></i> Property Type
+                        </label>
+                        <select id="filterPropertyType" class="filter-select">
+                            <option value="">All Types</option>
+                            <option value="Single-Family Home">Single-Family Home</option>
+                            <option value="Condominium">Condominium</option>
+                            <option value="Townhouse">Townhouse</option>
+                            <option value="Apartment">Apartment</option>
+                            <option value="Land">Land</option>
+                            <option value="Commercial">Commercial</option>
+                            <option value="Multi-Family">Multi-Family</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-tag me-2"></i> Listing Status
+                        </label>
+                        <select id="filterStatus" class="filter-select">
+                            <option value="">All Statuses</option>
+                            <option value="For Sale">For Sale</option>
+                            <option value="For Rent">For Rent</option>
+                        </select>
+                    </div>
+
+                    <!-- City Filter -->
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-map-marker-alt me-2"></i> City/Location
+                        </label>
+                        <select id="filterCity" class="filter-select">
+                            <option value="">All Locations</option>
+                            <?php
+                            $cities = array_unique(array_column($all_properties, 'City'));
+                            sort($cities);
+                            foreach ($cities as $city):
+                                if (!empty($city)):
+                            ?>
+                            <option value="<?php echo htmlspecialchars($city); ?>"><?php echo htmlspecialchars($city); ?></option>
+                            <?php
+                                endif;
+                            endforeach;
+                            ?>
+                        </select>
+                    </div>
+
+                    <!-- Price Range Section -->
+                    <div class="filter-section-divider">
+                        <span><i class="fas fa-dollar-sign me-2"></i>Price Range</span>
+                    </div>
+
+                    <div class="price-range-inputs">
+                        <div class="filter-group">
+                            <label class="filter-label">Min Price</label>
+                            <input type="number" id="filterPriceMin" class="filter-input" placeholder="₱ Min" min="0" step="100000">
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">Max Price</label>
+                            <input type="number" id="filterPriceMax" class="filter-input" placeholder="₱ Max" min="0" step="100000">
+                        </div>
+                    </div>
+
+                    <!-- Bedrooms & Bathrooms Section -->
+                    <div class="filter-section-divider">
+                        <span><i class="fas fa-bed me-2"></i>Bedrooms & Bathrooms</span>
+                    </div>
+
+                    <div class="bed-bath-grid">
+                        <div class="filter-group">
+                            <label class="filter-label">Bedrooms</label>
+                            <select id="filterBedrooms" class="filter-select">
+                                <option value="">Any</option>
+                                <option value="1">1+</option>
+                                <option value="2">2+</option>
+                                <option value="3">3+</option>
+                                <option value="4">4+</option>
+                                <option value="5">5+</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">Bathrooms</label>
+                            <select id="filterBathrooms" class="filter-select">
+                                <option value="">Any</option>
+                                <option value="1">1+</option>
+                                <option value="2">2+</option>
+                                <option value="3">3+</option>
+                                <option value="4">4+</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Date Range Section -->
+                    <div class="filter-section-divider">
+                        <span><i class="fas fa-calendar-range me-2"></i>Listing Date Range</span>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-calendar-day me-2"></i> From Date
+                        </label>
+                        <input type="date" id="filterDateFrom" class="filter-input">
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-calendar-day me-2"></i> To Date
+                        </label>
+                        <input type="date" id="filterDateTo" class="filter-input">
+                    </div>
+
+                    <!-- Sort Section -->
+                    <div class="filter-section-divider">
+                        <span><i class="fas fa-sort me-2"></i>Sort By</span>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-sort-amount-down me-2"></i> Order
+                        </label>
+                        <select id="filterSort" class="filter-select">
+                            <option value="date-desc">Newest First</option>
+                            <option value="date-asc">Oldest First</option>
+                            <option value="price-desc">Highest Price</option>
+                            <option value="price-asc">Lowest Price</option>
+                            <option value="views-desc">Most Views</option>
+                            <option value="likes-desc">Most Likes</option>
+                        </select>
+                    </div>
+
+                    <!-- Clear Button -->
+                    <div class="filter-group">
+                        <button type="button" class="btn btn-dark-outline w-100" id="resetFiltersBtn">
+                            <i class="fas fa-times me-2"></i>Clear All Filters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Footer -->
+                <div class="filter-footer">
+                    <div class="filter-result-count">
+                        <strong id="visibleCount">0</strong> of <strong id="totalCount">0</strong> properties
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="tab-content pt-4" id="propertyStatusTabsContent">
             <!-- Active Tab -->
@@ -1993,6 +2523,262 @@ document.addEventListener('DOMContentLoaded', function () {
             markSoldForm.reset();
         });
     }
+
+    // ===== PROPERTY FILTER SIDEBAR SYSTEM =====
+    const filterSidebar = document.getElementById('filterSidebar');
+    const filterOverlay = document.getElementById('filterOverlay');
+    const openFiltersBtn = document.getElementById('openFiltersBtn');
+    const closeFiltersBtn = document.getElementById('closeFiltersBtn');
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+    const filterSearch = document.getElementById('filterSearch');
+    
+    // All filter inputs
+    const filterPropertyType = document.getElementById('filterPropertyType');
+    const filterStatus = document.getElementById('filterStatus');
+    const filterCity = document.getElementById('filterCity');
+    const filterPriceMin = document.getElementById('filterPriceMin');
+    const filterPriceMax = document.getElementById('filterPriceMax');
+    const filterBedrooms = document.getElementById('filterBedrooms');
+    const filterBathrooms = document.getElementById('filterBathrooms');
+    const filterDateFrom = document.getElementById('filterDateFrom');
+    const filterDateTo = document.getElementById('filterDateTo');
+    const filterSort = document.getElementById('filterSort');
+    
+    // Count display
+    const visibleCountEl = document.getElementById('visibleCount');
+    const totalCountEl = document.getElementById('totalCount');
+
+    // Open filter sidebar
+    if (openFiltersBtn) {
+        openFiltersBtn.addEventListener('click', function() {
+            filterSidebar.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+    }
+
+    // Close filter sidebar
+    function closeFilterSidebar() {
+        filterSidebar.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    if (closeFiltersBtn) {
+        closeFiltersBtn.addEventListener('click', closeFilterSidebar);
+    }
+
+    if (filterOverlay) {
+        filterOverlay.addEventListener('click', closeFilterSidebar);
+    }
+
+    // Close sidebar on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && filterSidebar.classList.contains('active')) {
+            closeFilterSidebar();
+        }
+    });
+
+    // Reset all filters
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', function() {
+            filterSearch.value = '';
+            filterPropertyType.value = '';
+            filterStatus.value = '';
+            filterCity.value = '';
+            filterPriceMin.value = '';
+            filterPriceMax.value = '';
+            filterBedrooms.value = '';
+            filterBathrooms.value = '';
+            filterDateFrom.value = '';
+            filterDateTo.value = '';
+            filterSort.value = 'date-desc';
+            applyFilters();
+        });
+    }
+
+    // Apply filters function
+    function applyFilters() {
+        const activeTab = document.querySelector('.tab-pane.active');
+        if (!activeTab) return;
+
+        const propertyCards = activeTab.querySelectorAll('.col-md-6');
+        let visibleCount = 0;
+        const totalCount = propertyCards.length;
+
+        const filters = {
+            search: filterSearch.value.toLowerCase().trim(),
+            propertyType: filterPropertyType.value.toLowerCase(),
+            status: filterStatus.value.toLowerCase(),
+            city: filterCity.value.toLowerCase(),
+            priceMin: parseFloat(filterPriceMin.value) || 0,
+            priceMax: parseFloat(filterPriceMax.value) || Infinity,
+            bedrooms: parseInt(filterBedrooms.value) || 0,
+            bathrooms: parseInt(filterBathrooms.value) || 0,
+            dateFrom: filterDateFrom.value ? new Date(filterDateFrom.value) : null,
+            dateTo: filterDateTo.value ? new Date(filterDateTo.value) : null,
+            sort: filterSort.value
+        };
+
+        // Count active filters for badge
+        let activeFilterCount = 0;
+        if (filters.search) activeFilterCount++;
+        if (filters.propertyType) activeFilterCount++;
+        if (filters.status) activeFilterCount++;
+        if (filters.city) activeFilterCount++;
+        if (filterPriceMin.value) activeFilterCount++;
+        if (filterPriceMax.value) activeFilterCount++;
+        if (filters.bedrooms > 0) activeFilterCount++;
+        if (filters.bathrooms > 0) activeFilterCount++;
+        if (filters.dateFrom) activeFilterCount++;
+        if (filters.dateTo) activeFilterCount++;
+
+        // Update filter badge
+        const filterBadge = document.getElementById('activeFilterBadge');
+        if (filterBadge) {
+            if (activeFilterCount > 0) {
+                filterBadge.textContent = activeFilterCount;
+                filterBadge.style.display = 'inline-flex';
+            } else {
+                filterBadge.style.display = 'none';
+            }
+        }
+
+        // Convert NodeList to Array for sorting
+        const cardsArray = Array.from(propertyCards);
+        
+        // Filter cards
+        cardsArray.forEach(card => {
+            const propertyType = (card.dataset.propertyType || '').toLowerCase();
+            const status = (card.dataset.status || '').toLowerCase();
+            const city = (card.dataset.city || '').toLowerCase();
+            const price = parseFloat(card.dataset.price) || 0;
+            const bedrooms = parseInt(card.dataset.bedrooms) || 0;
+            const bathrooms = parseFloat(card.dataset.bathrooms) || 0;
+            const listingDate = card.dataset.listingDate ? new Date(card.dataset.listingDate) : null;
+
+            // Get text content for search
+            const searchableText = (card.textContent || '').toLowerCase();
+
+            let showCard = true;
+
+            // Apply search filter
+            if (filters.search && !searchableText.includes(filters.search)) showCard = false;
+
+            // Apply other filters
+            if (filters.propertyType && !propertyType.includes(filters.propertyType)) showCard = false;
+            if (filters.status && !status.includes(filters.status)) showCard = false;
+            if (filters.city && !city.includes(filters.city)) showCard = false;
+            if (price < filters.priceMin || price > filters.priceMax) showCard = false;
+            if (filters.bedrooms > 0 && bedrooms < filters.bedrooms) showCard = false;
+            if (filters.bathrooms > 0 && bathrooms < filters.bathrooms) showCard = false;
+            if (filters.dateFrom && listingDate && listingDate < filters.dateFrom) showCard = false;
+            if (filters.dateTo && listingDate && listingDate > filters.dateTo) showCard = false;
+
+            card.style.display = showCard ? '' : 'none';
+            if (showCard) visibleCount++;
+        });
+
+        // Sort visible cards
+        const visibleCards = cardsArray.filter(card => card.style.display !== 'none');
+        
+        visibleCards.sort((a, b) => {
+            const sortBy = filters.sort;
+            
+            if (sortBy === 'date-desc') {
+                const dateA = new Date(a.dataset.listingDate || 0);
+                const dateB = new Date(b.dataset.listingDate || 0);
+                return dateB - dateA;
+            } else if (sortBy === 'date-asc') {
+                const dateA = new Date(a.dataset.listingDate || 0);
+                const dateB = new Date(b.dataset.listingDate || 0);
+                return dateA - dateB;
+            } else if (sortBy === 'price-desc') {
+                return parseFloat(b.dataset.price || 0) - parseFloat(a.dataset.price || 0);
+            } else if (sortBy === 'price-asc') {
+                return parseFloat(a.dataset.price || 0) - parseFloat(b.dataset.price || 0);
+            } else if (sortBy === 'views-desc') {
+                return parseInt(b.dataset.views || 0) - parseInt(a.dataset.views || 0);
+            } else if (sortBy === 'likes-desc') {
+                return parseInt(b.dataset.likes || 0) - parseInt(a.dataset.likes || 0);
+            }
+            return 0;
+        });
+
+        // Re-append cards in sorted order
+        const container = activeTab.querySelector('.row');
+        if (container) {
+            visibleCards.forEach(card => container.appendChild(card));
+        }
+
+        // Update counts
+        if (visibleCountEl) visibleCountEl.textContent = visibleCount;
+        if (totalCountEl) totalCountEl.textContent = totalCount;
+
+        // Show/hide empty state
+        let emptyState = activeTab.querySelector('.empty-state');
+        const rowContainer = activeTab.querySelector('.row');
+        
+        if (visibleCount === 0 && totalCount > 0) {
+            // Properties exist but all are filtered out
+            if (!emptyState) {
+                // Create temporary empty state for filter results
+                emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.innerHTML = '<i class="bi bi-funnel"></i><p>No properties match your filters. Try adjusting your search criteria.</p>';
+                if (rowContainer) {
+                    rowContainer.parentNode.insertBefore(emptyState, rowContainer);
+                }
+            } else {
+                emptyState.style.display = 'block';
+                const messageEl = emptyState.querySelector('p');
+                if (messageEl && rowContainer) {
+                    messageEl.textContent = 'No properties match your filters. Try adjusting your search criteria.';
+                }
+            }
+            if (rowContainer) rowContainer.style.display = 'none';
+        } else {
+            // Has visible properties or no properties at all
+            if (emptyState && rowContainer) {
+                emptyState.style.display = 'none';
+            }
+            if (rowContainer) rowContainer.style.display = '';
+        }
+    }
+
+    // Attach event listeners to all filter inputs
+    [filterSearch, filterPropertyType, filterStatus, filterCity, filterPriceMin, filterPriceMax,
+     filterBedrooms, filterBathrooms, filterDateFrom, filterDateTo, filterSort].forEach(input => {
+        if (input) {
+            input.addEventListener('change', applyFilters);
+            if (input.type === 'number' || input.type === 'date' || input.type === 'text') {
+                input.addEventListener('input', debounce(applyFilters, 300));
+            }
+        }
+    });
+
+    // Debounce function for input fields
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Apply filters when tab changes
+    document.querySelectorAll('[data-bs-toggle=\"tab\"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function() {
+            setTimeout(applyFilters, 100);
+        });
+    });
+
+    // Initial filter application
+    setTimeout(() => {
+        applyFilters();
+    }, 300);
 });
 </script>
 </body>
