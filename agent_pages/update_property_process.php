@@ -57,11 +57,11 @@ if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > date('Y-m-d
   $errors['ListingDate'] = 'Listing date is invalid or in the future.';
 }
 
-$beds = is_numeric($input['Bedrooms']) ? (int)$input['Bedrooms'] : -1;
-if ($beds < 0) $errors['Bedrooms'] = 'Bedrooms must be 0 or more.';
+$beds = ($input['Bedrooms'] !== null && $input['Bedrooms'] !== '') ? (is_numeric($input['Bedrooms']) ? (int)$input['Bedrooms'] : -1) : null;
+if ($beds !== null && $beds < 0) $errors['Bedrooms'] = 'Bedrooms must be 0 or more.';
 
-$baths = is_numeric($input['Bathrooms']) ? (float)$input['Bathrooms'] : -1;
-if ($baths < 0) $errors['Bathrooms'] = 'Bathrooms must be 0 or more.';
+$baths = ($input['Bathrooms'] !== null && $input['Bathrooms'] !== '') ? (is_numeric($input['Bathrooms']) ? (float)$input['Bathrooms'] : -1) : null;
+if ($baths !== null && $baths < 0) $errors['Bathrooms'] = 'Bathrooms must be 0 or more.';
 
 $sqft = is_numeric($input['SquareFootage']) ? (int)$input['SquareFootage'] : -1;
 if ($sqft < 0) $errors['SquareFootage'] = 'Square footage must be 0 or more.';

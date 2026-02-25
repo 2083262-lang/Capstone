@@ -39,7 +39,7 @@
                                 <input type="text" class="form-control" name="City" value="<?php echo htmlspecialchars($property_data['City']); ?>" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Barangay</label>
+                                <label class="form-label">Barangay <span class="text-optional">(Optional)</span></label>
                                 <input type="text" class="form-control" name="Barangay" value="<?php echo htmlspecialchars($property_data['Barangay'] ?? ''); ?>" placeholder="e.g., Brgy. San Jose">
                             </div>
                         </div>
@@ -84,8 +84,8 @@
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Parking Type <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="ParkingType" value="<?php echo htmlspecialchars($property_data['ParkingType'] ?? ''); ?>" placeholder="e.g., Garage, Driveway" required>
+                                        <label class="form-label">Parking Type <span class="text-optional">(Optional)</span></label>
+                                        <input type="text" class="form-control" name="ParkingType" value="<?php echo htmlspecialchars($property_data['ParkingType'] ?? ''); ?>" placeholder="e.g., Garage, Driveway">
                                     </div>
                                 </div>
                                 <div class="row g-3 mt-1">
@@ -124,21 +124,21 @@
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label">Bedrooms <span class="text-danger">*</span></label>
+                                        <label class="form-label">Bedrooms <span class="text-optional">(Optional)</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text edit-input-icon"><i class="bi bi-door-open"></i></span>
-                                            <input type="number" min="0" class="form-control" name="Bedrooms" value="<?php echo (int)$property_data['Bedrooms']; ?>" required>
+                                            <input type="number" min="0" class="form-control" name="Bedrooms" value="<?php echo (int)$property_data['Bedrooms']; ?>">
                                         </div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Bathrooms <span class="text-danger">*</span></label>
+                                        <label class="form-label">Bathrooms <span class="text-optional">(Optional)</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text edit-input-icon"><i class="bi bi-droplet"></i></span>
-                                            <input type="number" min="0" step="0.5" class="form-control" name="Bathrooms" value="<?php echo htmlspecialchars($property_data['Bathrooms']); ?>" required>
+                                            <input type="number" min="0" step="0.5" class="form-control" name="Bathrooms" value="<?php echo htmlspecialchars($property_data['Bathrooms']); ?>">
                                         </div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Year Built</label>
+                                        <label class="form-label">Year Built <span class="text-optional">(Optional)</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text edit-input-icon"><i class="bi bi-calendar3"></i></span>
                                             <input type="number" min="1800" max="<?php echo date('Y'); ?>" class="form-control" name="YearBuilt" value="<?php echo (int)$property_data['YearBuilt']; ?>">
@@ -151,7 +151,7 @@
                                         <input type="number" min="0" class="form-control" name="SquareFootage" value="<?php echo (int)$property_data['SquareFootage']; ?>" placeholder="e.g., 2500" required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Lot Size (acres)</label>
+                                        <label class="form-label">Lot Size (acres) <span class="text-optional">(Optional)</span></label>
                                         <input type="number" min="0" step="0.01" class="form-control" name="LotSize" value="<?php echo htmlspecialchars($property_data['LotSize'] ?? ''); ?>" placeholder="e.g., 0.25">
                                     </div>
                                 </div>
@@ -331,7 +331,7 @@
                     <div class="modal-form-footer">
                         <div class="d-flex align-items-center gap-2" style="color: var(--gray-500); font-size: 0.8rem;">
                             <i class="bi bi-info-circle"></i>
-                            <span>Fields marked <span class="text-danger">*</span> are required</span>
+                            <span>Fields marked <span class="text-danger">*</span> are required. Fields marked <span class="text-optional">(Optional)</span> can be left blank.</span>
                         </div>
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-dark-outline" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1"></i> Cancel</button>

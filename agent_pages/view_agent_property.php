@@ -615,6 +615,13 @@ $days_on_market = $interval->days;
             .lightbox-next { right: 10px; }
             .info-grid { grid-template-columns: 1fr; }
         }
+
+        /* Optional field indicator */
+        .text-optional {
+            color: #f59e0b;
+            font-weight: 500;
+            font-size: 0.8em;
+        }
     </style>
 </head>
 <body>

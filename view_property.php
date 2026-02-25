@@ -600,7 +600,10 @@ if ($property_data) {
         if (!isset($floor_images[$floor_num])) {
             $floor_images[$floor_num] = [];
         }
-        $floor_images[$floor_num][] = $row['photo_url'];
+        // Normalize paths: strip leading '../' that may have been saved by agent upload scripts
+        $photo_url = ltrim($row['photo_url'], '.');
+        $photo_url = ltrim($photo_url, '/');
+        $floor_images[$floor_num][] = $photo_url;
     }
     $stmt_floor_images->close();
 
@@ -649,44 +652,32 @@ ob_end_flush();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Review Property - Admin Panel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
-        /* Tailwind-Inspired Luxury Real Estate Theme */
+        /* ================================================
+           ADMIN VIEW PROPERTY PAGE
+           Theme consistent with property.php (admin panel)
+           ================================================ */
+
         :root {
-            --primary-color: #111827;
+            --primary-color: #161209;
             --secondary-color: #bc9e42;
-            --background-color: #f9fafb;
-            --card-bg-color: #ffffff;
-            --border-color: #e5e7eb;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --warning-color: #f59e0b;
-            --text-primary: #111827;
-            --text-secondary: #6b7280;
-            --text-muted: #9ca3af;
-            /* Clean Tailwind shadows */
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --accent-color: #a08636;
+            --bg-light: #f8f9fa;
+            --border-color: #e0e0e0;
         }
-        
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
-            background-color: var(--background-color); 
-            font-weight: 400;
-            line-height: 1.6;
-            color: var(--text-primary);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: #212529;
         }
-        
-        /* Modern admin layout - minimal and clean */
+
         .admin-sidebar {
-            background: linear-gradient(180deg, var(--primary-color) 0%, #1f2937 100%);
+            background: linear-gradient(180deg, #161209 0%, #1f1a0f 100%);
             color: #fff;
             height: 100vh;
             position: fixed;
@@ -695,26 +686,23 @@ ob_end_flush();
             width: 290px;
             overflow-y: auto;
             z-index: 1000;
-            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         }
 
         .admin-content {
             margin-left: 290px;
             padding: 0;
             min-height: 100vh;
+            max-width: 1800px;
         }
-        
+
         @media (max-width: 1200px) {
-            .admin-sidebar {
-                transform: translateX(-100%);
-            }
-            
             .admin-content {
                 margin-left: 0 !important;
                 padding: 0;
             }
         }
-        
+
         @media (max-width: 768px) {
             .admin-content {
                 margin-left: 0 !important;
@@ -722,214 +710,430 @@ ob_end_flush();
             }
         }
 
-        /* Luxury Hero Section - Clean & Minimal */
-        .property-hero {
-            position: relative;
-            height: 65vh;
-            min-height: 450px;
-            max-height: 700px;
-            overflow: hidden;
-            background: #000;
+        /* ===== PAGE-SPECIFIC VARIABLES ===== */
+        .admin-content {
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --gold-dark: #b8941f;
+            --blue: #2563eb;
+            --blue-light: #3b82f6;
+            --blue-dark: #1e40af;
+            --card-bg: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
         }
 
-        .hero-image {
-            position: absolute;
-            top: 0;
-            left: 0;
+        /* ===== GALLERY GRID SECTION ===== */
+        .property-hero-gallery {
+            margin-bottom: 0;
+        }
+
+        /* View Selector (above gallery) */
+        .gallery-view-selector {
+            background: linear-gradient(to bottom, #ffffff, #f1f5f9);
+            border-top: 1px solid #e2e8f0;
+            border-bottom: 3px solid transparent;
+            border-image: linear-gradient(90deg, var(--gold), var(--blue)) 1;
+            padding: 1rem 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .view-selector-container {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .view-selector-btn {
+            padding: 0.5rem 1.25rem;
+            background: #ffffff;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            border-radius: 2px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .view-selector-btn:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+            border-color: var(--gold);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .view-selector-btn.active {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            color: white;
+            border-color: var(--gold);
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+
+        .view-selector-btn i {
+            font-size: 0.9rem;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 0;
+            height: 500px;
+            overflow: hidden;
+        }
+
+        .gallery-grid-main {
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .gallery-grid-main img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            z-index: 1;
+            transition: transform 0.3s ease;
         }
 
-        .hero-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
+        .gallery-grid-main:hover img {
+            transform: scale(1.02);
+        }
+
+        .gallery-grid-sidebar {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 0;
+        }
+
+        .gallery-grid-item {
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+
+
+        .gallery-grid-item img {
             width: 100%;
             height: 100%;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 100%);
-            z-index: 2;
+            object-fit: cover;
+            transition: transform 0.3s ease;
         }
 
-        .hero-content {
+        .gallery-grid-item:hover img {
+            transform: scale(1.05);
+        }
+
+        .gallery-grid-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            color: #94a3b8;
+            font-size: 2rem;
+        }
+
+        .gallery-more-overlay {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 3;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
             color: white;
-            padding: 3rem 0 2.5rem;
-            background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%);
+            pointer-events: none;
         }
 
-        .property-price {
-            font-size: 3rem;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            margin-bottom: 0.75rem;
+
+
+        /* Property Header Info (below gallery) */
+        .property-header-info {
+            padding: 2rem 1.5rem 1rem;
+            background: #fff;
+        }
+
+        .property-price-header {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 0.35rem;
             letter-spacing: -0.02em;
         }
 
-        .property-address {
-            font-size: 1.375rem;
+        .property-price-header .price-suffix {
+            font-size: 1.1rem;
             font-weight: 400;
-            color: rgba(255, 255, 255, 0.95);
-            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
-            margin-bottom: 1.5rem;
-            letter-spacing: -0.01em;
+            color: var(--text-secondary);
         }
 
-        .property-specs {
+        .property-address-header {
+            font-size: 1.05rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .property-specs-bar {
             display: flex;
-            gap: 1.5rem;
-            font-size: 1rem;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.9);
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex-wrap: wrap;
         }
 
-        .property-specs span {
+        .property-specs-bar span {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1.25rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 9999px;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            gap: 0.4rem;
+            padding: 0.4rem 0.85rem;
+            background: #f1f5f9;
+            border-radius: 2px;
+            border: 1px solid #e2e8f0;
         }
 
-        .property-specs span i {
-            font-size: 1.125rem;
+        .property-specs-bar span i {
+            font-size: 0.95rem;
+            color: var(--gold-dark);
         }
 
-        /* Elegant Image Gallery */
-        .hero-thumbnails {
+        /* Status Badges (inside gallery image) */
+        .gallery-status-badges {
             position: absolute;
-            bottom: 1.5rem;
-            right: 1.5rem;
+            top: 1rem;
+            left: 1rem;
             z-index: 4;
             display: flex;
             gap: 0.5rem;
-            max-width: 320px;
-            overflow-x: auto;
-            padding: 0.625rem;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 12px;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .hero-thumbnail {
-            width: 70px;
-            height: 50px;
-            object-fit: cover;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: border-color 0.2s ease, opacity 0.2s ease;
-            flex-shrink: 0;
-            opacity: 0.7;
-        }
-
-        .hero-thumbnail:hover,
-        .hero-thumbnail.active {
-            border-color: var(--secondary-color);
-            opacity: 1;
-        }
-
-        /* Clean Status Badges */
-        .hero-status-badge {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            z-index: 4;
-            font-weight: 600;
-            font-size: 0.875rem;
-            padding: 0.625rem 1.125rem;
-            border-radius: 9999px;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            text-transform: capitalize;
-            letter-spacing: 0.025em;
-            line-height: 1;
-        }
-
-        .badge-approved { 
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
-            color: white; 
-        }
-        .badge-pending { 
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
-            color: white; 
-        }
-        .badge-rejected { 
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
-            color: white; 
+            flex-wrap: wrap;
         }
 
         .property-status-badge {
-            position: absolute;
-            top: 1.5rem;
-            left: 1.5rem;
-            z-index: 4;
-            font-weight: 600;
-            font-size: 0.875rem;
-            padding: 0.625rem 1.125rem;
-            border-radius: 9999px;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            text-transform: capitalize;
-            letter-spacing: 0.025em;
+            font-weight: 700;
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
             line-height: 1;
+            backdrop-filter: blur(12px);
         }
 
         .status-for-sale {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
+            background: rgba(37, 99, 235, 0.85);
+            color: #fff;
+            border: 1px solid rgba(37, 99, 235, 0.3);
         }
 
         .status-for-rent {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            background: rgba(212, 175, 55, 0.85);
+            color: #fff;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .hero-status-badge {
+            font-weight: 700;
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1;
+            backdrop-filter: blur(12px);
+        }
+
+        .badge-approved { background: rgba(34, 197, 94, 0.85); color: #fff; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-pending { background: rgba(245, 158, 11, 0.85); color: #fff; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-rejected { background: rgba(239, 68, 68, 0.85); color: #fff; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        /* Days on Market Badge (inside gallery image) */
+        .gallery-days-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 4;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            line-height: 1;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* Lightbox Overlay */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox-overlay img {
+            max-width: 90%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.25rem;
+            background: rgba(255,255,255,0.1);
             color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            width: 44px;
+            height: 44px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .lightbox-close:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+
+        .lightbox-prev,
+        .lightbox-next {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            width: 48px;
+            height: 48px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+
+        .lightbox-prev { left: 1.5rem; }
+        .lightbox-next { right: 1.5rem; }
+
+        .lightbox-prev:hover,
+        .lightbox-next:hover {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            border-color: var(--gold);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .lightbox-counter {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 2px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .lightbox-label {
+            position: absolute;
+            top: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 2px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            white-space: nowrap;
         }
 
 
 
+        /* ===== CONTENT SECTIONS ===== */
         .content-section {
-            background: var(--card-bg-color);
-            border-radius: 16px;
-            padding: 3rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 2rem 1.5rem;
+            margin-top: 1rem;
+            margin-bottom: 1.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .content-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .content-section:hover::before { opacity: 1; }
+
+        .content-section:hover {
+            border-color: rgba(37, 99, 235, 0.2);
         }
 
         .section-title {
-            font-size: 1.5rem;
-            font-weight: 600;
+            font-size: 1.1rem;
+            font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 2.5rem;
+            margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             letter-spacing: -0.01em;
         }
 
         .section-title i {
-            color: var(--secondary-color);
-            font-size: 1.5rem;
+            color: var(--gold-dark);
+            font-size: 1.1rem;
         }
 
-        /* Elegant Facts Grid */
+        /* Facts Grid */
         .facts-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
+            gap: 1rem;
         }
 
         @media (max-width: 992px) {
@@ -949,163 +1153,175 @@ ob_end_flush();
             flex-direction: column;
             justify-content: center;
             text-align: center;
-            padding: 2.5rem 2rem;
+            padding: 1.5rem 1.25rem;
             background: #ffffff;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            min-height: 130px;
+            border-radius: 4px;
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.3s ease;
+            min-height: 110px;
         }
 
         .fact-item:hover {
-            border-color: var(--secondary-color);
-            box-shadow: var(--shadow-md);
+            border-color: rgba(37, 99, 235, 0.25);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.06);
+            transform: translateY(-2px);
         }
 
         .fact-label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-secondary);
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 1rem;
+            letter-spacing: 1px;
+            margin-bottom: 0.75rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
         }
 
         .fact-label i {
-            font-size: 0.875rem;
-            color: var(--secondary-color);
+            font-size: 0.8rem;
+            color: var(--gold-dark);
         }
 
         .fact-value {
-            font-size: 1.5rem;
-            font-weight: 700;
+            font-size: 1.25rem;
+            font-weight: 800;
             color: var(--text-primary);
             line-height: 1.2;
             letter-spacing: -0.01em;
         }
 
         .fact-value.highlight {
-            color: var(--secondary-color);
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .fact-value small {
-            font-size: 0.875rem;
+            font-size: 0.8rem;
             font-weight: 500;
             color: var(--text-secondary);
         }
 
 
-        /* Clean Amenities Grid */
+        /* Amenities Grid */
         .amenities-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
         }
 
         .amenity-item {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            padding: 1.125rem 1.5rem;
-            background: var(--background-color);
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            font-weight: 500;
-            font-size: 0.9375rem;
+            gap: 0.75rem;
+            padding: 0.8rem 1rem;
+            background: #f8fafc;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            font-weight: 600;
+            font-size: 0.85rem;
             color: var(--text-primary);
             transition: border-color 0.2s ease, background-color 0.2s ease;
         }
 
         .amenity-item:hover {
             background: #ffffff;
-            border-color: var(--secondary-color);
+            border-color: rgba(37, 99, 235, 0.25);
         }
 
         .amenity-item i {
-            color: var(--secondary-color);
-            width: 20px;
+            color: var(--gold-dark);
+            width: 18px;
             text-align: center;
-            font-size: 1.125rem;
+            font-size: 0.95rem;
         }
 
-        /* Elegant Description */
+        /* Description */
         .property-description {
-            font-size: 1.0625rem;
-            line-height: 2;
+            font-size: 0.95rem;
+            line-height: 1.9;
             color: var(--text-secondary);
             letter-spacing: -0.01em;
             text-align: justify;
             text-justify: inter-word;
         }
 
-        /* Luxury Rental Details Card */
+        /* Rental Details Card */
         .rental-details-card {
-            background: linear-gradient(135deg, #fffbf5 0%, #fff9ef 100%);
-            border: 1px solid #f59e0b;
-            border-radius: 16px;
-            padding: 2.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-sm);
+            background: var(--card-bg);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 4px;
+            padding: 1.75rem 1.5rem;
+            margin-bottom: 1.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rental-details-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--gold-dark), transparent);
         }
 
         .rental-details-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #d97706;
-            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--gold-dark);
+            margin-bottom: 1.25rem;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             letter-spacing: -0.01em;
         }
 
         .rental-details-title i {
-            font-size: 1.5rem;
+            font-size: 1.1rem;
         }
 
         .rental-info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1.25rem;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
         }
 
         .rental-info-item {
-            background: white;
-            padding: 1.5rem 1.25rem;
-            border-radius: 12px;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            box-shadow: var(--shadow-sm);
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            background: #fffbeb;
+            padding: 1.25rem 1rem;
+            border-radius: 4px;
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            transition: border-color 0.2s ease, transform 0.3s ease;
             text-align: center;
         }
 
         .rental-info-item:hover {
-            border-color: #f59e0b;
-            box-shadow: var(--shadow-md);
+            border-color: var(--gold);
+            transform: translateY(-2px);
         }
 
         .rental-info-label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
-            color: #d97706;
+            color: var(--gold-dark);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.875rem;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
         }
 
         .rental-info-value {
-            font-size: 1.125rem;
-            font-weight: 700;
+            font-size: 1rem;
+            font-weight: 800;
             color: #92400e;
             letter-spacing: -0.01em;
         }
 
 
-        /* Clean Sticky Action Panel */
+        /* ===== ACTION PANEL (Sidebar) ===== */
         .action-panel {
             position: sticky;
             top: 20px;
@@ -1116,120 +1332,119 @@ ob_end_flush();
             padding-bottom: 20px;
         }
         
-        /* Custom scrollbar for action panel */
-        .action-panel::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .action-panel::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        
-        .action-panel::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 10px;
-        }
-        
-        .action-panel::-webkit-scrollbar-thumb:hover {
-            background: var(--text-muted);
-        }
+        .action-panel::-webkit-scrollbar { width: 5px; }
+        .action-panel::-webkit-scrollbar-track { background: transparent; }
+        .action-panel::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+        .action-panel::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         .action-card {
-            background: var(--card-bg-color);
-            border-radius: 16px;
-            padding: 2.5rem;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border-color);
-            margin-bottom: 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 1.75rem;
+            margin-top: 1rem;
+            margin-bottom: 1.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
         }
         
-        /* Highlight admin actions card */
+        /* Admin Actions Card */
         .admin-actions-card {
-            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
-            border: 2px solid var(--secondary-color);
-            box-shadow: 0 8px 24px rgba(188, 158, 66, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .admin-actions-card::before {
+            background: linear-gradient(90deg, transparent, var(--gold), var(--gold-dark), transparent);
         }
         
         .admin-actions-card .section-title {
-            color: var(--primary-color);
-            font-size: 1.125rem;
-            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
         }
         
         .admin-actions-card .section-title i {
-            color: var(--secondary-color);
+            color: var(--gold-dark);
         }
 
-        /* Elegant Agent Card */
+        /* Agent Card */
         .agent-card {
             text-align: center;
-            padding: 2.5rem 2rem;
-            background: var(--background-color);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
+            padding: 1.5rem 1.25rem;
+            background: #f8fafc;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
         }
 
         .agent-avatar {
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
             object-fit: cover;
-            margin: 0 auto 1.5rem;
-            border: 3px solid var(--secondary-color);
-            box-shadow: var(--shadow);
+            margin: 0 auto 1rem;
+            border: 2px solid var(--gold);
         }
 
         .agent-name {
-            font-size: 1.125rem;
-            font-weight: 600;
+            font-size: 1rem;
+            font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
             letter-spacing: -0.01em;
         }
 
         .agent-title {
-            font-size: 0.9375rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
-            font-weight: 500;
+            font-weight: 600;
         }
 
-        /* Luxury Buttons */
+        /* ===== BUTTONS ===== */
         .btn-modern {
-            font-weight: 600;
-            padding: 1.125rem 2.5rem;
-            border-radius: 12px;
+            font-weight: 700;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
             border: none;
             transition: all 0.3s ease;
-            text-transform: capitalize;
-            letter-spacing: 0.01em;
-            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.8rem;
             line-height: 1;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
         }
         
-        /* Admin action buttons - larger and more prominent */
         .admin-actions-card .btn-modern {
-            padding: 1.25rem 2rem;
-            font-size: 1.0625rem;
-            font-weight: 700;
+            padding: 0.85rem 1.5rem;
+            font-size: 0.85rem;
         }
 
         .btn-approve {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
             color: white;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
         }
 
         .btn-approve:hover {
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+            box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35);
             color: white;
+            transform: translateY(-2px);
         }
 
         .btn-reject {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
             color: white;
             box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
         }
@@ -1237,619 +1452,265 @@ ob_end_flush();
         .btn-reject:hover {
             box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
             color: white;
+            transform: translateY(-2px);
         }
 
         .btn-secondary-modern {
-            background: var(--background-color);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-secondary);
+            border: 1px solid #e2e8f0;
         }
 
         .btn-secondary-modern:hover {
-            background: #ffffff;
-            border-color: var(--secondary-color);
-            color: var(--text-primary);
+            border-color: var(--blue);
+            color: var(--blue);
+            background: rgba(37, 99, 235, 0.03);
         }
 
         .btn-update {
-            background: linear-gradient(135deg, var(--secondary-color) 0%, #a78a3a 100%);
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
             color: white;
-            box-shadow: 0 4px 12px rgba(188, 158, 66, 0.25);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
         }
 
         .btn-update:hover {
-            box-shadow: 0 6px 16px rgba(188, 158, 66, 0.35);
+            box-shadow: 0 6px 16px rgba(212, 175, 55, 0.35);
             color: white;
+            transform: translateY(-2px);
         }
 
 
-        /* Clean Price History Table */
+        /* ===== PRICE HISTORY TABLE ===== */
         .price-history-table {
-            background: var(--card-bg-color);
-            border-radius: 12px;
+            background: var(--card-bg);
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--border-color);
+            border: 1px solid rgba(37, 99, 235, 0.1);
         }
 
-        .price-history-table table {
-            margin: 0;
-        }
+        .price-history-table table { margin: 0; }
 
         .price-history-table th {
-            background: var(--background-color);
-            font-weight: 600;
+            background: #f8fafc;
+            font-weight: 700;
             color: var(--text-primary);
-            padding: 1.25rem 1.75rem;
+            padding: 0.85rem 1.25rem;
             border: none;
-            font-size: 0.875rem;
+            font-size: 0.7rem;
             text-transform: uppercase;
-            letter-spacing: 0.025em;
+            letter-spacing: 1px;
         }
 
         .price-history-table td {
-            padding: 1.25rem 1.75rem;
+            padding: 0.85rem 1.25rem;
             border: none;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid #e2e8f0;
             font-weight: 500;
             color: var(--text-secondary);
+            font-size: 0.85rem;
         }
 
-        .price-history-table tr:last-child td {
-            border-bottom: none;
-        }
+        .price-history-table tr:last-child td { border-bottom: none; }
+        .price-history-table tr:hover { background: #f8fafc; }
 
-        .price-history-table tr:hover {
-            background: var(--background-color);
-        }
-
-        /* Clean Chart Container */
+        /* Chart Container */
         .chart-container {
             position: relative;
-            height: 350px;
-            background: var(--card-bg-color);
-            border-radius: 12px;
-            padding: 2rem;
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow-sm);
+            height: 300px;
+            background: var(--card-bg);
+            border-radius: 4px;
+            padding: 1.5rem;
+            border: 1px solid rgba(37, 99, 235, 0.1);
         }
 
         .chart-filters {
             display: flex;
-            gap: 0.75rem;
-            margin-bottom: 2rem;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
             flex-wrap: wrap;
         }
 
         .chart-filter-btn {
-            padding: 0.625rem 1.25rem;
-            border: 1px solid var(--border-color);
-            background: var(--background-color);
+            padding: 0.4rem 0.85rem;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
             color: var(--text-primary);
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+            border-radius: 2px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
             cursor: pointer;
         }
 
         .chart-filter-btn.active,
         .chart-filter-btn:hover {
-            background: var(--secondary-color);
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
             color: white;
-            border-color: var(--secondary-color);
+            border-color: var(--gold);
         }
 
 
-        /* Responsive Design - Mobile Optimized */
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
-            .property-price { font-size: 2.25rem; }
-            .property-address { font-size: 1.125rem; }
-            .property-specs { 
+            .property-price-header { font-size: 1.75rem; }
+            .property-address-header { font-size: 0.95rem; }
+            .property-specs-bar { 
                 flex-direction: column; 
-                gap: 0.75rem; 
+                gap: 0.5rem; 
                 align-items: flex-start;
             }
-            .hero-thumbnails { display: none; }
-            .content-section { padding: 2rem; }
-            .facts-grid { grid-template-columns: 1fr; gap: 1.25rem; }
-            .property-content { padding: 2.5rem 0; }
-            .action-card { padding: 2rem; }
-            .agent-card { padding: 2rem 1.5rem; }
+            .gallery-grid {
+                grid-template-columns: 1fr;
+                height: 300px;
+            }
+            .gallery-grid-sidebar { display: none; }
+            .view-selector-container { padding: 0 1rem; }
+            .view-selector-btn { font-size: 0.7rem; padding: 0.4rem 0.8rem; }
+            .content-section { padding: 1.25rem 1rem; }
+            .facts-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+            .rental-details-card { padding: 1.25rem 1rem; }
+            .alert { margin: 0 1rem 1.25rem; padding: 0.75rem 1rem; }
+            .action-card { padding: 1.25rem; }
+            .agent-card { padding: 1.25rem 1rem; }
+            .lightbox-prev { left: 0.75rem; }
+            .lightbox-next { right: 0.75rem; }
+            .lightbox-prev, .lightbox-next { width: 40px; height: 40px; font-size: 1rem; }
         }
 
-        /* Clean Alert Styles */
+        /* Alerts */
         .alert {
             border: none;
-            border-radius: 12px;
-            padding: 1.25rem 1.75rem;
-            margin-bottom: 2.5rem;
-            border-left: 4px solid;
+            border-radius: 4px;
+            padding: 0.85rem 1.5rem;
+            margin: 0 1.5rem 1.5rem;
+            border-left: 3px solid;
+            font-size: 0.85rem;
+            font-weight: 500;
         }
 
         .alert-success {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%);
+            background: rgba(34, 197, 94, 0.06);
             color: #065f46;
-            border-left-color: var(--success-color);
+            border-left-color: #16a34a;
         }
 
         .alert-danger {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.03) 100%);
+            background: rgba(239, 68, 68, 0.06);
             color: #991b1b;
-            border-left-color: var(--danger-color);
+            border-left-color: #dc2626;
         }
 
-        /* Minimal Modal Improvements */
+        /* Modal Styles */
         .modal-content {
             border: none;
-            border-radius: 16px;
-            box-shadow: var(--shadow-lg);
+            border-radius: 4px;
+            overflow: hidden;
         }
 
         .modal-header {
-            background: var(--primary-color);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: white;
-            border-radius: 16px 16px 0 0;
-            padding: 1.75rem 2.25rem;
+            border-radius: 0;
+            padding: 1.25rem 1.75rem;
             border-bottom: none;
+            position: relative;
+        }
+
+        .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--gold), var(--blue));
         }
 
         .modal-body {
-            padding: 2.5rem;
+            padding: 1.75rem;
         }
 
         .modal-footer {
-            padding: 1.75rem 2.25rem;
-            border-top: 1px solid var(--border-color);
+            padding: 1.25rem 1.75rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--background-color);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--secondary-color);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a78a3a;
-        }
-
-        /* Floor Selector Pills */
-        .floor-selector {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background: var(--background-color);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-        }
-
-        .floor-pill {
-            padding: 0.625rem 1.25rem;
-            border: 1px solid var(--border-color);
-            background: white;
-            color: var(--text-primary);
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .floor-pill:hover {
-            background: var(--background-color);
-            border-color: var(--secondary-color);
-        }
-
-        .floor-pill.active {
-            background: var(--secondary-color);
-            color: white;
-            border-color: var(--secondary-color);
-        }
-
-        .floor-pill i {
-            font-size: 1rem;
-        }
-
-        /* Enhanced Hero Thumbnails */
-        .hero-thumbnails {
-            position: absolute;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            z-index: 4;
-            display: flex;
-            gap: 0.5rem;
-            max-width: 400px;
-            overflow-x: auto;
-            padding: 0.625rem;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 12px;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .hero-thumbnail {
-            width: 70px;
-            height: 50px;
-            object-fit: cover;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: border-color 0.2s ease, opacity 0.2s ease;
-            flex-shrink: 0;
-            opacity: 0.7;
-        }
-
-        .hero-thumbnail:hover,
-        .hero-thumbnail.active {
-            border-color: var(--secondary-color);
-            opacity: 1;
-        }
-
-        /* Gallery Button */
-        .gallery-trigger-btn {
-            position: absolute;
-            bottom: 7rem;
-            right: 1.5rem;
-            z-index: 4;
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 0.875rem 1.5rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            font-size: 0.9375rem;
-            cursor: pointer;
-            backdrop-filter: blur(12px);
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.625rem;
-        }
-
-        .gallery-trigger-btn:hover {
-            background: rgba(0, 0, 0, 0.8);
-            border-color: var(--secondary-color);
-            transform: translateY(-2px);
-        }
-
-        /* Full-Screen Gallery Modal */
-        .gallery-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.97);
-            z-index: 9999;
-            overflow: hidden;
-        }
-
-        .gallery-modal.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .gallery-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem 2rem;
-            background: rgba(0, 0, 0, 0.9);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .gallery-title {
-            color: white;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .gallery-close-btn {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 1.5rem;
-        }
-
-        .gallery-close-btn:hover {
-            background: var(--danger-color);
-            border-color: var(--danger-color);
-            transform: rotate(90deg);
-        }
-
-        .gallery-type-selector {
-            display: flex;
-            gap: 1rem;
-            padding: 1.5rem 2rem;
-            background: rgba(0, 0, 0, 0.8);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .gallery-type-btn {
-            padding: 0.75rem 1.75rem;
-            background: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 9999px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.625rem;
-        }
-
-        .gallery-type-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-        }
-
-        .gallery-type-btn.active {
-            background: var(--secondary-color);
-            color: white;
-            border-color: var(--secondary-color);
-        }
-
-        .gallery-floor-selector {
-            display: flex;
-            gap: 0.625rem;
-            padding: 1.5rem 2rem;
-            background: rgba(0, 0, 0, 0.8);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            overflow-x: auto;
-        }
-
-        .gallery-floor-btn {
-            padding: 0.625rem 1.25rem;
-            background: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 9999px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-
-        .gallery-floor-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-        }
-
-        .gallery-floor-btn.active {
-            background: var(--secondary-color);
-            color: white;
-            border-color: var(--secondary-color);
-        }
-
-        .gallery-content {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .gallery-main-image {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-            border-radius: 8px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-
-        .gallery-nav-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 1.5rem;
-            backdrop-filter: blur(8px);
-        }
-
-        .gallery-nav-btn:hover {
-            background: var(--secondary-color);
-            border-color: var(--secondary-color);
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .gallery-nav-btn.prev {
-            left: 2rem;
-        }
-
-        .gallery-nav-btn.next {
-            right: 2rem;
-        }
-
-        .gallery-counter {
-            position: absolute;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(8px);
-        }
-
-        .gallery-thumbnails {
-            padding: 1.5rem 2rem;
-            background: rgba(0, 0, 0, 0.9);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            overflow-x: auto;
-        }
-
-        .gallery-thumb-grid {
-            display: flex;
-            gap: 0.75rem;
-            min-width: min-content;
-        }
-
-        .gallery-thumb {
-            width: 100px;
-            height: 70px;
-            object-fit: cover;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: all 0.2s ease;
-            opacity: 0.6;
-            flex-shrink: 0;
-        }
-
-        .gallery-thumb:hover,
-        .gallery-thumb.active {
-            border-color: var(--secondary-color);
-            opacity: 1;
-            transform: scale(1.05);
-        }
-
-        /* Responsive Gallery */
-        @media (max-width: 768px) {
-            .gallery-header {
-                padding: 1rem 1.5rem;
-            }
-
-            .gallery-title {
-                font-size: 1rem;
-            }
-
-            .gallery-type-selector,
-            .gallery-floor-selector {
-                padding: 1rem 1.5rem;
-            }
-
-            .gallery-nav-btn {
-                width: 44px;
-                height: 44px;
-                font-size: 1.25rem;
-            }
-
-            .gallery-nav-btn.prev {
-                left: 1rem;
-            }
-
-            .gallery-nav-btn.next {
-                right: 1rem;
-            }
-
-            .gallery-content {
-                padding: 1rem;
-            }
-
-            .gallery-main-image {
-                max-width: 95%;
-                max-height: 95%;
-            }
-        }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-light); }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         /* Error State */
         .error-state {
             text-align: center;
-            padding: 5rem 2rem;
-            background: var(--card-bg-color);
-            border-radius: 16px;
-            margin: 3rem;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
+            padding: 4rem 2rem;
+            background: var(--card-bg);
+            border-radius: 4px;
+            margin: 2rem 1.5rem;
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .error-state::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
         }
 
         .error-icon {
-            font-size: 4rem;
-            color: var(--secondary-color);
-            margin-bottom: 1.5rem;
+            font-size: 3rem;
+            color: var(--gold-dark);
+            margin-bottom: 1rem;
         }
 
-        /* Detail Row Styling */
+        /* Detail Row */
         .detail-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.25rem 0;
-            border-bottom: 1px solid var(--border-color);
+            padding: 0.85rem 0;
+            border-bottom: 1px solid #e2e8f0;
         }
 
-        .detail-row:last-child {
-            border-bottom: none;
-        }
+        .detail-row:last-child { border-bottom: none; }
 
         .detail-label {
             color: var(--text-secondary);
-            font-size: 0.875rem;
-            font-weight: 500;
+            font-size: 0.8rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 0.625rem;
+            gap: 0.5rem;
         }
 
         .detail-label i {
-            color: var(--text-muted);
-            font-size: 1rem;
+            color: #94a3b8;
+            font-size: 0.85rem;
         }
 
         .detail-value {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-primary);
-            font-size: 0.9375rem;
+            font-size: 0.85rem;
         }
 
         /* Form Controls */
         .form-control:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(188, 158, 66, 0.1);
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
         }
 
         .form-label {
             font-weight: 600;
             color: var(--text-primary);
-            font-size: 0.9375rem;
-            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            margin-bottom: 0.375rem;
         }
         
-        /* Mobile Floating Action Button */
+        /* Mobile FAB */
         .mobile-actions-fab {
             display: none;
             position: fixed;
@@ -1859,71 +1720,65 @@ ob_end_flush();
         }
         
         .fab-button {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--secondary-color) 0%, #a78a3a 100%);
+            width: 52px;
+            height: 52px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
             color: white;
             border: none;
-            box-shadow: 0 4px 20px rgba(188, 158, 66, 0.4);
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.35);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 20px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         
         .fab-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 30px rgba(188, 158, 66, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(212, 175, 55, 0.45);
         }
         
         .fab-menu {
             position: absolute;
-            bottom: 75px;
+            bottom: 65px;
             right: 0;
             background: white;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15);
             padding: 1rem;
-            min-width: 280px;
+            min-width: 260px;
             display: none;
-            border: 1px solid var(--border-color);
+            border: 1px solid rgba(37, 99, 235, 0.1);
         }
         
         .fab-menu.active {
             display: block;
-            animation: slideUpFade 0.3s ease;
+            animation: slideUpFade 0.25s ease;
         }
         
         @keyframes slideUpFade {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .fab-menu-title {
-            font-size: 0.875rem;
+            font-size: 0.7rem;
             font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
             text-transform: uppercase;
-            letter-spacing: 0.025em;
+            letter-spacing: 1px;
         }
         
         .fab-menu-actions {
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.5rem;
         }
         
         .fab-menu-actions .btn {
@@ -1931,30 +1786,25 @@ ob_end_flush();
             text-align: left;
         }
         
-        /* Responsive Adjustments */
         @media (max-width: 991px) {
             .action-panel {
                 position: relative;
                 top: 0;
-                margin-top: 2rem;
+                margin-top: 1.5rem;
                 max-height: none;
                 overflow-y: visible;
             }
-            
-            .mobile-actions-fab {
-                display: block;
-            }
-            
-            /* Hide sidebar actions on mobile, show in FAB instead */
-            .action-panel-mobile-hide {
-                display: none;
-            }
+            .mobile-actions-fab { display: block; }
+            .action-panel-mobile-hide { display: none; }
         }
         
         @media (min-width: 992px) {
-            .mobile-actions-fab {
-                display: none;
-            }
+            .mobile-actions-fab { display: none; }
+        }
+
+        /* ===== PROPERTY CONTENT WRAPPER ===== */
+        .property-content {
+            padding: 0;
         }
 
     </style>
@@ -1970,7 +1820,7 @@ include 'admin_navbar.php';
 
 <div class="admin-content">
     <?php if ($error_message): ?>
-        <div class="container-fluid px-4 pt-4">
+        <div class="container-fluid px-0 pt-4">
             <div class="alert alert-danger" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo htmlspecialchars($error_message); ?>
             </div>
@@ -1978,7 +1828,7 @@ include 'admin_navbar.php';
     <?php endif; ?>
     
     <?php if ($success_message): ?>
-        <div class="container-fluid px-4 pt-4">
+        <div class="container-fluid px-0 pt-4">
             <div class="alert alert-success" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i><?php echo htmlspecialchars($success_message); ?>
             </div>
@@ -1993,97 +1843,99 @@ include 'admin_navbar.php';
             $is_admin_poster = ($agent_info && $agent_info['account_id'] == $admin_account_id);
         ?>
         
-        <!-- Hero Section -->
-        <div class="property-hero">
-            <img src="<?php echo htmlspecialchars($property_images[0] ?? 'https://via.placeholder.com/1200x600?text=No+Image'); ?>" 
-                 alt="Main property view" id="mainHeroImage" class="hero-image">
-            <div class="hero-overlay"></div>
-            
-            <!-- Property Status Badge (For Sale / For Rent) -->
-            <?php
-                $status_value = $property_data['Status'] ?? 'For Sale';
-                $status_badge_class = ($status_value === 'For Rent') ? 'status-for-rent' : 'status-for-sale';
-                $status_icon = ($status_value === 'For Rent') ? 'bi-key-fill' : 'bi-tag-fill';
-            ?>
-            <div class="property-status-badge <?php echo $status_badge_class; ?>">
-                <i class="bi <?php echo $status_icon; ?> me-2"></i><?php echo htmlspecialchars($status_value); ?>
-            </div>
-            
-            <!-- Approval Status Badge -->
-            <div class="hero-status-badge <?php echo $status_class; ?>" style="right: 1.5rem; left: auto;">
-                <?php echo ucfirst($property_data['approval_status']); ?>
-            </div>
-            
-            <!-- View Gallery Button -->
-            <button class="gallery-trigger-btn" onclick="openGallery()">
-                <i class="bi bi-grid-3x3-gap-fill"></i>
-                <span>View All Photos</span>
-            </button>
-            
-            <!-- Floor Selector (if floor images exist) -->
-            <?php if (!empty($floor_images)): ?>
-            <div class="floor-selector" style="position: absolute; top: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 4; max-width: 80%;">
-                <button class="floor-pill active" data-type="featured" onclick="switchHeroView('featured')">
-                    <i class="bi bi-image"></i>
-                    Featured
-                </button>
-                <?php foreach ($floor_images as $floor_num => $images): ?>
-                    <button class="floor-pill" data-type="floor" data-floor="<?php echo $floor_num; ?>" 
-                            onclick="switchHeroView('floor', <?php echo $floor_num; ?>)">
-                        <i class="bi bi-building"></i>
-                        Floor <?php echo $floor_num; ?>
-                    </button>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-            
-            <!-- Thumbnails -->
-            <div class="hero-thumbnails" id="heroThumbnails">
-                <?php 
-                $hero_images = $property_images; // Default to featured images
-                foreach ($hero_images as $index => $img_url): 
-                ?>
-                    <img src="<?php echo htmlspecialchars($img_url); ?>" 
-                         alt="Thumbnail <?php echo $index + 1; ?>" 
-                         class="hero-thumbnail <?php echo $index === 0 ? 'active' : ''; ?>" 
-                         onclick="changeHeroImage('<?php echo htmlspecialchars($img_url); ?>', this)">
-                <?php endforeach; ?>
-            </div>
-            
-            <!-- Hero Content -->
-            <div class="hero-content">
-                <div class="container-fluid px-4">
-                    <div class="row">
-                        <div class="col-lg-8">
-                            <h1 class="property-price">
-                                ₱<?php echo number_format($property_data['ListingPrice']); ?>
-                                <?php if ($status_value === 'For Rent'): ?>
-                                    <span style="font-size: 1.5rem; font-weight: 400; color: rgba(255,255,255,0.8);">/ month</span>
-                                <?php endif; ?>
-                            </h1>
-                            <p class="property-address">
-                                <i class="bi bi-geo-alt me-2"></i><?php echo $full_address; ?>
-                            </p>
-                            <div class="property-specs">
-                                <span><i class="bi bi-house me-2"></i><?php echo $property_data['Bedrooms']; ?> beds</span>
-                                <span><i class="bi bi-droplet me-2"></i><?php echo $property_data['Bathrooms']; ?> baths</span>
-                                <?php if (!empty($property_data['SquareFootage'])): ?>
-                                <span><i class="bi bi-rulers me-2"></i><?php echo number_format($property_data['SquareFootage']); ?> sqft</span>
-                                <?php endif; ?>
-                                <?php if (!empty($property_data['MLSNumber'])): ?>
-                                <span><i class="bi bi-hash me-2"></i>MLS: <?php echo htmlspecialchars($property_data['MLSNumber']); ?></span>
-                                <?php endif; ?>
-                                <span><i class="bi bi-calendar me-2"></i><?php echo ($days_on_market !== null ? $days_on_market : '—'); ?> days on market</span>
+        <!-- Hero Section - Grid Gallery -->
+        <?php
+            $status_value = $property_data['Status'] ?? 'For Sale';
+            $status_badge_class = ($status_value === 'For Rent') ? 'status-for-rent' : 'status-for-sale';
+            $status_icon = ($status_value === 'For Rent') ? 'bi-key-fill' : 'bi-tag-fill';
+        ?>
+        <section class="property-hero-gallery">
+            <div class="container-fluid px-0">
+                <!-- Floor/Featured Selector (above gallery) -->
+                <div class="gallery-view-selector">
+                    <div class="view-selector-container">
+                        <button class="view-selector-btn active" data-type="featured" onclick="switchHeroView('featured')">
+                            <i class="bi bi-star-fill"></i> Featured Images
+                        </button>
+                        <?php if (!empty($floor_images)): ?>
+                            <?php foreach ($floor_images as $floor_num => $images): ?>
+                                <button class="view-selector-btn" data-type="floor" data-floor="<?php echo $floor_num; ?>" onclick="switchHeroView('floor', <?php echo $floor_num; ?>)">
+                                    <i class="bi bi-building"></i> Floor <?php echo $floor_num; ?>
+                                </button>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="gallery-grid">
+                    <div class="gallery-grid-main" onclick="openLightbox(0)">
+                        <img src="<?php echo htmlspecialchars($property_images[0] ?? 'https://via.placeholder.com/1200x600?text=No+Image'); ?>" 
+                             alt="Main property view" id="mainHeroImage">
+                        
+                        <!-- Status Badges (inside image) -->
+                        <div class="gallery-status-badges">
+                            <div class="property-status-badge <?php echo $status_badge_class; ?>">
+                                <i class="bi <?php echo $status_icon; ?>"></i><?php echo htmlspecialchars($status_value); ?>
                             </div>
+                            <div class="hero-status-badge <?php echo $status_class; ?>">
+                                <?php echo ucfirst($property_data['approval_status']); ?>
+                            </div>
+                        </div>
+
+                        <!-- Days on Market Badge (inside image) -->
+                        <div class="gallery-days-badge">
+                            <i class="bi bi-calendar3"></i> <?php echo ($days_on_market !== null ? $days_on_market : '—'); ?> days on market
+                        </div>
+                    </div>
+                    <div class="gallery-grid-sidebar">
+                        <div class="gallery-grid-item" id="sidebarItem0" <?php if(count($property_images) >= 2): ?>onclick="openLightbox(1)"<?php else: ?>style="cursor:default;"<?php endif; ?>>
+                            <?php if(count($property_images) >= 2): ?>
+                                <img src="<?php echo htmlspecialchars($property_images[1]); ?>" alt="Property image 2" id="sideImg0">
+                            <?php else: ?>
+                                <div class="gallery-grid-placeholder"><i class="bi bi-image"></i></div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="gallery-grid-item" id="sidebarItem1" <?php if(count($property_images) >= 3): ?>onclick="openLightbox(2)"<?php else: ?>style="cursor:default;"<?php endif; ?>>
+                            <?php if(count($property_images) >= 3): ?>
+                                <img src="<?php echo htmlspecialchars($property_images[2]); ?>" alt="Property image 3" id="sideImg1">
+                            <?php else: ?>
+                                <div class="gallery-grid-placeholder"><i class="bi bi-image"></i></div>
+                            <?php endif; ?>
+                            <?php if(count($property_images) > 3): ?>
+                                <div class="gallery-more-overlay" id="moreOverlay">+<?php echo count($property_images) - 3; ?></div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
+
+                <!-- Property Header Info -->
+                <div class="property-header-info container-fluid">
+                    <h1 class="property-price-header">
+                        ₱<?php echo number_format($property_data['ListingPrice']); ?>
+                        <?php if ($status_value === 'For Rent'): ?>
+                            <span class="price-suffix">/ month</span>
+                        <?php endif; ?>
+                    </h1>
+                    <p class="property-address-header">
+                        <i class="bi bi-geo-alt me-2"></i><?php echo $full_address; ?>
+                    </p>
+                    <div class="property-specs-bar">
+                        <span><i class="bi bi-house me-1"></i><?php echo $property_data['Bedrooms']; ?> beds</span>
+                        <span><i class="bi bi-droplet me-1"></i><?php echo $property_data['Bathrooms']; ?> baths</span>
+                        <?php if (!empty($property_data['SquareFootage'])): ?>
+                        <span><i class="bi bi-rulers me-1"></i><?php echo number_format($property_data['SquareFootage']); ?> sqft</span>
+                        <?php endif; ?>
+                        <?php if (!empty($property_data['MLSNumber'])): ?>
+                        <span><i class="bi bi-hash me-1"></i>MLS: <?php echo htmlspecialchars($property_data['MLSNumber']); ?></span>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
 
         <!-- Rental Details Section (shown only for For Rent properties) -->
         <?php if ($status_value === 'For Rent' && $rental_data): ?>
-        <div class="container-fluid px-4 mt-4">
+        <div class="container-fluid px-0 mt-4">
             <div class="rental-details-card">
                 <h3 class="rental-details-title">
                     <i class="bi bi-key-fill"></i>
@@ -2132,7 +1984,7 @@ include 'admin_navbar.php';
 
         <!-- Main Content -->
         <div class="property-content">
-            <div class="container-fluid px-4">
+            <div class="container-fluid px-0">
                 <div class="row">
                     <div class="col-lg-8">
                         
@@ -2576,69 +2428,14 @@ include 'admin_navbar.php';
     </div>
     </div>
 
-<!-- Full-Screen Gallery Modal -->
-<div class="gallery-modal" id="galleryModal">
-    <!-- Gallery Header -->
-    <div class="gallery-header">
-        <h2 class="gallery-title">
-            <i class="bi bi-images"></i>
-            <span id="galleryTitleText">Property Gallery</span>
-        </h2>
-        <button class="gallery-close-btn" onclick="closeGallery()" title="Close Gallery">
-            <i class="bi bi-x"></i>
-        </button>
-    </div>
-    
-    <!-- Gallery Type Selector -->
-    <div class="gallery-type-selector">
-        <button class="gallery-type-btn active" data-gallery-type="featured" onclick="switchGalleryType('featured')">
-            <i class="bi bi-star-fill"></i>
-            Featured Images
-        </button>
-        <?php if (!empty($floor_images)): ?>
-        <button class="gallery-type-btn" data-gallery-type="floors" onclick="switchGalleryType('floors')">
-            <i class="bi bi-building"></i>
-            Floor Images
-        </button>
-        <?php endif; ?>
-    </div>
-    
-    <!-- Floor Selector for Floor Images (hidden by default) -->
-    <?php if (!empty($floor_images)): ?>
-    <div class="gallery-floor-selector" id="galleryFloorSelector" style="display: none;">
-        <?php foreach ($floor_images as $floor_num => $images): ?>
-            <button class="gallery-floor-btn <?php echo $floor_num === array_key_first($floor_images) ? 'active' : ''; ?>" 
-                    data-floor="<?php echo $floor_num; ?>" 
-                    onclick="switchGalleryFloor(<?php echo $floor_num; ?>)">
-                Floor <?php echo $floor_num; ?>
-            </button>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
-    
-    <!-- Gallery Content (Main Image) -->
-    <div class="gallery-content">
-        <button class="gallery-nav-btn prev" onclick="navigateGallery(-1)">
-            <i class="bi bi-chevron-left"></i>
-        </button>
-        
-        <img src="" alt="Gallery image" id="galleryMainImage" class="gallery-main-image">
-        
-        <button class="gallery-nav-btn next" onclick="navigateGallery(1)">
-            <i class="bi bi-chevron-right"></i>
-        </button>
-        
-        <div class="gallery-counter" id="galleryCounter">
-            1 / 1
-        </div>
-    </div>
-    
-    <!-- Gallery Thumbnails -->
-    <div class="gallery-thumbnails">
-        <div class="gallery-thumb-grid" id="galleryThumbGrid">
-            <!-- Thumbnails will be populated by JavaScript -->
-        </div>
-    </div>
+<!-- Lightbox Overlay -->
+<div class="lightbox-overlay" id="lightboxOverlay" style="display:none;">
+    <button class="lightbox-close" onclick="closeLightbox(event)"><i class="bi bi-x-lg"></i></button>
+    <button class="lightbox-prev" onclick="changeImage(-1, event)"><i class="bi bi-chevron-left"></i></button>
+    <button class="lightbox-next" onclick="changeImage(1, event)"><i class="bi bi-chevron-right"></i></button>
+    <img src="" alt="Lightbox view" id="lightboxImage">
+    <div class="lightbox-counter" id="lightboxCounter"></div>
+    <div class="lightbox-label" id="lightboxLabel"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -2646,23 +2443,65 @@ include 'admin_navbar.php';
 <script>
     // Property image data from PHP
     const featuredImages = <?php echo json_encode($property_images); ?>;
-    const floorImages = <?php echo json_encode($floor_images); ?>;
+    const floorImagesRaw = <?php echo json_encode($floor_images); ?>;
+    
+    // Convert floor images to a usable object
+    const floorImages = {};
+    for (const [key, value] of Object.entries(floorImagesRaw || {})) {
+        floorImages[key] = value;
+    }
     
     // Gallery state
-    let currentGalleryType = 'featured';
-    let currentFloor = <?php echo !empty($floor_images) ? array_key_first($floor_images) : 'null'; ?>;
-    let currentImageIndex = 0;
-    let currentImages = [];
-
-    // Hero view state
     let currentHeroView = 'featured';
     let currentHeroFloor = null;
+    let currentLightboxImages = [];
+    let currentLightboxIndex = 0;
+    let currentLightboxLabel = 'Featured Images';
+
+    // Update sidebar thumbnails when switching views
+    function updateSidebar(images) {
+        const sideImg0 = document.getElementById('sideImg0');
+        const sideImg1 = document.getElementById('sideImg1');
+        const sidebarItem0 = document.getElementById('sidebarItem0');
+        const sidebarItem1 = document.getElementById('sidebarItem1');
+        const moreOverlay = document.getElementById('moreOverlay');
+
+        if (images.length >= 2 && sideImg0) {
+            sideImg0.src = images[1];
+            sidebarItem0.onclick = () => openLightbox(1);
+            sidebarItem0.style.cursor = 'pointer';
+        } else if (sidebarItem0) {
+            sidebarItem0.innerHTML = '<div class="gallery-grid-placeholder"><i class="bi bi-image"></i></div>';
+            sidebarItem0.onclick = null;
+            sidebarItem0.style.cursor = 'default';
+        }
+
+        if (images.length >= 3 && sideImg1) {
+            sideImg1.src = images[2];
+            sidebarItem1.onclick = () => openLightbox(2);
+            sidebarItem1.style.cursor = 'pointer';
+        } else if (sidebarItem1) {
+            const placeholder = '<div class="gallery-grid-placeholder"><i class="bi bi-image"></i></div>';
+            sidebarItem1.innerHTML = placeholder;
+            sidebarItem1.onclick = null;
+            sidebarItem1.style.cursor = 'default';
+        }
+
+        // Update "+N more" overlay
+        if (moreOverlay) moreOverlay.remove();
+        if (images.length > 3 && sidebarItem1) {
+            const overlay = document.createElement('div');
+            overlay.className = 'gallery-more-overlay';
+            overlay.id = 'moreOverlay';
+            overlay.textContent = '+' + (images.length - 3);
+            sidebarItem1.appendChild(overlay);
+        }
+    }
 
     // Switch hero view between featured and floor images
     function switchHeroView(viewType, floorNum = null) {
         const mainImage = document.getElementById('mainHeroImage');
-        const thumbnailsContainer = document.getElementById('heroThumbnails');
-        const pills = document.querySelectorAll('.floor-pill');
+        const pills = document.querySelectorAll('.view-selector-btn');
         
         // Update active pill
         pills.forEach(pill => {
@@ -2681,206 +2520,88 @@ include 'admin_navbar.php';
         let imagesToShow = [];
         if (viewType === 'featured') {
             imagesToShow = featuredImages;
+            currentLightboxLabel = 'Featured Images';
         } else if (viewType === 'floor' && floorImages[floorNum]) {
             imagesToShow = floorImages[floorNum];
+            currentLightboxLabel = 'Floor ' + floorNum + ' Images';
         }
         
         if (imagesToShow.length > 0) {
-            // Update main image
             mainImage.src = imagesToShow[0];
-            
-            // Update thumbnails
-            thumbnailsContainer.innerHTML = '';
-            imagesToShow.forEach((img, index) => {
-                const thumb = document.createElement('img');
-                thumb.src = img;
-                thumb.alt = `Thumbnail ${index + 1}`;
-                thumb.className = `hero-thumbnail ${index === 0 ? 'active' : ''}`;
-                thumb.onclick = function() {
-                    changeHeroImage(img, this);
-                };
-                thumbnailsContainer.appendChild(thumb);
-            });
+            updateSidebar(imagesToShow);
+        } else {
+            console.warn('No images found for:', viewType, floorNum);
+            // Show placeholder if no images
+            mainImage.src = 'https://via.placeholder.com/1200x600?text=No+Images+Available';
+            updateSidebar([]);
         }
     }
 
-    // Hero image functionality
-    function changeHeroImage(imageUrl, thumbnailElement) {
-        document.getElementById('mainHeroImage').src = imageUrl;
-        
-        document.querySelectorAll('.hero-thumbnail').forEach(thumb => {
-            thumb.classList.remove('active');
-        });
-        thumbnailElement.classList.add('active');
-    }
-
-    // Open gallery
-    function openGallery() {
-        const modal = document.getElementById('galleryModal');
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        
-        // Start with current hero view
+    // Lightbox functions
+    function openLightbox(index) {
         if (currentHeroView === 'featured') {
-            switchGalleryType('featured');
-        } else if (currentHeroView === 'floor') {
-            switchGalleryType('floors');
-            if (currentHeroFloor !== null) {
-                switchGalleryFloor(currentHeroFloor);
-            }
+            currentLightboxImages = featuredImages;
+            currentLightboxLabel = 'Featured Images';
+        } else if (currentHeroView === 'floor' && floorImages[currentHeroFloor]) {
+            currentLightboxImages = floorImages[currentHeroFloor];
+            currentLightboxLabel = 'Floor ' + currentHeroFloor + ' Images';
         }
+        
+        if (currentLightboxImages.length === 0) return;
+        
+        currentLightboxIndex = index;
+        document.getElementById('lightboxOverlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        updateLightboxImage();
     }
 
-    // Close gallery
-    function closeGallery() {
-        const modal = document.getElementById('galleryModal');
-        modal.classList.remove('active');
+    function closeLightbox(event) {
+        if (event) event.stopPropagation();
+        document.getElementById('lightboxOverlay').style.display = 'none';
         document.body.style.overflow = '';
     }
 
-    // Switch gallery type (featured/floors)
-    function switchGalleryType(type) {
-        currentGalleryType = type;
-        const buttons = document.querySelectorAll('.gallery-type-btn');
-        const floorSelector = document.getElementById('galleryFloorSelector');
-        
-        buttons.forEach(btn => {
-            if (btn.dataset.galleryType === type) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-        
-        if (type === 'featured') {
-            if (floorSelector) floorSelector.style.display = 'none';
-            currentImages = [...featuredImages];
-            document.getElementById('galleryTitleText').textContent = 'Featured Images';
-        } else if (type === 'floors') {
-            if (floorSelector) floorSelector.style.display = 'flex';
-            if (currentFloor && floorImages[currentFloor]) {
-                currentImages = [...floorImages[currentFloor]];
-                document.getElementById('galleryTitleText').textContent = `Floor ${currentFloor} Images`;
-            }
-        }
-        
-        currentImageIndex = 0;
-        updateGalleryDisplay();
+    function changeImage(direction, event) {
+        if (event) event.stopPropagation();
+        currentLightboxIndex += direction;
+        if (currentLightboxIndex < 0) currentLightboxIndex = currentLightboxImages.length - 1;
+        if (currentLightboxIndex >= currentLightboxImages.length) currentLightboxIndex = 0;
+        updateLightboxImage();
     }
 
-    // Switch gallery floor
-    function switchGalleryFloor(floorNum) {
-        currentFloor = floorNum;
-        const buttons = document.querySelectorAll('.gallery-floor-btn');
+    function updateLightboxImage() {
+        const img = document.getElementById('lightboxImage');
+        const counter = document.getElementById('lightboxCounter');
+        const label = document.getElementById('lightboxLabel');
         
-        buttons.forEach(btn => {
-            if (parseInt(btn.dataset.floor) === floorNum) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-        
-        if (floorImages[floorNum]) {
-            currentImages = [...floorImages[floorNum]];
-            document.getElementById('galleryTitleText').textContent = `Floor ${floorNum} Images`;
-            currentImageIndex = 0;
-            updateGalleryDisplay();
-        }
+        img.src = currentLightboxImages[currentLightboxIndex];
+        counter.textContent = (currentLightboxIndex + 1) + ' / ' + currentLightboxImages.length;
+        label.textContent = currentLightboxLabel;
     }
 
-    // Navigate gallery (prev/next)
-    function navigateGallery(direction) {
-        if (currentImages.length === 0) return;
-        
-        currentImageIndex += direction;
-        
-        if (currentImageIndex < 0) {
-            currentImageIndex = currentImages.length - 1;
-        } else if (currentImageIndex >= currentImages.length) {
-            currentImageIndex = 0;
-        }
-        
-        updateGalleryDisplay();
-    }
-
-    // Jump to specific image
-    function jumpToImage(index) {
-        currentImageIndex = index;
-        updateGalleryDisplay();
-    }
-
-    // Update gallery display
-    function updateGalleryDisplay() {
-        if (currentImages.length === 0) return;
-        
-        const mainImage = document.getElementById('galleryMainImage');
-        const counter = document.getElementById('galleryCounter');
-        const thumbGrid = document.getElementById('galleryThumbGrid');
-        
-        // Update main image
-        mainImage.src = currentImages[currentImageIndex];
-        
-        // Update counter
-        counter.textContent = `${currentImageIndex + 1} / ${currentImages.length}`;
-        
-        // Update thumbnails
-        thumbGrid.innerHTML = '';
-        currentImages.forEach((img, index) => {
-            const thumb = document.createElement('img');
-            thumb.src = img;
-            thumb.alt = `Thumbnail ${index + 1}`;
-            thumb.className = `gallery-thumb ${index === currentImageIndex ? 'active' : ''}`;
-            thumb.onclick = () => jumpToImage(index);
-            thumbGrid.appendChild(thumb);
-        });
-        
-        // Scroll active thumbnail into view
-        setTimeout(() => {
-            const activeThumb = thumbGrid.querySelector('.gallery-thumb.active');
-            if (activeThumb) {
-                activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            }
-        }, 100);
-    }
-
-    // Keyboard navigation
+    // Keyboard navigation for lightbox
     document.addEventListener('keydown', function(e) {
-        const modal = document.getElementById('galleryModal');
-        if (!modal.classList.contains('active')) return;
+        const overlay = document.getElementById('lightboxOverlay');
+        if (overlay.style.display !== 'flex') return;
         
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
-            navigateGallery(-1);
+            changeImage(-1);
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
-            navigateGallery(1);
+            changeImage(1);
         } else if (e.key === 'Escape') {
             e.preventDefault();
-            closeGallery();
+            closeLightbox();
         }
     });
 
-    // Prevent gallery modal from closing when clicking on image
-    document.getElementById('galleryMainImage')?.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-
-    // Close gallery when clicking outside content
-    document.getElementById('galleryModal')?.addEventListener('click', function(e) {
+    // Close lightbox when clicking overlay background
+    document.getElementById('lightboxOverlay')?.addEventListener('click', function(e) {
         if (e.target === this) {
-            closeGallery();
+            closeLightbox();
         }
     });
-    // Hero image functionality
-    function changeHeroImage(imageUrl, thumbnailElement) {
-        document.getElementById('mainHeroImage').src = imageUrl;
-        
-        document.querySelectorAll('.hero-thumbnail').forEach(thumb => {
-            thumb.classList.remove('active');
-        });
-        thumbnailElement.classList.add('active');
-    }
 
     // Timestamp handling for forms
     document.addEventListener('DOMContentLoaded', function() {

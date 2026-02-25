@@ -36,7 +36,7 @@
                                 <input type="text" class="form-control" id="edit_ZIP" name="ZIP" maxlength="4" pattern="\d{4}" required>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label for="edit_Barangay" class="form-label">Barangay</label>
+                                <label for="edit_Barangay" class="form-label">Barangay <span class="text-optional">(Optional)</span></label>
                                 <input type="text" class="form-control" id="edit_Barangay" name="Barangay" placeholder="e.g., Brgy. San Jose">
                             </div>
                             <div class="col-12 col-sm-6 col-md-3">
@@ -68,16 +68,16 @@
                         </h6>
                         <div class="row g-3">
                             <div class="col-6 col-md-3">
-                                <label for="edit_YearBuilt" class="form-label">Year Built <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="edit_YearBuilt" name="YearBuilt" min="1800" required>
+                                <label for="edit_YearBuilt" class="form-label">Year Built <span class="text-optional">(Optional)</span></label>
+                                <input type="number" class="form-control" id="edit_YearBuilt" name="YearBuilt" min="1800">
                             </div>
                             <div class="col-6 col-md-3">
-                                <label for="edit_Bedrooms" class="form-label">Bedrooms <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="edit_Bedrooms" name="Bedrooms" min="0" required>
+                                <label for="edit_Bedrooms" class="form-label">Bedrooms <span class="text-optional">(Optional)</span></label>
+                                <input type="number" class="form-control" id="edit_Bedrooms" name="Bedrooms" min="0">
                             </div>
                             <div class="col-6 col-md-2">
-                                <label for="edit_Bathrooms" class="form-label">Bathrooms <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="edit_Bathrooms" name="Bathrooms" min="0" step="0.5" required>
+                                <label for="edit_Bathrooms" class="form-label">Bathrooms <span class="text-optional">(Optional)</span></label>
+                                <input type="number" class="form-control" id="edit_Bathrooms" name="Bathrooms" min="0" step="0.5">
                             </div>
                             <div class="col-6 col-md-2">
                                 <label for="edit_ListingDate" class="form-label">Listing Date <span class="text-danger">*</span></label>
@@ -92,12 +92,12 @@
                                 <input type="number" class="form-control" id="edit_SquareFootage" name="SquareFootage" min="1" required>
                             </div>
                             <div class="col-6 col-md-3">
-                                <label for="edit_LotSize" class="form-label">Lot Size (acres) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="edit_LotSize" name="LotSize" step="0.01" min="0" required>
+                                <label for="edit_LotSize" class="form-label">Lot Size (acres) <span class="text-optional">(Optional)</span></label>
+                                <input type="number" class="form-control" id="edit_LotSize" name="LotSize" step="0.01" min="0">
                             </div>
                             <div class="col-12 col-md-3">
-                                <label for="edit_ParkingType" class="form-label">Parking Type <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="edit_ParkingType" name="ParkingType" required>
+                                <label for="edit_ParkingType" class="form-label">Parking Type <span class="text-optional">(Optional)</span></label>
+                                <input type="text" class="form-control" id="edit_ParkingType" name="ParkingType">
                             </div>
                         </div>
                     </div>
@@ -246,6 +246,12 @@
     border-radius: 8px;
     padding: 1.25rem;
     margin-bottom: 1rem;
+}
+
+.text-optional {
+    color: #d97706;
+    font-weight: 500;
+    font-size: 0.8em;
 }
 
 .edit-section-title {

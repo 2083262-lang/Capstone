@@ -393,10 +393,11 @@ if (empty($errors)) {
 
                         $new_name = uniqid('floor_' . $floor . '_', true) . '.' . $ext;
                         $dest = $floor_dir . $new_name;
+                        $db_floor_path = 'uploads/floors/' . $property_id . '/floor_' . $floor . '/' . $new_name;
                         if (move_uploaded_file($ff['tmp_name'][$j], $dest)) {
                             if ($pis = $conn->prepare($floor_sql)) {
                                 $sort = $j + 1;
-                                $pis->bind_param('iisi', $property_id, $floor, $dest, $sort);
+                                $pis->bind_param('iisi', $property_id, $floor, $db_floor_path, $sort);
                                 $pis->execute();
                                 $pis->close();
                             }
