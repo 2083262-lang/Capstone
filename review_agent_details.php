@@ -30,8 +30,6 @@ if ($result_fetch_agent->num_rows > 0) {
 }
 
 $stmt_fetch_agent->close();
-// Keep the connection open so included navbar/sidebar can access admin profile if needed
-// $conn->close() will be handled at the end of the script if necessary
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -40,279 +38,382 @@ $stmt_fetch_agent->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Review Agent - <?php echo htmlspecialchars($agent_data['first_name'] ?? ''); ?> - Admin Panel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
+        /* ================================================
+           ADMIN REVIEW AGENT DETAILS PAGE
+           Structure matches property.php exactly:
+           - Same :root, body, sidebar/content layout
+           - Hardcoded margin-left: 290px (no variable overrides)
+           - Prevents layout shift from sidebar
+           ================================================ */
+
         :root {
             --primary-color: #161209;
             --secondary-color: #bc9e42;
-            --background-color: #f8f9fa;
-            --card-bg-color: #ffffff;
-            --border-color: #e9ecef;
-            --success-color: #22c55e;
-            --danger-color: #ef4444;
-            --warning-color: #f59e0b;
-            --info-color: #3b82f6;
-            --text-muted: #6b7280;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --accent-color: #a08636;
+            --bg-light: #f8f9fa;
+            --border-color: #e0e0e0;
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--background-color);
-            font-weight: 400;
-            line-height: 1.6;
+            background-color: var(--bg-light);
+            color: #212529;
         }
 
-        /* Sidebar and navbar styles (unchanged) */
-        .sidebar { background-color: #161209; color: #fff; height: 100vh; position: fixed; top: 0; left: 0; width: 290px; overflow-y: auto; padding-top: 30px; display: flex; flex-direction: column; }
-        .sidebar-logo { text-align: center; padding: 20px; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar a { display: block; color: #f8f4f4; padding: 15px 30px; text-decoration: none; font-weight: 500; font-size: 1.1rem; transition: background-color 0.3s ease, color 0.3s ease; }
-        .sidebar a:hover { background-color: #bc9e42; color: #161209; }
-        .sidebar .active { background-color: #bc9e42; color: #161209; }
-        .sidebar a.text-danger { margin-top: auto; padding-top: 20px; padding-bottom: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
-        .navbar-custom { background-color: var(--card-bg-color); border-bottom: 1px solid var(--border-color); height: 70px; margin-left: 290px; padding: 0 20px; }
-        .content { margin-left: 290px; padding: 0; min-height: 100vh; }
+        .admin-sidebar {
+            background: linear-gradient(180deg, #161209 0%, #1f1a0f 100%);
+            color: #fff;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 290px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
 
-        /* Hero Section */
+        .admin-content {
+            margin-left: 290px;
+            padding: 2rem;
+            min-height: 100vh;
+            max-width: 1800px;
+        }
+
+        @media (max-width: 1200px) {
+            .admin-content {
+                margin-left: 0 !important;
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-content {
+                margin-left: 0 !important;
+                padding: 1rem;
+            }
+        }
+
+        /* ===== PAGE-SPECIFIC VARIABLES ===== */
+        .admin-content {
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --gold-dark: #b8941f;
+            --blue: #2563eb;
+            --blue-light: #3b82f6;
+            --blue-dark: #1e40af;
+            --card-bg: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        /* ===== BREADCRUMB / BACK NAV ===== */
+        .back-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            background: var(--card-bg);
+            transition: all 0.2s ease;
+            margin-bottom: 1.5rem;
+        }
+
+        .back-nav:hover {
+            color: var(--blue);
+            border-color: var(--blue);
+            background: rgba(37, 99, 235, 0.03);
+            transform: translateX(-2px);
+        }
+
+        .back-nav i { font-size: 0.9rem; }
+
+        /* ===== AGENT HERO HEADER ===== */
         .agent-hero {
-            background: linear-gradient(135deg, var(--primary-color) 0%, rgba(22, 18, 9, 0.9) 100%);
-            color: white;
-            padding: 3rem 0;
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .agent-hero::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+            z-index: 5;
+        }
+
+        .hero-banner {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 2rem 2.5rem 1.5rem;
+            position: relative;
+        }
+
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(ellipse at top right, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom left, rgba(37, 99, 235, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .hero-banner::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            opacity: 0.4;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-avatar {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid var(--gold);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        .hero-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .hero-name {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 0 0 0.25rem 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .hero-specialty {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.65);
+            margin: 0 0 1rem 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-stat {
+            background: rgba(212, 175, 55, 0.12);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            min-width: 100px;
+        }
+
+        .hero-stat-value {
+            display: block;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--gold);
+        }
+
+        .hero-stat-label {
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.55);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .hero-status-badge {
+            position: absolute;
+            top: 2rem;
+            right: 2.5rem;
+            z-index: 3;
+            padding: 0.4rem 1rem;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-approved { background: rgba(34, 197, 94, 0.9); color: #fff; }
+        .status-pending { background: rgba(245, 158, 11, 0.9); color: #fff; }
+        .status-rejected { background: rgba(239, 68, 68, 0.9); color: #fff; }
+        .status-needs-profile { background: rgba(6, 182, 212, 0.9); color: #fff; }
+
+        /* ===== CONTENT SECTIONS ===== */
+        .content-section {
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
             position: relative;
             overflow: hidden;
         }
 
-        .agent-hero::before {
+        .content-section::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(188,158,66,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(188,158,66,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(188,158,66,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
-            opacity: 0.3;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        .agent-hero-content {
-            position: relative;
-            z-index: 2;
-        }
-
-        .agent-avatar {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 5px solid var(--secondary-color);
-            box-shadow: var(--shadow-lg);
-            margin-bottom: 2rem;
-        }
-
-        .agent-name {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .agent-specialty {
-            font-size: 1.25rem;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 1rem;
-        }
-
-        .agent-quick-stats {
-            display: flex;
-            gap: 2rem;
-            flex-wrap: wrap;
-            margin-top: 1.5rem;
-        }
-
-        .quick-stat {
-            background: rgba(188, 158, 66, 0.2);
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(188, 158, 66, 0.3);
-            text-align: center;
-            min-width: 120px;
-        }
-
-        .quick-stat-value {
-            display: block;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--secondary-color);
-        }
-
-        .quick-stat-label {
-            font-size: 0.85rem;
-            opacity: 0.8;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Status badge in hero */
-        .hero-status-badge {
-            position: absolute;
-            top: 2rem;
-            right: 2rem;
-            z-index: 3;
-            font-weight: 600;
-            font-size: 1rem;
-            padding: 0.75rem 1.5rem;
-            border-radius: 50px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .badge-approved { background: rgba(34, 197, 94, 0.9); color: white; }
-        .badge-pending { background: rgba(245, 158, 11, 0.9); color: white; }
-        .badge-rejected { background: rgba(239, 68, 68, 0.9); color: white; }
-        .badge-needs-profile { background: rgba(59, 130, 246, 0.9); color: white; }
-
-        /* Content sections */
-        .agent-content {
-            padding: 2rem 0;
-        }
-
-        .content-section {
-            background: var(--card-bg-color);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-        }
-
-        .content-section:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-2px);
-        }
+        .content-section:hover::before { opacity: 1; }
 
         .section-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.25rem;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
         }
 
         .section-title i {
-            color: var(--secondary-color);
-            font-size: 1.25rem;
+            color: var(--gold-dark);
+            font-size: 1rem;
         }
 
-        /* Info grid */
+        /* ===== INFO GRID ===== */
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
         }
 
         .info-item {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            padding: 1.25rem;
-            background: linear-gradient(135deg, var(--background-color) 0%, rgba(248, 249, 250, 0.5) 100%);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
         }
 
         .info-item:hover {
-            background: rgba(188, 158, 66, 0.05);
-            border-color: var(--secondary-color);
-            transform: translateY(-2px);
+            border-color: rgba(37, 99, 235, 0.2);
+            background: rgba(37, 99, 235, 0.02);
         }
 
         .info-icon {
-            width: 45px;
-            height: 45px;
-            background: var(--secondary-color);
-            border-radius: 12px;
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 1.1rem;
+            font-size: 1rem;
             flex-shrink: 0;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.15));
+            color: var(--gold-dark);
+            border: 1px solid rgba(212, 175, 55, 0.2);
         }
 
-        .info-content {
-            flex: 1;
-        }
+        .info-content { flex: 1; min-width: 0; }
 
         .info-label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            font-weight: 500;
+            font-size: 0.7rem;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 0.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.15rem;
         }
 
         .info-value {
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             font-weight: 600;
-            color: var(--primary-color);
+            color: var(--text-primary);
             word-break: break-word;
         }
 
-        /* Bio section */
+        /* ===== BIO SECTION ===== */
         .agent-bio {
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             line-height: 1.8;
             color: #374151;
             white-space: pre-wrap;
             word-break: break-word;
-            overflow-wrap: break-word;
-            padding: 1.5rem;
-            background: var(--background-color);
-            border-radius: 12px;
-            border-left: 4px solid var(--secondary-color);
+            padding: 1.25rem;
+            background: #f8fafc;
+            border-radius: 4px;
+            border-left: 3px solid var(--gold);
+            text-align: justify;
         }
 
-        /* Rejection notice */
+        /* ===== REJECTION NOTICE ===== */
         .rejection-notice {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-left: 4px solid var(--danger-color);
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(239, 68, 68, 0.03) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            border-left: 4px solid var(--danger);
+            border-radius: 4px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
-        .rejection-title {
-            color: var(--danger-color);
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin-bottom: 1rem;
+        .rejection-notice .rejection-title {
+            color: #dc2626;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .rejection-message {
+        .rejection-notice .rejection-message {
             color: #991b1b;
             font-style: italic;
-            font-size: 1rem;
+            font-size: 0.9rem;
             line-height: 1.6;
             margin: 0;
         }
 
-        /* Action panel */
+        /* ===== ACTION PANEL (Sticky Sidebar) ===== */
         .action-panel {
             position: sticky;
             top: 90px;
@@ -320,655 +421,359 @@ $stmt_fetch_agent->close();
         }
 
         .action-card {
-            background: var(--card-bg-color);
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border-color);
-            margin-bottom: 2rem;
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .action-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--primary-color);
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+        }
+
+        .action-card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
         }
 
-        /* Modern buttons */
-        .btn-modern {
-            font-weight: 600;
-            padding: 0.875rem 2rem;
-            border-radius: 12px;
+        .action-card-title i { color: var(--gold-dark); }
+
+        /* ===== BUTTONS ===== */
+        .btn-action {
+            font-weight: 700;
+            padding: 0.7rem 1.5rem;
+            border-radius: 4px;
             border: none;
             transition: all 0.3s ease;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 0.9rem;
+            letter-spacing: 0.05em;
+            font-size: 0.8rem;
             position: relative;
             overflow: hidden;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
         }
 
-        .btn-modern::before {
+        .btn-action::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
+            top: 0; left: -100%; width: 100%; height: 100%;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
             transition: left 0.5s;
         }
 
-        .btn-modern:hover::before {
-            left: 100%;
-        }
+        .btn-action:hover::before { left: 100%; }
 
         .btn-approve {
-            background: linear-gradient(135deg, var(--success-color) 0%, #16a34a 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+            background: linear-gradient(135deg, #16a34a 0%, var(--success) 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
         }
 
         .btn-approve:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
-            color: white;
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+            color: #fff;
         }
 
-        .btn-reject {
-            background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        .btn-reject-action {
+            background: linear-gradient(135deg, #dc2626 0%, var(--danger) 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
         }
 
-        .btn-reject:hover {
+        .btn-reject-action:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-            color: white;
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+            color: #fff;
         }
 
-        .btn-secondary-modern {
-            background: var(--background-color);
-            color: var(--primary-color);
-            border: 2px solid var(--border-color);
+        .btn-back {
+            background: var(--card-bg);
+            color: var(--text-secondary);
+            border: 1px solid #e2e8f0;
+            box-shadow: none;
         }
 
-        .btn-secondary-modern:hover {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-            transform: translateY(-2px);
+        .btn-back:hover {
+            color: var(--text-primary);
+            border-color: var(--blue);
+            background: rgba(37, 99, 235, 0.03);
+            transform: translateY(-1px);
         }
 
-        .btn-modern:disabled {
-            opacity: 0.6;
+        .btn-action:disabled {
+            opacity: 0.5;
             transform: none !important;
             cursor: not-allowed;
         }
 
-        .btn-modern:disabled::before {
-            display: none;
-        }
+        .btn-action:disabled::before { display: none; }
 
-        /* Modal improvements */
-        .modal-content {
-            border: none;
-            border-radius: 16px;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .modal-header {
-            background: var(--primary-color);
-            color: white;
-            border-radius: 16px 16px 0 0;
-            padding: 1.5rem 2rem;
-            border-bottom: none;
-        }
-
-        .modal-title {
-            font-weight: 600;
+        /* Status indicators in action panel */
+        .status-info-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-
-        .modal-body {
-            padding: 2rem;
-        }
-
-        .modal-footer {
-            padding: 1.5rem 2rem;
-            border-top: 1px solid var(--border-color);
-            border-radius: 0 0 16px 16px;
-        }
-
-        /* ================================================
-           DISABLE AGENT MODAL - CUSTOM DESIGN
-           ================================================ */
-        
-        .disable-modal-content {
-            border: none;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(22, 18, 9, 0.3);
-        }
-
-        .disable-modal-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #2a2317 100%);
-            border: none;
-            padding: 2rem 2rem 1.5rem 2rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            position: relative;
-        }
-
-        .disable-modal-header::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--secondary-color) 0%, var(--accent-color) 100%);
-        }
-
-        .disable-modal-icon {
-            width: 48px;
-            height: 48px;
-            background: rgba(188, 158, 66, 0.15);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .disable-modal-icon i {
-            font-size: 1.5rem;
-            color: var(--secondary-color);
-        }
-
-        .disable-modal-header-text {
-            flex: 1;
-        }
-
-        .disable-modal-header-text .modal-title {
-            color: white;
-            font-size: 1.35rem;
-            font-weight: 700;
-            margin: 0;
-            letter-spacing: -0.02em;
-            line-height: 1.2;
-        }
-
-        .disable-modal-subtitle {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.813rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-top: 0.25rem;
-            display: block;
-        }
-
-        .disable-modal-header .btn-close {
-            filter: brightness(0) invert(1);
-            opacity: 0.8;
-            transition: all 0.2s ease;
-            margin: 0;
-            padding: 0;
-        }
-
-        .disable-modal-header .btn-close:hover {
-            opacity: 1;
-            transform: rotate(90deg);
-        }
-
-        .disable-modal-body {
-            padding: 2rem;
-            background: #ffffff;
-        }
-
-        .disable-warning-box {
-            background: linear-gradient(135deg, rgba(188, 158, 66, 0.08) 0%, rgba(160, 134, 54, 0.05) 100%);
-            border-left: 4px solid var(--secondary-color);
-            border-radius: 12px;
-            padding: 1.25rem 1.5rem;
-            margin-bottom: 1.75rem;
-            display: flex;
-            gap: 1rem;
-            align-items: flex-start;
-        }
-
-        .disable-warning-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--secondary-color);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .disable-warning-icon i {
-            font-size: 1.25rem;
-            color: white;
-        }
-
-        .disable-warning-content {
-            flex: 1;
-        }
-
-        .disable-warning-content h6 {
-            font-size: 0.938rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            margin: 0 0 0.5rem 0;
-            letter-spacing: -0.01em;
-        }
-
-        .disable-warning-content p {
-            font-size: 0.875rem;
-            line-height: 1.6;
-            color: #4a4642;
-            margin: 0;
-        }
-
-        .disable-instructions {
-            padding: 0 0.25rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .disable-instructions p {
-            font-size: 0.906rem;
-            line-height: 1.7;
-            color: #6c757d;
-            margin: 0;
-        }
-
-        .disable-form-group {
-            margin-bottom: 0;
-        }
-
-        .disable-form-label {
-            font-size: 0.938rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 0.75rem;
-            display: block;
-            letter-spacing: -0.01em;
-        }
-
-        .disable-textarea {
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 1rem 1.25rem;
-            font-size: 0.938rem;
-            line-height: 1.6;
-            color: var(--primary-color);
-            transition: all 0.2s ease;
-            resize: vertical;
-            min-height: 110px;
-        }
-
-        .disable-textarea:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 4px rgba(188, 158, 66, 0.1);
-            outline: none;
-        }
-
-        .disable-textarea::placeholder {
-            color: #9ca3af;
-            opacity: 1;
-        }
-
-        .disable-helper-text {
-            font-size: 0.813rem;
-            color: #6c757d;
-            margin-top: 0.625rem;
-            display: flex;
-            align-items: center;
-            padding: 0 0.25rem;
-            line-height: 1.5;
-        }
-
-        .disable-helper-text i {
-            color: var(--secondary-color);
-            margin-right: 0.25rem;
-            font-size: 0.875rem;
-        }
-
-        .disable-modal-footer {
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
-            padding: 1.25rem 2rem;
-            display: flex;
             gap: 0.75rem;
-            justify-content: flex-end;
-        }
-
-        .disable-btn-cancel {
-            background: white;
-            color: #6c757d;
-            border: 2px solid #dee2e6;
-            padding: 0.75rem 1.75rem;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 0.938rem;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .disable-btn-cancel:hover {
-            background: #f8f9fa;
-            border-color: #adb5bd;
-            color: #495057;
-            transform: translateY(-1px);
-        }
-
-        .disable-btn-submit {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #2a2317 100%);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.75rem;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 0.938rem;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 12px rgba(22, 18, 9, 0.25);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .disable-btn-submit::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(188, 158, 66, 0.3), transparent);
-            transition: left 0.5s;
-        }
-
-        .disable-btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(22, 18, 9, 0.35);
-            color: white;
-        }
-
-        .disable-btn-submit:hover::before {
-            left: 100%;
-        }
-
-        .disable-btn-submit:active {
-            transform: translateY(0);
-        }
-
-        /* Responsive adjustments for disable modal */
-        @media (max-width: 576px) {
-            .disable-modal-header {
-                padding: 1.5rem 1.25rem 1.25rem 1.25rem;
-            }
-
-            .disable-modal-icon {
-                width: 40px;
-                height: 40px;
-            }
-
-            .disable-modal-icon i {
-                font-size: 1.25rem;
-            }
-
-            .disable-modal-header-text .modal-title {
-                font-size: 1.15rem;
-            }
-
-            .disable-modal-subtitle {
-                font-size: 0.75rem;
-            }
-
-            .disable-modal-body {
-                padding: 1.5rem 1.25rem;
-            }
-
-            .disable-warning-box {
-                padding: 1rem 1.25rem;
-                gap: 0.75rem;
-            }
-
-            .disable-warning-icon {
-                width: 36px;
-                height: 36px;
-            }
-
-            .disable-modal-footer {
-                padding: 1rem 1.25rem;
-                flex-direction: column;
-            }
-
-            .disable-btn-cancel,
-            .disable-btn-submit {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-
-        /* Alert improvements */
-        .alert {
-            border: none;
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 2rem;
-            border-left: 4px solid;
-        }
-
-        .alert-success {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
-            color: #166534;
-            border-left-color: var(--success-color);
-        }
-
-        .alert-danger {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
-            color: #991b1b;
-            border-left-color: var(--danger-color);
-        }
-
-        /* Error state */
-        .error-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            background: var(--card-bg-color);
-            border-radius: 16px;
-            margin: 2rem;
-            box-shadow: var(--shadow);
-        }
-
-        .error-icon {
-            font-size: 4rem;
-            color: var(--secondary-color);
-            margin-bottom: 1.5rem;
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .agent-name { font-size: 2.2rem; }
-            .agent-quick-stats { justify-content: center; }
-            .quick-stat { min-width: 100px; }
-            .content-section { padding: 1.5rem; }
-            .info-grid { grid-template-columns: 1fr; }
-            .hero-status-badge { position: relative; top: auto; right: auto; margin-bottom: 1rem; }
-        }
-
-        @media (max-width: 992px) {
-            .sidebar { left: -290px; }
-            .content, .navbar-custom { margin-left: 0; }
-            .action-panel { position: relative; top: auto; }
-        }
-
-        /* Loading animation */
-        .loading-skeleton {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-            border-radius: 8px;
-        }
-
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        /* Form enhancements */
-        .form-control {
-            border-radius: 8px;
-            border: 2px solid var(--border-color);
-            padding: 0.75rem 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 0.2rem rgba(188, 158, 66, 0.25);
-        }
-
-        .form-label {
-            font-weight: 500;
-            color: var(--primary-color);
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
             margin-bottom: 0.5rem;
         }
 
-        /* Agent Action Forms - Specific styling to avoid conflicts */
-        .agent-action-form {
-            width: 100%;
+        .status-indicator {
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
         }
 
-        #approveAgentForm {
-            margin-bottom: 0;
+        .status-indicator.green {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.2));
+            color: #16a34a;
+            border: 1px solid rgba(34, 197, 94, 0.2);
         }
 
-        .btn-approve-agent {
-            width: 100%;
+        .status-indicator.red {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.2));
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
-        .btn-reject-agent {
-            width: 100%;
+        .status-indicator.amber {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.2));
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.2);
         }
 
-        .btn-back-to-list {
-            width: 100%;
+        .status-info-text .status-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
         }
 
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
+        .status-info-text .status-value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
         }
 
-        ::-webkit-scrollbar-track {
-            background: var(--background-color);
+        /* ===== ALERTS ===== */
+        .alert-custom {
+            border: none;
+            border-radius: 4px;
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid;
+            font-size: 0.85rem;
+            font-weight: 500;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: var(--secondary-color);
-            border-radius: 3px;
+        .alert-custom.alert-success {
+            background: rgba(34, 197, 94, 0.06);
+            color: #166534;
+            border-left-color: var(--success);
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-color);
+        .alert-custom.alert-danger {
+            background: rgba(239, 68, 68, 0.06);
+            color: #991b1b;
+            border-left-color: var(--danger);
+        }
+
+        .alert-custom.alert-info {
+            background: rgba(37, 99, 235, 0.06);
+            color: #1e40af;
+            border-left-color: var(--blue);
+        }
+
+        /* ===== MODALS ===== */
+        .modal-content {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .modal-header-custom {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #fff;
+            padding: 1.25rem 1.5rem;
+            border: none;
+            position: relative;
+        }
+
+        .modal-header-custom::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--gold), var(--blue));
+        }
+
+        .modal-header-custom .modal-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-header-custom .btn-close {
+            filter: brightness(0) invert(1);
+            opacity: 0.8;
+        }
+
+        .modal-header-custom .btn-close:hover { opacity: 1; }
+
+        .modal-body { padding: 1.5rem; }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        /* ===== ERROR STATE ===== */
+        .error-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+        }
+
+        .error-state i {
+            font-size: 3.5rem;
+            color: rgba(37, 99, 235, 0.15);
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .error-state h2 {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 992px) {
+            .action-panel { position: relative; top: auto; }
+            .hero-content { flex-direction: column; text-align: center; }
+            .hero-stats { justify-content: center; }
+            .hero-status-badge { position: relative; top: auto; right: auto; margin-bottom: 0.5rem; display: inline-block; }
+        }
+
+        @media (max-width: 768px) {
+            .hero-banner { padding: 1.5rem; }
+            .hero-name { font-size: 1.4rem; }
+            .hero-avatar { width: 80px; height: 80px; }
+            .info-grid { grid-template-columns: 1fr; }
+            .hero-status-badge { position: relative; top: auto; right: auto; }
         }
     </style>
 </head>
 <body>
 
 <?php
-// Use shared admin sidebar and navbar to preserve consistent design
 // Mark 'agent.php' as active in the sidebar since this page is part of the Agents workflow
 $active_page = 'agent.php';
 include 'admin_sidebar.php';
 include 'admin_navbar.php';
 ?>
 
-<div class="content">
+<div class="admin-content">
+
     <?php if ($error_message): ?>
-        <div class="container-fluid px-4 pt-4">
-            <div class="alert alert-danger" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo $error_message; ?>
-            </div>
+        <div class="alert-custom alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo $error_message; ?>
         </div>
     <?php endif; ?>
     
     <?php if ($success_message): ?>
-        <div class="container-fluid px-4 pt-4">
-            <div class="alert alert-success" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i><?php echo $success_message; ?>
-            </div>
+        <div class="alert-custom alert-success" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i><?php echo $success_message; ?>
         </div>
     <?php endif; ?>
 
     <?php if ($agent_data): ?>
         <?php
-            $full_name = htmlspecialchars(trim($agent_data['first_name'] . ' ' . $agent_data['middle_name'] . ' ' . $agent_data['last_name']));
+            $full_name = htmlspecialchars(trim($agent_data['first_name'] . ' ' . ($agent_data['middle_name'] ?? '') . ' ' . $agent_data['last_name']));
             
             $is_profile_incomplete = ($agent_data['profile_completed'] == 0);
             $is_rejected = (!$agent_data['is_active'] && !$agent_data['is_approved']);
 
             if ($is_profile_incomplete) {
-                $status_text = 'Needs Profile Info';
-                $status_class = 'badge-needs-profile';
+                $status_text = 'Needs Profile';
+                $status_class = 'status-needs-profile';
             } elseif ($is_rejected) {
                 $status_text = 'Rejected';
-                $status_class = 'badge-rejected';
+                $status_class = 'status-rejected';
             } elseif (!$agent_data['is_approved']) {
                 $status_text = 'Pending Approval';
-                $status_class = 'badge-pending';
+                $status_class = 'status-pending';
             } else {
                 $status_text = 'Approved';
-                $status_class = 'badge-approved';
+                $status_class = 'status-approved';
             }
+
+            // Profile image
+            $profile_image = !empty($agent_data['profile_picture_url']) ? 
+                htmlspecialchars($agent_data['profile_picture_url']) : 
+                'https://ui-avatars.com/api/?name=' . urlencode($agent_data['first_name'] . '+' . $agent_data['last_name']) . '&background=d4af37&color=fff&size=220&font-size=0.4&bold=true';
         ?>
 
-        <!-- Hero Section -->
+        <!-- Agent Hero Header -->
         <div class="agent-hero">
-            <!-- Status Badge -->
-            <div class="hero-status-badge <?php echo $status_class; ?>">
-                <?php echo $status_text; ?>
-            </div>
-            
-            <div class="agent-hero-content">
-                <div class="container-fluid px-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <div class="text-center text-md-start">
-                                <img src="<?php echo htmlspecialchars($agent_data['profile_picture_url'] ?? 'https://via.placeholder.com/150?text=N/A'); ?>" 
-                                     alt="Agent Profile Picture" class="agent-avatar">
-                                <h1 class="agent-name"><?php echo $full_name; ?></h1>
-                                <p class="agent-specialty"><?php echo htmlspecialchars($agent_data['specialization'] ?? 'Real Estate Agent'); ?></p>
-                                
-                                <div class="agent-quick-stats">
-                                    <div class="quick-stat">
-                                        <span class="quick-stat-value"><?php echo htmlspecialchars($agent_data['years_experience'] ?? '0'); ?></span>
-                                        <span class="quick-stat-label">Years Experience</span>
-                                    </div>
-                                    
-                                    <div class="quick-stat">
-                                        <span class="quick-stat-value"><?php echo date('M Y', strtotime($agent_data['date_registered'])); ?></span>
-                                        <span class="quick-stat-label">Registered</span>
-                                    </div>
-                                </div>
+            <div class="hero-banner">
+                <span class="hero-status-badge <?php echo $status_class; ?>">
+                    <i class="bi bi-<?php echo $status_class === 'status-approved' ? 'check-circle-fill' : ($status_class === 'status-pending' ? 'clock-fill' : ($status_class === 'status-rejected' ? 'x-circle-fill' : 'exclamation-circle-fill')); ?> me-1"></i>
+                    <?php echo $status_text; ?>
+                </span>
+                <div class="hero-content">
+                    <img src="<?php echo $profile_image; ?>" 
+                         alt="Agent Profile" class="hero-avatar"
+                         onerror="this.src='https://ui-avatars.com/api/?name=<?php echo urlencode($agent_data['first_name'] . '+' . $agent_data['last_name']); ?>&background=d4af37&color=fff&size=220&font-size=0.4&bold=true'">
+                    <div class="hero-info">
+                        <h1 class="hero-name"><?php echo $full_name; ?></h1>
+                        <p class="hero-specialty"><?php echo htmlspecialchars($agent_data['specialization'] ?? 'Real Estate Agent'); ?></p>
+                        <div class="hero-stats">
+                            <div class="hero-stat">
+                                <span class="hero-stat-value"><?php echo htmlspecialchars($agent_data['years_experience'] ?? '0'); ?></span>
+                                <span class="hero-stat-label">Years Exp.</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-value"><?php echo date('M Y', strtotime($agent_data['date_registered'])); ?></span>
+                                <span class="hero-stat-label">Registered</span>
+                            </div>
+                            <div class="hero-stat">
+                                <span class="hero-stat-value"><?php echo htmlspecialchars($agent_data['license_number'] ?? 'N/A'); ?></span>
+                                <span class="hero-stat-label">License No.</span>
                             </div>
                         </div>
                     </div>
@@ -976,241 +781,216 @@ include 'admin_navbar.php';
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="agent-content">
-            <div class="container-fluid px-4">
-                <div class="row">
-                    <div class="col-lg-8">
+        <!-- Main Content Grid -->
+        <div class="row">
+            <div class="col-lg-8">
+                
+                <!-- Rejection Notice -->
+                <?php if ($is_rejected && !empty($agent_data['rejection_reason'])): ?>
+                <div class="rejection-notice">
+                    <div class="rejection-title">
+                        <i class="bi bi-exclamation-octagon-fill"></i>
+                        Rejection Reason
+                    </div>
+                    <p class="rejection-message">"<?php echo htmlspecialchars($agent_data['rejection_reason']); ?>"</p>
+                </div>
+                <?php endif; ?>
+
+                <!-- About Section -->
+                <div class="content-section">
+                    <h2 class="section-title">
+                        <i class="bi bi-person-lines-fill"></i>
+                        About <?php echo htmlspecialchars($agent_data['first_name']); ?>
+                    </h2>
+                    <div class="agent-bio">
+                        <?php echo htmlspecialchars($agent_data['bio'] ?? 'No biography provided.'); ?>
+                    </div>
+                </div>
+
+                <!-- Professional Information -->
+                <div class="content-section">
+                    <h2 class="section-title">
+                        <i class="bi bi-briefcase-fill"></i>
+                        Professional Information
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-patch-check-fill"></i>
+                            </div>
+                            <div class="info-content">
+                                <div class="info-label">License Number</div>
+                                <div class="info-value"><?php echo htmlspecialchars($agent_data['license_number'] ?? 'N/A'); ?></div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                            <div class="info-content">
+                                <div class="info-label">Years of Experience</div>
+                                <div class="info-value"><?php echo htmlspecialchars($agent_data['years_experience'] ?? 'N/A'); ?> years</div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-star-fill"></i>
+                            </div>
+                            <div class="info-content">
+                                <div class="info-label">Specialization</div>
+                                <div class="info-value"><?php echo htmlspecialchars($agent_data['specialization'] ?? 'General Real Estate'); ?></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="content-section">
+                    <h2 class="section-title">
+                        <i class="bi bi-telephone-fill"></i>
+                        Contact Information
+                    </h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-envelope-fill"></i>
+                            </div>
+                            <div class="info-content">
+                                <div class="info-label">Email Address</div>
+                                <div class="info-value"><?php echo htmlspecialchars($agent_data['email']); ?></div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-phone-fill"></i>
+                            </div>
+                            <div class="info-content">
+                                <div class="info-label">Phone Number</div>
+                                <div class="info-value"><?php echo htmlspecialchars($agent_data['phone_number'] ?? 'N/A'); ?></div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="bi bi-person-badge-fill"></i>
+                            </div>
+                            <div class="info-content">
+                                <div class="info-label">Username</div>
+                                <div class="info-value"><?php echo htmlspecialchars($agent_data['username']); ?></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Sidebar -->
+            <div class="col-lg-4">
+                <div class="action-panel">
+                    
+                    <!-- Admin Actions Card -->
+                    <div class="action-card">
+                        <div class="action-card-title">
+                            <i class="bi bi-tools"></i>
+                            Admin Actions
+                        </div>
                         
-                        <!-- Rejection Notice -->
-                        <?php if ($is_rejected && !empty($agent_data['rejection_reason'])): ?>
-                        <div class="rejection-notice">
-                            <div class="rejection-title">
-                                <i class="bi bi-exclamation-octagon-fill"></i>
-                                Rejection Reason
+                        <?php if ($is_rejected): ?>
+                            <div class="alert-custom alert-danger mb-3">
+                                <i class="bi bi-x-circle me-1"></i>
+                                <small>This agent has been rejected and cannot be approved without reactivation.</small>
                             </div>
-                            <p class="rejection-message">"<?php echo htmlspecialchars($agent_data['rejection_reason']); ?>"</p>
-                        </div>
+                            <div class="d-grid">
+                                <a href="agent.php" class="btn-action btn-back">
+                                    <i class="bi bi-arrow-left"></i>Back to Agent List
+                                </a>
+                            </div>
+                        <?php else: ?>
+                            <!-- Approve Agent Form -->
+                            <form id="approveAgentForm" action="review_agent_details.php?account_id=<?php echo $account_id_to_review; ?>" method="POST">
+                                <input type="hidden" name="account_id" value="<?php echo $account_id_to_review; ?>">
+                                <input type="hidden" name="action" value="approve">
+                                <div class="d-grid gap-3">
+                                    <button type="submit" class="btn-action btn-approve" 
+                                            <?php echo ($is_profile_incomplete || $agent_data['is_approved']) ? 'disabled' : ''; ?>>
+                                        <i class="bi bi-check-circle"></i>Approve Agent
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <!-- Reject/Disable Button -->
+                            <div class="d-grid gap-3 mt-3">
+                                <?php if ($agent_data['is_approved']): ?>
+                                    <button type="button" class="btn-action btn-reject-action" 
+                                            data-bs-toggle="modal" data-bs-target="#disableModal">
+                                        <i class="bi bi-ban"></i>Disable Agent Account
+                                    </button>
+                                <?php else: ?>
+                                    <button type="button" class="btn-action btn-reject-action" 
+                                            data-bs-toggle="modal" data-bs-target="#rejectionModal"
+                                            <?php echo $is_profile_incomplete ? 'disabled' : ''; ?>>
+                                        <i class="bi bi-x-circle"></i>Reject Agent
+                                    </button>
+                                <?php endif; ?>
+                                
+                                <a href="agent.php" class="btn-action btn-back">
+                                    <i class="bi bi-arrow-left"></i>Back to Agent List
+                                </a>
+                            </div>
+                            
+                            <?php if ($is_profile_incomplete): ?>
+                                <div class="alert-custom alert-info mt-3" style="margin-bottom: 0;">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <small>Agent must complete their profile before actions become available.</small>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <?php if ($agent_data['is_approved']): ?>
+                                <div class="alert-custom alert-success mt-3" style="margin-bottom: 0;">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    <small>This agent is approved and active in the system.</small>
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
-
-                        <!-- About Section -->
-                        <div class="content-section">
-                            <h2 class="section-title">
-                                <i class="bi bi-person-lines-fill"></i>
-                                About <?php echo htmlspecialchars($agent_data['first_name']); ?>
-                            </h2>
-                            <div class="agent-bio">
-                                <?php echo htmlspecialchars($agent_data['bio'] ?? 'No biography provided.'); ?>
-                            </div>
-                        </div>
-
-                        <!-- Professional Information -->
-                        <div class="content-section">
-                            <h2 class="section-title">
-                                <i class="bi bi-briefcase-fill"></i>
-                                Professional Information
-                            </h2>
-                            <div class="info-grid">
-                                <div class="info-item">
-                                    <div class="info-icon">
-                                        <i class="bi bi-patch-check-fill"></i>
-                                    </div>
-                                    <div class="info-content">
-                                        <div class="info-label">License Number</div>
-                                        <div class="info-value"><?php echo htmlspecialchars($agent_data['license_number'] ?? 'N/A'); ?></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="info-item">
-                                    <div class="info-icon">
-                                        <i class="bi bi-clock-history"></i>
-                                    </div>
-                                    <div class="info-content">
-                                        <div class="info-label">Years of Experience</div>
-                                        <div class="info-value"><?php echo htmlspecialchars($agent_data['years_experience'] ?? 'N/A'); ?> years</div>
-                                    </div>
-                                </div>
-                                
-                                
-                                
-                                <div class="info-item">
-                                    <div class="info-icon">
-                                        <i class="bi bi-star-fill"></i>
-                                    </div>
-                                    <div class="info-content">
-                                        <div class="info-label">Specialization</div>
-                                        <div class="info-value"><?php echo htmlspecialchars($agent_data['specialization'] ?? 'General Real Estate'); ?></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Contact Information -->
-                        <div class="content-section">
-                            <h2 class="section-title">
-                                <i class="bi bi-telephone-fill"></i>
-                                Contact Information
-                            </h2>
-                            <div class="info-grid">
-                                <div class="info-item">
-                                    <div class="info-icon">
-                                        <i class="bi bi-envelope-fill"></i>
-                                    </div>
-                                    <div class="info-content">
-                                        <div class="info-label">Email Address</div>
-                                        <div class="info-value"><?php echo htmlspecialchars($agent_data['email']); ?></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="info-item">
-                                    <div class="info-icon">
-                                        <i class="bi bi-phone-fill"></i>
-                                    </div>
-                                    <div class="info-content">
-                                        <div class="info-label">Phone Number</div>
-                                        <div class="info-value"><?php echo htmlspecialchars($agent_data['phone_number'] ?? 'N/A'); ?></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="info-item">
-                                    <div class="info-icon">
-                                        <i class="bi bi-person-badge-fill"></i>
-                                    </div>
-                                    <div class="info-content">
-                                        <div class="info-label">Username</div>
-                                        <div class="info-value"><?php echo htmlspecialchars($agent_data['username']); ?></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
                     
-                    <div class="col-lg-4">
-                        <div class="action-panel">
-                            
-                            <!-- Action Card -->
-                            <div class="action-card">
-                                <div class="action-title">
-                                    <i class="bi bi-tools"></i>
-                                    Admin Actions
-                                </div>
-                                
-                                <?php if ($is_rejected): ?>
-                                    <div class="text-center mb-4">
-                                        <div class="alert alert-danger">
-                                            <i class="bi bi-x-circle me-2"></i>
-                                            This agent has been rejected and cannot be approved without reactivation.
-                                        </div>
-                                    </div>
-                                    <div class="d-grid">
-                                        <a href="agent.php" class="btn btn-modern btn-secondary-modern">
-                                            <i class="bi bi-arrow-left me-2"></i>Back to Agent List
-                                        </a>
-                                    </div>
-                                <?php else: ?>
-                                    <!-- Approve Agent Form -->
-                                    <form id="approveAgentForm" class="agent-action-form" action="review_agent_details.php?account_id=<?php echo $account_id_to_review; ?>" method="POST">
-                                        <input type="hidden" name="account_id" value="<?php echo $account_id_to_review; ?>">
-                                        <input type="hidden" name="action" value="approve">
-                                        <div class="d-grid gap-3">
-                                            <button type="submit" 
-                                                    class="btn btn-modern btn-approve btn-approve-agent" 
-                                                    <?php echo ($is_profile_incomplete || $agent_data['is_approved']) ? 'disabled' : ''; ?>>
-                                                <i class="bi bi-check-circle me-2"></i>Approve Agent
-                                            </button>
-                                        </div>
-                                    </form>
-                                    
-                                    <!-- Reject/Disable Agent Form (Modal Trigger) -->
-                                    <form class="agent-action-form mt-3">
-                                        <div class="d-grid gap-3">
-                                            <?php if ($agent_data['is_approved']): ?>
-                                                <!-- Disable Agent Button (for approved agents) -->
-                                                <button type="button" 
-                                                        class="btn btn-modern btn-reject btn-disable-agent" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#disableModal">
-                                                    <i class="bi bi-ban me-2"></i>Disable Agent Account
-                                                </button>
-                                            <?php else: ?>
-                                                <!-- Reject Agent Button (for pending agents) -->
-                                                <button type="button" 
-                                                        class="btn btn-modern btn-reject btn-reject-agent" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#rejectionModal" 
-                                                        <?php echo $is_profile_incomplete ? 'disabled' : ''; ?>>
-                                                    <i class="bi bi-x-circle me-2"></i>Reject Agent
-                                                </button>
-                                            <?php endif; ?>
-                                            
-                                            <a href="agent.php" class="btn btn-modern btn-secondary-modern btn-back-to-list">
-                                                <i class="bi bi-arrow-left me-2"></i>Back to Agent List
-                                            </a>
-                                        </div>
-                                    </form>
-                                    
-                                    <?php if ($is_profile_incomplete): ?>
-                                        <div class="alert alert-info mt-3">
-                                            <i class="bi bi-info-circle me-2"></i>
-                                            <small>Agent must complete their profile before approval/rejection actions become available.</small>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <?php if ($agent_data['is_approved']): ?>
-                                        <div class="alert alert-success mt-3">
-                                            <i class="bi bi-check-circle me-2"></i>
-                                            <small>This agent has already been approved and is active in the system.</small>
-                                        </div>
-                                    <?php endif; ?>
-                                <?php endif; ?>
+                    <!-- Profile Status Card -->
+                    <div class="action-card">
+                        <div class="action-card-title">
+                            <i class="bi bi-list-check"></i>
+                            Profile Status
+                        </div>
+                        
+                        <div class="status-info-item">
+                            <div class="status-indicator <?php echo $agent_data['profile_completed'] ? 'green' : 'amber'; ?>">
+                                <i class="bi bi-<?php echo $agent_data['profile_completed'] ? 'check-lg' : 'clock'; ?>"></i>
                             </div>
-                            
-                            <!-- Profile Completion Status -->
-                            <div class="action-card">
-                                <div class="action-title">
-                                    <i class="bi bi-list-check"></i>
-                                    Profile Status
-                                </div>
-                                
-                                <div class="info-grid">
-                                    <div class="info-item">
-                                        <div class="info-icon" style="background: <?php echo $agent_data['profile_completed'] ? 'var(--success-color)' : 'var(--warning-color)'; ?>">
-                                            <i class="bi bi-<?php echo $agent_data['profile_completed'] ? 'check-lg' : 'clock'; ?>"></i>
-                                        </div>
-                                        <div class="info-content">
-                                            <div class="info-label">Profile</div>
-                                            <div class="info-value"><?php echo $agent_data['profile_completed'] ? 'Complete' : 'Incomplete'; ?></div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="info-item">
-                                        <div class="info-icon" style="background: <?php echo $agent_data['is_active'] ? 'var(--success-color)' : 'var(--danger-color)'; ?>">
-                                            <i class="bi bi-<?php echo $agent_data['is_active'] ? 'person-check' : 'person-x'; ?>"></i>
-                                        </div>
-                                        <div class="info-content">
-                                            <div class="info-label">Account Status</div>
-                                            <div class="info-value"><?php echo $agent_data['is_active'] ? 'Active' : 'Inactive'; ?></div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="status-info-text">
+                                <div class="status-label">Profile</div>
+                                <div class="status-value"><?php echo $agent_data['profile_completed'] ? 'Complete' : 'Incomplete'; ?></div>
                             </div>
-                            
+                        </div>
+                        
+                        <div class="status-info-item">
+                            <div class="status-indicator <?php echo $agent_data['is_active'] ? 'green' : 'red'; ?>">
+                                <i class="bi bi-<?php echo $agent_data['is_active'] ? 'person-check' : 'person-x'; ?>"></i>
+                            </div>
+                            <div class="status-info-text">
+                                <div class="status-label">Account</div>
+                                <div class="status-value"><?php echo $agent_data['is_active'] ? 'Active' : 'Inactive'; ?></div>
+                            </div>
                         </div>
                     </div>
+                    
                 </div>
             </div>
         </div>
 
     <?php else: ?>
         <div class="error-state">
-            <div class="error-icon">
-                <i class="bi bi-person-exclamation"></i>
-            </div>
+            <i class="bi bi-person-exclamation"></i>
             <h2>Agent Not Found</h2>
             <p class="text-muted mb-4">The agent you are trying to review could not be found or may not have the correct role.</p>
-            <a href="agent.php" class="btn btn-modern btn-secondary-modern">
-                <i class="bi bi-arrow-left me-2"></i>Back to Agent List
+            <a href="agent.php" class="btn-action btn-back" style="width: auto; display: inline-flex;">
+                <i class="bi bi-arrow-left"></i>Back to Agent List
             </a>
         </div>
     <?php endif; ?>
@@ -1221,29 +1001,30 @@ include 'admin_navbar.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form action="review_agent_details.php?account_id=<?php echo $account_id_to_review; ?>" method="POST">
-                <div class="modal-header">
+                <div class="modal-header modal-header-custom">
                     <h5 class="modal-title" id="rejectionModalLabel">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Reason for Rejection
+                        <i class="bi bi-exclamation-triangle"></i>Reason for Rejection
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted mb-3">Please provide a detailed reason for rejecting this agent. This message will be sent to the agent's email and recorded in the system.</p>
+                    <p class="text-muted mb-3" style="font-size: 0.85rem;">Please provide a detailed reason for rejecting this agent. This message will be sent to the agent's email.</p>
                     
                     <input type="hidden" name="action" value="reject">
                     <input type="hidden" name="account_id" value="<?php echo $account_id_to_review; ?>">
                     
                     <div class="mb-3">
-                        <label for="rejection_reason" class="form-label">Rejection Message *</label>
+                        <label for="rejection_reason" class="form-label" style="font-weight: 600; font-size: 0.85rem;">Rejection Message *</label>
                         <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="4" 
-                                  placeholder="Please provide specific reasons for rejection..." required></textarea>
-                        <div class="form-text">Be specific and constructive in your feedback to help the agent understand what needs to be improved.</div>
+                                  placeholder="Please provide specific reasons for rejection..." required
+                                  style="border-radius: 4px; border: 1px solid #e2e8f0; font-size: 0.9rem;"></textarea>
+                        <div class="form-text" style="font-size: 0.75rem;">Be specific and constructive in your feedback.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-modern btn-reject">
-                        <i class="bi bi-send me-2"></i>Send Rejection
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" style="border-radius: 4px;">Cancel</button>
+                    <button type="submit" class="btn-action btn-reject-action" style="width: auto; padding: 0.5rem 1.25rem;">
+                        <i class="bi bi-send"></i>Send Rejection
                     </button>
                 </div>
             </form>
@@ -1254,52 +1035,44 @@ include 'admin_navbar.php';
 <!-- Disable Agent Modal -->
 <div class="modal fade" id="disableModal" tabindex="-1" aria-labelledby="disableModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content disable-modal-content">
+        <div class="modal-content">
             <form action="review_agent_details.php?account_id=<?php echo $account_id_to_review; ?>" method="POST">
-                <div class="modal-header disable-modal-header">
-                    <div class="disable-modal-icon">
-                        <i class="bi bi-ban"></i>
-                    </div>
-                    <div class="disable-modal-header-text">
-                        <h5 class="modal-title mb-0" id="disableModalLabel">Disable Agent Account</h5>
-                        <small class="disable-modal-subtitle">Account Deactivation</small>
-                    </div>
+                <div class="modal-header modal-header-custom">
+                    <h5 class="modal-title" id="disableModalLabel">
+                        <i class="bi bi-ban"></i>Disable Agent Account
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body disable-modal-body">
-                    <div class="disable-warning-box">
-                        <div class="disable-warning-icon">
+                <div class="modal-body">
+                    <div class="rejection-notice" style="margin-bottom: 1.25rem;">
+                        <div class="rejection-title" style="color: #d97706;">
                             <i class="bi bi-exclamation-triangle-fill"></i>
+                            Important Notice
                         </div>
-                        <div class="disable-warning-content">
-                            <h6 class="mb-1">Important Notice</h6>
-                            <p class="mb-0">This action will deactivate the agent's account and prevent login access. The agent will be notified via email.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="disable-instructions">
-                        <p>Please provide a detailed reason for disabling this agent's account. This message will be sent to the agent's email and recorded in the system.</p>
+                        <p class="rejection-message" style="color: #92400e; font-style: normal; font-size: 0.85rem;">
+                            This action will deactivate the agent's account and prevent login access. The agent will be notified via email.
+                        </p>
                     </div>
                     
                     <input type="hidden" name="action" value="disable">
                     <input type="hidden" name="account_id" value="<?php echo $account_id_to_review; ?>">
                     
-                    <div class="disable-form-group">
-                        <label for="disable_reason" class="disable-form-label">Reason for Disabling <span class="text-danger">*</span></label>
-                        <textarea class="form-control disable-textarea" id="disable_reason" name="disable_reason" rows="4" 
-                                  placeholder="Provide specific reasons for disabling this account..." required></textarea>
-                        <div class="disable-helper-text">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Be clear and professional in explaining why this account is being disabled.
+                    <div class="mb-0">
+                        <label for="disable_reason" class="form-label" style="font-weight: 600; font-size: 0.85rem;">Reason for Disabling <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="disable_reason" name="disable_reason" rows="4" 
+                                  placeholder="Provide specific reasons for disabling this account..." required
+                                  style="border-radius: 4px; border: 1px solid #e2e8f0; font-size: 0.9rem;"></textarea>
+                        <div class="form-text" style="font-size: 0.75rem;">
+                            <i class="bi bi-info-circle me-1"></i>Be clear and professional in your explanation.
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer disable-modal-footer">
-                    <button type="button" class="btn disable-btn-cancel" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-2"></i>Cancel
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" style="border-radius: 4px;">
+                        <i class="bi bi-x-lg me-1"></i>Cancel
                     </button>
-                    <button type="submit" class="btn disable-btn-submit">
-                        <i class="bi bi-ban me-2"></i>Disable Account
+                    <button type="submit" class="btn-action btn-reject-action" style="width: auto; padding: 0.5rem 1.25rem;">
+                        <i class="bi bi-ban"></i>Disable Account
                     </button>
                 </div>
             </form>
@@ -1311,57 +1084,31 @@ include 'admin_navbar.php';
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Enhanced form validation and submission handling for agent actions
     document.addEventListener('DOMContentLoaded', function() {
         let isFormSubmitting = false;
         
-        // Handle Approve Agent Form specifically
+        // Handle Approve Agent Form
         const approveForm = document.getElementById('approveAgentForm');
         if (approveForm) {
-            console.log('Approve form found and listener attached');
-            
             approveForm.addEventListener('submit', function(e) {
-                console.log('Approve form submitted');
-                console.log('Form action:', this.action);
-                console.log('Form method:', this.method);
-                
-                // Log form data
-                const formData = new FormData(this);
-                console.log('Form data:');
-                for (let [key, value] of formData.entries()) {
-                    console.log(key + ': ' + value);
-                }
-                
-                // Prevent double submission
                 if (isFormSubmitting) {
-                    console.log('Double submission prevented');
                     e.preventDefault();
                     return false;
                 }
                 
                 const submitButton = this.querySelector('button[type="submit"]');
-                
                 if (submitButton && !submitButton.disabled) {
-                    // Mark as submitting
                     isFormSubmitting = true;
-                    console.log('Form marked as submitting');
-                    
-                    // Show loading state
                     const originalContent = submitButton.innerHTML;
                     submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
                     submitButton.disabled = true;
                     
-                    // Re-enable after timeout (fallback)
                     setTimeout(() => {
                         submitButton.innerHTML = originalContent;
                         submitButton.disabled = false;
                         isFormSubmitting = false;
-                        console.log('Form re-enabled after timeout');
                     }, 10000);
                 }
-                
-                console.log('Form submitting normally...');
-                // Allow form to submit normally
                 return true;
             });
         }
@@ -1370,7 +1117,6 @@ include 'admin_navbar.php';
         const rejectionForm = document.querySelector('#rejectionModal form');
         if (rejectionForm) {
             rejectionForm.addEventListener('submit', function(e) {
-                // Prevent double submission
                 if (isFormSubmitting) {
                     e.preventDefault();
                     return false;
@@ -1380,7 +1126,6 @@ include 'admin_navbar.php';
                 const submitButton = this.querySelector('button[type="submit"]');
                 let isValid = true;
 
-                // Validate required fields
                 requiredInputs.forEach(input => {
                     if (!input.value.trim()) {
                         input.classList.add('is-invalid');
@@ -1391,92 +1136,97 @@ include 'admin_navbar.php';
                 });
 
                 if (!isValid) {
-                    // Validation failed - prevent submission
                     e.preventDefault();
                     const firstInvalid = this.querySelector('.is-invalid');
-                    if (firstInvalid) {
-                        firstInvalid.focus();
-                    }
+                    if (firstInvalid) firstInvalid.focus();
                     return false;
                 }
                 
-                // Validation passed - mark as submitting and show loading state
                 isFormSubmitting = true;
-                
                 if (submitButton && !submitButton.disabled) {
                     const originalContent = submitButton.innerHTML;
                     submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
                     submitButton.disabled = true;
-                    
-                    // Re-enable after timeout (fallback in case redirect fails)
                     setTimeout(() => {
                         submitButton.innerHTML = originalContent;
                         submitButton.disabled = false;
                         isFormSubmitting = false;
                     }, 10000);
                 }
-                
-                // Allow form to submit
                 return true;
             });
         }
 
-        // Real-time validation for textarea in rejection modal
-        const rejectionTextarea = document.getElementById('rejection_reason');
-        if (rejectionTextarea) {
-            rejectionTextarea.addEventListener('input', function() {
-                if (this.value.trim()) {
-                    this.classList.remove('is-invalid');
+        // Handle Disable Modal Form
+        const disableForm = document.querySelector('#disableModal form');
+        if (disableForm) {
+            disableForm.addEventListener('submit', function(e) {
+                if (isFormSubmitting) {
+                    e.preventDefault();
+                    return false;
                 }
+                
+                const requiredInputs = this.querySelectorAll('[required]');
+                const submitButton = this.querySelector('button[type="submit"]');
+                let isValid = true;
+
+                requiredInputs.forEach(input => {
+                    if (!input.value.trim()) {
+                        input.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        input.classList.remove('is-invalid');
+                    }
+                });
+
+                if (!isValid) {
+                    e.preventDefault();
+                    const firstInvalid = this.querySelector('.is-invalid');
+                    if (firstInvalid) firstInvalid.focus();
+                    return false;
+                }
+                
+                isFormSubmitting = true;
+                if (submitButton && !submitButton.disabled) {
+                    const originalContent = submitButton.innerHTML;
+                    submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
+                    submitButton.disabled = true;
+                    setTimeout(() => {
+                        submitButton.innerHTML = originalContent;
+                        submitButton.disabled = false;
+                        isFormSubmitting = false;
+                    }, 10000);
+                }
+                return true;
             });
         }
+
+        // Real-time validation for textareas
+        document.querySelectorAll('textarea[required]').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                if (this.value.trim()) this.classList.remove('is-invalid');
+            });
+        });
     });
 
     // Auto-hide alerts after 5 seconds
-    document.querySelectorAll('.alert').forEach(alert => {
-        if (!alert.classList.contains('alert-info')) { // Don't auto-hide info alerts
+    document.querySelectorAll('.alert-custom').forEach(alert => {
+        if (!alert.classList.contains('alert-info')) {
             setTimeout(() => {
                 alert.style.opacity = '0';
-                alert.style.transform = 'translateY(-20px)';
-                setTimeout(() => {
-                    alert.remove();
-                }, 300);
+                alert.style.transform = 'translateY(-10px)';
+                alert.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                setTimeout(() => alert.remove(), 300);
             }, 5000);
         }
     });
 
-    // Intersection Observer for scroll animations
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    }, observerOptions);
-
-    // Animate content sections on scroll
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.style.opacity = '0';
-        section.style.transform = 'translateY(20px)';
-        section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(section);
-    });
-
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
-        // Ctrl/Cmd + B to go back to agents
         if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
             e.preventDefault();
             window.location.href = 'agent.php';
         }
-        
-        // Escape to close modals
         if (e.key === 'Escape') {
             const openModal = document.querySelector('.modal.show');
             if (openModal) {
@@ -1488,23 +1238,21 @@ include 'admin_navbar.php';
 
     // Tooltip initialization
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
+    tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 
-    // Character count for textarea
+    // Character count for rejection textarea
     const rejectionTextarea = document.getElementById('rejection_reason');
     if (rejectionTextarea) {
         const maxLength = 500;
         const counter = document.createElement('div');
         counter.className = 'form-text text-end mt-1';
-        counter.style.fontSize = '0.8rem';
+        counter.style.fontSize = '0.75rem';
         rejectionTextarea.parentNode.appendChild(counter);
 
         function updateCounter() {
             const remaining = maxLength - rejectionTextarea.value.length;
-            counter.textContent = `${rejectionTextarea.value.length}/${maxLength} characters`;
-            counter.style.color = remaining < 50 ? 'var(--danger-color)' : 'var(--text-muted)';
+            counter.textContent = rejectionTextarea.value.length + '/' + maxLength + ' characters';
+            counter.style.color = remaining < 50 ? '#dc2626' : '#94a3b8';
         }
 
         rejectionTextarea.addEventListener('input', updateCounter);
@@ -1512,13 +1260,6 @@ include 'admin_navbar.php';
         updateCounter();
     }
 </script>
-
-<!-- Footer -->
-<footer class="py-4 mt-5" style="margin-left: 290px; background-color: var(--card-bg-color); border-top: 1px solid var(--border-color);">
-    <div class="container-fluid px-4 text-center">
-        <small class="text-muted">&copy; <?php echo date('Y'); ?> Prestige Properties. All Rights Reserved.</small>
-    </div>
-</footer>
 
 </body>
 </html>

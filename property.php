@@ -1362,6 +1362,71 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
             font-weight: 600;
         }
 
+        /* ===== PAGINATION ===== */
+        .pagination-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            padding: 1.25rem 0.25rem 0.5rem;
+            margin-top: 0.75rem;
+            border-top: 1px solid rgba(212,175,55,0.18);
+        }
+        .pagination-info {
+            font-size: 0.82rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .page-btn {
+            min-width: 36px;
+            height: 36px;
+            padding: 0 0.6rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            color: #374151;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+            line-height: 1;
+        }
+        .page-btn:hover:not(:disabled):not(.active) {
+            background: #f8f9fa;
+            border-color: #d4af37;
+            color: #d4af37;
+        }
+        .page-btn.active {
+            background: linear-gradient(135deg, #d4af37, #b8941f);
+            border-color: #d4af37;
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(212,175,55,0.35);
+        }
+        .page-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        .page-ellipsis {
+            padding: 0 0.35rem;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            line-height: 36px;
+        }
+        @media (max-width: 576px) {
+            .pagination-bar { flex-direction: column; align-items: flex-start; }
+        }
+
     </style>
 </head>
 <body>
@@ -1489,26 +1554,32 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                 <!-- All Properties -->
                 <div class="tab-pane fade show active" id="all-content" role="tabpanel">
                     <div class="properties-grid" id="all-grid"></div>
+                    <div class="pagination-bar" id="all-pagination" style="display:none;"></div>
                 </div>
                 <!-- Pending Properties -->
                 <div class="tab-pane fade" id="pending-content" role="tabpanel">
                     <div class="properties-grid" id="pending-grid"></div>
+                    <div class="pagination-bar" id="pending-pagination" style="display:none;"></div>
                 </div>
                 <!-- Pending Sold Properties -->
                 <div class="tab-pane fade" id="pending-sold-content" role="tabpanel">
                     <div class="properties-grid" id="pending-sold-grid"></div>
+                    <div class="pagination-bar" id="pending-sold-pagination" style="display:none;"></div>
                 </div>
                 <!-- Approved Properties -->
                 <div class="tab-pane fade" id="approved-content" role="tabpanel">
                     <div class="properties-grid" id="approved-grid"></div>
+                    <div class="pagination-bar" id="approved-pagination" style="display:none;"></div>
                 </div>
                 <!-- Rejected Properties -->
                 <div class="tab-pane fade" id="rejected-content" role="tabpanel">
                     <div class="properties-grid" id="rejected-grid"></div>
+                    <div class="pagination-bar" id="rejected-pagination" style="display:none;"></div>
                 </div>
                 <!-- Sold Properties -->
                 <div class="tab-pane fade" id="sold-content" role="tabpanel">
                     <div class="properties-grid" id="sold-grid"></div>
+                    <div class="pagination-bar" id="sold-pagination" style="display:none;"></div>
                 </div>
             </div>
 
@@ -1946,6 +2017,11 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
             renderGrids(filtered);
         }
 
+        // Pagination globals
+        const PROP_PER_PAGE = 12;
+        let propFilteredItems = {};
+        let propCurrentPage = { all: 1, pending: 1, 'pending-sold': 1, approved: 1, rejected: 1, sold: 1 };
+
         function renderGrids(filtered) {
             // Get all pre-rendered card wrappers
             const allCards = Array.from(document.querySelectorAll('#all-property-cards .property-card-wrapper'));
@@ -1957,83 +2033,144 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                 cardMap.set(propertyId, card);
             });
 
-            const ensureGrid = (paneSelector) => {
-                const pane = document.querySelector(paneSelector);
-                if (!pane) return null;
-                // remove any existing empty-state
-                const existingEmpty = pane.querySelector('.empty-state');
-                if (existingEmpty) existingEmpty.remove();
-                let grid = pane.querySelector('.properties-grid');
-                if (!grid) {
-                    grid = document.createElement('div');
-                    grid.className = 'properties-grid';
-                    pane.appendChild(grid);
-                }
-                return grid;
-            };
-
-            const allContainer = ensureGrid('#all-content');
-            const pendingContainer = ensureGrid('#pending-content');
-            const approvedContainer = ensureGrid('#approved-content');
-            const rejectedContainer = ensureGrid('#rejected-content');
-            const soldContainer = ensureGrid('#sold-content');
-            const pendingSoldContainer = ensureGrid('#pending-sold-content');
-
-            // Group by approval_status for pending/approved/rejected (exclude sold and pending sold listings)
+            // Group items
             const groupByApproval = (status) => filtered.filter(p => {
                 const sl = (p.Status||'').toLowerCase();
                 return (p.approval_status||'') === status && sl !== 'sold' && sl !== 'pending sold';
             });
-            // Separate Pending Sold and Sold
             const pendingSoldItems = filtered.filter(p => (p.Status||'').toLowerCase() === 'pending sold');
             const soldItems = filtered.filter(p => (p.Status||'').toLowerCase() === 'sold');
 
-            const fill = (container, items) => {
-                if (!container) return;
-                // Clear existing content
-                container.innerHTML = '';
-                if (!items.length) {
-                    // Render the empty state centered vertically and horizontally
-                    container.innerHTML = `<div class="empty-state" style="max-width:720px;width:100%;margin:0 1rem;">
-                        <i class="bi bi-search empty-state-icon"></i>
-                        <h4>No matching properties</h4>
-                        <p class="text-muted">Try adjusting your filters.</p>
-                    </div>`;
-                    // Use flex layout to center the message within the pane
-                    container.style.display = 'flex';
-                    container.style.justifyContent = 'center';
-                    container.style.alignItems = 'center';
-                    container.style.minHeight = '220px';
-                    // Clear grid-specific properties if previously set
-                    container.style.gridTemplateColumns = '';
-                    container.style.gap = '';
-                    return;
-                }
-                // Append cloned cards
-                items.forEach(item => {
-                    const card = cardMap.get(item.property_ID.toString());
-                    if (card) {
-                        const clonedCard = card.cloneNode(true);
-                        container.appendChild(clonedCard);
-                    }
-                });
-                // Restore grid layout
-                container.style.display = 'grid';
-                container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(380px,1fr))';
-                container.style.gap = '1.5rem';
-                // Clear any flex centering styles
-                container.style.justifyContent = '';
-                container.style.alignItems = '';
-                container.style.minHeight = '';
+            // Store filtered items per key and reset to page 1
+            propFilteredItems = {
+                all: filtered,
+                pending: groupByApproval('pending'),
+                'pending-sold': pendingSoldItems,
+                approved: groupByApproval('approved'),
+                rejected: groupByApproval('rejected'),
+                sold: soldItems
             };
+            Object.keys(propCurrentPage).forEach(k => { propCurrentPage[k] = 1; });
 
-            fill(allContainer, filtered);
-            fill(pendingContainer, groupByApproval('pending'));
-            fill(pendingSoldContainer, pendingSoldItems);
-            fill(approvedContainer, groupByApproval('approved'));
-            fill(rejectedContainer, groupByApproval('rejected'));
-            fill(soldContainer, soldItems);
+            // Render each key
+            Object.keys(propFilteredItems).forEach(key => {
+                renderPropGridPage(key, cardMap);
+            });
         }
+
+        function renderPropGridPage(key, cardMap) {
+            if (!cardMap) {
+                // Rebuild cardMap if not passed (e.g., called from goToPropertyPage)
+                const allCards = Array.from(document.querySelectorAll('#all-property-cards .property-card-wrapper'));
+                cardMap = new Map();
+                allCards.forEach(card => { cardMap.set(card.getAttribute('data-property-id'), card); });
+            }
+
+            const paneId = key === 'pending-sold' ? 'pending-sold-content' : key + '-content';
+            const pane = document.getElementById(paneId);
+            if (!pane) return;
+
+            const items = propFilteredItems[key] || [];
+            const total = items.length;
+            const page = propCurrentPage[key] || 1;
+            const start = (page - 1) * PROP_PER_PAGE;
+            const end = start + PROP_PER_PAGE;
+            const pageItems = items.slice(start, end);
+
+            // Remove existing empty-state
+            const existingEmpty = pane.querySelector('.empty-state');
+            if (existingEmpty) existingEmpty.remove();
+
+            // Get or create grid
+            let grid = pane.querySelector('.properties-grid');
+            if (!grid) {
+                grid = document.createElement('div');
+                grid.className = 'properties-grid';
+                pane.insertBefore(grid, pane.querySelector('.pagination-bar'));
+            }
+
+            grid.innerHTML = '';
+
+            if (!items.length) {
+                grid.innerHTML = `<div class="empty-state" style="max-width:720px;width:100%;margin:0 1rem;">
+                    <i class="bi bi-search empty-state-icon"></i>
+                    <h4>No matching properties</h4>
+                    <p class="text-muted">Try adjusting your filters.</p>
+                </div>`;
+                grid.style.display = 'flex';
+                grid.style.justifyContent = 'center';
+                grid.style.alignItems = 'center';
+                grid.style.minHeight = '220px';
+                grid.style.gridTemplateColumns = '';
+                grid.style.gap = '';
+            } else {
+                pageItems.forEach(item => {
+                    const card = cardMap.get(item.property_ID.toString());
+                    if (card) grid.appendChild(card.cloneNode(true));
+                });
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(380px,1fr))';
+                grid.style.gap = '1.5rem';
+                grid.style.justifyContent = '';
+                grid.style.alignItems = '';
+                grid.style.minHeight = '';
+            }
+
+            renderPropPagination(key, total);
+        }
+
+        function renderPropPagination(key, total) {
+            const paginationId = key + '-pagination';
+            const el = document.getElementById(paginationId);
+            if (!el) return;
+
+            const totalPages = Math.ceil(total / PROP_PER_PAGE);
+            if (totalPages <= 1) { el.style.display = 'none'; return; }
+
+            el.style.display = 'flex';
+            const page = propCurrentPage[key] || 1;
+            const startItem = (page - 1) * PROP_PER_PAGE + 1;
+            const endItem = Math.min(page * PROP_PER_PAGE, total);
+
+            const maxBtns = 5;
+            let startPage = Math.max(1, page - Math.floor(maxBtns / 2));
+            let endPage = Math.min(totalPages, startPage + maxBtns - 1);
+            if (endPage - startPage < maxBtns - 1) startPage = Math.max(1, endPage - maxBtns + 1);
+
+            let pages = '';
+            if (startPage > 1) {
+                pages += `<button class="page-btn" onclick="goToPropertyPage('${key}',1)">1</button>`;
+                if (startPage > 2) pages += `<span class="page-ellipsis">…</span>`;
+            }
+            for (let i = startPage; i <= endPage; i++) {
+                pages += `<button class="page-btn ${i === page ? 'active' : ''}" onclick="goToPropertyPage('${key}',${i})">${i}</button>`;
+            }
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) pages += `<span class="page-ellipsis">…</span>`;
+                pages += `<button class="page-btn" onclick="goToPropertyPage('${key}',${totalPages})">${totalPages}</button>`;
+            }
+
+            el.innerHTML = `
+                <div class="pagination-info">Showing ${startItem}–${endItem} of ${total} properties</div>
+                <div class="pagination-controls">
+                    <button class="page-btn" onclick="goToPropertyPage('${key}',${page-1})" ${page <= 1 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>
+                    ${pages}
+                    <button class="page-btn" onclick="goToPropertyPage('${key}',${page+1})" ${page >= totalPages ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>
+                </div>`;
+        }
+
+        function goToPropertyPage(key, page) {
+            const total = (propFilteredItems[key] || []).length;
+            const totalPages = Math.ceil(total / PROP_PER_PAGE);
+            if (page < 1 || page > totalPages) return;
+            propCurrentPage[key] = page;
+            renderPropGridPage(key, null);
+            const paneId = key === 'pending-sold' ? 'pending-sold-content' : key + '-content';
+            const pane = document.getElementById(paneId);
+            if (pane) pane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+
 
         function escapeHtml(str) {
             if (!str) return '';
