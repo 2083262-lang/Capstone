@@ -75,7 +75,10 @@ $agents_sql = "
         a.email,
         a.phone_number,
         ai.license_number,
-        ai.specialization,
+        COALESCE((SELECT GROUP_CONCAT(s.specialization_name ORDER BY s.specialization_name SEPARATOR ', ')
+                  FROM agent_specializations asp
+                  JOIN specializations s ON asp.specialization_id = s.specialization_id
+                  WHERE asp.agent_info_id = ai.agent_info_id), '') AS specialization,
         ai.years_experience,
         ai.bio,
         ai.profile_picture_url

@@ -27,15 +27,19 @@ $date_hired = '';
 $profile_completed_status = 0;
 $is_approved_status = 0;
 
-// Allowed specialization options (single source of truth)
-$specialization_options = [
-    'Luxury Homes', 'Commercial', 'Rentals', 'Condos', 'First-Time Buyers',
-    'Investment Properties', 'New Construction', 'Relocation', 'Waterfront',
-    'Land', 'Property Management', 'Foreclosures'
-];
+// Load specialization options from DB (single source of truth)
+$spec_result = $conn->query("SELECT specialization_id, specialization_name FROM specializations ORDER BY specialization_name ASC");
+$specialization_options = [];
+$spec_id_map = []; // name -> id
+if ($spec_result) {
+    while ($spec_row = $spec_result->fetch_assoc()) {
+        $specialization_options[] = $spec_row['specialization_name'];
+        $spec_id_map[$spec_row['specialization_name']] = (int)$spec_row['specialization_id'];
+    }
+}
 
 // --- Fetch existing agent information if it exists ---
-$stmt_fetch_agent_info = $conn->prepare("SELECT license_number, specialization, years_experience, bio, profile_picture_url, profile_completed, is_approved FROM agent_information WHERE account_id = ?");
+$stmt_fetch_agent_info = $conn->prepare("SELECT agent_info_id, license_number, COALESCE((SELECT GROUP_CONCAT(s.specialization_name ORDER BY s.specialization_name SEPARATOR ', ') FROM agent_specializations asp JOIN specializations s ON asp.specialization_id = s.specialization_id WHERE asp.agent_info_id = agent_information.agent_info_id), '') AS specialization, years_experience, bio, profile_picture_url, profile_completed, is_approved FROM agent_information WHERE account_id = ?");
 $stmt_fetch_agent_info->bind_param("i", $account_id);
 $stmt_fetch_agent_info->execute();
 $result_fetch_agent_info = $stmt_fetch_agent_info->get_result();
@@ -88,14 +92,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    // Specializations: at least one required; each must be from allowed list
-    $sanitized_specs = array_values(array_unique(array_filter(array_map('trim', $raw_specs))));
+    // Specializations: at least one required; each must be a valid name from DB
+    $sanitized_specs     = array_values(array_unique(array_filter(array_map('trim', $raw_specs))));
+    $sanitized_spec_ids  = [];
     if (count($sanitized_specs) === 0) {
         $validation_errors[] = 'Please select at least one specialization.';
     } else {
-        $invalid_specs = array_diff($sanitized_specs, $specialization_options);
+        $invalid_specs = array_diff($sanitized_specs, array_keys($spec_id_map));
         if (!empty($invalid_specs)) {
             $validation_errors[] = 'One or more selected specializations are invalid.';
+        } else {
+            foreach ($sanitized_specs as $name) {
+                $sanitized_spec_ids[] = $spec_id_map[$name];
+            }
         }
     }
 
@@ -168,23 +177,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $error_message = '';
     }
 
-    // Prepare specialization string for DB if valid
-    if (empty($validation_errors)) {
-        $specialization = implode(', ', $sanitized_specs);
-    }
-
     if (empty($validation_errors)) {
             $stmt_check_exists = $conn->prepare("SELECT agent_info_id FROM agent_information WHERE account_id = ?");
             $stmt_check_exists->bind_param("i", $account_id);
             $stmt_check_exists->execute();
-            $result_check_exists = $stmt_check_exists->get_result();
+            $existing_row = $stmt_check_exists->get_result()->fetch_assoc();
+            $stmt_check_exists->close();
 
             $db_operation_successful = false;
+            $agent_info_id = null;
 
-            if ($result_check_exists->num_rows > 0) {
-                // UPDATE existing record
-                $stmt_update = $conn->prepare("UPDATE agent_information SET license_number = ?, specialization = ?, years_experience = ?, bio = ?, profile_picture_url = ?, profile_completed = 1 WHERE account_id = ?");
-                $stmt_update->bind_param("ssissi", $license_number, $specialization, $years_experience, $bio, $new_profile_picture_path, $account_id);
+            if ($existing_row) {
+                $agent_info_id = (int)$existing_row['agent_info_id'];
+                // UPDATE existing record (specialization is stored in pivot table)
+                $stmt_update = $conn->prepare("UPDATE agent_information SET license_number = ?, years_experience = ?, bio = ?, profile_picture_url = ?, profile_completed = 1 WHERE account_id = ?");
+                $stmt_update->bind_param("sissi", $license_number, $years_experience, $bio, $new_profile_picture_path, $account_id);
                 if ($stmt_update->execute()) {
                     $success_message = "Agent information updated successfully!";
                     $db_operation_successful = true;
@@ -193,10 +200,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
                 $stmt_update->close();
             } else {
-                // INSERT new record
-                $stmt_insert = $conn->prepare("INSERT INTO agent_information (account_id, license_number, specialization, years_experience, bio, profile_picture_url, profile_completed, is_approved) VALUES (?, ?, ?, ?, ?, ?, 1, 0)");
-                $stmt_insert->bind_param("ississ", $account_id, $license_number, $specialization, $years_experience, $bio, $new_profile_picture_path);
+                // INSERT new record (specialization is stored in pivot table)
+                $stmt_insert = $conn->prepare("INSERT INTO agent_information (account_id, license_number, years_experience, bio, profile_picture_url, profile_completed, is_approved) VALUES (?, ?, ?, ?, ?, 1, 0)");
+                $stmt_insert->bind_param("isiss", $account_id, $license_number, $years_experience, $bio, $new_profile_picture_path);
                 if ($stmt_insert->execute()) {
+                    $agent_info_id = (int)$conn->insert_id;
                     $success_message = "Agent information submitted for review!";
                     $db_operation_successful = true;
                 } else {
@@ -204,7 +212,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
                 $stmt_insert->close();
             }
-            $stmt_check_exists->close();
+
+            // Save specializations to pivot table
+            if ($db_operation_successful && $agent_info_id && !empty($sanitized_spec_ids)) {
+                $del_spec = $conn->prepare("DELETE FROM agent_specializations WHERE agent_info_id = ?");
+                $del_spec->bind_param("i", $agent_info_id);
+                $del_spec->execute();
+                $del_spec->close();
+
+                $ins_spec = $conn->prepare("INSERT INTO agent_specializations (agent_info_id, specialization_id) VALUES (?, ?)");
+                foreach ($sanitized_spec_ids as $spec_id) {
+                    $ins_spec->bind_param("ii", $agent_info_id, $spec_id);
+                    $ins_spec->execute();
+                }
+                $ins_spec->close();
+            }
 
             // --- CREATE NOTIFICATION ON SUCCESS ---
             if ($db_operation_successful) {

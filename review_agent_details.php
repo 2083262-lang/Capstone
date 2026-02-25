@@ -7,7 +7,7 @@ include 'review_agent_details_process.php';
 
 $sql_fetch_agent = "SELECT 
                         a.account_id, a.first_name, a.middle_name, a.last_name, a.email, a.phone_number, a.date_registered, a.username, a.is_active,
-                        ai.license_number, ai.specialization, ai.years_experience,
+                        ai.license_number, COALESCE((SELECT GROUP_CONCAT(s.specialization_name ORDER BY s.specialization_name SEPARATOR ', ') FROM agent_specializations asp JOIN specializations s ON asp.specialization_id = s.specialization_id WHERE asp.agent_info_id = ai.agent_info_id), '') AS specialization, ai.years_experience,
                         ai.bio, ai.profile_picture_url,
                         ai.profile_completed, ai.is_approved,
                         (SELECT sl.reason_message 

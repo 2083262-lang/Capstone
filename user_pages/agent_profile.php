@@ -14,7 +14,12 @@ if ($agent_id <= 0) {
     $agent_sql = "
         SELECT 
             a.account_id, a.first_name, a.middle_name, a.last_name, a.email, a.phone_number, a.date_registered,
-            ai.license_number, ai.specialization, ai.years_experience, ai.bio, ai.profile_picture_url
+            ai.license_number,
+            COALESCE((SELECT GROUP_CONCAT(s.specialization_name ORDER BY s.specialization_name SEPARATOR ', ')
+                      FROM agent_specializations asp
+                      JOIN specializations s ON asp.specialization_id = s.specialization_id
+                      WHERE asp.agent_info_id = ai.agent_info_id), '') AS specialization,
+            ai.years_experience, ai.bio, ai.profile_picture_url
         FROM accounts a
         JOIN user_roles ur ON a.role_id = ur.role_id
         JOIN agent_information ai ON a.account_id = ai.account_id

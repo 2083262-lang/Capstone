@@ -38,12 +38,16 @@ if (isset($_POST['specialization'])) {
     $raw_specs = is_array($_POST['specialization']) ? $_POST['specialization'] : array_filter(array_map('trim', explode(',', (string)$_POST['specialization'])));
 }
 
-// Allowed specialization options
-$specialization_options = [
-    'Luxury Homes', 'Commercial', 'Rentals', 'Condos', 'First-Time Buyers',
-    'Investment Properties', 'New Construction', 'Relocation', 'Waterfront',
-    'Land', 'Property Management', 'Foreclosures'
-];
+// Load specialization options from DB
+$spec_result = $conn->query("SELECT specialization_id, specialization_name FROM specializations ORDER BY specialization_name ASC");
+$specialization_options = [];
+$spec_id_map = []; // name -> id
+if ($spec_result) {
+    while ($spec_row = $spec_result->fetch_assoc()) {
+        $specialization_options[] = $spec_row['specialization_name'];
+        $spec_id_map[$spec_row['specialization_name']] = (int)$spec_row['specialization_id'];
+    }
+}
 
 // ===== Validation =====
 
@@ -117,13 +121,18 @@ if ($years_experience_input !== '') {
 }
 
 // Specializations
-$sanitized_specs = array_values(array_unique(array_filter(array_map('trim', $raw_specs))));
+$sanitized_specs    = array_values(array_unique(array_filter(array_map('trim', $raw_specs))));
+$sanitized_spec_ids = [];
 if (count($sanitized_specs) === 0) {
     $errors[] = 'Please select at least one specialization.';
 } else {
-    $invalid_specs = array_diff($sanitized_specs, $specialization_options);
+    $invalid_specs = array_diff($sanitized_specs, array_keys($spec_id_map));
     if (!empty($invalid_specs)) {
         $errors[] = 'One or more selected specializations are invalid.';
+    } else {
+        foreach ($sanitized_specs as $name) {
+            $sanitized_spec_ids[] = $spec_id_map[$name];
+        }
     }
 }
 
@@ -204,27 +213,47 @@ try {
     $check_exists->close();
 
     if ($exists) {
-        // Update existing record
+        // Update existing record (specialization stored in pivot table)
         if ($new_profile_picture !== null) {
-            $update_agent = $conn->prepare("UPDATE agent_information SET license_number = ?, specialization = ?, years_experience = ?, bio = ?, profile_picture_url = ?, profile_completed = 1 WHERE account_id = ?");
-            $update_agent->bind_param("ssissi", $license_number, $specialization, $years_experience, $bio, $new_profile_picture, $account_id);
+            $update_agent = $conn->prepare("UPDATE agent_information SET license_number = ?, years_experience = ?, bio = ?, profile_picture_url = ?, profile_completed = 1 WHERE account_id = ?");
+            $update_agent->bind_param("sissi", $license_number, $years_experience, $bio, $new_profile_picture, $account_id);
         } else {
-            $update_agent = $conn->prepare("UPDATE agent_information SET license_number = ?, specialization = ?, years_experience = ?, bio = ?, profile_completed = 1 WHERE account_id = ?");
-            $update_agent->bind_param("ssisi", $license_number, $specialization, $years_experience, $bio, $account_id);
+            $update_agent = $conn->prepare("UPDATE agent_information SET license_number = ?, years_experience = ?, bio = ?, profile_completed = 1 WHERE account_id = ?");
+            $update_agent->bind_param("sisi", $license_number, $years_experience, $bio, $account_id);
         }
         if (!$update_agent->execute()) {
             throw new Exception('Failed to update agent information: ' . $update_agent->error);
         }
         $update_agent->close();
+
+        // Get agent_info_id for pivot upsert
+        $ai_row = $conn->query("SELECT agent_info_id FROM agent_information WHERE account_id = $account_id LIMIT 1")->fetch_assoc();
+        $agent_info_id = (int)$ai_row['agent_info_id'];
     } else {
-        // Insert new record
+        // Insert new record (specialization stored in pivot table)
         $pic = $new_profile_picture ?? '';
-        $insert_agent = $conn->prepare("INSERT INTO agent_information (account_id, license_number, specialization, years_experience, bio, profile_picture_url, profile_completed, is_approved) VALUES (?, ?, ?, ?, ?, ?, 1, 0)");
-        $insert_agent->bind_param("ississ", $account_id, $license_number, $specialization, $years_experience, $bio, $pic);
+        $insert_agent = $conn->prepare("INSERT INTO agent_information (account_id, license_number, years_experience, bio, profile_picture_url, profile_completed, is_approved) VALUES (?, ?, ?, ?, ?, 1, 0)");
+        $insert_agent->bind_param("isiss", $account_id, $license_number, $years_experience, $bio, $pic);
         if (!$insert_agent->execute()) {
             throw new Exception('Failed to create agent profile: ' . $insert_agent->error);
         }
+        $agent_info_id = (int)$conn->insert_id;
         $insert_agent->close();
+    }
+
+    // 3. Save specializations to pivot table
+    if (!empty($sanitized_spec_ids)) {
+        $del_spec = $conn->prepare("DELETE FROM agent_specializations WHERE agent_info_id = ?");
+        $del_spec->bind_param("i", $agent_info_id);
+        $del_spec->execute();
+        $del_spec->close();
+
+        $ins_spec = $conn->prepare("INSERT INTO agent_specializations (agent_info_id, specialization_id) VALUES (?, ?)");
+        foreach ($sanitized_spec_ids as $spec_id) {
+            $ins_spec->bind_param("ii", $agent_info_id, $spec_id);
+            $ins_spec->execute();
+        }
+        $ins_spec->close();
     }
 
     $conn->commit();

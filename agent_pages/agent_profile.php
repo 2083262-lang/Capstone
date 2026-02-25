@@ -13,7 +13,7 @@ $agent_username = $_SESSION['username'];
 
 // Fetch comprehensive agent data
 $agent_query = "SELECT a.account_id, a.first_name, a.middle_name, a.last_name, a.phone_number, a.email, a.username, a.date_registered,
-                       ai.license_number, ai.specialization, ai.years_experience, ai.bio, ai.profile_picture_url, ai.profile_completed, ai.is_approved
+                       ai.license_number, COALESCE((SELECT GROUP_CONCAT(s.specialization_name ORDER BY s.specialization_name SEPARATOR ', ') FROM agent_specializations asp JOIN specializations s ON asp.specialization_id = s.specialization_id WHERE asp.agent_info_id = ai.agent_info_id), '') AS specialization, ai.years_experience, ai.bio, ai.profile_picture_url, ai.profile_completed, ai.is_approved
                 FROM accounts a
                 LEFT JOIN agent_information ai ON a.account_id = ai.account_id
                 WHERE a.account_id = ?";
@@ -72,6 +72,15 @@ $stmt->execute();
 $sales_vol = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
+// Load specialization options from DB (for the edit form)
+$spec_result = $conn->query("SELECT specialization_id, specialization_name FROM specializations ORDER BY specialization_name ASC");
+$specialization_options = [];
+if ($spec_result) {
+    while ($spec_row = $spec_result->fetch_assoc()) {
+        $specialization_options[] = $spec_row['specialization_name'];
+    }
+}
+
 $conn->close();
 
 // Build profile image URL
@@ -93,12 +102,7 @@ $member_since = isset($agent_info['date_registered']) ? date('F Y', strtotime($a
 $member_since_full = isset($agent_info['date_registered']) ? date('F d, Y', strtotime($agent_info['date_registered'])) : 'N/A';
 $specializations = !empty($agent_info['specialization']) ? array_map('trim', explode(',', $agent_info['specialization'])) : [];
 
-// Specialization options for edit form
-$specialization_options = [
-    'Luxury Homes', 'Commercial', 'Rentals', 'Condos', 'First-Time Buyers',
-    'Investment Properties', 'New Construction', 'Relocation', 'Waterfront',
-    'Land', 'Property Management', 'Foreclosures'
-];
+// Specialization options for edit form (loaded from DB above)
 
 $active_page = 'agent_profile.php';
 ?>

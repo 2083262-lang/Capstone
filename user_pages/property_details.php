@@ -93,7 +93,11 @@ if ($property_id <= 0) {
         $agent_sql = "
             SELECT
                 a.first_name, a.last_name, a.phone_number, a.email,
-                ai.specialization, ai.profile_picture_url, ai.license_number,
+                COALESCE((SELECT GROUP_CONCAT(s.specialization_name ORDER BY s.specialization_name SEPARATOR ', ')
+                          FROM agent_specializations asp
+                          JOIN specializations s ON asp.specialization_id = s.specialization_id
+                          WHERE asp.agent_info_id = ai.agent_info_id), '') AS specialization,
+                ai.profile_picture_url, ai.license_number,
                 adm.license_number AS admin_license,
                 adm.profile_picture_url AS admin_profile_picture_url,
                 ur.role_name AS user_role

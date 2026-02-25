@@ -12,7 +12,12 @@ if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'admin') {
 $sql = "SELECT
             a.account_id, a.first_name, a.middle_name, a.last_name,
             a.phone_number, a.email, a.date_registered, a.is_active,
-            ai.license_number, ai.specialization, ai.profile_picture_url,
+            ai.license_number,
+            COALESCE((SELECT GROUP_CONCAT(s.specialization_name ORDER BY s.specialization_name SEPARATOR ', ')
+                      FROM agent_specializations asp
+                      JOIN specializations s ON asp.specialization_id = s.specialization_id
+                      WHERE asp.agent_info_id = ai.agent_info_id), '') AS specialization,
+            ai.profile_picture_url,
             ai.profile_completed, ai.is_approved, ai.years_experience,
             (SELECT sl.reason_message 
              FROM status_log sl 
@@ -32,6 +37,10 @@ $sql = "SELECT
 
 $result = $conn->query($sql);
 $all_agents = $result->fetch_all(MYSQLI_ASSOC);
+
+// Load specializations from DB for filter drawer
+$spec_result = $conn->query("SELECT specialization_name FROM specializations ORDER BY specialization_name ASC");
+$all_specializations = $spec_result ? $spec_result->fetch_all(MYSQLI_ASSOC) : [];
 
 // Categorize agents
 $agents_pending_approval = array_filter($all_agents, fn($agent) => $agent['profile_completed'] && !$agent['is_approved'] && $agent['is_active']);
@@ -1361,12 +1370,9 @@ $agents_rejected = array_filter($all_agents, fn($agent) => !$agent['is_active'] 
             <div class="filter-section">
                 <div class="filter-section-title"><i class="bi bi-star-fill"></i>Specialization</div>
                 <div class="filter-chips">
-                    <label class="filter-chip"><input type="checkbox" class="specialization-filter" value="Residential"><span>Residential</span></label>
-                    <label class="filter-chip"><input type="checkbox" class="specialization-filter" value="Commercial"><span>Commercial</span></label>
-                    <label class="filter-chip"><input type="checkbox" class="specialization-filter" value="Industrial"><span>Industrial</span></label>
-                    <label class="filter-chip"><input type="checkbox" class="specialization-filter" value="Rental"><span>Rental</span></label>
-                    <label class="filter-chip"><input type="checkbox" class="specialization-filter" value="Luxury"><span>Luxury</span></label>
-                    <label class="filter-chip"><input type="checkbox" class="specialization-filter" value="Mixed"><span>Mixed-Use</span></label>
+                    <?php foreach ($all_specializations as $spec_item): ?>
+                    <label class="filter-chip"><input type="checkbox" class="specialization-filter" value="<?php echo htmlspecialchars($spec_item['specialization_name']); ?>"><span><?php echo htmlspecialchars($spec_item['specialization_name']); ?></span></label>
+                    <?php endforeach; ?>
                 </div>
             </div>
             <!-- Years of Experience -->
