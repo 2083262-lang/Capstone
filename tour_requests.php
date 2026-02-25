@@ -1428,7 +1428,7 @@ include 'admin_navbar.php';
   <div class="page-header">
     <div class="page-header-inner">
       <div>
-        <h1><i class="fas fa-route me-2"></i>Tour Requests</h1>
+        <h1>Tour Requests</h1>
         <p class="subtitle">Manage and respond to property tour requests from potential clients</p>
       </div>
       <div class="header-actions">

@@ -89,22 +89,20 @@ try {
     $now = date('Y-m-d H:i:s');
 
     if ($existingSaleId) {
-        // Update existing finalized sale record
+        // Update existing finalized sale record (commission lives in agent_commissions, not here)
         $upd = $conn->prepare("UPDATE finalized_sales
             SET agent_id = ?, buyer_name = ?, buyer_email = ?, buyer_contact = ?,
-                final_sale_price = ?, sale_date = ?, commission_amount = ?, commission_percentage = ?,
+                final_sale_price = ?, sale_date = ?,
                 additional_notes = ?, finalized_by = ?, finalized_at = ?, is_locked = 1
             WHERE sale_id = ?");
         $upd->bind_param(
-            'isssdsdsisii',
+            'isssdssisi',
             $agent_id,
             $buyer_name,
             $buyer_email,
             $buyer_contact,
             $final_sale_price,
             $now,
-            $commission_amount,
-            $commission_percentage,
             $notes,
             $_SESSION['account_id'],
             $now,
@@ -116,14 +114,26 @@ try {
         $upd->close();
         $sale_id = $existingSaleId;
     } else {
-        // Insert new finalized sale record
+        // Get the verification_id from approved sale_verifications (verification_id is NOT NULL)
+        $vfStmt = $conn->prepare("SELECT verification_id FROM sale_verifications WHERE property_id = ? AND status = 'Approved' ORDER BY submitted_at DESC LIMIT 1");
+        $vfStmt->bind_param('i', $property_id);
+        $vfStmt->execute();
+        $vfRow = $vfStmt->get_result()->fetch_assoc();
+        $vfStmt->close();
+        if (!$vfRow) {
+            throw new Exception('No approved sale verification found for this property.');
+        }
+        $verification_id = (int)$vfRow['verification_id'];
+
+        // Insert new finalized sale record (commission lives in agent_commissions)
         $ins = $conn->prepare("INSERT INTO finalized_sales (
                 verification_id, property_id, agent_id, buyer_name, buyer_email, buyer_contact,
-                final_sale_price, sale_date, commission_amount, commission_percentage, additional_notes,
+                final_sale_price, sale_date, additional_notes,
                 finalized_by, finalized_at, is_locked
-            ) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
         $ins->bind_param(
-            'iisssddsdsis',
+            'iiisssdssis',
+            $verification_id,
             $property_id,
             $agent_id,
             $buyer_name,
@@ -131,8 +141,6 @@ try {
             $buyer_contact,
             $final_sale_price,
             $now,
-            $commission_amount,
-            $commission_percentage,
             $notes,
             $_SESSION['account_id'],
             $now
@@ -156,14 +164,14 @@ try {
     $cchk->close();
 
     if ($commId) {
-        $cupd = $conn->prepare("UPDATE agent_commissions SET agent_id = ?, commission_amount = ?, commission_percentage = ?, status = 'calculated', calculated_at = ?, notes = ? WHERE commission_id = ?");
+        $cupd = $conn->prepare("UPDATE agent_commissions SET agent_id = ?, commission_amount = ?, commission_percentage = ?, status = 'calculated', calculated_at = ?, payment_reference = ? WHERE commission_id = ?");
         $cupd->bind_param('iddssi', $agent_id, $commission_amount, $commission_percentage, $now, $notes, $commId);
         if (!$cupd->execute()) {
             throw new Exception('Failed to update commission.');
         }
         $cupd->close();
     } else {
-        $cins = $conn->prepare("INSERT INTO agent_commissions (sale_id, agent_id, commission_amount, commission_percentage, status, calculated_at, notes, processed_by, created_at) VALUES (?, ?, ?, ?, 'calculated', ?, ?, ?, ?)");
+        $cins = $conn->prepare("INSERT INTO agent_commissions (sale_id, agent_id, commission_amount, commission_percentage, status, calculated_at, payment_reference, processed_by, created_at) VALUES (?, ?, ?, ?, 'calculated', ?, ?, ?, ?)");
         $cins->bind_param('iiddssis', $sale_id, $agent_id, $commission_amount, $commission_percentage, $now, $notes, $_SESSION['account_id'], $now);
         if (!$cins->execute()) {
             throw new Exception('Failed to create commission.');

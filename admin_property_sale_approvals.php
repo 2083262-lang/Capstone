@@ -8,753 +8,340 @@ if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'admin') {
     header('Location: login.php');
     exit;
 }
+date_default_timezone_set('Asia/Manila');
 
-// Handle approval action
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'approve' && isset($_POST['verification_id'])) {
+$success_message = '';
+$error_message   = '';
+
+// ===== HANDLE APPROVE ACTION =====
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'approve' && !empty($_POST['verification_id'])) {
     $verification_id = (int)$_POST['verification_id'];
-    
-    // Start transaction
     $conn->begin_transaction();
-    
     try {
-        // First, get the verification data including all sale details
-        $sql = "SELECT sv.*, p.ListingPrice FROM sale_verifications sv 
-                LEFT JOIN property p ON p.property_ID = sv.property_id 
-                WHERE sv.verification_id = ?";
+        // Lock and fetch the verification — must still be Pending
+        $sql = "SELECT sv.*, p.ListingPrice, p.StreetAddress, p.City, p.PropertyType
+                FROM sale_verifications sv
+                JOIN property p ON p.property_ID = sv.property_id
+                WHERE sv.verification_id = ? FOR UPDATE";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param('i', $verification_id);
         $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if ($result->num_rows === 0) {
-            throw new Exception('Sale verification not found');
-        }
-        
-        $verification = $result->fetch_assoc();
-        $property_id = $verification['property_id'];
+        $v = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        
-        // Update sale verification status to Approved
-        $sql = "UPDATE sale_verifications SET status = 'Approved', reviewed_by = ?, reviewed_at = NOW() WHERE verification_id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('ii', $_SESSION['account_id'], $verification_id);
-        $stmt->execute();
-        $stmt->close();
-        
-    // Update property status to "Sold" and lock it
-    $sql = "UPDATE property SET Status = 'Sold', is_locked = 1, sold_date = ?, sold_by_agent = ? WHERE property_ID = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('sii', $verification['sale_date'], $verification['agent_id'], $property_id);
-    $stmt->execute();
-    $stmt->close();
 
-        // Determine buyer email: prefer explicit email in buyer_contact if valid, else derive from latest tour request
+        if (!$v) throw new Exception('Sale verification not found.');
+        if ($v['status'] !== 'Pending') throw new Exception('Only pending verifications can be approved. Current status: ' . $v['status']);
+
+        $property_id = (int)$v['property_id'];
+
+        // 1) Update verification → Approved
+        $u = $conn->prepare("UPDATE sale_verifications SET status='Approved', reviewed_by=?, reviewed_at=NOW() WHERE verification_id=?");
+        $u->bind_param('ii', $_SESSION['account_id'], $verification_id);
+        $u->execute(); $u->close();
+
+        // 2) Update property → Sold & locked
+        $u = $conn->prepare("UPDATE property SET Status='Sold', is_locked=1, sold_date=?, sold_by_agent=? WHERE property_ID=?");
+        $u->bind_param('sii', $v['sale_date'], $v['agent_id'], $property_id);
+        $u->execute(); $u->close();
+
+        // 3) Determine buyer email
         $buyerEmail = null;
-        if (!empty($verification['buyer_contact']) && filter_var($verification['buyer_contact'], FILTER_VALIDATE_EMAIL)) {
-            $buyerEmail = $verification['buyer_contact'];
+        if (!empty($v['buyer_contact']) && filter_var($v['buyer_contact'], FILTER_VALIDATE_EMAIL)) {
+            $buyerEmail = $v['buyer_contact'];
         } else {
-            $tr = $conn->prepare("SELECT user_email FROM tour_requests WHERE property_id = ? ORDER BY requested_at DESC LIMIT 1");
-            $tr->bind_param('i', $property_id);
-            $tr->execute();
-            $trRes = $tr->get_result();
-            $trRow = $trRes ? $trRes->fetch_assoc() : null;
-            $tr->close();
-            if ($trRow && !empty($trRow['user_email'])) {
-                $buyerEmail = $trRow['user_email'];
-            }
+            $tr = $conn->prepare("SELECT user_email FROM tour_requests WHERE property_id=? ORDER BY requested_at DESC LIMIT 1");
+            $tr->bind_param('i', $property_id); $tr->execute();
+            $row = $tr->get_result()->fetch_assoc(); $tr->close();
+            if ($row) $buyerEmail = $row['user_email'] ?? null;
         }
 
-        // Create permanent finalized sale record (canonical table)
-        $sql = "INSERT INTO finalized_sales 
-                (verification_id, property_id, agent_id, buyer_name, buyer_email, buyer_contact, final_sale_price, sale_date, commission_amount, commission_percentage, additional_notes, finalized_by) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('iiisssdssi', 
-            $verification_id,
-            $property_id,
-            $verification['agent_id'],
-            $verification['buyer_name'],
-            $buyerEmail,
-            $verification['buyer_contact'],
-            $verification['sale_price'],
-            $verification['sale_date'],
-            $verification['additional_notes'],
-            $_SESSION['account_id']
-        );
-        $stmt->execute();
-        $stmt->close();
-        
-    // Log the approval action
-        $sql = "INSERT INTO status_log (item_id, item_type, action, reason_message, action_by_account_id) VALUES (?, 'property', 'approved', 'Property sale verification approved - property marked as sold and permanent record created', ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('ii', $property_id, $_SESSION['account_id']);
-        $stmt->execute();
-        $stmt->close();
+        // 4) Create finalized_sales record (commission handled separately in finalize step)
+        $ins = $conn->prepare("INSERT INTO finalized_sales
+            (verification_id, property_id, agent_id, buyer_name, buyer_email, buyer_contact, final_sale_price, sale_date, additional_notes, finalized_by)
+            VALUES (?,?,?,?,?,?,?,?,?,?)");
+        $ins->bind_param('iiisssdss' . 'i',
+            $verification_id, $property_id, $v['agent_id'],
+            $v['buyer_name'], $buyerEmail, $v['buyer_contact'],
+            $v['sale_price'], $v['sale_date'], $v['additional_notes'],
+            $_SESSION['account_id']);
+        $ins->execute(); $ins->close();
 
-    // Record in price history as 'Sold' event
-    $sql = "INSERT INTO price_history (property_id, event_date, event_type, price) VALUES (?, CURDATE(), 'Sold', ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('id', $property_id, $verification['sale_price']);
-    $stmt->execute();
-    $stmt->close();
+        // 5) Audit logs
+        $l = $conn->prepare("INSERT INTO status_log (item_id, item_type, action, reason_message, action_by_account_id) VALUES (?,'property','approved','Sale verification approved – property marked as sold',?)");
+        $l->bind_param('ii', $property_id, $_SESSION['account_id']); $l->execute(); $l->close();
 
-    // Append to property_log to keep audit of changes
-    // Record that the property was sold in the property_log for auditing
-    // Try to include contextual fields (reason_message, reference_id) when the schema supports them.
-    $approvedMessage = 'Sale approved via verification #' . $verification_id;
-    $extendedSql = "INSERT INTO property_log (property_id, account_id, action, log_timestamp, reason_message, reference_id) VALUES (?, ?, 'SOLD', NOW(), ?, ?)";
-    $stmt = $conn->prepare($extendedSql);
-    if ($stmt) {
-        $stmt->bind_param('iisi', $property_id, $_SESSION['account_id'], $approvedMessage, $verification_id);
-        $stmt->execute();
-        $stmt->close();
-    } else {
-        // Fallback for older schemas without extra columns
-        $sql = "INSERT INTO property_log (property_id, account_id, action, log_timestamp) VALUES (?, ?, 'SOLD', NOW())";
-        $stmt = $conn->prepare($sql);
-        if ($stmt) {
-            $stmt->bind_param('ii', $property_id, $_SESSION['account_id']);
-            $stmt->execute();
-            $stmt->close();
-        }
-    }
-        
-        // Commit transaction
+        $l = $conn->prepare("INSERT INTO price_history (property_id, event_date, event_type, price) VALUES (?, CURDATE(), 'Sold', ?)");
+        $l->bind_param('id', $property_id, $v['sale_price']); $l->execute(); $l->close();
+
+        $msg = 'Sale approved via verification #' . $verification_id;
+        $l = $conn->prepare("INSERT INTO property_log (property_id, account_id, action, log_timestamp, reason_message, reference_id) VALUES (?,?,'SOLD',NOW(),?,?)");
+        $l->bind_param('iisi', $property_id, $_SESSION['account_id'], $msg, $verification_id); $l->execute(); $l->close();
+
+        // 6) Admin notification
+        $fi = "Property sale approved – Commission pending for Property #$property_id, Agent #{$v['agent_id']}, Price: ₱" . number_format($v['sale_price'], 2);
+        $n = $conn->prepare("INSERT INTO notifications (item_id, item_type, message, created_at) VALUES (?,'property_sale',?,NOW())");
+        $n->bind_param('is', $verification_id, $fi); $n->execute(); $n->close();
+
+        // 7) Agent notification
+        require_once __DIR__ . '/agent_pages/agent_notification_helper.php';
+        createAgentNotification($conn, (int)$v['agent_id'], 'sale_approved', 'Sale Approved',
+            "Your sale for Property #$property_id has been approved! Sale price: ₱" . number_format($v['sale_price'], 2) . ". Commission will be processed shortly.",
+            $verification_id);
+
         $conn->commit();
 
-        // ===== SEND EMAIL NOTIFICATIONS =====
-        
-        // Fetch property details and agent info for email
-        $emailDataSql = "SELECT p.StreetAddress, p.City, p.PropertyType, p.ListingPrice,
-                                a.first_name AS agent_first_name, a.last_name AS agent_last_name, a.email AS agent_email
-                         FROM property p
-                         LEFT JOIN accounts a ON a.account_id = ?
-                         WHERE p.property_ID = ?";
-        $emailStmt = $conn->prepare($emailDataSql);
-        $emailStmt->bind_param('ii', $verification['agent_id'], $property_id);
-        $emailStmt->execute();
-        $emailData = $emailStmt->get_result()->fetch_assoc();
-        $emailStmt->close();
-        
-        $propertyAddress = $emailData['StreetAddress'] . ', ' . $emailData['City'];
-        $agentName = $emailData['agent_first_name'] . ' ' . $emailData['agent_last_name'];
-        $agentEmail = $emailData['agent_email'];
-        $formattedSalePrice = '₱' . number_format($verification['sale_price'], 2);
-        $saleDate = date('F j, Y', strtotime($verification['sale_date']));
-        
-        // 1) Send email to AGENT
-        if (!empty($agentEmail)) {
-            $agentSubject = '🎉 Congratulations! Property Sale Approved';
-            $agentBody = "
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset='UTF-8'>
-                <style>
-                    body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-                    .email-container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-                    .email-header { background: linear-gradient(135deg, #161209 0%, #2a2318 100%); color: #ffffff; padding: 40px 30px; text-align: center; }
-                    .email-header h1 { margin: 0; font-size: 28px; font-weight: 700; }
-                    .email-header .icon { font-size: 48px; margin-bottom: 10px; }
-                    .email-body { padding: 40px 30px; }
-                    .success-badge { display: inline-block; background: #d1e7dd; color: #0f5132; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; margin-bottom: 20px; }
-                    .email-body h2 { color: #161209; margin-top: 0; font-size: 22px; }
-                    .email-body p { margin: 15px 0; color: #555; }
-                    .info-box { background: #f8f9fa; border-left: 4px solid #bc9e42; padding: 20px; border-radius: 8px; margin: 25px 0; }
-                    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
-                    .info-row:last-child { border-bottom: none; }
-                    .info-label { font-weight: 600; color: #6c757d; font-size: 14px; }
-                    .info-value { color: #161209; font-weight: 600; text-align: right; }
-                    .highlight-price { color: #bc9e42; font-size: 24px; font-weight: 700; }
-                    .cta-button { display: inline-block; background: linear-gradient(135deg, #bc9e42, #d4b555); color: #161209; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; text-align: center; }
-                    .email-footer { background: #f8f9fa; padding: 30px; text-align: center; color: #6c757d; font-size: 14px; border-top: 1px solid #e0e0e0; }
-                    .email-footer p { margin: 5px 0; }
-                </style>
-            </head>
-            <body>
-                <div class='email-container'>
-                    <div class='email-header'>
-                        <div class='icon'>🎉</div>
-                        <h1>Property Sale Approved!</h1>
-                    </div>
-                    <div class='email-body'>
-                        <span class='success-badge'>✓ APPROVED</span>
-                        <h2>Congratulations, {$agentName}!</h2>
-                        <p>Great news! The property sale verification you submitted has been <strong>approved</strong> by the admin team.</p>
-                        
-                        <div class='info-box'>
-                            <div class='info-row'>
-                                <span class='info-label'>Property Address:</span>
-                                <span class='info-value'>{$propertyAddress}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Property Type:</span>
-                                <span class='info-value'>{$emailData['PropertyType']}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Sale Price:</span>
-                                <span class='info-value highlight-price'>{$formattedSalePrice}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Sale Date:</span>
-                                <span class='info-value'>{$saleDate}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Buyer Name:</span>
-                                <span class='info-value'>{$verification['buyer_name']}</span>
-                            </div>
-                        </div>
-                        
-                        <p><strong>What happens next?</strong></p>
-                        <ul style='color: #555; padding-left: 20px;'>
-                            <li>The property has been marked as <strong>SOLD</strong> in the system</li>
-                            <li>Commission processing will be initiated shortly</li>
-                            <li>You'll receive further details about your commission payout</li>
-                            <li>This sale will be reflected in your performance dashboard</li>
-                        </ul>
-                        
-                        <p style='margin-top: 30px;'>Thank you for your excellent work! This successful sale contributes to your outstanding track record.</p>
-                        
-                        <a href='http://localhost/capstoneSystem/agent_pages/agent_dashboard.php' class='cta-button'>View Dashboard</a>
-                    </div>
-                    <div class='email-footer'>
-                        <p><strong>Property Management System</strong></p>
-                        <p>This is an automated notification. Please do not reply to this email.</p>
-                        <p style='margin-top: 15px; font-size: 12px;'>© 2025 Property Management System. All rights reserved.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            ";
-            
-            sendEmail($agentEmail, $agentSubject, $agentBody);
+        // ===== SEND EMAILS (best-effort, after commit) =====
+        $propAddr = $v['StreetAddress'] . ', ' . $v['City'];
+        $agentSql = $conn->prepare("SELECT first_name, last_name, email FROM accounts WHERE account_id=?");
+        $agentSql->bind_param('i', $v['agent_id']); $agentSql->execute();
+        $ag = $agentSql->get_result()->fetch_assoc(); $agentSql->close();
+        $agentName  = ($ag['first_name'] ?? '') . ' ' . ($ag['last_name'] ?? '');
+        $agentEmail = $ag['email'] ?? '';
+        $fmtPrice = '₱' . number_format($v['sale_price'], 2);
+        $fmtDate  = date('F j, Y', strtotime($v['sale_date']));
+
+        // Email to agent
+        if ($agentEmail) {
+            $body = buildApprovalEmailAgent($agentName, $propAddr, $v['PropertyType'], $fmtPrice, $fmtDate, $v['buyer_name']);
+            sendSystemMail($agentEmail, $agentName, 'Property Sale Approved – Congratulations!', $body, 'Your property sale has been approved.');
         }
-        
-        // 2) Send email to BUYER
-        if (!empty($buyerEmail)) {
-            $buyerSubject = '🏡 Property Purchase Confirmed - Congratulations!';
-            $buyerBody = "
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset='UTF-8'>
-                <style>
-                    body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-                    .email-container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-                    .email-header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: #ffffff; padding: 40px 30px; text-align: center; }
-                    .email-header h1 { margin: 0; font-size: 28px; font-weight: 700; }
-                    .email-header .icon { font-size: 48px; margin-bottom: 10px; }
-                    .email-body { padding: 40px 30px; }
-                    .success-badge { display: inline-block; background: #d1e7dd; color: #0f5132; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; margin-bottom: 20px; }
-                    .email-body h2 { color: #161209; margin-top: 0; font-size: 22px; }
-                    .email-body p { margin: 15px 0; color: #555; }
-                    .info-box { background: #f8f9fa; border-left: 4px solid #28a745; padding: 20px; border-radius: 8px; margin: 25px 0; }
-                    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
-                    .info-row:last-child { border-bottom: none; }
-                    .info-label { font-weight: 600; color: #6c757d; font-size: 14px; }
-                    .info-value { color: #161209; font-weight: 600; text-align: right; }
-                    .highlight-price { color: #28a745; font-size: 24px; font-weight: 700; }
-                    .congratulations-box { background: linear-gradient(135deg, #fffbf0 0%, #fff9e6 100%); border: 2px solid #bc9e42; padding: 20px; border-radius: 8px; margin: 25px 0; text-align: center; }
-                    .email-footer { background: #f8f9fa; padding: 30px; text-align: center; color: #6c757d; font-size: 14px; border-top: 1px solid #e0e0e0; }
-                    .email-footer p { margin: 5px 0; }
-                </style>
-            </head>
-            <body>
-                <div class='email-container'>
-                    <div class='email-header'>
-                        <div class='icon'>🏡</div>
-                        <h1>Congratulations on Your New Property!</h1>
-                    </div>
-                    <div class='email-body'>
-                        <span class='success-badge'>✓ PURCHASE CONFIRMED</span>
-                        <h2>Dear {$verification['buyer_name']},</h2>
-                        <p>Congratulations! Your property purchase has been officially <strong>approved and confirmed</strong>.</p>
-                        
-                        <div class='congratulations-box'>
-                            <h3 style='margin: 0 0 10px 0; color: #bc9e42;'>🎊 Welcome to Your New Home! 🎊</h3>
-                            <p style='margin: 0; font-size: 16px;'>You are now the proud owner of this beautiful property.</p>
-                        </div>
-                        
-                        <div class='info-box'>
-                            <div class='info-row'>
-                                <span class='info-label'>Property Address:</span>
-                                <span class='info-value'>{$propertyAddress}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Property Type:</span>
-                                <span class='info-value'>{$emailData['PropertyType']}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Purchase Price:</span>
-                                <span class='info-value highlight-price'>{$formattedSalePrice}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Sale Date:</span>
-                                <span class='info-value'>{$saleDate}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Your Agent:</span>
-                                <span class='info-value'>{$agentName}</span>
-                            </div>
-                        </div>
-                        
-                        <p><strong>Next Steps:</strong></p>
-                        <ul style='color: #555; padding-left: 20px;'>
-                            <li>Your agent will contact you shortly to finalize documentation</li>
-                            <li>Ensure all legal paperwork is completed and filed</li>
-                            <li>Schedule your property handover and key collection</li>
-                            <li>Update your contact information for property records</li>
-                        </ul>
-                        
-                        <p style='margin-top: 30px;'>We wish you many happy years in your new home! Thank you for choosing to work with us.</p>
-                        
-                        <p style='margin-top: 20px; font-size: 14px; color: #6c757d;'><em>For any questions or assistance, please contact your agent {$agentName} or our support team.</em></p>
-                    </div>
-                    <div class='email-footer'>
-                        <p><strong>Property Management System</strong></p>
-                        <p>This is an automated notification. Please do not reply to this email.</p>
-                        <p style='margin-top: 15px; font-size: 12px;'>© 2025 Property Management System. All rights reserved.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            ";
-            
-            sendEmail($buyerEmail, $buyerSubject, $buyerBody);
+        // Email to buyer
+        if ($buyerEmail) {
+            $body = buildApprovalEmailBuyer($v['buyer_name'], $propAddr, $v['PropertyType'], $fmtPrice, $fmtDate, $agentName);
+            sendSystemMail($buyerEmail, $v['buyer_name'], 'Property Purchase Confirmed', $body, 'Your property purchase has been confirmed.');
         }
-        
-        // ===== END EMAIL NOTIFICATIONS =====
 
-        // Trigger internal processes after successful approval
-
-        // 1) Notification for property sale (use allowed enum 'property_sale')
-        $finance_message = "Property sale approved - Commission queuing required for Property #{$property_id}, Agent ID: {$verification['agent_id']}, Sale Price: $" . number_format($verification['sale_price'], 2);
-        $finance_sql = "INSERT INTO notifications (item_id, item_type, message, created_at) VALUES (?, 'property_sale', ?, NOW())";
-        $stmt = $conn->prepare($finance_sql);
-        $stmt->bind_param('is', $verification_id, $finance_message);
-        $stmt->execute();
-        $stmt->close();
-
-        // Agent notification — sale approved
-        require_once __DIR__ . '/agent_pages/agent_notification_helper.php';
-        createAgentNotification(
-            $conn,
-            (int)$verification['agent_id'],
-            'sale_approved',
-            'Sale Approved',
-            "Your sale for Property #{$property_id} has been approved! Sale price: ₱" . number_format($verification['sale_price'], 2) . ". Commission will be processed shortly.",
-            $verification_id
-        );
-
-        // Agent performance is now tracked via finalized_sales and agent_commissions tables
-        // No need for separate agent_performance table
-
-        // Redirect back with success message
         header('Location: ' . $_SERVER['PHP_SELF'] . '?success=approved');
         exit;
-        
     } catch (Exception $e) {
-        // Rollback transaction on error
         $conn->rollback();
-        $error_message = 'Error approving sale verification: ' . $e->getMessage();
+        $error_message = 'Error approving: ' . $e->getMessage();
     }
 }
 
-// Handle rejection action
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'reject' && isset($_POST['verification_id']) && isset($_POST['reason'])) {
+// ===== HANDLE REJECT ACTION =====
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reject' && !empty($_POST['verification_id']) && isset($_POST['reason'])) {
     $verification_id = (int)$_POST['verification_id'];
     $reason = trim($_POST['reason']);
-    
-    try {
-        // Fetch verification and related data before rejection
-        $fetchSql = "SELECT sv.*, p.StreetAddress, p.City, p.PropertyType, p.ListingPrice, p.property_ID,
-                            a.first_name AS agent_first_name, a.last_name AS agent_last_name, a.email AS agent_email
-                     FROM sale_verifications sv
-                     LEFT JOIN property p ON p.property_ID = sv.property_id
-                     LEFT JOIN accounts a ON a.account_id = sv.agent_id
-                     WHERE sv.verification_id = ?";
-        $fetchStmt = $conn->prepare($fetchSql);
-        $fetchStmt->bind_param('i', $verification_id);
-        $fetchStmt->execute();
-        $rejectionData = $fetchStmt->get_result()->fetch_assoc();
-        $fetchStmt->close();
-        
-        if (!$rejectionData) {
-            throw new Exception('Sale verification not found');
-        }
-        
-        // Update sale verification status to Rejected with reason
-        $sql = "UPDATE sale_verifications SET status = 'Rejected', admin_notes = ?, reviewed_by = ?, reviewed_at = NOW() WHERE verification_id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('sii', $reason, $_SESSION['account_id'], $verification_id);
-        $stmt->execute();
-        $stmt->close();
-        
-        // Revert property status back to "For Sale" since the sale request was rejected
-        if (!empty($rejectionData['property_ID'])) {
-            $propId = (int)$rejectionData['property_ID'];
-            $revertSql = "UPDATE property SET Status = 'For Sale', is_locked = 0 WHERE property_ID = ?";
-            $revertStmt = $conn->prepare($revertSql);
-            $revertStmt->bind_param('i', $propId);
-            $revertStmt->execute();
-            $revertStmt->close();
-        }
-        
-        // Log the rejection action
-        $sql = "INSERT INTO status_log (item_id, item_type, action, reason_message, action_by_account_id) VALUES (?, 'property', 'rejected', ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('isi', $verification_id, $reason, $_SESSION['account_id']);
-        $stmt->execute();
-        $stmt->close();
+    if ($reason === '') { $error_message = 'Rejection reason is required.'; }
+    else {
+        $conn->begin_transaction();
+        try {
+            // Lock and fetch
+            $sql = "SELECT sv.*, p.StreetAddress, p.City, p.PropertyType, p.property_ID
+                    FROM sale_verifications sv
+                    JOIN property p ON p.property_ID = sv.property_id
+                    WHERE sv.verification_id = ? FOR UPDATE";
+            $stmt = $conn->prepare($sql); $stmt->bind_param('i', $verification_id); $stmt->execute();
+            $v = $stmt->get_result()->fetch_assoc(); $stmt->close();
 
-        // Also record the rejection in property_log (use property ID where available)
-        if (!empty($rejectionData['property_ID'])) {
-            $propId = (int)$rejectionData['property_ID'];
-            // Try extended property_log insert that captures the rejection reason and verification reference
-            $extendedLogSql = "INSERT INTO property_log (property_id, account_id, action, log_timestamp, reason_message, reference_id) VALUES (?, ?, 'REJECTED', NOW(), ?, ?)";
-            $logStmt = $conn->prepare($extendedLogSql);
-            if ($logStmt) {
-                $logStmt->bind_param('iisi', $propId, $_SESSION['account_id'], $reason, $verification_id);
-                $logStmt->execute();
-                $logStmt->close();
-            } else {
-                // Fallback to minimal insert for older schemas
-                $logSql = "INSERT INTO property_log (property_id, account_id, action, log_timestamp) VALUES (?, ?, 'REJECTED', NOW())";
-                $logStmt2 = $conn->prepare($logSql);
-                if ($logStmt2) {
-                    $logStmt2->bind_param('ii', $propId, $_SESSION['account_id']);
-                    $logStmt2->execute();
-                    $logStmt2->close();
-                }
-            }
-        }
-        
-        // ===== SEND REJECTION EMAIL NOTIFICATIONS =====
-        
-        $propertyAddress = $rejectionData['StreetAddress'] . ', ' . $rejectionData['City'];
-        $agentName = $rejectionData['agent_first_name'] . ' ' . $rejectionData['agent_last_name'];
-        $agentEmail = $rejectionData['agent_email'];
-        $formattedSalePrice = '₱' . number_format($rejectionData['sale_price'], 2);
-        
-        // Determine buyer email
-        $buyerEmail = null;
-        if (!empty($rejectionData['buyer_contact']) && filter_var($rejectionData['buyer_contact'], FILTER_VALIDATE_EMAIL)) {
-            $buyerEmail = $rejectionData['buyer_contact'];
-        } else {
-            $tr = $conn->prepare("SELECT user_email FROM tour_requests WHERE property_id = ? ORDER BY requested_at DESC LIMIT 1");
-            $tr->bind_param('i', $rejectionData['property_ID']);
-            $tr->execute();
-            $trRes = $tr->get_result();
-            $trRow = $trRes ? $trRes->fetch_assoc() : null;
-            $tr->close();
-            if ($trRow && !empty($trRow['user_email'])) {
-                $buyerEmail = $trRow['user_email'];
-            }
-        }
-        
-        // 1) Send email to AGENT
-        if (!empty($agentEmail)) {
-            $agentSubject = '⚠️ Property Sale Verification - Action Required';
-            $agentBody = "
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset='UTF-8'>
-                <style>
-                    body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-                    .email-container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-                    .email-header { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: #ffffff; padding: 40px 30px; text-align: center; }
-                    .email-header h1 { margin: 0; font-size: 28px; font-weight: 700; }
-                    .email-header .icon { font-size: 48px; margin-bottom: 10px; }
-                    .email-body { padding: 40px 30px; }
-                    .warning-badge { display: inline-block; background: #f8d7da; color: #842029; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; margin-bottom: 20px; }
-                    .email-body h2 { color: #161209; margin-top: 0; font-size: 22px; }
-                    .email-body p { margin: 15px 0; color: #555; }
-                    .info-box { background: #f8f9fa; border-left: 4px solid #dc3545; padding: 20px; border-radius: 8px; margin: 25px 0; }
-                    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
-                    .info-row:last-child { border-bottom: none; }
-                    .info-label { font-weight: 600; color: #6c757d; font-size: 14px; }
-                    .info-value { color: #161209; font-weight: 600; text-align: right; }
-                    .reason-box { background: #fff3cd; border: 2px solid #ffc107; padding: 20px; border-radius: 8px; margin: 25px 0; }
-                    .reason-box h3 { margin: 0 0 10px 0; color: #856404; font-size: 16px; }
-                    .reason-box p { margin: 0; color: #856404; font-weight: 500; }
-                    .cta-button { display: inline-block; background: linear-gradient(135deg, #dc3545, #c82333); color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; text-align: center; }
-                    .email-footer { background: #f8f9fa; padding: 30px; text-align: center; color: #6c757d; font-size: 14px; border-top: 1px solid #e0e0e0; }
-                    .email-footer p { margin: 5px 0; }
-                </style>
-            </head>
-            <body>
-                <div class='email-container'>
-                    <div class='email-header'>
-                        <div class='icon'>⚠️</div>
-                        <h1>Sale Verification Rejected</h1>
-                    </div>
-                    <div class='email-body'>
-                        <span class='warning-badge'>✗ REJECTED</span>
-                        <h2>Dear {$agentName},</h2>
-                        <p>Your property sale verification has been <strong>reviewed and rejected</strong> by the admin team. This requires your attention.</p>
-                        
-                        <div class='info-box'>
-                            <div class='info-row'>
-                                <span class='info-label'>Property Address:</span>
-                                <span class='info-value'>{$propertyAddress}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Property Type:</span>
-                                <span class='info-value'>{$rejectionData['PropertyType']}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Submitted Sale Price:</span>
-                                <span class='info-value'>{$formattedSalePrice}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Buyer Name:</span>
-                                <span class='info-value'>{$rejectionData['buyer_name']}</span>
-                            </div>
-                        </div>
-                        
-                        <div class='reason-box'>
-                            <h3>📋 Reason for Rejection:</h3>
-                            <p>{$reason}</p>
-                        </div>
-                        
-                        <p><strong>What you need to do:</strong></p>
-                        <ul style='color: #555; padding-left: 20px;'>
-                            <li>Review the rejection reason carefully</li>
-                            <li>Address any issues or missing information</li>
-                            <li>Gather correct documentation if needed</li>
-                            <li>Resubmit the sale verification with accurate details</li>
-                            <li>Contact admin support if you need clarification</li>
-                        </ul>
-                        
-                        <p style='margin-top: 30px;'>Please ensure all information and documentation is accurate before resubmitting. If you have any questions, don't hesitate to reach out to our support team.</p>
-                        
-                        <a href='http://localhost/capstoneSystem/agent_pages/agent_dashboard.php' class='cta-button'>Go to Dashboard</a>
-                    </div>
-                    <div class='email-footer'>
-                        <p><strong>Property Management System</strong></p>
-                        <p>This is an automated notification. Please do not reply to this email.</p>
-                        <p style='margin-top: 15px; font-size: 12px;'>© 2025 Property Management System. All rights reserved.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            ";
-            
-            sendEmail($agentEmail, $agentSubject, $agentBody);
-        }
-        
-        // 2) Send email to BUYER (if applicable)
-        if (!empty($buyerEmail)) {
-            $buyerSubject = '📋 Property Purchase Update - Verification Under Review';
-            $buyerBody = "
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset='UTF-8'>
-                <style>
-                    body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-                    .email-container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-                    .email-header { background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: #ffffff; padding: 40px 30px; text-align: center; }
-                    .email-header h1 { margin: 0; font-size: 28px; font-weight: 700; }
-                    .email-header .icon { font-size: 48px; margin-bottom: 10px; }
-                    .email-body { padding: 40px 30px; }
-                    .info-badge { display: inline-block; background: #fff3cd; color: #856404; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; margin-bottom: 20px; }
-                    .email-body h2 { color: #161209; margin-top: 0; font-size: 22px; }
-                    .email-body p { margin: 15px 0; color: #555; }
-                    .info-box { background: #f8f9fa; border-left: 4px solid #ffc107; padding: 20px; border-radius: 8px; margin: 25px 0; }
-                    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
-                    .info-row:last-child { border-bottom: none; }
-                    .info-label { font-weight: 600; color: #6c757d; font-size: 14px; }
-                    .info-value { color: #161209; font-weight: 600; text-align: right; }
-                    .email-footer { background: #f8f9fa; padding: 30px; text-align: center; color: #6c757d; font-size: 14px; border-top: 1px solid #e0e0e0; }
-                    .email-footer p { margin: 5px 0; }
-                </style>
-            </head>
-            <body>
-                <div class='email-container'>
-                    <div class='email-header'>
-                        <div class='icon'>📋</div>
-                        <h1>Purchase Verification Update</h1>
-                    </div>
-                    <div class='email-body'>
-                        <span class='info-badge'>ℹ️ UNDER REVIEW</span>
-                        <h2>Dear {$rejectionData['buyer_name']},</h2>
-                        <p>We're writing to inform you that the sale verification for your property purchase requires additional review.</p>
-                        
-                        <div class='info-box'>
-                            <div class='info-row'>
-                                <span class='info-label'>Property Address:</span>
-                                <span class='info-value'>{$propertyAddress}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Property Type:</span>
-                                <span class='info-value'>{$rejectionData['PropertyType']}</span>
-                            </div>
-                            <div class='info-row'>
-                                <span class='info-label'>Your Agent:</span>
-                                <span class='info-value'>{$agentName}</span>
-                            </div>
-                        </div>
-                        
-                        <p><strong>What does this mean?</strong></p>
-                        <p>Some details in the sale verification submitted by your agent need to be corrected or clarified. Your agent has been notified and will address this promptly.</p>
-                        
-                        <p><strong>What happens next?</strong></p>
-                        <ul style='color: #555; padding-left: 20px;'>
-                            <li>Your agent will review and correct the submission</li>
-                            <li>Once corrected, the verification will be resubmitted for approval</li>
-                            <li>You'll be notified once everything is finalized</li>
-                            <li>This is a normal part of ensuring accuracy</li>
-                        </ul>
-                        
-                        <p style='margin-top: 30px;'>Your agent {$agentName} will be in contact with you shortly. If you have any immediate concerns, please reach out to them directly.</p>
-                        
-                        <p style='margin-top: 20px; font-size: 14px; color: #6c757d;'><em>We apologize for any inconvenience and appreciate your patience as we ensure all details are correct.</em></p>
-                    </div>
-                    <div class='email-footer'>
-                        <p><strong>Property Management System</strong></p>
-                        <p>This is an automated notification. Please do not reply to this email.</p>
-                        <p style='margin-top: 15px; font-size: 12px;'>© 2025 Property Management System. All rights reserved.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            ";
-            
-            sendEmail($buyerEmail, $buyerSubject, $buyerBody);
-        }
-        
-        // ===== END REJECTION EMAIL NOTIFICATIONS =====
-        
-        // Agent notification — sale rejected
-        if (!function_exists('createAgentNotification')) {
-            require_once __DIR__ . '/agent_pages/agent_notification_helper.php';
-        }
-        if (!empty($rejectionData['agent_id'])) {
-            createAgentNotification(
-                $conn,
-                (int)$rejectionData['agent_id'],
-                'sale_rejected',
-                'Sale Rejected',
-                "Your sale verification for {$propertyAddress} was rejected. Reason: {$reason}",
-                $verification_id
-            );
-        }
+            if (!$v) throw new Exception('Sale verification not found.');
+            if ($v['status'] !== 'Pending') throw new Exception('Only pending verifications can be rejected. Current status: ' . $v['status']);
 
-        // Redirect back with success message
-        header('Location: ' . $_SERVER['PHP_SELF'] . '?success=rejected');
-        exit;
-        
-    } catch (Exception $e) {
-        $error_message = 'Error rejecting sale verification: ' . $e->getMessage();
+            $property_id = (int)$v['property_ID'];
+
+            // 1) Reject verification
+            $u = $conn->prepare("UPDATE sale_verifications SET status='Rejected', admin_notes=?, reviewed_by=?, reviewed_at=NOW() WHERE verification_id=?");
+            $u->bind_param('sii', $reason, $_SESSION['account_id'], $verification_id); $u->execute(); $u->close();
+
+            // 2) Revert property to For Sale
+            $u = $conn->prepare("UPDATE property SET Status='For Sale', is_locked=0 WHERE property_ID=?");
+            $u->bind_param('i', $property_id); $u->execute(); $u->close();
+
+            // 3) Audit logs
+            $l = $conn->prepare("INSERT INTO status_log (item_id, item_type, action, reason_message, action_by_account_id) VALUES (?,'property','rejected',?,?)");
+            $l->bind_param('isi', $verification_id, $reason, $_SESSION['account_id']); $l->execute(); $l->close();
+
+            $l = $conn->prepare("INSERT INTO property_log (property_id, account_id, action, log_timestamp, reason_message, reference_id) VALUES (?,?,'REJECTED',NOW(),?,?)");
+            $l->bind_param('iisi', $property_id, $_SESSION['account_id'], $reason, $verification_id); $l->execute(); $l->close();
+
+            // 4) Agent notification
+            if (!function_exists('createAgentNotification')) require_once __DIR__ . '/agent_pages/agent_notification_helper.php';
+            createAgentNotification($conn, (int)$v['agent_id'], 'sale_rejected', 'Sale Rejected',
+                "Your sale verification for {$v['StreetAddress']}, {$v['City']} was rejected. Reason: $reason",
+                $verification_id);
+
+            $conn->commit();
+
+            // Emails (best-effort)
+            $propAddr = $v['StreetAddress'] . ', ' . $v['City'];
+            $agSql = $conn->prepare("SELECT first_name, last_name, email FROM accounts WHERE account_id=?");
+            $agSql->bind_param('i', $v['agent_id']); $agSql->execute();
+            $ag = $agSql->get_result()->fetch_assoc(); $agSql->close();
+            $agentName  = ($ag['first_name'] ?? '') . ' ' . ($ag['last_name'] ?? '');
+            $agentEmail = $ag['email'] ?? '';
+
+            if ($agentEmail) {
+                $body = buildRejectionEmailAgent($agentName, $propAddr, $v['PropertyType'], '₱' . number_format($v['sale_price'], 2), $v['buyer_name'], $reason);
+                sendSystemMail($agentEmail, $agentName, 'Sale Verification Rejected – Action Required', $body, 'Your sale verification was rejected.');
+            }
+
+            header('Location: ' . $_SERVER['PHP_SELF'] . '?success=rejected');
+            exit;
+        } catch (Exception $e) {
+            $conn->rollback();
+            $error_message = 'Error rejecting: ' . $e->getMessage();
+        }
     }
 }
 
-// Handle success messages
-$success_message = '';
+// ===== SUCCESS MESSAGES =====
 if (isset($_GET['success'])) {
-    if ($_GET['success'] === 'approved') {
-        $success_message = 'Property sale verification approved successfully! The property has been marked as SOLD.';
-    } elseif ($_GET['success'] === 'rejected') {
-        $success_message = 'Property sale verification rejected successfully.';
+    switch ($_GET['success']) {
+        case 'approved':  $success_message = 'Sale verification approved! Property marked as SOLD.'; break;
+        case 'rejected':  $success_message = 'Sale verification rejected successfully.'; break;
+        case 'finalized': $success_message = 'Sale finalized and commission calculated.'; break;
     }
 }
 
-$error_message = '';
-$sale_verifications = [];
-$status_counts = [
-    'All' => 0,
-    'Pending' => 0,
-    'Approved' => 0,
-    'Rejected' => 0,
-];
+// ===== EMAIL BUILDER FUNCTIONS =====
+function buildApprovalEmailAgent($name, $address, $type, $price, $date, $buyer) {
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+    <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;background:#0a0a0a;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:60px 20px;"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
+    <tr><td style="background:linear-gradient(90deg,#22c55e 0%,#16a34a 50%,#22c55e 100%);height:3px;"></td></tr>
+    <tr><td style="padding:48px 48px 32px;text-align:center;border-bottom:1px solid #1f1f1f;"><h1 style="margin:0 0 12px;color:#22c55e;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Sale Approved</h1><p style="margin:0;color:#666;font-size:15px;">Congratulations on the successful sale!</p></td></tr>
+    <tr><td style="padding:48px;">
+        <p style="margin:0 0 24px;font-size:14px;color:#999;">Hello <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($name) . '</span>,</p>
+        <p style="margin:0 0 32px;font-size:15px;color:#ccc;line-height:1.8;">Your property sale verification has been <strong style="color:#22c55e;">approved</strong> by the admin team.</p>
+        <div style="background:#0d1117;border-left:2px solid #d4af37;padding:20px 24px;margin:0 0 24px;">
+            <p style="margin:0 0 12px;font-size:13px;color:#d4af37;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Sale Details</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Property:</strong> ' . htmlspecialchars($address) . '</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Type:</strong> ' . htmlspecialchars($type) . '</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Sale Price:</strong> <span style="color:#22c55e;font-weight:700;">' . $price . '</span></p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Sale Date:</strong> ' . $date . '</p>
+            <p style="margin:0;font-size:14px;color:#999;"><strong style="color:#ccc;">Buyer:</strong> ' . htmlspecialchars($buyer) . '</p>
+        </div>
+        <div style="background:#0d1117;border-left:2px solid #2563eb;padding:16px 20px;margin:0 0 24px;">
+            <p style="margin:0;font-size:13px;color:#999;line-height:1.6;"><strong style="color:#2563eb;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">What\'s Next</strong>The property has been marked as SOLD. Commission processing will follow shortly. This sale will be reflected in your dashboard.</p>
+        </div>
+    </td></tr>
+    <tr><td style="background:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;text-align:center;"><p style="margin:0 0 8px;font-size:13px;color:#666;"><strong style="color:#d4af37;">HomeEstate Realty</strong></p><p style="margin:0;font-size:11px;color:#444;">© ' . date('Y') . ' All rights reserved</p></td></tr>
+    </table></td></tr></table></body></html>';
+}
 
-// Fetch sale verifications with property and agent details
+function buildApprovalEmailBuyer($name, $address, $type, $price, $date, $agent) {
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+    <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;background:#0a0a0a;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:60px 20px;"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
+    <tr><td style="background:linear-gradient(90deg,#d4af37 0%,#f4d03f 50%,#d4af37 100%);height:3px;"></td></tr>
+    <tr><td style="padding:48px 48px 32px;text-align:center;border-bottom:1px solid #1f1f1f;"><h1 style="margin:0 0 12px;color:#d4af37;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Purchase Confirmed</h1><p style="margin:0;color:#666;font-size:15px;">Congratulations on your new property!</p></td></tr>
+    <tr><td style="padding:48px;">
+        <p style="margin:0 0 24px;font-size:14px;color:#999;">Dear <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($name) . '</span>,</p>
+        <p style="margin:0 0 32px;font-size:15px;color:#ccc;line-height:1.8;">Your property purchase has been officially <strong style="color:#22c55e;">confirmed</strong>. Welcome to your new home!</p>
+        <div style="background:#0d1117;border-left:2px solid #d4af37;padding:20px 24px;margin:0 0 24px;">
+            <p style="margin:0 0 12px;font-size:13px;color:#d4af37;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Property Details</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Address:</strong> ' . htmlspecialchars($address) . '</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Type:</strong> ' . htmlspecialchars($type) . '</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Purchase Price:</strong> <span style="color:#d4af37;font-weight:700;">' . $price . '</span></p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Sale Date:</strong> ' . $date . '</p>
+            <p style="margin:0;font-size:14px;color:#999;"><strong style="color:#ccc;">Your Agent:</strong> ' . htmlspecialchars($agent) . '</p>
+        </div>
+        <div style="background:#0d1117;border-left:2px solid #22c55e;padding:16px 20px;margin:0 0 24px;">
+            <p style="margin:0;font-size:13px;color:#999;line-height:1.6;"><strong style="color:#22c55e;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Next Steps</strong>Your agent will contact you to finalize documentation. Ensure all legal paperwork is completed. Schedule your property handover and key collection.</p>
+        </div>
+    </td></tr>
+    <tr><td style="background:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;text-align:center;"><p style="margin:0 0 8px;font-size:13px;color:#666;"><strong style="color:#d4af37;">HomeEstate Realty</strong></p><p style="margin:0;font-size:11px;color:#444;">© ' . date('Y') . ' All rights reserved</p></td></tr>
+    </table></td></tr></table></body></html>';
+}
+
+function buildRejectionEmailAgent($name, $address, $type, $price, $buyer, $reason) {
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+    <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;background:#0a0a0a;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:60px 20px;"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
+    <tr><td style="background:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#ef4444 100%);height:3px;"></td></tr>
+    <tr><td style="padding:48px 48px 32px;text-align:center;border-bottom:1px solid #1f1f1f;"><h1 style="margin:0 0 12px;color:#ef4444;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Sale Rejected</h1><p style="margin:0;color:#666;font-size:15px;">Your sale verification requires attention</p></td></tr>
+    <tr><td style="padding:48px;">
+        <p style="margin:0 0 24px;font-size:14px;color:#999;">Hello <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($name) . '</span>,</p>
+        <p style="margin:0 0 32px;font-size:15px;color:#ccc;line-height:1.8;">Your sale verification has been <strong style="color:#ef4444;">rejected</strong>. Please review the details below.</p>
+        <div style="background:#0d1117;border-left:2px solid #d4af37;padding:20px 24px;margin:0 0 24px;">
+            <p style="margin:0 0 12px;font-size:13px;color:#d4af37;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Submission Details</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Property:</strong> ' . htmlspecialchars($address) . '</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Type:</strong> ' . htmlspecialchars($type) . '</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Sale Price:</strong> ' . $price . '</p>
+            <p style="margin:0;font-size:14px;color:#999;"><strong style="color:#ccc;">Buyer:</strong> ' . htmlspecialchars($buyer) . '</p>
+        </div>
+        <div style="background:#0d1117;border-left:2px solid #ef4444;padding:20px 24px;margin:0 0 24px;">
+            <p style="margin:0 0 8px;font-size:13px;color:#ef4444;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Rejection Reason</p>
+            <p style="margin:0;font-size:14px;color:#ccc;line-height:1.7;">' . htmlspecialchars($reason) . '</p>
+        </div>
+        <div style="background:#0d1117;border-left:2px solid #2563eb;padding:16px 20px;margin:0 0 24px;">
+            <p style="margin:0;font-size:13px;color:#999;line-height:1.6;"><strong style="color:#2563eb;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">What To Do</strong>Review the rejection reason, address the issues, gather correct documentation, and resubmit the sale verification with accurate details.</p>
+        </div>
+    </td></tr>
+    <tr><td style="background:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;text-align:center;"><p style="margin:0 0 8px;font-size:13px;color:#666;"><strong style="color:#d4af37;">HomeEstate Realty</strong></p><p style="margin:0;font-size:11px;color:#444;">© ' . date('Y') . ' All rights reserved</p></td></tr>
+    </table></td></tr></table></body></html>';
+}
+
+// ===== FETCH ALL SALE VERIFICATIONS =====
+$sale_verifications = [];
+$status_counts = ['All' => 0, 'Pending' => 0, 'Approved' => 0, 'Rejected' => 0];
+
 $sql = "
-    SELECT 
-        sv.*, 
+    SELECT
+        sv.*,
         p.StreetAddress, p.City, p.property_ID, p.PropertyType, p.ListingPrice,
         a.first_name AS agent_first_name, a.last_name AS agent_last_name, a.email AS agent_email,
-        (SELECT pi.PhotoURL FROM property_images pi 
-         WHERE pi.property_ID = p.property_ID 
-         ORDER BY pi.SortOrder ASC LIMIT 1) as property_image,
+        (SELECT pi.PhotoURL FROM property_images pi WHERE pi.property_ID = p.property_ID ORDER BY pi.SortOrder ASC LIMIT 1) as property_image,
         (SELECT COUNT(*) FROM property_images pi WHERE pi.property_ID = p.property_ID) as property_image_count,
         (SELECT GROUP_CONCAT(
-            CONCAT(
-                '{\"url\":\"', REPLACE(pi.PhotoURL, '\"', '\\\"'), '\"',
-                ',\"sort_order\":', COALESCE(pi.SortOrder, 0), '}'
-            ) ORDER BY pi.SortOrder ASC SEPARATOR '|||'
-         ) FROM property_images pi 
-         WHERE pi.property_ID = p.property_ID) as property_images_json,
-        (SELECT COUNT(*) FROM sale_verification_documents svd 
-         WHERE svd.verification_id = sv.verification_id) as document_count,
+            CONCAT('{\"url\":\"', REPLACE(pi.PhotoURL, '\"', '\\\\\"'), '\",\"sort_order\":', COALESCE(pi.SortOrder, 0), '}')
+            ORDER BY pi.SortOrder ASC SEPARATOR '|||')
+         FROM property_images pi WHERE pi.property_ID = p.property_ID) as property_images_json,
+        (SELECT COUNT(*) FROM sale_verification_documents svd WHERE svd.verification_id = sv.verification_id) as document_count,
         (SELECT GROUP_CONCAT(
-            CONCAT(
-                '{\"id\":', svd.document_id, 
-                ',\"original_filename\":\"', REPLACE(svd.original_filename, '\"', '\\\"'), '\"',
-                ',\"stored_filename\":\"', REPLACE(svd.stored_filename, '\"', '\\\"'), '\"',
-                ',\"file_path\":\"', REPLACE(svd.file_path, '\"', '\\\"'), '\"',
-                ',\"file_size\":', COALESCE(svd.file_size, 0),
-                ',\"mime_type\":\"', COALESCE(svd.mime_type, ''), '\"',
-                ',\"uploaded_at\":\"', svd.uploaded_at, '\"}'
-            ) SEPARATOR '|||'
-         ) FROM sale_verification_documents svd 
-         WHERE svd.verification_id = sv.verification_id) as documents_json
+            CONCAT('{\"id\":', svd.document_id, ',\"original_filename\":\"', REPLACE(svd.original_filename, '\"', '\\\\\"'), '\",\"stored_filename\":\"', REPLACE(svd.stored_filename, '\"', '\\\\\"'), '\",\"file_path\":\"', REPLACE(svd.file_path, '\"', '\\\\\"'), '\",\"file_size\":', COALESCE(svd.file_size, 0), ',\"mime_type\":\"', COALESCE(svd.mime_type, ''), '\",\"uploaded_at\":\"', svd.uploaded_at, '\"}')
+            SEPARATOR '|||')
+         FROM sale_verification_documents svd WHERE svd.verification_id = sv.verification_id) as documents_json,
+        fs.sale_id AS finalized_sale_id,
+        ac.commission_amount, ac.commission_percentage, ac.status AS commission_status
     FROM sale_verifications sv
     LEFT JOIN property p ON p.property_ID = sv.property_id
     LEFT JOIN accounts a ON a.account_id = sv.agent_id
-    ORDER BY 
-        CASE sv.status
-            WHEN 'Pending' THEN 1
-            WHEN 'Approved' THEN 2
-            WHEN 'Rejected' THEN 3
-            ELSE 4
-        END,
-        sv.submitted_at DESC
-";
+    LEFT JOIN finalized_sales fs ON fs.verification_id = sv.verification_id
+    LEFT JOIN agent_commissions ac ON ac.sale_id = fs.sale_id
+    ORDER BY
+        CASE sv.status WHEN 'Pending' THEN 1 WHEN 'Approved' THEN 2 WHEN 'Rejected' THEN 3 ELSE 4 END,
+        sv.submitted_at DESC";
 
 $stmt = $conn->prepare($sql);
 $stmt->execute();
 $res = $stmt->get_result();
 while ($row = $res->fetch_assoc()) {
-    $status = $row['status'] ?: 'Pending';
-    if (!isset($status_counts[$status])) $status_counts[$status] = 0;
-    $status_counts[$status]++;
+    $st = $row['status'] ?: 'Pending';
+    $status_counts[$st] = ($status_counts[$st] ?? 0) + 1;
     $status_counts['All']++;
 
-    $row['sale_date_fmt'] = $row['sale_date'] ? date('M j, Y', strtotime($row['sale_date'])) : '';
+    $row['sale_date_fmt']    = $row['sale_date'] ? date('M j, Y', strtotime($row['sale_date'])) : '';
     $row['submitted_at_fmt'] = $row['submitted_at'] ? date('M j, Y g:i A', strtotime($row['submitted_at'])) : '';
-    $row['reviewed_at_fmt'] = $row['reviewed_at'] ? date('M j, Y g:i A', strtotime($row['reviewed_at'])) : '';
-    
-    // Process documents JSON
+    $row['reviewed_at_fmt']  = $row['reviewed_at'] ? date('M j, Y g:i A', strtotime($row['reviewed_at'])) : '';
+
+    // Parse documents
+    $row['documents'] = [];
     if ($row['documents_json']) {
-        $documents = [];
-        $doc_strings = explode('|||', $row['documents_json']);
-        foreach ($doc_strings as $doc_string) {
-            $documents[] = json_decode($doc_string, true);
+        foreach (explode('|||', $row['documents_json']) as $ds) {
+            $d = json_decode($ds, true);
+            if ($d) $row['documents'][] = $d;
         }
-        $row['documents'] = $documents;
-    } else {
-        $row['documents'] = [];
     }
-    
-    // Process property images JSON
+    // Parse property images
+    $row['property_images'] = [];
     if ($row['property_images_json']) {
-        $property_images = [];
-        $img_strings = explode('|||', $row['property_images_json']);
-        foreach ($img_strings as $img_string) {
-            $property_images[] = json_decode($img_string, true);
+        foreach (explode('|||', $row['property_images_json']) as $is) {
+            $i = json_decode($is, true);
+            if ($i) $row['property_images'][] = $i;
         }
-        $row['property_images'] = $property_images;
-    } else {
-        $row['property_images'] = [];
     }
-    
+
     $sale_verifications[] = $row;
 }
 $stmt->close();
 
+// Status tabs config
+$status_tabs = [
+    'All'      => ['icon' => 'bi-grid-3x3-gap-fill', 'count' => $status_counts['All']],
+    'Pending'  => ['icon' => 'bi-clock-history',      'count' => $status_counts['Pending']],
+    'Approved' => ['icon' => 'bi-check-circle-fill',  'count' => $status_counts['Approved']],
+    'Rejected' => ['icon' => 'bi-x-circle-fill',      'count' => $status_counts['Rejected']],
+];
+$active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $status_tabs) ? $_GET['status'] : 'All';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -763,9 +350,11 @@ $stmt->close();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Property Sale Approvals - Admin Panel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
+        /* ===== GLOBAL LAYOUT (matches property.php exactly) ===== */
         :root {
             --primary-color: #161209;
             --secondary-color: #bc9e42;
@@ -773,2002 +362,767 @@ $stmt->close();
             --bg-light: #f8f9fa;
             --border-color: #e0e0e0;
         }
-        
-        body { 
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-light);
-            color: #212529;
-        }
-        
-        /* Use standardized admin-content from dashboard */
+        body { font-family: 'Inter', sans-serif; background: var(--bg-light); color: #212529; }
+        .admin-sidebar { background: linear-gradient(180deg, #161209 0%, #1f1a0f 100%); color: #fff; height: 100vh; position: fixed; top: 0; left: 0; width: 290px; overflow-y: auto; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .admin-content { margin-left: 290px; padding: 2rem; min-height: 100vh; max-width: 1800px; }
+        @media (max-width: 1200px) { .admin-content { margin-left: 0 !important; padding: 1.5rem; } }
+        @media (max-width: 768px)  { .admin-content { margin-left: 0 !important; padding: 1rem; } }
+
         .admin-content {
-            margin-left: 290px;
-            padding: 2rem;
-            min-height: 100vh;
-            max-width: 1800px;
-        }
-        
-        @media (max-width: 1200px) {
-            .admin-content {
-                margin-left: 0 !important;
-                padding: 1.5rem;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .admin-content {
-                margin-left: 0 !important;
-                padding: 1rem;
-            }
-        }
-        
-        /* Dashboard Header - Consistent with admin_dashboard.php */
-        .dashboard-header {
-            background: linear-gradient(135deg, #161209 0%, #2a2318 100%);
-            color: #fff;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --gold: #d4af37; --gold-light: #f4d03f; --gold-dark: #b8941f;
+            --blue: #2563eb; --blue-light: #3b82f6; --blue-dark: #1e40af;
+            --card-bg: #ffffff; --text-primary: #212529; --text-secondary: #6c757d;
         }
 
-        .dashboard-header h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
+        /* ===== PAGE HEADER (matches property.php) ===== */
+        .page-header { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 2rem 2.5rem; margin-bottom: 1.5rem; position: relative; overflow: hidden; }
+        .page-header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at top right, rgba(37,99,235,0.04) 0%, transparent 50%), radial-gradient(ellipse at bottom left, rgba(212,175,55,0.03) 0%, transparent 50%); pointer-events: none; }
+        .page-header::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
+        .page-header-inner { position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; }
+        .page-header h1 { font-size: 1.75rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.25rem; }
+        .page-header .subtitle { font-size: 0.95rem; color: var(--text-secondary); font-weight: 400; }
 
-        .dashboard-header p {
-            opacity: 0.9;
-            margin-bottom: 0;
-            font-size: 1rem;
-        }
-        
-        /* Stats Cards - Consistent with dashboard */
-        .stat-card {
-            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
-            border: 1px solid var(--border-color);
-            border-left: 4px solid var(--secondary-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            min-height: 120px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .stat-card:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
-        }
-        
-        .stat-card.active {
-            border-left-color: var(--secondary-color);
-            background: linear-gradient(135deg, #fffbf0 0%, #fff9e6 100%);
-            box-shadow: 0 4px 16px rgba(188, 158, 66, 0.2);
-        }
+        /* ===== KPI STAT CARDS (matches property.php) ===== */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .kpi-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem; cursor: default; transition: all 0.2s ease; position: relative; overflow: hidden; }
+        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(212,175,55,0.03), rgba(37,99,235,0.02)); opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+        .kpi-card:hover::before { opacity: 1; }
+        .kpi-card .kpi-icon { width: 48px; height: 48px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; }
+        .kpi-icon.gold   { background: rgba(212,175,55,0.1);  color: var(--gold); }
+        .kpi-icon.amber  { background: rgba(245,158,11,0.1);  color: #d97706; }
+        .kpi-icon.green  { background: rgba(34,197,94,0.1);   color: #16a34a; }
+        .kpi-icon.red    { background: rgba(239,68,68,0.1);   color: #dc2626; }
+        .kpi-card .kpi-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 0.125rem; }
+        .kpi-card .kpi-value { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); }
 
-        .stat-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-            margin-right: 1rem;
-        }
-        
-        .stat-card .stat-label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #6c757d;
-            margin-bottom: 0.25rem;
-        }
-        
-        .stat-card .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            line-height: 1.2;
-        }
-        
-        /* Sale Verification Cards - Redesigned for consistency */
-        .sale-card {
-            background: #fff;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .sale-card:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
-        }
-        
-        .sale-card-image {
-            position: relative;
-            height: 200px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            overflow: hidden;
-        }
-        
-        .sale-card-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .sale-card-image .property-type-badge {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            background: rgba(22, 18, 9, 0.9);
-            color: #fff;
-            padding: 0.35rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            backdrop-filter: blur(4px);
-        }
-        
-        .sale-card-image .status-badge {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            padding: 0.35rem 0.85rem;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            backdrop-filter: blur(4px);
-        }
-        
-        .status-badge.pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .status-badge.approved {
-            background: #d1e7dd;
-            color: #0f5132;
-        }
-        
-        .status-badge.rejected {
-            background: #f8d7da;
-            color: #842029;
-        }
-        
-        .sale-card-body {
-            padding: 1.5rem;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .property-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin: 0 0 0.5rem 0;
-            line-height: 1.3;
-            /* Single-line truncation with ellipsis to prevent wrapping to two lines */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: block;
-            max-width: 100%;
-        }
-        
-        .property-location {
-            font-size: 0.875rem;
-            color: #6c757d;
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-            margin-bottom: 1rem;
-        }
-        
-        .property-location i {
-            color: var(--secondary-color);
-        }
-        
-        .sale-info {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-        
-        .sale-info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-        
-        .sale-info-row:last-child {
-            margin-bottom: 0;
-        }
-        
-        .sale-info-label {
-            font-size: 0.75rem;
-            color: #6c757d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
-        }
-        
-        .sale-info-value {
-            font-size: 0.9rem;
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-        
-        .sale-price {
-            font-size: 1.1rem;
-            color: var(--secondary-color);
-            font-weight: 700;
-        }
-        
-        .buyer-info {
-            background: #fffbf0;
-            padding: 0.875rem;
-            border-radius: 8px;
-            border: 1px solid #f5ecd0;
-            margin-bottom: 1rem;
-        }
-        
-        .buyer-info-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: var(--secondary-color);
-            margin-bottom: 0.5rem;
-            letter-spacing: 0.5px;
-        }
-        
-        .buyer-detail {
-            font-size: 0.875rem;
-            color: var(--primary-color);
-            margin-bottom: 0.25rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .buyer-detail:last-child {
-            margin-bottom: 0;
-        }
-        
-        .buyer-detail i {
-            width: 16px;
-            color: var(--secondary-color);
-        }
-        
-        .agent-info {
-            padding: 0.75rem;
-            background: #e8f4f8;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            border: 1px solid #d1e7f0;
-        }
-        
-        .agent-info-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: #0c5776;
-            margin-bottom: 0.5rem;
-            letter-spacing: 0.5px;
-        }
-        
-        .agent-name {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 0.25rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .agent-name i {
-            color: #0c5776;
-        }
-        
-        .document-count {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.85rem;
-            color: var(--secondary-color);
-            font-weight: 600;
-            margin-top: 0.5rem;
-        }
-        
-        .card-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: auto;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border-color);
-        }
-        
-        .btn-action {
-            flex: 1;
-            padding: 0.625rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.35rem;
-        }
-        
-        .btn-view {
-            background: var(--primary-color);
-            color: #fff;
-        }
-        
-        .btn-view:hover {
-            background: var(--secondary-color);
-            color: var(--primary-color);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(188, 158, 66, 0.3);
-        }
-        
-        .btn-approve {
-            background: #28a745;
-            color: #fff;
-        }
-        
-        .btn-approve:hover {
-            background: #218838;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-        }
-        
-        .btn-reject {
-            background: #dc3545;
-            color: #fff;
-        }
-        
-        .btn-reject:hover {
-            background: #c82333;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-        }
-        
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            background: #fff;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        
-        .empty-state i {
-            font-size: 3.5rem;
-            color: #6c757d;
-            opacity: 0.3;
-            margin-bottom: 1rem;
-        }
-        
-        .empty-state h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
-        }
-        
-        .empty-state p {
-            color: #6c757d;
-            margin: 0;
-        }
-        
-        /* Alerts - Match dashboard styling */
-        .alert {
-            border-radius: 8px;
-            border-left: 4px solid;
-            margin-bottom: 1.5rem;
-            padding: 1rem 1.25rem;
-        }
-        
-        /* Modal Styles - Match tour_requests.php */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            z-index: 1050;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-        
-        .modal-overlay.show {
-            display: block;
-            opacity: 1;
-        }
-        
-        .modal-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            max-width: 800px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            z-index: 1051;
-            opacity: 0;
-            transition: all 0.2s ease;
-        }
-        
-        .modal-large {
-            max-width: 1200px;
-            width: 95%;
-        }
-        
-        .modal-overlay.show .modal-container {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
-        
-        .modal-header {
-            background: linear-gradient(135deg, #161209 0%, #2a2318 100%);
-            color: white;
-            padding: 1.5rem 2rem;
-            border-radius: 12px 12px 0 0;
-            border-bottom: none;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .modal-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: white;
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-            opacity: 0.8;
-        }
-        
-        .modal-close:hover {
-            opacity: 1;
-            background: rgba(255,255,255,0.1);
-        }
-        
-        .modal-body {
-            padding: 2rem;
-        }
-        
-        .modal-footer {
-            padding: 1.25rem 2rem;
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
-            border-radius: 0 0 12px 12px;
-            display: flex;
-            gap: 0.75rem;
-            justify-content: flex-end;
-        }
-        
-        .detail-section {
-            margin-bottom: 2rem;
-        }
-        
-        .detail-section:last-child {
-            margin-bottom: 0;
-        }
-        
-        .detail-title {
-            font-size: 0.875rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--secondary-color);
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #f8f9fa;
-        }
-        
-        .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-        }
-        
-        .detail-item {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .detail-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #6c757d;
-            margin-bottom: 0.25rem;
-        }
-        
-        .detail-value {
-            font-size: 0.95rem;
-            color: var(--primary-color);
-            font-weight: 500;
-        }
-        
-        .detail-value.price {
-            font-size: 1.1rem;
-            color: var(--secondary-color);
-            font-weight: 700;
-        }
-        
-        .property-image-large {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-        
-        .status-display {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-        
-        .status-display.pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .status-display.approved {
-            background: #d1e7dd;
-            color: #0f5132;
-        }
-        
-        .status-display.rejected {
-            background: #f8d7da;
-            color: #842029;
-        }
-        
-        .documents-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        
-        .document-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.75rem;
-            background: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-        
-        .document-icon {
-            font-size: 1.5rem;
-            color: var(--secondary-color);
-        }
-        
-        .document-info {
-            flex: 1;
-        }
-        
-        .document-name {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-        }
-        
-        .document-meta {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-        
-        .document-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .btn-preview, .btn-download {
-            padding: 0.375rem 0.75rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        
-        .btn-preview {
-            background: var(--secondary-color);
-            color: var(--primary-color);
-        }
-        
-        .btn-preview:hover {
-            background: #a08636;
-        }
-        
-        .btn-download {
-            background: #28a745;
-            color: #fff;
-        }
-        
-        .btn-download:hover {
-            background: #218838;
-        }
-        
-        .btn-modal {
-            padding: 0.625rem 1.5rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-modal:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .btn-primary {
-            background: var(--primary-color);
-            color: #fff;
-        }
-        
-        .btn-primary:hover {
-            background: var(--secondary-color);
-            color: var(--primary-color);
-        }
-        
-        .btn-success {
-            background: #28a745;
-            color: #fff;
-        }
-        
-        .btn-success:hover {
-            background: #218838;
-        }
-        
-        .btn-danger {
-            background: #dc3545;
-            color: #fff;
-        }
-        
-        .btn-danger:hover {
-            background: #c82333;
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-            color: #fff;
-        }
-        
-        .btn-secondary:hover {
-            background: #545b62;
-        }
-        
-        /* Property Gallery Styles */
-        .property-gallery {
-            position: relative;
-            width: 100%;
-            height: 300px;
-            overflow: hidden;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 1rem;
-        }
-        
-        .gallery-item {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            display: none;
-        }
-        
-        .gallery-item.active {
-            opacity: 1;
-            display: block;
-        }
-        
-        .gallery-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-        
-        .gallery-navigation {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        
-        .gallery-nav-btn {
-            background: var(--secondary-color);
-            color: var(--primary-color);
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            font-size: 1rem;
-        }
-        
-        .gallery-nav-btn:hover:not(:disabled) {
-            background: #a08636;
-            transform: scale(1.1);
-        }
-        
-        .gallery-nav-btn:disabled {
-            background: #dee2e6;
-            color: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .gallery-indicators {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .gallery-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: none;
-            background: #dee2e6;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .gallery-indicator.active {
-            background: var(--secondary-color);
-            transform: scale(1.2);
-        }
-        
-        .gallery-indicator:hover {
-            background: #a08636;
-        }
-        
-        .no-images {
-            text-align: center;
-        }
+        /* ===== STATUS TABS (matches property.php tabs) ===== */
+        .sale-tabs { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 1.5rem; position: relative; }
+        .sale-tabs::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
+        .sale-tabs .nav-tabs { border: none; padding: 0 1rem; margin: 0; }
+        .sale-tabs .nav-item { margin: 0; }
+        .sale-tabs .nav-link { border: none; border-radius: 0; padding: 1rem 1.25rem; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); background: transparent; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.5rem; border-bottom: 2px solid transparent; }
+        .sale-tabs .nav-link:hover { color: var(--text-primary); background: rgba(37,99,235,0.03); }
+        .sale-tabs .nav-link.active { color: var(--gold-dark); border-bottom-color: var(--gold); background: rgba(212,175,55,0.04); }
+        .tab-badge { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 700; }
+        .badge-all      { background: rgba(212,175,55,0.1); color: var(--gold-dark); border: 1px solid rgba(212,175,55,0.15); }
+        .badge-pending  { background: rgba(245,158,11,0.1); color: #d97706; border: 1px solid rgba(245,158,11,0.15); }
+        .badge-approved { background: rgba(34,197,94,0.1);  color: #16a34a; border: 1px solid rgba(34,197,94,0.15); }
+        .badge-rejected { background: rgba(239,68,68,0.1);  color: #dc2626; border: 1px solid rgba(239,68,68,0.15); }
+
+        /* ===== CONTENT AREA ===== */
+        .tab-content { padding: 1.5rem; }
+        .sales-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
+
+        /* ===== SALE CARD (consistent with property.php card style) ===== */
+        .sale-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; overflow: hidden; transition: all 0.2s ease; height: 100%; display: flex; flex-direction: column; position: relative; }
+        .sale-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(212,175,55,0.02), rgba(37,99,235,0.01)); opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 1; }
+        .sale-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .sale-card:hover::before { opacity: 1; }
+
+        .card-img-wrap { position: relative; height: 200px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); overflow: hidden; }
+        .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+        .sale-card:hover .card-img-wrap img { transform: scale(1.03); }
+        .card-img-wrap .img-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.5)); pointer-events: none; }
+
+        /* Badges on image */
+        .card-img-wrap .type-badge { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.95); color: var(--text-primary); padding: 0.3rem 0.65rem; border-radius: 3px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; z-index: 2; backdrop-filter: blur(4px); border: 1px solid rgba(37,99,235,0.08); box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .card-img-wrap .status-badge { position: absolute; top: 10px; right: 10px; padding: 0.3rem 0.7rem; border-radius: 3px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
+        .status-badge.pending  { background: rgba(245,158,11,0.9); color: #fff; }
+        .status-badge.approved { background: rgba(34,197,94,0.9);  color: #fff; }
+        .status-badge.rejected { background: rgba(239,68,68,0.9);  color: #fff; }
+
+        .card-img-wrap .price-overlay { position: absolute; bottom: 10px; left: 10px; z-index: 2; }
+        .card-img-wrap .price-overlay .price { font-size: 1.2rem; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+        /* Card Body */
+        .sale-card .card-body-content { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; position: relative; z-index: 2; }
+        .sale-card .prop-address { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+        .sale-card .prop-location { font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.75rem; }
+        .sale-card .prop-location i { color: var(--gold-dark); font-size: 0.7rem; }
+
+        /* Info rows */
+        .sale-info { background: rgba(37,99,235,0.03); padding: 0.75rem; border-radius: 3px; margin-bottom: 0.75rem; border: 1px solid rgba(37,99,235,0.06); }
+        .sale-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .sale-info-row:last-child { margin-bottom: 0; }
+        .sale-info-label { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; }
+        .sale-info-value { font-size: 0.85rem; color: var(--text-primary); font-weight: 600; }
+        .sale-info-value.sale-price { font-size: 0.95rem; color: var(--gold-dark); font-weight: 800; }
+
+        /* People sections */
+        .people-section { padding: 0.65rem 0.75rem; border-radius: 3px; margin-bottom: 0.5rem; border: 1px solid rgba(37,99,235,0.06); }
+        .people-section.buyer { background: rgba(212,175,55,0.04); }
+        .people-section.agent { background: rgba(37,99,235,0.03); }
+        .people-section .section-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.35rem; }
+        .people-section.buyer .section-title { color: var(--gold-dark); }
+        .people-section.agent .section-title { color: var(--blue); }
+        .people-section .detail-line { font-size: 0.8rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.15rem; }
+        .people-section .detail-line i { font-size: 0.7rem; width: 14px; text-align: center; }
+        .people-section.buyer .detail-line i { color: var(--gold-dark); }
+        .people-section.agent .detail-line i { color: var(--blue); }
+        .doc-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--blue); font-weight: 600; margin-top: 0.25rem; }
+
+        /* Card footer actions */
+        .card-actions { display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid rgba(37,99,235,0.08); }
+        .btn-action { flex: 1; padding: 0.55rem; font-size: 0.8rem; font-weight: 600; border: none; border-radius: 3px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.35rem; }
+        .btn-view { background: var(--text-primary); color: #fff; }
+        .btn-view:hover { background: var(--gold); color: var(--text-primary); }
+        .btn-approve { background: #22c55e; color: #fff; }
+        .btn-approve:hover { background: #16a34a; }
+        .btn-reject { background: #ef4444; color: #fff; }
+        .btn-reject:hover { background: #dc2626; }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state { text-align: center; padding: 4rem 2rem; background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; }
+        .empty-state i { font-size: 3rem; color: var(--text-secondary); opacity: 0.3; margin-bottom: 0.75rem; display: block; }
+        .empty-state h4 { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem; }
+        .empty-state p { color: var(--text-secondary); margin: 0; }
+
+        /* ===== ALERTS ===== */
+        .alert { border-radius: 4px; border-left: 3px solid; margin-bottom: 1rem; padding: 0.85rem 1.25rem; font-size: 0.9rem; }
+
+        /* ===== MODAL (consistent admin light theme) ===== */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 1050; opacity: 0; transition: opacity 0.2s ease; }
+        .modal-overlay.show { display: flex; opacity: 1; align-items: center; justify-content: center; }
+        .modal-container { background: var(--card-bg); border-radius: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); max-width: 800px; width: 92%; max-height: 92vh; overflow-y: auto; transform: scale(0.95); opacity: 0; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); border: 1px solid rgba(37,99,235,0.1); }
+        .modal-large { max-width: 1100px; width: 95%; }
+        .modal-overlay.show .modal-container { opacity: 1; transform: scale(1); }
+
+        .modal-admin-header { background: var(--card-bg); padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(37,99,235,0.1); display: flex; align-items: center; justify-content: space-between; position: relative; }
+        .modal-admin-header::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
+        .modal-admin-header h2 { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+        .modal-admin-header h2 i { color: var(--gold-dark); }
+        .modal-close-btn { background: none; border: 1px solid rgba(37,99,235,0.1); width: 32px; height: 32px; border-radius: 4px; font-size: 1rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+        .modal-close-btn:hover { background: rgba(239,68,68,0.08); color: #ef4444; border-color: rgba(239,68,68,0.2); }
+        .modal-body { padding: 1.75rem; }
+        .modal-footer { padding: 1rem 1.75rem; background: rgba(37,99,235,0.02); border-top: 1px solid rgba(37,99,235,0.1); display: flex; gap: 0.6rem; justify-content: flex-end; }
+
+        /* Modal detail sections */
+        .detail-section { margin-bottom: 1.5rem; }
+        .detail-section:last-child { margin-bottom: 0; }
+        .detail-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gold-dark); margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(37,99,235,0.08); display: flex; align-items: center; gap: 0.5rem; }
+        .detail-title i { font-size: 0.9rem; }
+        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
+        .detail-item .detail-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 0.15rem; }
+        .detail-item .detail-value { font-size: 0.9rem; color: var(--text-primary); font-weight: 500; }
+        .detail-item .detail-value.price-val { font-size: 1rem; color: var(--gold-dark); font-weight: 800; }
+
+        .status-display { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 3px; font-size: 0.8rem; font-weight: 600; }
+        .status-display.pending  { background: rgba(245,158,11,0.1); color: #d97706; }
+        .status-display.approved { background: rgba(34,197,94,0.1);  color: #16a34a; }
+        .status-display.rejected { background: rgba(239,68,68,0.1);  color: #dc2626; }
+
+        .admin-notes-box { background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.1); border-left: 3px solid #ef4444; padding: 0.75rem 1rem; border-radius: 3px; margin-top: 0.5rem; }
+        .admin-notes-box .notes-label { font-size: 0.65rem; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+        .admin-notes-box .notes-text { font-size: 0.85rem; color: var(--text-primary); line-height: 1.5; }
+
+        .commission-box { background: rgba(34,197,94,0.04); border: 1px solid rgba(34,197,94,0.1); border-left: 3px solid #22c55e; padding: 0.75rem 1rem; border-radius: 3px; margin-top: 0.5rem; }
+        .commission-box .comm-label { font-size: 0.65rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+        .commission-box .comm-value { font-size: 1rem; color: #16a34a; font-weight: 800; }
+
+        /* Property gallery in modal */
+        .property-gallery { position: relative; width: 100%; height: 280px; overflow: hidden; border-radius: 4px; margin-bottom: 0.75rem; }
+        .gallery-item { position: absolute; inset: 0; opacity: 0; display: none; transition: opacity 0.3s; }
+        .gallery-item.active { opacity: 1; display: block; }
+        .gallery-image { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-navigation { display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
+        .gallery-nav-btn { background: var(--gold); color: var(--text-primary); border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; font-size: 0.9rem; }
+        .gallery-nav-btn:hover:not(:disabled) { background: var(--gold-dark); }
+        .gallery-nav-btn:disabled { background: #dee2e6; color: #adb5bd; cursor: not-allowed; }
+        .gallery-indicators { display: flex; gap: 0.35rem; }
+        .gallery-indicator { width: 10px; height: 10px; border-radius: 50%; border: none; background: #dee2e6; cursor: pointer; transition: all 0.15s; }
+        .gallery-indicator.active { background: var(--gold); transform: scale(1.2); }
+
+        /* Documents list in modal */
+        .documents-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .document-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; background: rgba(37,99,235,0.03); border-radius: 3px; border: 1px solid rgba(37,99,235,0.06); }
+        .document-icon { font-size: 1.25rem; color: var(--gold-dark); }
+        .document-info { flex: 1; }
+        .document-name { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+        .document-meta { font-size: 0.7rem; color: var(--text-secondary); }
+        .document-actions { display: flex; gap: 0.35rem; }
+        .btn-doc { padding: 0.3rem 0.5rem; font-size: 0.7rem; font-weight: 600; border: none; border-radius: 3px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 0.2rem; }
+        .btn-preview-doc { background: var(--gold); color: var(--text-primary); }
+        .btn-preview-doc:hover { background: var(--gold-dark); }
+        .btn-download-doc { background: var(--blue); color: #fff; }
+        .btn-download-doc:hover { background: var(--blue-dark); }
+
+        /* Modal buttons */
+        .btn-modal { padding: 0.55rem 1.25rem; font-size: 0.85rem; font-weight: 600; border: none; border-radius: 3px; cursor: pointer; transition: all 0.15s; }
+        .btn-modal:hover { transform: translateY(-1px); }
+        .btn-modal-primary { background: var(--gold); color: var(--text-primary); }
+        .btn-modal-primary:hover { background: var(--gold-dark); }
+        .btn-modal-success { background: #22c55e; color: #fff; }
+        .btn-modal-success:hover { background: #16a34a; }
+        .btn-modal-danger { background: #ef4444; color: #fff; }
+        .btn-modal-danger:hover { background: #dc2626; }
+        .btn-modal-secondary { background: rgba(37,99,235,0.08); color: var(--text-secondary); }
+        .btn-modal-secondary:hover { background: rgba(37,99,235,0.15); color: var(--text-primary); }
+        .btn-modal-blue { background: var(--blue); color: #fff; }
+        .btn-modal-blue:hover { background: var(--blue-dark); }
 
         /* Processing overlay */
-        .processing-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.45);
-            z-index: 2000; /* Above custom modals */
-        }
-
+        .processing-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); z-index: 2000; }
         .processing-overlay.show { display: flex; }
+        .processing-box { display: flex; align-items: center; gap: 0.75rem; background: var(--card-bg); color: var(--text-primary); padding: 1rem 1.5rem; border-radius: 4px; border: 1px solid rgba(37,99,235,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
 
-        .processing-box {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            background: rgba(22, 18, 9, 0.95);
-            color: #fff;
-            padding: 1rem 1.25rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-            min-width: 260px;
-            justify-content: center;
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+            .sales-grid { grid-template-columns: 1fr; }
+            .modal-container { width: 98%; }
         }
 
-        .processing-text {
-            font-weight: 600;
-            letter-spacing: 0.2px;
-        }
+        /* ===== FINALIZE MODAL OVERRIDES ===== */
+        #finalizeSaleModal .modal-header { background: var(--card-bg); border-bottom: 1px solid rgba(37,99,235,0.1); position: relative; }
+        #finalizeSaleModal .modal-header::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
+        #finalizeSaleModal .modal-title { color: var(--text-primary); font-weight: 700; }
+        #finalizeSaleModal .modal-title i { color: var(--gold-dark); }
     </style>
 </head>
 <body>
-    <?php 
+    <?php
     $active_page = 'admin_property_sale_approvals.php';
-    include 'admin_sidebar.php'; 
-    include 'admin_navbar.php'; 
+    include 'admin_sidebar.php';
+    include 'admin_navbar.php';
     ?>
-    
+
     <div class="admin-content">
-        <div class="container-fluid">
-            <!-- Success Message -->
-            <?php if ($success_message): ?>
-                <div class="alert alert-success">
-                    <i class="bi bi-check-circle me-2"></i><?php echo htmlspecialchars($success_message); ?>
-                </div>
-            <?php endif; ?>
+        <!-- Success / Error messages -->
+        <?php if ($success_message): ?>
+            <div class="alert alert-success"><i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($success_message) ?></div>
+        <?php endif; ?>
+        <?php if ($error_message): ?>
+            <div class="alert alert-danger"><i class="bi bi-exclamation-circle me-2"></i><?= htmlspecialchars($error_message) ?></div>
+        <?php endif; ?>
 
-            <!-- Error Message -->
-            <?php if ($error_message): ?>
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-circle me-2"></i><?php echo htmlspecialchars($error_message); ?>
-                </div>
-            <?php endif; ?>
-
-            <!-- Dashboard Header -->
-            <div class="dashboard-header">
-                <h1><i class="bi bi-file-earmark-check me-2"></i>Property Sale Approvals</h1>
-                <p>Review and approve property sale verifications submitted by agents</p>
-            </div>
-
-            <!-- Statistics -->
-            <div class="row g-4 mb-4">
-                <div class="col-xl-3 col-lg-6 col-md-6">
-                    <div class="stat-card active" data-filter="All" onclick="filterSales('All')">
-                        <div class="stat-icon bg-primary bg-opacity-10 text-primary">
-                            <i class="bi bi-list-ul"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="stat-label">Total Submissions</div>
-                            <div class="stat-value"><?php echo $status_counts['All']; ?></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-lg-6 col-md-6">
-                    <div class="stat-card" data-filter="Pending" onclick="filterSales('Pending')">
-                        <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-                            <i class="bi bi-clock-history"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="stat-label">Pending Review</div>
-                            <div class="stat-value"><?php echo $status_counts['Pending']; ?></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-lg-6 col-md-6">
-                    <div class="stat-card" data-filter="Approved" onclick="filterSales('Approved')">
-                        <div class="stat-icon bg-success bg-opacity-10 text-success">
-                            <i class="bi bi-tag-fill"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="stat-label">Sold</div>
-                            <div class="stat-value"><?php echo $status_counts['Approved']; ?></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-lg-6 col-md-6">
-                    <div class="stat-card" data-filter="Rejected" onclick="filterSales('Rejected')">
-                        <div class="stat-icon bg-danger bg-opacity-10 text-danger">
-                            <i class="bi bi-x-circle"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="stat-label">Rejected</div>
-                            <div class="stat-value"><?php echo $status_counts['Rejected']; ?></div>
-                        </div>
-                    </div>
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-inner">
+                <div>
+                    <h1>Sale Approvals</h1>
+                    <p class="subtitle">Review and approve property sale verifications submitted by agents</p>
                 </div>
             </div>
+        </div>
 
-            <!-- Sale Verification Cards -->
-            <?php if (empty($sale_verifications)): ?>
-                <div class="empty-state">
-                    <i class="bi bi-inbox"></i>
-                    <h3>No Sale Verifications Found</h3>
-                    <p>There are no property sale verifications to display at this time.</p>
-                </div>
-            <?php else: ?>
-                <div class="row g-4" id="salesGrid">
-                    <?php foreach ($sale_verifications as $sale): ?>
-                        <div class="col-xl-3 col-lg-4 col-md-6" data-status="<?php echo htmlspecialchars($sale['status']); ?>">
-                            <div class="sale-card">
-                                <!-- Property Image -->
-                                <div class="sale-card-image">
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon gold"><i class="fas fa-layer-group"></i></div>
+                <div><div class="kpi-label">Total Submissions</div><div class="kpi-value"><?= $status_counts['All'] ?></div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon amber"><i class="fas fa-clock"></i></div>
+                <div><div class="kpi-label">Pending Review</div><div class="kpi-value"><?= $status_counts['Pending'] ?></div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon green"><i class="fas fa-check-circle"></i></div>
+                <div><div class="kpi-label">Approved (Sold)</div><div class="kpi-value"><?= $status_counts['Approved'] ?></div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon red"><i class="fas fa-times-circle"></i></div>
+                <div><div class="kpi-label">Rejected</div><div class="kpi-value"><?= $status_counts['Rejected'] ?></div></div>
+            </div>
+        </div>
+
+        <!-- Status Tabs -->
+        <div class="sale-tabs">
+            <ul class="nav nav-tabs">
+                <?php foreach ($status_tabs as $tabKey => $tabInfo): ?>
+                    <li class="nav-item">
+                        <a class="nav-link <?= $active_status === $tabKey ? 'active' : '' ?>"
+                           href="?status=<?= $tabKey ?>"
+                           data-tab="<?= $tabKey ?>">
+                            <i class="bi <?= $tabInfo['icon'] ?>"></i>
+                            <?= $tabKey === 'Approved' ? 'Sold' : $tabKey ?>
+                            <span class="tab-badge badge-<?= strtolower($tabKey) ?>"><?= $tabInfo['count'] ?></span>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+
+            <div class="tab-content">
+                <?php
+                    $display = $active_status === 'All'
+                        ? $sale_verifications
+                        : array_filter($sale_verifications, fn($s) => $s['status'] === $active_status);
+                ?>
+                <?php if (empty($display)): ?>
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <h4>No <?= $active_status === 'All' ? '' : $active_status ?> Verifications</h4>
+                        <p>There are no <?= strtolower($active_status) ?> sale verifications to display.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="sales-grid">
+                        <?php foreach ($display as $sale): ?>
+                            <div class="sale-card" data-verification='<?= htmlspecialchars(json_encode($sale), ENT_QUOTES) ?>'>
+                                <!-- Image -->
+                                <div class="card-img-wrap">
                                     <?php if ($sale['property_image']): ?>
-                                        <img src="<?php echo htmlspecialchars($sale['property_image']); ?>" 
-                                             alt="<?php echo htmlspecialchars($sale['StreetAddress']); ?>"
-                                             onerror="this.src='uploads/default-property.jpg'">
+                                        <img src="<?= htmlspecialchars($sale['property_image']) ?>" alt="Property" onerror="this.src='uploads/default-property.jpg'">
                                     <?php else: ?>
-                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#6c757d;">
-                                            <i class="bi bi-image" style="font-size:3rem;"></i>
-                                        </div>
+                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#adb5bd;"><i class="bi bi-image" style="font-size:2.5rem;"></i></div>
                                     <?php endif; ?>
-                                    
-                                    <div class="property-type-badge">
-                                        <i class="bi bi-house-door me-1"></i><?php echo htmlspecialchars($sale['PropertyType']); ?>
-                                    </div>
-                                    
+                                    <div class="img-overlay"></div>
+                                    <div class="type-badge"><i class="bi bi-house-door me-1"></i><?= htmlspecialchars($sale['PropertyType']) ?></div>
                                     <?php
-                                        // Display 'Sold' for approvals (keeps approved styling)
-                                        $badgeClass = strtolower($sale['status']) === 'approved' ? 'approved' : strtolower($sale['status']);
-                                        $badgeLabel = ($sale['status'] === 'Approved') ? 'Sold' : $sale['status'];
+                                        $badgeClass = strtolower($sale['status']);
+                                        $badgeLabel = $sale['status'] === 'Approved' ? 'SOLD' : strtoupper($sale['status']);
                                     ?>
-                                    <div class="status-badge <?php echo $badgeClass; ?>">
-                                        <?php echo htmlspecialchars($badgeLabel); ?>
-                                    </div>
+                                    <div class="status-badge <?= $badgeClass ?>"><?= $badgeLabel ?></div>
+                                    <div class="price-overlay"><div class="price">₱<?= number_format($sale['sale_price'], 0) ?></div></div>
                                 </div>
-                        
-                                <!-- Card Body -->
-                                <div class="sale-card-body">
-                                    <h3 class="property-title">
-                                        <?php echo htmlspecialchars($sale['StreetAddress']); ?>
-                                    </h3>
-                                    <div class="property-location">
-                                        <i class="bi bi-geo-alt-fill"></i>
-                                        <span><?php echo htmlspecialchars($sale['City']); ?></span>
-                                    </div>
-                                    
-                                    <!-- Sale Information -->
+
+                                <!-- Body -->
+                                <div class="card-body-content">
+                                    <h3 class="prop-address"><?= htmlspecialchars($sale['StreetAddress']) ?></h3>
+                                    <div class="prop-location"><i class="bi bi-geo-alt-fill"></i><?= htmlspecialchars($sale['City']) ?></div>
+
                                     <div class="sale-info">
                                         <div class="sale-info-row">
-                                            <div class="sale-info-label">Sale Price</div>
-                                            <div class="sale-info-value sale-price">
-                                                ₱<?php echo number_format($sale['sale_price'], 2); ?>
-                                            </div>
+                                            <span class="sale-info-label">Sale Price</span>
+                                            <span class="sale-info-value sale-price">₱<?= number_format($sale['sale_price'], 2) ?></span>
                                         </div>
                                         <div class="sale-info-row">
-                                            <div class="sale-info-label">Listing Price</div>
-                                            <div class="sale-info-value">
-                                                ₱<?php echo number_format($sale['ListingPrice'], 2); ?>
-                                            </div>
+                                            <span class="sale-info-label">Listing Price</span>
+                                            <span class="sale-info-value">₱<?= number_format($sale['ListingPrice'], 2) ?></span>
                                         </div>
                                         <div class="sale-info-row">
-                                            <div class="sale-info-label">Sale Date</div>
-                                            <div class="sale-info-value">
-                                                <?php echo htmlspecialchars($sale['sale_date_fmt']); ?>
-                                            </div>
+                                            <span class="sale-info-label">Sale Date</span>
+                                            <span class="sale-info-value"><?= htmlspecialchars($sale['sale_date_fmt']) ?></span>
                                         </div>
                                     </div>
-                                    
-                                    <!-- Buyer Information -->
-                                    <div class="buyer-info">
-                                        <div class="buyer-info-title"><i class="bi bi-person-fill me-2"></i>Buyer</div>
-                                        <div class="buyer-detail">
-                                            <i class="bi bi-person"></i>
-                                            <span><?php echo htmlspecialchars($sale['buyer_name']); ?></span>
-                                        </div>
+
+                                    <div class="people-section buyer">
+                                        <div class="section-title"><i class="bi bi-person-fill me-1"></i>Buyer</div>
+                                        <div class="detail-line"><i class="bi bi-person"></i><?= htmlspecialchars($sale['buyer_name']) ?></div>
                                         <?php if ($sale['buyer_contact']): ?>
-                                            <div class="buyer-detail">
-                                                <i class="bi bi-envelope"></i>
-                                                <span><?php echo htmlspecialchars($sale['buyer_contact']); ?></span>
-                                            </div>
+                                            <div class="detail-line"><i class="bi bi-telephone"></i><?= htmlspecialchars($sale['buyer_contact']) ?></div>
                                         <?php endif; ?>
                                     </div>
-                                    
-                                    <!-- Agent Information -->
-                                    <div class="agent-info">
-                                        <div class="agent-info-title"><i class="bi bi-person-badge me-2"></i>Agent</div>
-                                        <div class="agent-name">
-                                            <i class="bi bi-person-check"></i>
-                                            <?php echo htmlspecialchars($sale['agent_first_name'] . ' ' . $sale['agent_last_name']); ?>
-                                        </div>
+
+                                    <div class="people-section agent">
+                                        <div class="section-title"><i class="bi bi-person-badge me-1"></i>Agent</div>
+                                        <div class="detail-line"><i class="bi bi-person-check"></i><?= htmlspecialchars($sale['agent_first_name'] . ' ' . $sale['agent_last_name']) ?></div>
                                         <?php if ($sale['document_count'] > 0): ?>
-                                            <div class="document-count">
-                                                <i class="bi bi-file-earmark-text"></i>
-                                                <?php echo $sale['document_count']; ?> Document<?php echo $sale['document_count'] > 1 ? 's' : ''; ?>
-                                            </div>
+                                            <div class="doc-badge"><i class="bi bi-file-earmark-text"></i><?= $sale['document_count'] ?> Document<?= $sale['document_count'] > 1 ? 's' : '' ?></div>
                                         <?php endif; ?>
                                     </div>
-                                    
-                                    <!-- Actions -->
+
                                     <div class="card-actions">
-                                        <button class="btn-action btn-view" 
-                                                onclick="viewDetails(<?php echo $sale['verification_id']; ?>)">
+                                        <button class="btn-action btn-view" onclick="viewDetails(<?= $sale['verification_id'] ?>)">
                                             <i class="bi bi-eye"></i> View
                                         </button>
                                         <?php if ($sale['status'] === 'Pending'): ?>
-                                            <button class="btn-action btn-approve" 
-                                                    onclick="approveVerification(<?php echo $sale['verification_id']; ?>)">
+                                            <button class="btn-action btn-approve" onclick="approveVerification(<?= $sale['verification_id'] ?>)">
                                                 <i class="bi bi-check-lg"></i> Approve
                                             </button>
-                                            <button class="btn-action btn-reject" 
-                                                    onclick="rejectVerification(<?php echo $sale['verification_id']; ?>)">
+                                            <button class="btn-action btn-reject" onclick="rejectVerification(<?= $sale['verification_id'] ?>)">
                                                 <i class="bi bi-x-lg"></i> Reject
                                             </button>
                                         <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 
-    <!-- Modal for View Details -->
+    <!-- View Details Modal -->
     <div class="modal-overlay" id="detailsModal">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h2 class="modal-title"><i class="bi bi-file-earmark-check me-2"></i>Sale Verification Details</h2>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div class="modal-container modal-large">
+            <div class="modal-admin-header">
+                <h2><i class="bi bi-file-earmark-check"></i> Sale Verification Details</h2>
+                <button class="modal-close-btn" onclick="closeModal('detailsModal')">&times;</button>
             </div>
-            <div class="modal-body" id="modalContent">
-                <!-- Content will be populated by JavaScript -->
-            </div>
-            <div class="modal-footer">
-                <div id="modalActions">
-                    <!-- Action buttons will be populated by JavaScript -->
-                </div>
-                <button class="btn-modal btn-secondary" onclick="closeModal()">
-                    <i class="bi bi-x-lg me-2"></i>Close
-                </button>
-            </div>
+            <div class="modal-body" id="modalContent"></div>
+            <div class="modal-footer" id="modalFooter"></div>
         </div>
     </div>
 
-    <!-- Modal for Document Preview -->
+    <!-- Document Preview Modal -->
     <div class="modal-overlay" id="previewModal">
         <div class="modal-container modal-large">
-            <div class="modal-header">
-                <h2 class="modal-title" id="previewTitle"><i class="bi bi-file-earmark-text me-2"></i>Document Preview</h2>
-                <button class="modal-close" onclick="closePreviewModal()">&times;</button>
+            <div class="modal-admin-header">
+                <h2 id="previewTitle"><i class="bi bi-file-earmark-text"></i> Document Preview</h2>
+                <button class="modal-close-btn" onclick="closeModal('previewModal')">&times;</button>
             </div>
-            <div class="modal-body" id="previewContent">
-                <!-- Document preview will be shown here -->
-            </div>
+            <div class="modal-body" id="previewContent"></div>
             <div class="modal-footer">
-                <button class="btn-modal btn-primary" id="downloadBtn" onclick="downloadCurrentDocument()">
-                    <i class="bi bi-download me-2"></i> Download
-                </button>
-                <button class="btn-modal btn-secondary" onclick="closePreviewModal()">
-                    <i class="bi bi-x-lg me-2"></i>Close
-                </button>
+                <button class="btn-modal btn-modal-blue" id="downloadBtn" onclick="downloadCurrentDocument()"><i class="bi bi-download me-1"></i>Download</button>
+                <button class="btn-modal btn-modal-secondary" onclick="closeModal('previewModal')"><i class="bi bi-x-lg me-1"></i>Close</button>
             </div>
         </div>
     </div>
 
     <!-- Confirmation Modal -->
-    <div class="modal-overlay" id="confirmationModal">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h2 class="modal-title" id="confirmationModalLabel">
-                    <i class="bi bi-question-circle me-2"></i>Confirm Action
-                </h2>
-                <button class="modal-close" onclick="closeConfirmationModal()">&times;</button>
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-container" style="max-width:500px;">
+            <div class="modal-admin-header">
+                <h2 id="confirmTitle"><i class="bi bi-question-circle"></i> Confirm Action</h2>
+                <button class="modal-close-btn" onclick="closeModal('confirmModal')">&times;</button>
             </div>
-            <div class="modal-body" id="confirmationModalBody">
-                <!-- Dynamic content -->
-            </div>
+            <div class="modal-body" id="confirmBody"></div>
             <div class="modal-footer">
-                <button class="btn-modal btn-secondary" onclick="closeConfirmationModal()">
-                    <i class="bi bi-x-lg me-2"></i>Cancel
-                </button>
-                <button class="btn-modal btn-primary" id="confirmActionBtn">
-                    <i class="bi bi-check-lg me-2"></i>Confirm
-                </button>
+                <button class="btn-modal btn-modal-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+                <button class="btn-modal btn-modal-success" id="confirmActionBtn">Confirm</button>
             </div>
         </div>
     </div>
 
-    <!-- Input Modal (for rejection reason) -->
-    <div class="modal-overlay" id="inputModal">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h2 class="modal-title" id="inputModalLabel">
-                    <i class="bi bi-chat-left-text me-2"></i>Provide Reason
-                </h2>
-                <button class="modal-close" onclick="closeInputModal()">&times;</button>
+    <!-- Rejection Reason Modal -->
+    <div class="modal-overlay" id="reasonModal">
+        <div class="modal-container" style="max-width:500px;">
+            <div class="modal-admin-header">
+                <h2><i class="bi bi-chat-left-text"></i> Reject – Provide Reason</h2>
+                <button class="modal-close-btn" onclick="closeModal('reasonModal')">&times;</button>
             </div>
             <div class="modal-body">
-                <label for="reasonInput" class="form-label fw-bold" id="inputModalPrompt" style="color: #161209; margin-bottom: 0.5rem;">Please provide a reason:</label>
-                <textarea class="form-control" id="reasonInput" rows="4" placeholder="Enter your reason here..." style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.75rem;"></textarea>
-                <div style="color: #dc3545; font-size: 0.875rem; margin-top: 0.5rem; display: none;" id="reasonError">
-                    This field is required.
-                </div>
+                <label class="form-label fw-bold" for="reasonInput" style="font-size:0.85rem;">Reason for rejection:</label>
+                <textarea class="form-control" id="reasonInput" rows="4" placeholder="Explain why this verification is being rejected..." style="border:1px solid rgba(37,99,235,0.15);border-radius:3px;font-size:0.9rem;"></textarea>
+                <div id="reasonError" style="color:#ef4444;font-size:0.8rem;margin-top:0.35rem;display:none;">A reason is required.</div>
             </div>
             <div class="modal-footer">
-                <button class="btn-modal btn-secondary" onclick="closeInputModal()">
-                    <i class="bi bi-x-lg me-2"></i>Cancel
-                </button>
-                <button class="btn-modal btn-danger" id="submitReasonBtn">
-                    <i class="bi bi-check-lg me-2"></i>Submit
-                </button>
+                <button class="btn-modal btn-modal-secondary" onclick="closeModal('reasonModal')">Cancel</button>
+                <button class="btn-modal btn-modal-danger" id="submitRejectBtn"><i class="bi bi-x-lg me-1"></i>Reject</button>
             </div>
         </div>
     </div>
 
-    <!-- Processing Overlay -->
-    <div id="processingOverlay" class="processing-overlay" aria-hidden="true">
-        <div class="processing-box" role="status" aria-live="polite">
-            <div class="spinner-border text-light" style="width: 1.5rem; height: 1.5rem;" aria-hidden="true"></div>
-            <div class="processing-text">Processing, please wait…</div>
-        </div>
-    </div>
-
-    <!-- Bootstrap 5 Modal: Finalize Sale & Commission -->
+    <!-- Finalize Sale & Commission Modal -->
     <div class="modal fade" id="finalizeSaleModal" tabindex="-1" aria-labelledby="finalizeSaleLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header" style="background: linear-gradient(135deg, #161209 0%, #2a2318 100%); color: #fff;">
+            <div class="modal-content" style="border:1px solid rgba(37,99,235,0.1);border-radius:4px;">
+                <div class="modal-header" style="position:relative;">
                     <h5 class="modal-title" id="finalizeSaleLabel"><i class="bi bi-cash-coin me-2"></i>Finalize Sale & Commission</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="finalizeSaleForm">
                     <div class="modal-body">
                         <input type="hidden" name="property_id" id="finalize_property_id">
                         <input type="hidden" name="agent_id" id="finalize_agent_id">
-
                         <div class="mb-3">
-                            <label for="final_sale_price" class="form-label fw-semibold">Final Sale Price</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="final_sale_price" name="final_sale_price" placeholder="e.g. 3500000" required>
+                            <label for="final_sale_price" class="form-label fw-semibold" style="font-size:0.85rem;">Final Sale Price (₱)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="final_sale_price" name="final_sale_price" required>
                         </div>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="buyer_name" class="form-label fw-semibold">Buyer Name</label>
-                                <input type="text" class="form-control" id="buyer_name" name="buyer_name" placeholder="Juan Dela Cruz">
+                                <label for="buyer_name" class="form-label fw-semibold" style="font-size:0.85rem;">Buyer Name</label>
+                                <input type="text" class="form-control" id="buyer_name" name="buyer_name">
                             </div>
                             <div class="col-md-6">
-                                <label for="buyer_email" class="form-label fw-semibold">Buyer Email</label>
-                                <input type="email" class="form-control" id="buyer_email" name="buyer_email" placeholder="buyer@example.com">
+                                <label for="buyer_email" class="form-label fw-semibold" style="font-size:0.85rem;">Buyer Email</label>
+                                <input type="email" class="form-control" id="buyer_email" name="buyer_email">
                             </div>
                         </div>
                         <div class="mt-3">
-                            <label for="buyer_contact" class="form-label fw-semibold">Buyer Contact</label>
-                            <input type="text" class="form-control" id="buyer_contact" name="buyer_contact" placeholder="(+63) 900 000 0000">
+                            <label for="buyer_contact" class="form-label fw-semibold" style="font-size:0.85rem;">Buyer Contact</label>
+                            <input type="text" class="form-control" id="buyer_contact" name="buyer_contact">
                         </div>
                         <div class="mt-3">
-                            <label for="commission_percentage" class="form-label fw-semibold">Commission Percentage (%)</label>
-                            <input type="number" step="0.01" min="0" max="100" class="form-control" id="commission_percentage" name="commission_percentage" placeholder="e.g. 3" required>
+                            <label for="commission_percentage" class="form-label fw-semibold" style="font-size:0.85rem;">Commission Percentage (%)</label>
+                            <input type="number" step="0.01" min="0" max="100" class="form-control" id="commission_percentage" name="commission_percentage" required>
                         </div>
                         <div class="mt-3">
-                            <label for="notes" class="form-label fw-semibold">Notes (optional)</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Any additional context..."></textarea>
+                            <label for="notes" class="form-label fw-semibold" style="font-size:0.85rem;">Notes (optional)</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
                         </div>
-                        <div class="mt-3 small text-muted" id="finalizeHelp"></div>
+                        <div class="mt-2 small text-muted" id="finalizeHelp"></div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Save & Calculate</button>
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-sm" style="background:var(--gold);color:var(--text-primary);font-weight:600;"><i class="bi bi-check2-circle me-1"></i>Save & Calculate</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <script>
-        // Bootstrap (for finalize modal)
-        let finalizeModalInstance = null;
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.bootstrap) {
-                const modalEl = document.getElementById('finalizeSaleModal');
-                if (modalEl) finalizeModalInstance = new bootstrap.Modal(modalEl);
-            }
-        });
+    <!-- Processing Overlay -->
+    <div id="processingOverlay" class="processing-overlay">
+        <div class="processing-box">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <div style="font-weight:600;">Processing, please wait...</div>
+        </div>
+    </div>
 
-        // Processing overlay helpers
-        function showProcessing(message) {
-            const overlay = document.getElementById('processingOverlay');
-            const textEl = overlay.querySelector('.processing-text');
-            if (message && textEl) textEl.textContent = message;
-            overlay.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function hideProcessing() {
-            const overlay = document.getElementById('processingOverlay');
-            overlay.classList.remove('show');
-            document.body.style.overflow = '';
-        }
-
-        // Store sale verifications data for modal
-        const saleVerifications = <?php echo json_encode($sale_verifications); ?>;
-        
-        // Filter functionality
-        document.querySelectorAll('.stat-card').forEach(card => {
-            card.addEventListener('click', function() {
-                const filter = this.dataset.filter;
-                
-                // Update active state
-                document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Filter grid items that contain the data-status attribute (the column wrapper)
-                const cards = document.querySelectorAll('#salesGrid [data-status]');
-                let visibleCount = 0;
-
-                cards.forEach(card => {
-                    // data-status lives on the wrapper (col-*) element, not the inner .sale-card
-                    const status = card.getAttribute('data-status') || '';
-                    if (filter === 'All' || status === filter) {
-                        card.style.display = 'block';
-                        visibleCount++;
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-                
-                // Handle empty state
-                const grid = document.getElementById('salesGrid');
-                let emptyState = grid.querySelector('.empty-state');
-                
-                if (visibleCount === 0) {
-                    // Show empty state
-                    if (!emptyState) {
-                        emptyState = document.createElement('div');
-                        emptyState.className = 'empty-state col-12';
-                        grid.appendChild(emptyState);
-                    }
-                    emptyState.innerHTML = `
-                        <i class="bi bi-clipboard-x"></i>
-                        <h3>No ${filter} Verifications</h3>
-                        <p>There are no ${filter.toLowerCase()} verifications to display.</p>
-                    `;
-                } else {
-                    // Remove empty state if it exists
-                    if (emptyState) {
-                        emptyState.remove();
-                    }
-                }
-            });
-        });
-        
-        function viewDetails(verificationId) {
-            const sale = saleVerifications.find(s => s.verification_id == verificationId);
-            if (!sale) return;
-            // Expose current sale for finalize workflow
-            window.currentViewedSale = sale;
-            
-            const modalContent = document.getElementById('modalContent');
-            const modalActions = document.getElementById('modalActions');
-            
-            // Format status for display — show 'Sold' when status is 'Approved', but keep approved styling
-            const statusClass = (sale.status && sale.status.toLowerCase() === 'approved') ? 'approved' : (sale.status || '').toLowerCase();
-            const statusLabel = (sale.status === 'Approved') ? 'Sold' : (sale.status || '');
-            const statusDisplay = `<span class="status-display ${statusClass}"><i class="bi bi-circle-fill"></i> ${statusLabel}</span>`;
-            
-            // Build modal content
-            modalContent.innerHTML = `
-                <!-- Property Images Gallery -->
-                <div class="detail-section">
-                    <h3 class="detail-title"><i class="bi bi-images me-2"></i>Property Images (${sale.property_image_count || 0})</h3>
-                    ${sale.property_images && sale.property_images.length > 0 ? `
-                        <div class="property-gallery">
-                            ${sale.property_images.map((image, index) => `
-                                <div class="gallery-item ${index === 0 ? 'active' : ''}" data-index="${index}">
-                                    <img src="${image.url}" alt="Property Image ${index + 1}" class="gallery-image">
-                                </div>
-                            `).join('')}
-                        </div>
-                        ${sale.property_images.length > 1 ? `
-                            <div class="gallery-navigation">
-                                <button class="gallery-nav-btn" onclick="previousImage()" id="prevBtn" disabled>
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-                                <div class="gallery-indicators">
-                                    ${sale.property_images.map((_, index) => `
-                                        <button class="gallery-indicator ${index === 0 ? 'active' : ''}" 
-                                                onclick="goToImage(${index})" 
-                                                data-index="${index}"></button>
-                                    `).join('')}
-                                </div>
-                                <button class="gallery-nav-btn" onclick="nextImage()" id="nextBtn">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        ` : ''}
-                    ` : `
-                        <div class="no-images">
-                            <img src="https://via.placeholder.com/800x250?text=No+Images" alt="No images" class="property-image-large">
-                        </div>
-                    `}
-                </div>
-                
-                <!-- Property Details -->
-                <div class="detail-section">
-                    <h3 class="detail-title"><i class="bi bi-building me-2"></i>Property Information</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Property Address</div>
-                            <div class="detail-value">${sale.StreetAddress}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">City</div>
-                            <div class="detail-value">${sale.City}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Property Type</div>
-                            <div class="detail-value">${sale.PropertyType}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Listing Price</div>
-                            <div class="detail-value">₱${Number(sale.ListingPrice).toLocaleString()}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Sale Details -->
-                <div class="detail-section">
-                    <h3 class="detail-title"><i class="bi bi-handshake me-2"></i>Sale Information</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Sale Price</div>
-                            <div class="detail-value price">₱${Number(sale.sale_price).toLocaleString()}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Sale Date</div>
-                            <div class="detail-value">${sale.sale_date_fmt}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Status</div>
-                            <div class="detail-value">${statusDisplay}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Submitted Date</div>
-                            <div class="detail-value">${sale.submitted_at_fmt}</div>
-                        </div>
-                        ${sale.reviewed_at ? `
-                        <div class="detail-item">
-                            <div class="detail-label">Reviewed Date</div>
-                            <div class="detail-value">${sale.reviewed_at_fmt}</div>
-                        </div>
-                        ` : ''}
-                        ${sale.admin_notes ? `
-                        <div class="detail-item" style="grid-column: 1 / -1;">
-                            <div class="detail-label">Admin Notes</div>
-                            <div class="detail-value">${sale.admin_notes}</div>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-                
-                <!-- Buyer Information -->
-                <div class="detail-section">
-                    <h3 class="detail-title"><i class="bi bi-person-fill me-2"></i>Buyer Information</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Buyer Name</div>
-                            <div class="detail-value">${sale.buyer_name}</div>
-                        </div>
-                        ${sale.buyer_contact ? `
-                        <div class="detail-item">
-                            <div class="detail-label">Buyer Contact</div>
-                            <div class="detail-value">${sale.buyer_contact}</div>
-                        </div>
-                        ` : ''}
-                        ${sale.additional_notes ? `
-                        <div class="detail-item" style="grid-column: 1 / -1;">
-                            <div class="detail-label">Additional Notes</div>
-                            <div class="detail-value">${sale.additional_notes}</div>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-                
-                <!-- Agent Information -->
-                <div class="detail-section">
-                    <h3 class="detail-title"><i class="bi bi-person-badge me-2"></i>Agent Information</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Agent Name</div>
-                            <div class="detail-value">${sale.agent_first_name} ${sale.agent_last_name}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Agent Email</div>
-                            <div class="detail-value">${sale.agent_email}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Documents -->
-                ${sale.document_count > 0 ? `
-                <div class="detail-section">
-                    <h3 class="detail-title"><i class="bi bi-file-earmark-text me-2"></i>Supporting Documents (${sale.document_count})</h3>
-                    <div class="documents-list">
-                        ${sale.documents.map(doc => {
-                            const fileExt = doc.original_filename.split('.').pop().toLowerCase();
-                            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
-                            const isPDF = fileExt === 'pdf';
-                            const fileSize = formatFileSize(doc.file_size);
-                            const uploadDate = new Date(doc.uploaded_at).toLocaleDateString();
-                            
-                            return `
-                                <div class="document-item">
-                                    <div class="document-icon">
-                                        ${isImage ? '<i class="bi bi-file-image"></i>' : 
-                                          isPDF ? '<i class="bi bi-file-pdf"></i>' : 
-                                          '<i class="bi bi-file-earmark"></i>'}
-                                    </div>
-                                    <div class="document-info">
-                                        <div class="document-name">${doc.original_filename}</div>
-                                        <div class="document-meta">${fileSize} • Uploaded ${uploadDate}</div>
-                                    </div>
-                                    <div class="document-actions">
-                                        ${isImage || isPDF ? 
-                                            `<button class="btn-preview" onclick="previewDocument('${doc.file_path}', '${doc.mime_type}', '${doc.original_filename}', ${doc.id})">
-                                                <i class="bi bi-eye"></i> Preview
-                                             </button>` : ''}
-                                        <button class="btn-download" onclick="downloadDocument(${doc.id}, '${doc.original_filename}')">
-                                            <i class="bi bi-download"></i> Download
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-                ` : ''}
-            `;
-            
-            // Build action buttons
-            if (sale.status === 'Pending') {
-                modalActions.innerHTML = `
-                    <button class="btn-modal btn-success" onclick="approveFromModal(${verificationId})">
-                        <i class="bi bi-check-lg me-1"></i> Approve
-                    </button>
-                    <button class="btn-modal btn-danger" onclick="rejectFromModal(${verificationId})">
-                        <i class="bi bi-x-lg me-1"></i> Reject
-                    </button>
-                `;
-            } else {
-                modalActions.innerHTML = '';
-            }
-            
-            // Show modal
-            openModal();
-        }
-        
-        function openModal() {
-            document.getElementById('detailsModal').classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-        
-        function closeModal() {
-            document.getElementById('detailsModal').classList.remove('show');
-            document.body.style.overflow = '';
-        }
-        
-        // Close modal when clicking overlay
-        document.getElementById('detailsModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal();
-            }
-        });
-        
-        // Close modal on Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && document.getElementById('detailsModal').classList.contains('show')) {
-                closeModal();
-            }
-        });
-        
-        function approveFromModal(verificationId) {
-            showConfirmationModal(
-                'Approve Property Sale',
-                'Are you sure you want to approve this property sale verification? This will mark the property as SOLD and notify the agent and buyer via email.',
-                () => {
-                    // Create form to submit approval
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = window.location.href;
-                    
-                    const verificationInput = document.createElement('input');
-                    verificationInput.type = 'hidden';
-                    verificationInput.name = 'verification_id';
-                    verificationInput.value = verificationId;
-                    
-                    const actionInput = document.createElement('input');
-                    actionInput.type = 'hidden';
-                    actionInput.name = 'action';
-                    actionInput.value = 'approve';
-                    
-                    form.appendChild(verificationInput);
-                    form.appendChild(actionInput);
-                    document.body.appendChild(form);
-                    showProcessing('Approving sale, please wait…');
-                    form.submit();
-                }
-            );
-        }
-        
-        function rejectFromModal(verificationId) {
-            showInputModal(
-                'Reject Sale Verification',
-                'Please provide a reason for rejecting this sale verification:',
-                (reason) => {
-                    // Create form to submit rejection
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = window.location.href;
-                    
-                    const verificationInput = document.createElement('input');
-                    verificationInput.type = 'hidden';
-                    verificationInput.name = 'verification_id';
-                    verificationInput.value = verificationId;
-                    
-                    const actionInput = document.createElement('input');
-                    actionInput.type = 'hidden';
-                    actionInput.name = 'action';
-                    actionInput.value = 'reject';
-                    
-                    const reasonInput = document.createElement('input');
-                    reasonInput.type = 'hidden';
-                    reasonInput.name = 'reason';
-                    reasonInput.value = reason;
-                    
-                    form.appendChild(verificationInput);
-                    form.appendChild(actionInput);
-                    form.appendChild(reasonInput);
-                    document.body.appendChild(form);
-                    showProcessing('Rejecting sale, please wait…');
-                    form.submit();
-                }
-            );
-        }
-        
-        // Show confirmation modal
-        function showConfirmationModal(title, message, onConfirm) {
-            const modal = document.getElementById('confirmationModal');
-            document.getElementById('confirmationModalLabel').innerHTML = `<i class="bi bi-question-circle me-2"></i>${title}`;
-            document.getElementById('confirmationModalBody').innerHTML = `<p style="margin: 0; color: #555; font-size: 1rem;">${message}</p>`;
-            
-            const confirmBtn = document.getElementById('confirmActionBtn');
-            
-            // Remove old event listeners by cloning
-            const newConfirmBtn = confirmBtn.cloneNode(true);
-            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-            
-            newConfirmBtn.addEventListener('click', () => {
-                closeConfirmationModal();
-                onConfirm();
-            });
-            
-            modal.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-        
-        function closeConfirmationModal() {
-            document.getElementById('confirmationModal').classList.remove('show');
-            document.body.style.overflow = '';
-        }
-        
-        // Show input modal (for rejection reason)
-        function showInputModal(title, prompt, onSubmit) {
-            const modal = document.getElementById('inputModal');
-            const input = document.getElementById('reasonInput');
-            const error = document.getElementById('reasonError');
-            
-            document.getElementById('inputModalLabel').innerHTML = `<i class="bi bi-chat-left-text me-2"></i>${title}`;
-            document.getElementById('inputModalPrompt').textContent = prompt;
-            input.value = '';
-            input.style.borderColor = '#e0e0e0';
-            error.style.display = 'none';
-            
-            const submitBtn = document.getElementById('submitReasonBtn');
-            
-            // Remove old event listeners by cloning
-            const newSubmitBtn = submitBtn.cloneNode(true);
-            submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
-            
-            newSubmitBtn.addEventListener('click', () => {
-                const reason = input.value.trim();
-                if (!reason) {
-                    input.style.borderColor = '#dc3545';
-                    error.style.display = 'block';
-                    return;
-                }
-                closeInputModal();
-                onSubmit(reason);
-            });
-            
-            modal.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-        
-        function closeInputModal() {
-            document.getElementById('inputModal').classList.remove('show');
-            document.body.style.overflow = '';
-        }
-        
-        // Close modals when clicking overlay
-        document.getElementById('confirmationModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeConfirmationModal();
-            }
-        });
-        
-        document.getElementById('inputModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeInputModal();
-            }
-        });
-        
-        // Close modals on Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                if (document.getElementById('confirmationModal').classList.contains('show')) {
-                    closeConfirmationModal();
-                }
-                if (document.getElementById('inputModal').classList.contains('show')) {
-                    closeInputModal();
-                }
-            }
-        });
-        
-        // Document preview and download functions
-        let currentDocumentId = null;
-        let currentDocumentName = '';
-        
-        function previewDocument(filePath, mimeType, fileName, documentId) {
-            // Convert relative path to web-accessible path
-            const webPath = filePath.replace('../sale_documents/', 'sale_documents/');
-            currentDocumentId = documentId;
-            currentDocumentName = fileName;
-            
-            const previewContent = document.getElementById('previewContent');
-            const previewTitle = document.getElementById('previewTitle');
-            
-            previewTitle.textContent = `Preview: ${fileName}`;
-            
-            if (mimeType.startsWith('image/')) {
-                // Image preview
-                previewContent.innerHTML = `
-                    <div style="text-align: center;">
-                        <img src="${webPath}" alt="${fileName}" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 4px; box-shadow: var(--shadow-md);">
-                    </div>
-                `;
-            } else if (mimeType === 'application/pdf') {
-                // PDF preview using iframe
-                previewContent.innerHTML = `
-                    <div style="height: 70vh;">
-                        <iframe src="${webPath}" width="100%" height="100%" style="border: none; border-radius: 4px;"></iframe>
-                    </div>
-                `;
-            } else {
-                // Generic file preview
-                previewContent.innerHTML = `
-                    <div style="text-align: center; padding: 3rem;">
-                        <i class="bi bi-file-earmark" style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
-                        <h4 style="color: var(--text-secondary); margin-bottom: 1rem;">Preview not available</h4>
-                        <p style="color: var(--text-secondary);">This file type cannot be previewed in the browser.</p>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Click "Download" to view the file.</p>
-                    </div>
-                `;
-            }
-            
-            openPreviewModal();
-        }
-        
-        function downloadDocument(documentId, fileName) {
-            // Redirect to PHP download script
-            window.location.href = `download_document.php?id=${documentId}`;
-        }
-        
-        function downloadCurrentDocument() {
-            if (currentDocumentId && currentDocumentName) {
-                downloadDocument(currentDocumentId, currentDocumentName);
-            }
-        }
-        
-        function openPreviewModal() {
-            document.getElementById('previewModal').classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-        
-        function closePreviewModal() {
-            document.getElementById('previewModal').classList.remove('show');
-            document.body.style.overflow = '';
-        }
-        
-        // Close preview modal when clicking overlay
-        document.getElementById('previewModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closePreviewModal();
-            }
-        });
-        
-        // Close preview modal on Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && document.getElementById('previewModal').classList.contains('show')) {
-                closePreviewModal();
-            }
-        });
-        
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-        
-        function approveVerification(verificationId) {
-            showConfirmationModal(
-                'Approve Property Sale',
-                'Are you sure you want to approve this property sale verification? This will mark the property as SOLD and notify the agent and buyer via email.',
-                () => {
-                    // Create form to submit approval
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = window.location.href;
-                    
-                    const verificationInput = document.createElement('input');
-                    verificationInput.type = 'hidden';
-                    verificationInput.name = 'verification_id';
-                    verificationInput.value = verificationId;
-                    
-                    const actionInput = document.createElement('input');
-                    actionInput.type = 'hidden';
-                    actionInput.name = 'action';
-                    actionInput.value = 'approve';
-                    
-                    form.appendChild(verificationInput);
-                    form.appendChild(actionInput);
-                    document.body.appendChild(form);
-                    showProcessing('Approving sale, please wait…');
-                    form.submit();
-                }
-            );
-        }
-        
-        function rejectVerification(verificationId) {
-            showInputModal(
-                'Reject Sale Verification',
-                'Please provide a reason for rejecting this sale verification:',
-                (reason) => {
-                    // Create form to submit rejection
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = window.location.href;
-                    
-                    const verificationInput = document.createElement('input');
-                    verificationInput.type = 'hidden';
-                    verificationInput.name = 'verification_id';
-                    verificationInput.value = verificationId;
-                    
-                    const actionInput = document.createElement('input');
-                    actionInput.type = 'hidden';
-                    actionInput.name = 'action';
-                    actionInput.value = 'reject';
-                    
-                    const reasonInput = document.createElement('input');
-                    reasonInput.type = 'hidden';
-                    reasonInput.name = 'reason';
-                    reasonInput.value = reason;
-                    
-                    form.appendChild(verificationInput);
-                    form.appendChild(actionInput);
-                    form.appendChild(reasonInput);
-                    document.body.appendChild(form);
-                    showProcessing('Rejecting sale, please wait…');
-                    form.submit();
-                }
-            );
-        }
-        
-        // Property Gallery Navigation Functions
-        let currentImageIndex = 0;
-        let totalImages = 0;
-        
-        function initializeGallery() {
-            const galleryItems = document.querySelectorAll('.gallery-item');
-            const indicators = document.querySelectorAll('.gallery-indicator');
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            
-            totalImages = galleryItems.length;
-            currentImageIndex = 0;
-            
-            if (totalImages <= 1) {
-                if (prevBtn) prevBtn.style.display = 'none';
-                if (nextBtn) nextBtn.style.display = 'none';
-                return;
-            }
-            
-            updateGalleryDisplay();
-        }
-        
-        function updateGalleryDisplay() {
-            const galleryItems = document.querySelectorAll('.gallery-item');
-            const indicators = document.querySelectorAll('.gallery-indicator');
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            
-            // Update gallery items
-            galleryItems.forEach((item, index) => {
-                if (index === currentImageIndex) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-            
-            // Update indicators
-            indicators.forEach((indicator, index) => {
-                if (index === currentImageIndex) {
-                    indicator.classList.add('active');
-                } else {
-                    indicator.classList.remove('active');
-                }
-            });
-            
-            // Update navigation buttons
-            if (prevBtn) {
-                prevBtn.disabled = currentImageIndex === 0;
-            }
-            if (nextBtn) {
-                nextBtn.disabled = currentImageIndex === totalImages - 1;
-            }
-        }
-        
-        function nextImage() {
-            if (currentImageIndex < totalImages - 1) {
-                currentImageIndex++;
-                updateGalleryDisplay();
-            }
-        }
-        
-        function previousImage() {
-            if (currentImageIndex > 0) {
-                currentImageIndex--;
-                updateGalleryDisplay();
-            }
-        }
-        
-        function goToImage(index) {
-            if (index >= 0 && index < totalImages) {
-                currentImageIndex = index;
-                updateGalleryDisplay();
-            }
-        }
-        
-        // Initialize gallery when modal opens
-        function openModal() {
-            document.getElementById('detailsModal').classList.add('show');
-            document.body.style.overflow = 'hidden';
-            
-            // Initialize gallery after modal is shown
-            setTimeout(() => {
-                initializeGallery();
-            }, 100);
-        }
-
-        // Open Bootstrap Finalize Modal and prefill
-        function openFinalizeModal(payload) {
-            try {
-                document.getElementById('finalize_property_id').value = payload.property_id || '';
-                document.getElementById('finalize_agent_id').value = payload.agent_id || '';
-                document.getElementById('final_sale_price').value = payload.final_sale_price || '';
-                document.getElementById('buyer_name').value = payload.buyer_name || '';
-                document.getElementById('buyer_email').value = payload.buyer_email || '';
-                document.getElementById('buyer_contact').value = payload.buyer_contact || '';
-                document.getElementById('commission_percentage').value = '';
-                document.getElementById('notes').value = '';
-                const help = document.getElementById('finalizeHelp');
-                help.textContent = `Property #${payload.property_id} • Agent #${payload.agent_id}`;
-                if (finalizeModalInstance) finalizeModalInstance.show();
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        // Add Finalize button into Details modal actions when Approved
-        const actionsObserver = new MutationObserver(() => {
-            try {
-                const actionsEl = document.getElementById('modalActions');
-                const sale = window.currentViewedSale || null;
-                if (!actionsEl || !sale) return;
-                const exists = actionsEl.querySelector('[data-finalize-btn="1"]');
-                if (exists) return;
-                if ((sale.status || '').toLowerCase() === 'approved') {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'btn-modal btn-primary';
-                    btn.setAttribute('data-finalize-btn', '1');
-                    btn.innerHTML = '<i class="bi bi-cash-coin me-1"></i>Finalize Sale & Commission';
-                    btn.addEventListener('click', () => {
-                        openFinalizeModal({
-                            property_id: sale.property_id,
-                            agent_id: sale.agent_id,
-                            final_sale_price: sale.sale_price || '',
-                            buyer_name: sale.buyer_name || '',
-                            buyer_email: sale.buyer_email || '',
-                            buyer_contact: sale.buyer_contact || ''
-                        });
-                    });
-                    actionsEl.appendChild(btn);
-                }
-            } catch (e) { /* noop */ }
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const actionsEl = document.getElementById('modalActions');
-            if (actionsEl) actionsObserver.observe(actionsEl, { childList: true, subtree: false });
-        });
-
-        // Handle finalize submit
-        const finalizeForm = document.getElementById('finalizeSaleForm');
-        if (finalizeForm) {
-            finalizeForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const fd = new FormData(finalizeForm);
-                const price = parseFloat(fd.get('final_sale_price'));
-                const pct = parseFloat(fd.get('commission_percentage'));
-                if (!price || price <= 0) {
-                    alert('Please enter a valid final sale price.');
-                    return;
-                }
-                if (isNaN(pct) || pct < 0 || pct > 100) {
-                    alert('Commission percentage must be between 0 and 100.');
-                    return;
-                }
-                showProcessing('Finalizing sale and computing commission…');
-                try {
-                    const res = await fetch('admin_finalize_sale.php', { method: 'POST', body: fd });
-                    const data = await res.json();
-                    hideProcessing();
-                    if (data && data.ok) {
-                        if (finalizeModalInstance) finalizeModalInstance.hide();
-                        alert(`Success! Commission computed: ₱${Number(data.commission_amount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`);
-                        window.location.href = window.location.pathname + '?success=finalized';
-                    } else {
-                        alert(data && data.message ? data.message : 'Failed to finalize sale.');
-                    }
-                } catch (err) {
-                    hideProcessing();
-                    alert('Unexpected error while finalizing sale.');
-                    console.error(err);
-                }
-            });
-        }
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // ===== DATA =====
+    const saleVerifications = <?= json_encode($sale_verifications) ?>;
+    let currentViewedSale = null;
+    let currentDocId = null, currentDocName = '';
+
+    // ===== MODAL HELPERS =====
+    function openModal(id) { document.getElementById(id).classList.add('show'); document.body.style.overflow = 'hidden'; }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); document.body.style.overflow = ''; }
+    document.querySelectorAll('.modal-overlay').forEach(o => {
+        o.addEventListener('click', e => { if (e.target === o) closeModal(o.id); });
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.show').forEach(m => closeModal(m.id));
+    });
+
+    function showProcessing(msg) {
+        const o = document.getElementById('processingOverlay');
+        if (msg) o.querySelector('div:last-child').textContent = msg;
+        o.classList.add('show'); document.body.style.overflow = 'hidden';
+    }
+    function hideProcessing() { document.getElementById('processingOverlay').classList.remove('show'); document.body.style.overflow = ''; }
+
+    // ===== VIEW DETAILS =====
+    function viewDetails(vid) {
+        const sale = saleVerifications.find(s => s.verification_id == vid);
+        if (!sale) return;
+        currentViewedSale = sale;
+
+        const stClass = sale.status.toLowerCase();
+        const stLabel = sale.status === 'Approved' ? 'Sold' : sale.status;
+
+        let html = '';
+
+        // Gallery
+        if (sale.property_images && sale.property_images.length > 0) {
+            html += `<div class="detail-section">
+                <div class="detail-title"><i class="bi bi-images"></i> Property Images (${sale.property_image_count || 0})</div>
+                <div class="property-gallery">
+                    ${sale.property_images.map((img, i) => `<div class="gallery-item ${i === 0 ? 'active' : ''}" data-index="${i}"><img src="${img.url}" alt="Image ${i+1}" class="gallery-image"></div>`).join('')}
+                </div>
+                ${sale.property_images.length > 1 ? `
+                <div class="gallery-navigation">
+                    <button class="gallery-nav-btn" onclick="prevImg()" id="prevBtn" disabled><i class="bi bi-chevron-left"></i></button>
+                    <div class="gallery-indicators">${sale.property_images.map((_, i) => `<button class="gallery-indicator ${i === 0 ? 'active' : ''}" onclick="goToImg(${i})"></button>`).join('')}</div>
+                    <button class="gallery-nav-btn" onclick="nextImg()" id="nextBtn"><i class="bi bi-chevron-right"></i></button>
+                </div>` : ''}
+            </div>`;
+        }
+
+        // Property info
+        html += `<div class="detail-section">
+            <div class="detail-title"><i class="bi bi-building"></i> Property Information</div>
+            <div class="detail-grid">
+                <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value">${esc(sale.StreetAddress)}</div></div>
+                <div class="detail-item"><div class="detail-label">City</div><div class="detail-value">${esc(sale.City)}</div></div>
+                <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value">${esc(sale.PropertyType)}</div></div>
+                <div class="detail-item"><div class="detail-label">Listing Price</div><div class="detail-value">₱${Number(sale.ListingPrice).toLocaleString()}</div></div>
+            </div>
+        </div>`;
+
+        // Sale info
+        html += `<div class="detail-section">
+            <div class="detail-title"><i class="bi bi-handshake"></i> Sale Information</div>
+            <div class="detail-grid">
+                <div class="detail-item"><div class="detail-label">Sale Price</div><div class="detail-value price-val">₱${Number(sale.sale_price).toLocaleString()}</div></div>
+                <div class="detail-item"><div class="detail-label">Sale Date</div><div class="detail-value">${sale.sale_date_fmt}</div></div>
+                <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="status-display ${stClass}"><i class="bi bi-circle-fill" style="font-size:0.5rem;"></i> ${stLabel}</span></div></div>
+                <div class="detail-item"><div class="detail-label">Submitted</div><div class="detail-value">${sale.submitted_at_fmt}</div></div>
+                ${sale.reviewed_at ? `<div class="detail-item"><div class="detail-label">Reviewed</div><div class="detail-value">${sale.reviewed_at_fmt}</div></div>` : ''}
+            </div>
+            ${sale.admin_notes ? `<div class="admin-notes-box"><div class="notes-label">Rejection Reason</div><div class="notes-text">${esc(sale.admin_notes)}</div></div>` : ''}
+            ${sale.commission_amount ? `<div class="commission-box"><div class="comm-label">Commission (${Number(sale.commission_percentage)}%)</div><div class="comm-value">₱${Number(sale.commission_amount).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
+        </div>`;
+
+        // Buyer info
+        html += `<div class="detail-section">
+            <div class="detail-title"><i class="bi bi-person-fill"></i> Buyer Information</div>
+            <div class="detail-grid">
+                <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">${esc(sale.buyer_name)}</div></div>
+                ${sale.buyer_contact ? `<div class="detail-item"><div class="detail-label">Contact</div><div class="detail-value">${esc(sale.buyer_contact)}</div></div>` : ''}
+                ${sale.additional_notes ? `<div class="detail-item" style="grid-column:1/-1;"><div class="detail-label">Notes</div><div class="detail-value">${esc(sale.additional_notes)}</div></div>` : ''}
+            </div>
+        </div>`;
+
+        // Agent info
+        html += `<div class="detail-section">
+            <div class="detail-title"><i class="bi bi-person-badge"></i> Agent Information</div>
+            <div class="detail-grid">
+                <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">${esc(sale.agent_first_name)} ${esc(sale.agent_last_name)}</div></div>
+                <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value">${esc(sale.agent_email)}</div></div>
+            </div>
+        </div>`;
+
+        // Documents
+        if (sale.documents && sale.documents.length > 0) {
+            html += `<div class="detail-section">
+                <div class="detail-title"><i class="bi bi-file-earmark-text"></i> Supporting Documents (${sale.document_count})</div>
+                <div class="documents-list">
+                    ${sale.documents.map(doc => {
+                        const ext = (doc.original_filename || '').split('.').pop().toLowerCase();
+                        const isImg = ['jpg','jpeg','png','gif','webp'].includes(ext);
+                        const isPdf = ext === 'pdf';
+                        const icon = isImg ? 'bi-file-image' : isPdf ? 'bi-file-pdf' : 'bi-file-earmark';
+                        return `<div class="document-item">
+                            <div class="document-icon"><i class="bi ${icon}"></i></div>
+                            <div class="document-info">
+                                <div class="document-name">${esc(doc.original_filename)}</div>
+                                <div class="document-meta">${formatSize(doc.file_size)} • ${new Date(doc.uploaded_at).toLocaleDateString()}</div>
+                            </div>
+                            <div class="document-actions">
+                                ${isImg || isPdf ? `<button class="btn-doc btn-preview-doc" onclick="previewDoc('${doc.file_path}','${doc.mime_type}','${esc(doc.original_filename)}',${doc.id})"><i class="bi bi-eye"></i></button>` : ''}
+                                <button class="btn-doc btn-download-doc" onclick="downloadDoc(${doc.id})"><i class="bi bi-download"></i></button>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        }
+
+        document.getElementById('modalContent').innerHTML = html;
+
+        // Footer buttons
+        let footer = '';
+        if (sale.status === 'Pending') {
+            footer = `<button class="btn-modal btn-modal-success" onclick="approveFromModal(${vid})"><i class="bi bi-check-lg me-1"></i>Approve</button>
+                      <button class="btn-modal btn-modal-danger" onclick="rejectFromModal(${vid})"><i class="bi bi-x-lg me-1"></i>Reject</button>`;
+        }
+        if (sale.status === 'Approved') {
+            const hasCommission = sale.commission_amount && Number(sale.commission_amount) > 0;
+            footer = `<button class="btn-modal btn-modal-primary" onclick="openFinalizeModal()"><i class="bi bi-cash-coin me-1"></i>${hasCommission ? 'Edit' : 'Finalize'} Commission</button>`;
+        }
+        footer += `<button class="btn-modal btn-modal-secondary" onclick="closeModal('detailsModal')">Close</button>`;
+        document.getElementById('modalFooter').innerHTML = footer;
+
+        openModal('detailsModal');
+        setTimeout(initGallery, 100);
+    }
+
+    // ===== GALLERY =====
+    let galleryIdx = 0, galleryTotal = 0;
+    function initGallery() {
+        galleryTotal = document.querySelectorAll('.gallery-item').length;
+        galleryIdx = 0;
+        updateGallery();
+    }
+    function updateGallery() {
+        document.querySelectorAll('.gallery-item').forEach((el, i) => el.classList.toggle('active', i === galleryIdx));
+        document.querySelectorAll('.gallery-indicator').forEach((el, i) => el.classList.toggle('active', i === galleryIdx));
+        const p = document.getElementById('prevBtn'), n = document.getElementById('nextBtn');
+        if (p) p.disabled = galleryIdx === 0;
+        if (n) n.disabled = galleryIdx >= galleryTotal - 1;
+    }
+    function nextImg() { if (galleryIdx < galleryTotal - 1) { galleryIdx++; updateGallery(); } }
+    function prevImg() { if (galleryIdx > 0) { galleryIdx--; updateGallery(); } }
+    function goToImg(i) { galleryIdx = i; updateGallery(); }
+
+    // ===== APPROVE / REJECT =====
+    function approveVerification(vid) { approveFromModal(vid); }
+    function rejectVerification(vid) { rejectFromModal(vid); }
+
+    function approveFromModal(vid) {
+        document.getElementById('confirmTitle').innerHTML = '<i class="bi bi-check-circle"></i> Approve Sale';
+        document.getElementById('confirmBody').innerHTML = '<p style="margin:0;font-size:0.9rem;color:var(--text-secondary);">Are you sure you want to approve this sale? The property will be marked as <strong>SOLD</strong> and both the agent and buyer will be notified by email.</p>';
+        const btn = document.getElementById('confirmActionBtn');
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', () => {
+            closeModal('confirmModal');
+            submitAction('approve', vid);
+        });
+        openModal('confirmModal');
+    }
+
+    function rejectFromModal(vid) {
+        document.getElementById('reasonInput').value = '';
+        document.getElementById('reasonError').style.display = 'none';
+        const btn = document.getElementById('submitRejectBtn');
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', () => {
+            const reason = document.getElementById('reasonInput').value.trim();
+            if (!reason) { document.getElementById('reasonError').style.display = 'block'; return; }
+            closeModal('reasonModal');
+            submitAction('reject', vid, reason);
+        });
+        openModal('reasonModal');
+    }
+
+    function submitAction(action, vid, reason) {
+        const form = document.createElement('form');
+        form.method = 'POST'; form.action = window.location.pathname;
+        form.innerHTML = `<input type="hidden" name="action" value="${action}"><input type="hidden" name="verification_id" value="${vid}">`;
+        if (reason) form.innerHTML += `<input type="hidden" name="reason" value="${esc(reason)}">`;
+        document.body.appendChild(form);
+        showProcessing(action === 'approve' ? 'Approving sale...' : 'Rejecting sale...');
+        form.submit();
+    }
+
+    // ===== DOCUMENTS =====
+    function previewDoc(path, mime, name, id) {
+        const webPath = path.replace(/^\.\.\/sale_documents\//, 'sale_documents/');
+        currentDocId = id; currentDocName = name;
+        document.getElementById('previewTitle').innerHTML = `<i class="bi bi-file-earmark-text"></i> ${esc(name)}`;
+        const c = document.getElementById('previewContent');
+        if (mime.startsWith('image/')) {
+            c.innerHTML = `<div style="text-align:center;"><img src="${webPath}" alt="${esc(name)}" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:4px;"></div>`;
+        } else if (mime === 'application/pdf') {
+            c.innerHTML = `<div style="height:70vh;"><iframe src="${webPath}" width="100%" height="100%" style="border:none;border-radius:4px;"></iframe></div>`;
+        } else {
+            c.innerHTML = `<div style="text-align:center;padding:3rem;"><i class="bi bi-file-earmark" style="font-size:3rem;color:var(--text-secondary);"></i><p style="margin-top:1rem;color:var(--text-secondary);">Preview not available. Click Download to view.</p></div>`;
+        }
+        openModal('previewModal');
+    }
+    function downloadDoc(id) { window.location.href = 'download_document.php?id=' + id; }
+    function downloadCurrentDocument() { if (currentDocId) downloadDoc(currentDocId); }
+
+    // ===== FINALIZE COMMISSION =====
+    let finalizeModalInstance = null;
+    document.addEventListener('DOMContentLoaded', () => {
+        const el = document.getElementById('finalizeSaleModal');
+        if (el && window.bootstrap) finalizeModalInstance = new bootstrap.Modal(el);
+    });
+
+    function openFinalizeModal() {
+        const sale = currentViewedSale;
+        if (!sale) return;
+        document.getElementById('finalize_property_id').value = sale.property_id || '';
+        document.getElementById('finalize_agent_id').value = sale.agent_id || '';
+        document.getElementById('final_sale_price').value = sale.sale_price || '';
+        document.getElementById('buyer_name').value = sale.buyer_name || '';
+        document.getElementById('buyer_email').value = sale.buyer_email || '';
+        document.getElementById('buyer_contact').value = sale.buyer_contact || '';
+        document.getElementById('commission_percentage').value = sale.commission_percentage || '';
+        document.getElementById('notes').value = '';
+        document.getElementById('finalizeHelp').textContent = `Property #${sale.property_id} • Agent: ${sale.agent_first_name} ${sale.agent_last_name}`;
+        if (finalizeModalInstance) finalizeModalInstance.show();
+    }
+
+    const ff = document.getElementById('finalizeSaleForm');
+    if (ff) ff.addEventListener('submit', async e => {
+        e.preventDefault();
+        const fd = new FormData(ff);
+        const price = parseFloat(fd.get('final_sale_price'));
+        const pct = parseFloat(fd.get('commission_percentage'));
+        if (!price || price <= 0) { alert('Enter a valid sale price.'); return; }
+        if (isNaN(pct) || pct < 0 || pct > 100) { alert('Commission must be 0-100%.'); return; }
+        showProcessing('Finalizing sale...');
+        try {
+            const res = await fetch('admin_finalize_sale.php', { method: 'POST', body: fd });
+            const data = await res.json();
+            hideProcessing();
+            if (data.ok) {
+                if (finalizeModalInstance) finalizeModalInstance.hide();
+                alert('Commission saved: ₱' + Number(data.commission_amount).toLocaleString(undefined, {minimumFractionDigits:2}));
+                location.href = location.pathname + '?success=finalized';
+            } else {
+                alert(data.message || 'Failed to finalize.');
+            }
+        } catch (err) { hideProcessing(); alert('Error finalizing sale.'); console.error(err); }
+    });
+
+    // ===== UTILITY =====
+    function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function formatSize(b) {
+        if (!b) return '0 B';
+        const k = 1024, s = ['B','KB','MB','GB'];
+        const i = Math.floor(Math.log(b) / Math.log(k));
+        return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + s[i];
+    }
+    </script>
 </body>
 </html>
