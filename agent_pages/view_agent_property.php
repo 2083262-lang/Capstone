@@ -725,9 +725,9 @@ $days_on_market = $interval->days;
             <h1 class="property-title"><?php echo htmlspecialchars($property_data['StreetAddress']); ?></h1>
             <div class="property-address">
                 <i class="bi bi-geo-alt-fill"></i>
-                <?php echo htmlspecialchars($property_data['City'] . ', ' . $property_data['State'] . ' ' . $property_data['ZIP']); ?>
-                <?php if (!empty($property_data['County'])): ?>
-                    &mdash; <?php echo htmlspecialchars($property_data['County']); ?> County
+                <?php echo htmlspecialchars($property_data['City'] . ', ' . $property_data['Province'] . ' ' . $property_data['ZIP']); ?>
+                <?php if (!empty($property_data['Barangay'])): ?>
+                    &mdash; <?php echo htmlspecialchars($property_data['Barangay']); ?>
                 <?php endif; ?>
             </div>
             <div class="property-meta">
@@ -809,15 +809,17 @@ $days_on_market = $interval->days;
                             <div class="info-item-value"><?php echo htmlspecialchars($property_data['PropertyType']); ?></div>
                         </div>
                         <div>
-                            <div class="info-item-label">County</div>
-                            <div class="info-item-value"><?php echo htmlspecialchars($property_data['County'] ?? 'Not specified'); ?></div>
+                            <div class="info-item-label">Barangay</div>
+                            <div class="info-item-value"><?php echo htmlspecialchars($property_data['Barangay'] ?? 'Not specified'); ?></div>
                         </div>
-                        <?php if (!empty($property_data['MLSNumber'])): ?>
+                        <div>
+                            <div class="info-item-label">Province</div>
+                            <div class="info-item-value"><?php echo htmlspecialchars($property_data['Province']); ?></div>
+                        </div>
                         <div>
                             <div class="info-item-label">MLS Number</div>
                             <div class="info-item-value"><?php echo htmlspecialchars($property_data['MLSNumber']); ?></div>
                         </div>
-                        <?php endif; ?>
                         <div>
                             <div class="info-item-label">Price per Sq Ft</div>
                             <div class="info-item-value"><?php echo $price_per_sqft; ?></div>
@@ -826,12 +828,10 @@ $days_on_market = $interval->days;
                             <div class="info-item-label">Listed Date</div>
                             <div class="info-item-value"><?php echo date('M d, Y', strtotime($property_data['ListingDate'])); ?></div>
                         </div>
-                        <?php if (!empty($property_data['Source'])): ?>
                         <div>
-                            <div class="info-item-label">Source</div>
+                            <div class="info-item-label">Source (MLS)</div>
                             <div class="info-item-value"><?php echo htmlspecialchars($property_data['Source']); ?></div>
                         </div>
-                        <?php endif; ?>
                     </div>
                 </div>
 

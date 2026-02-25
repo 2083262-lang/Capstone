@@ -17,7 +17,7 @@ if ($tour_id <= 0) {
 // Ensure the tour request belongs to a property listed by an admin
 $sql = "
 SELECT tr.*, 
-       p.StreetAddress, p.City, p.State, p.ZIP, p.PropertyType,
+       p.StreetAddress, p.City, p.Province, p.ZIP, p.PropertyType,
        a_agent.first_name AS agent_first_name, a_agent.last_name AS agent_last_name,
        a_list.first_name AS poster_first_name, a_list.last_name AS poster_last_name,
        ur.role_name AS poster_role

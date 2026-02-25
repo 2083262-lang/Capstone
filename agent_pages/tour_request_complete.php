@@ -47,7 +47,7 @@ try {
     
     // Get user and property info for notification
     $info_sql = "SELECT tr.user_email, tr.user_name, tr.tour_date, tr.tour_time, 
-                       p.StreetAddress, p.City, p.State 
+                       p.StreetAddress, p.City, p.Province 
                 FROM tour_requests tr
                 JOIN property p ON tr.property_id = p.property_ID
                 WHERE tr.tour_id = ?";
@@ -69,7 +69,7 @@ try {
     $conn->commit();
     
     // Send email notification to user
-    $property_address = $tour_info['StreetAddress'] . ', ' . $tour_info['City'] . ', ' . $tour_info['State'];
+    $property_address = $tour_info['StreetAddress'] . ', ' . $tour_info['City'] . ', ' . $tour_info['Province'];
     $formattedDate = date('F j, Y', strtotime($tour_info['tour_date']));
     $formattedTime = date('g:i A', strtotime($tour_info['tour_time']));
     
@@ -170,7 +170,7 @@ try {
             'email' => $tour_info['user_email']
         ],
         'property_info' => [
-            'address' => $tour_info['StreetAddress'] . ', ' . $tour_info['City'] . ', ' . $tour_info['State']
+            'address' => $tour_info['StreetAddress'] . ', ' . $tour_info['City'] . ', ' . $tour_info['Province']
         ]
     ]);
 } catch (Exception $e) {

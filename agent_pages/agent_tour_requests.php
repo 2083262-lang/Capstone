@@ -18,7 +18,7 @@ $now_ph = date('Y-m-d H:i:s'); // Current Philippine date/time
 // Find all Pending requests for this agent where the tour date+time has already passed
 $expire_find_sql = "
     SELECT tr.tour_id, tr.user_name, tr.user_email, tr.tour_date, tr.tour_time,
-           p.StreetAddress, p.City, p.State
+           p.StreetAddress, p.City, p.Province
     FROM tour_requests tr
     JOIN property p ON tr.property_id = p.property_ID
     WHERE tr.agent_account_id = ?
@@ -52,7 +52,7 @@ if (!empty($expired_tours)) {
     
     // Send expiry notification email to each user
     foreach ($expired_tours as $exp) {
-        $property_address = $exp['StreetAddress'] . ', ' . $exp['City'] . ', ' . $exp['State'];
+        $property_address = $exp['StreetAddress'] . ', ' . $exp['City'] . ', ' . $exp['Province'];
         $formattedDate = date('F j, Y', strtotime($exp['tour_date']));
         $formattedTime = date('g:i A', strtotime($exp['tour_time']));
         

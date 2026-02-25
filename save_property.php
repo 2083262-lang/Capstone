@@ -39,16 +39,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Required fields check (all form inputs except amenities/file uploads handled separately)
     $required_fields = [
-        'StreetAddress', 'City', 'State', 'ZIP', 'County', 'PropertyType', 'YearBuilt', 'SquareFootage',
-        'LotSize', 'ParkingType', 'Bedrooms', 'Bathrooms', 'ListingPrice', 'ListingDate', 'Source', 'MLSNumber',
-        'ListingDescription', 'Status'
+        'StreetAddress', 'City', 'Province', 'ZIP', 'PropertyType',
+        'ListingPrice', 'ListingDate', 'ListingDescription', 'Status',
+        'SquareFootage', 'Source', 'MLSNumber'
     ];
-    // For rentals, SquareFootage and LotSize are optional
-    if ($statusEarly === 'For Rent') {
-        $required_fields = array_values(array_diff($required_fields, ['SquareFootage', 'LotSize']));
-    }
     foreach ($required_fields as $field) {
-        if (empty(trim($_POST[$field]))) {
+        if (empty(trim($_POST[$field] ?? ''))) {
             $errors[] = "The " . htmlspecialchars($field) . " field is required.";
         }
     }
@@ -64,9 +60,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $errors[] = "City cannot exceed 100 characters.";
     }
 
-    $State = trim($_POST['State']);
-    if (!preg_match('/^[A-Za-z]{2}$/', $State)) {
-        $errors[] = "State must be a 2-character abbreviation.";
+    $Province = trim($_POST['Province']);
+    if (strlen($Province) > 100) {
+        $errors[] = "Province cannot exceed 100 characters.";
     }
 
     $ZIP = trim($_POST['ZIP']);
@@ -253,7 +249,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // All other variables are sanitized during validation
         $StreetAddress = trim($_POST['StreetAddress']);
         $City = trim($_POST['City']);
-        $State = trim($_POST['State']);
+        $Province = trim($_POST['Province']);
         $ZIP = trim($_POST['ZIP']);
         $PropertyType = trim($_POST['PropertyType']);
         $ListingPrice = (float)($_POST['ListingPrice'] ?? 0);
@@ -266,7 +262,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $Bedrooms = !empty($_POST['Bedrooms']) ? (int)$_POST['Bedrooms'] : null;
         $Bathrooms = !empty($_POST['Bathrooms']) ? (float)$_POST['Bathrooms'] : null;
         $ListingDate = !empty($_POST['ListingDate']) ? $_POST['ListingDate'] : date('Y-m-d');
-        $County = !empty($_POST['County']) ? trim($_POST['County']) : null;
+        $Barangay = !empty($_POST['Barangay']) ? trim($_POST['Barangay']) : null;
         $Source = !empty($_POST['Source']) ? trim($_POST['Source']) : null;
         $MLSNumber = !empty($_POST['MLSNumber']) ? trim($_POST['MLSNumber']) : null;
         $ListingDescription = !empty($_POST['ListingDescription']) ? trim($_POST['ListingDescription']) : null;
@@ -284,7 +280,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $approval_status_value = ($_SESSION['user_role'] === 'admin') ? 'approved' : 'pending';
 
         $sql = "INSERT INTO property (
-            StreetAddress, City, County, State, ZIP, PropertyType, YearBuilt, SquareFootage, LotSize,
+            StreetAddress, City, Barangay, Province, ZIP, PropertyType, YearBuilt, SquareFootage, LotSize,
             Bedrooms, Bathrooms, ListingPrice, Status, ListingDate,
             Source, MLSNumber, ListingDescription, ParkingType, approval_status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -292,7 +288,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($stmt = $conn->prepare($sql)) {
             $stmt->bind_param(
                 "ssssssiididssssssss",
-                $StreetAddress, $City, $County, $State, $ZIP, $PropertyType,
+                $StreetAddress, $City, $Barangay, $Province, $ZIP, $PropertyType,
                 $YearBuilt, $SquareFootage, $LotSize, $Bedrooms, $Bathrooms,
                 $ListingPrice, $Status, $ListingDate, $Source, $MLSNumber,
                 $ListingDescription, $ParkingType, $approval_status_value

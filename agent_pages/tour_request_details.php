@@ -19,7 +19,7 @@ if ($tour_id <= 0) {
 }
 
 // Fetch tour details ensuring it belongs to this agent
-$sql = "SELECT tr.*, p.StreetAddress, p.City, p.State
+$sql = "SELECT tr.*, p.StreetAddress, p.City, p.Province
         FROM tour_requests tr
         JOIN property p ON tr.property_id = p.property_ID
         WHERE tr.tour_id = ? AND tr.agent_account_id = ?";
@@ -42,7 +42,7 @@ if ($mark_read === 1 && (int)$req['is_read_by_agent'] === 0) {
     $upd->close();
 }
 
-$address = htmlspecialchars($req['StreetAddress'] . ', ' . $req['City'] . ', ' . $req['State']);
+$address = htmlspecialchars($req['StreetAddress'] . ', ' . $req['City'] . ', ' . $req['Province']);
 $user_name = htmlspecialchars($req['user_name']);
 $user_email = htmlspecialchars($req['user_email']);
 $user_phone = htmlspecialchars($req['user_phone']);

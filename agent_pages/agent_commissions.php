@@ -32,7 +32,7 @@ $sql = "
         fs.property_id, fs.final_sale_price, fs.sale_date,
         fs.buyer_name, fs.buyer_email, fs.buyer_contact,
         fs.additional_notes, fs.finalized_at,
-        p.StreetAddress, p.City, p.State, p.PropertyType,
+        p.StreetAddress, p.City, p.Province, p.PropertyType,
         p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice
     FROM agent_commissions ac
     JOIN finalized_sales fs ON fs.sale_id = ac.sale_id
@@ -1087,7 +1087,7 @@ $conn->close();
     const commissions = <?php echo json_encode(array_map(function($r) {
         return [
             'property'   => trim(($r['StreetAddress'] ?? '') . ', ' . ($r['City'] ?? '')),
-            'state'      => $r['State'] ?? '',
+            'state'      => $r['Province'] ?? '',
             'type'       => $r['PropertyType'] ?? 'N/A',
             'beds'       => $r['Bedrooms'] ?? null,
             'baths'      => $r['Bathrooms'] ?? null,

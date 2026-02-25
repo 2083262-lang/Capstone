@@ -19,7 +19,7 @@ $fields = [
   'property_id' => FILTER_SANITIZE_NUMBER_INT,
   'StreetAddress' => FILTER_UNSAFE_RAW,
   'City' => FILTER_UNSAFE_RAW,
-  'State' => FILTER_UNSAFE_RAW,
+  'Province' => FILTER_UNSAFE_RAW,
   'ZIP' => FILTER_UNSAFE_RAW,
   'ListingPrice' => FILTER_UNSAFE_RAW,
   'ListingDate' => FILTER_UNSAFE_RAW,
@@ -31,7 +31,7 @@ $fields = [
   'PropertyType' => FILTER_UNSAFE_RAW,
   'ParkingType' => FILTER_UNSAFE_RAW,
   'MLSNumber' => FILTER_UNSAFE_RAW,
-  'County' => FILTER_UNSAFE_RAW,
+  'Barangay' => FILTER_UNSAFE_RAW,
   'Source' => FILTER_UNSAFE_RAW,
   'ListingDescription' => FILTER_UNSAFE_RAW,
 ];
@@ -46,7 +46,7 @@ if ($pid <= 0) $errors['property_id'] = 'Invalid property.';
 
 if ($input['StreetAddress'] === '') $errors['StreetAddress'] = 'Street address is required.';
 if ($input['City'] === '') $errors['City'] = 'City is required.';
-if ($input['State'] === '') $errors['State'] = 'State is required.';
+if ($input['Province'] === '') $errors['Province'] = 'Province is required.';
 if ($input['ZIP'] === '') $errors['ZIP'] = 'ZIP is required.';
 
 $price = is_numeric($input['ListingPrice']) ? (float)$input['ListingPrice'] : -1;
@@ -98,7 +98,7 @@ if ($property_status === 'Sold') {
 }
 
 // Perform update
-$sql = 'UPDATE property SET StreetAddress=?, City=?, State=?, ZIP=?, ListingPrice=?, ListingDate=?, Bedrooms=?, Bathrooms=?, SquareFootage=?, YearBuilt=?, LotSize=?, PropertyType=?, ParkingType=?, MLSNumber=?, County=?, Source=?, ListingDescription=? WHERE property_ID=?';
+$sql = 'UPDATE property SET StreetAddress=?, City=?, Province=?, ZIP=?, ListingPrice=?, ListingDate=?, Bedrooms=?, Bathrooms=?, SquareFootage=?, YearBuilt=?, LotSize=?, PropertyType=?, ParkingType=?, MLSNumber=?, Barangay=?, Source=?, ListingDescription=? WHERE property_ID=?';
 $stmt = $conn->prepare($sql);
 if (!$stmt) jfail('Database error: '.$conn->error);
 
@@ -109,7 +109,7 @@ $stmt->bind_param(
   'ssssdsididsssssssi',
   $input['StreetAddress'],
   $input['City'],
-  $input['State'],
+  $input['Province'],
   $input['ZIP'],
   $price,
   $date,
@@ -121,7 +121,7 @@ $stmt->bind_param(
   $input['PropertyType'],
   $input['ParkingType'],
   $input['MLSNumber'],
-  $input['County'],
+  $input['Barangay'],
   $input['Source'],
   $input['ListingDescription'],
   $pid

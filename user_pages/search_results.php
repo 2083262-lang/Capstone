@@ -17,7 +17,7 @@ $search_query = isset($_GET['q']) ? trim($_GET['q']) : '';
 // Build SQL query with filters
 $sql = "
     SELECT 
-        p.property_ID, p.StreetAddress, p.City, p.State, p.PropertyType, 
+        p.property_ID, p.StreetAddress, p.City, p.Province, p.PropertyType, 
         p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice, p.Status, p.Likes, p.ViewsCount,
         p.ParkingType, p.YearBuilt, p.ListingDate,
         pi.PhotoURL,
@@ -58,7 +58,7 @@ if ($bathrooms > 0) {
 }
 if ($search_query) {
     $escaped_q = $conn->real_escape_string($search_query);
-    $sql .= " AND (p.StreetAddress LIKE '%$escaped_q%' OR p.City LIKE '%$escaped_q%' OR p.State LIKE '%$escaped_q%' OR p.PropertyType LIKE '%$escaped_q%')";
+    $sql .= " AND (p.StreetAddress LIKE '%$escaped_q%' OR p.City LIKE '%$escaped_q%' OR p.Province LIKE '%$escaped_q%' OR p.PropertyType LIKE '%$escaped_q%')";
 }
 
 // Add sorting based on category or sort param

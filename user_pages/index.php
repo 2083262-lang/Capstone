@@ -4,7 +4,7 @@ include '../connection.php'; // Your database connection
 // --- FETCH DATA FOR THE HOME PAGE ---
 $properties_sql = "
     SELECT 
-        p.property_ID, p.StreetAddress, p.City, p.State, p.PropertyType, 
+        p.property_ID, p.StreetAddress, p.City, p.Province, p.PropertyType, 
         p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice, p.Status, p.Likes,
         pi.PhotoURL,
         a.first_name, a.last_name
@@ -30,7 +30,7 @@ $properties = $properties_result->fetch_all(MYSQLI_ASSOC);
 // Fetch recently sold properties
 $recently_sold_sql = "
     SELECT 
-        p.property_ID, p.StreetAddress, p.City, p.State, p.PropertyType, 
+        p.property_ID, p.StreetAddress, p.City, p.Province, p.PropertyType, 
         p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice, p.Status, p.Likes,
         pi.PhotoURL,
         a.first_name, a.last_name,

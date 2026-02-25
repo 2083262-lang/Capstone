@@ -28,117 +28,215 @@ unset($_SESSION['message']);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <style>
+        /* ================================================
+           ADD PROPERTY PAGE
+           Structure matches property.php / admin_dashboard.php:
+           - Simple :root for core vars only
+           - Hardcoded sidebar/content layout (290px)
+           - No wildcard resets
+           - Page-specific vars scoped to .admin-content
+           ================================================ */
+
         :root {
-            --sidebar-width: 250px;
             --primary-color: #161209;
             --secondary-color: #bc9e42;
-            --background-color: #f5f5f5;
-            --card-bg-color: #ffffff;
+            --accent-color: #a08636;
+            --bg-light: #f8f9fa;
             --border-color: #e0e0e0;
-            --text-muted: #6c757d;
-            --shadow-light: 0 1px 3px rgba(0,0,0,0.08);
-            --shadow-medium: 0 2px 8px rgba(0,0,0,0.12);
-            --shadow-heavy: 0 4px 16px rgba(0,0,0,0.15);
         }
-        
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background-color: var(--background-color);
-            color: var(--primary-color);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: #212529;
         }
 
-        /* Main Content Styling */
-        .main-content { 
-            margin-left: var(--sidebar-width); 
-            padding: 2rem; 
-            background-color: var(--background-color);
+        .admin-sidebar {
+            background: linear-gradient(180deg, #161209 0%, #1f1a0f 100%);
+            color: #fff;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 290px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .admin-content {
+            margin-left: 290px;
+            padding: 2rem;
             min-height: 100vh;
+            max-width: 1800px;
         }
 
-        @media (max-width: 992px) {
-            .main-content {
-                margin-left: 0;
+        @media (max-width: 1200px) {
+            .admin-content {
+                margin-left: 0 !important;
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-content {
+                margin-left: 0 !important;
                 padding: 1rem;
             }
         }
 
-        /* Page Header */
+        /* ===== PAGE-SPECIFIC VARIABLES (scoped to admin-content) ===== */
+        .admin-content {
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --gold-dark: #b8941f;
+            --blue: #2563eb;
+            --blue-light: #3b82f6;
+            --blue-dark: #1e40af;
+            --card-bg: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+        }
+
+        /* ===== PAGE HEADER (matches property.php) ===== */
         .page-header {
-            background: white;
-            padding: 1.5rem 2rem;
-            margin-bottom: 2rem;
-            border-radius: 12px;
-            box-shadow: var(--shadow-light);
-            border-left: 4px solid var(--secondary-color);
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at top right, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom left, rgba(212, 175, 55, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .page-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+        }
+
+        .page-header-inner {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
         }
 
         .page-header h1 {
             font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--primary-color);
+            font-weight: 800;
+            color: var(--text-primary, #0f172a);
             margin-bottom: 0.25rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
         }
 
-        .page-header h1 i {
-            color: var(--secondary-color);
-        }
-
-        .page-header p {
-            font-size: 0.875rem;
-            color: var(--text-muted);
+        .page-header .subtitle {
+            color: var(--text-secondary, #64748b);
+            font-size: 0.95rem;
             margin: 0;
         }
 
-        /* Form Container */
-        .form-container {
-            background: transparent;
-            margin-bottom: 2rem;
+        /* ===== FORM PROGRESS (redesigned to match theme) ===== */
+        .form-progress {
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .form-header {
-            display: none; /* Remove the old gradient header */
+        .form-progress::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
         }
 
-        .form-body {
-            padding: 0;
+        .progress-bar {
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
         }
 
-        /* Form Sections */
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary, #64748b);
+            text-align: center;
+        }
+
+        /* ===== FORM SECTIONS (matches property.php card style) ===== */
         .form-section {
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
             padding: 2rem;
             margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-light);
+            position: relative;
+            overflow: hidden;
         }
 
+        .form-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--blue), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .form-section:hover::before { opacity: 1; }
+
         .section-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--primary-color);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
             margin-bottom: 1.5rem;
             padding-bottom: 0.75rem;
-            border-bottom: 2px solid var(--border-color);
+            border-bottom: 1px solid #e2e8f0;
             display: flex;
             align-items: center;
             gap: 0.625rem;
         }
 
         .section-title i {
-            color: var(--secondary-color);
+            color: var(--gold-dark);
             font-size: 1.125rem;
         }
 
-        /* Form Controls */
+        /* ===== FORM CONTROLS ===== */
         .form-label {
             font-weight: 600;
-            color: var(--primary-color);
+            color: var(--text-primary, #0f172a);
             margin-bottom: 0.5rem;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             display: block;
         }
 
@@ -148,7 +246,7 @@ unset($_SESSION['message']);
         }
 
         .form-label .optional {
-            color: #f59e0b;
+            color: #d97706;
             font-weight: 500;
             margin-left: 0.25rem;
             font-size: 0.8125rem;
@@ -156,26 +254,26 @@ unset($_SESSION['message']);
 
         .form-control, .form-select {
             height: 42px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
             padding: 0.5rem 0.875rem;
             font-size: 0.9375rem;
             background-color: #fff;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
         }
 
         .form-control:focus, .form-select:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 3px rgba(188, 158, 66, 0.1);
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
             outline: none;
         }
 
         .form-control:hover, .form-select:hover {
-            border-color: #bc9e42;
+            border-color: rgba(37, 99, 235, 0.3);
         }
 
         .form-control::placeholder {
-            color: #9ca3af;
+            color: #94a3b8;
         }
 
         .form-control.optional-field {
@@ -187,62 +285,52 @@ unset($_SESSION['message']);
             position: relative;
         }
 
-        .input-group .form-control {
-            /* padding-left: 2.75rem; REMOVED GLOBAL PADDING */
-        }
-
         /* Textarea */
         textarea.form-control {
             resize: vertical;
             min-height: 120px;
             height: auto;
-            border-radius: 8px !important;
+            border-radius: 4px !important;
             padding: 0.75rem 0.875rem;
         }
 
         /* ===== CUSTOM PROPERTY INPUT GROUP STYLES - ISOLATED ===== */
-        
-        /* Container for input with left icon */
         .property-input-group {
             position: relative;
-            display: block; /* Not flex, to prevent layout shifts */
+            display: block;
         }
 
-        /* Input field inside property-input-group */
         .property-input-group .property-form-input {
-            padding-left: 2.5rem !important; /* Space for left icon */
-            padding-right: calc(1.5em + 0.75rem) !important; /* Space for validation icon on right */
-            border-radius: 8px !important;
-            height: 42px !important; /* Fixed height to prevent shifts */
+            padding-left: 2.5rem !important;
+            padding-right: calc(1.5em + 0.75rem) !important;
+            border-radius: 4px !important;
+            height: 42px !important;
             display: block;
             width: 100%;
         }
 
-        /* Icon positioned on the left - LOCKED positioning */
         .property-input-group .property-input-icon {
             position: absolute !important;
             left: 0.875rem !important;
-            top: 11px !important; /* Fixed pixel value for consistent centering (42px height / 2 = 21px - icon height/2) */
+            top: 11px !important;
             display: inline-block !important;
-            color: var(--text-muted) !important;
+            color: var(--text-secondary, #64748b) !important;
             pointer-events: none !important;
-            z-index: 100 !important; /* High z-index to stay on top */
+            z-index: 100 !important;
             line-height: 1 !important;
             font-size: 1rem !important;
         }
 
-        /* Ensure validation state doesn't affect our icon or input */
         .property-input-group .property-form-input:invalid,
         .property-input-group .property-form-input.is-invalid,
         .was-validated .property-input-group .property-form-input:invalid {
-            padding-left: 2.5rem !important; /* Keep left padding for our icon */
-            padding-right: calc(1.5em + 0.75rem) !important; /* Keep right padding for validation icon */
-            border-radius: 8px !important;
+            padding-left: 2.5rem !important;
+            padding-right: calc(1.5em + 0.75rem) !important;
+            border-radius: 4px !important;
             height: 42px !important;
-            background-position: right calc(0.375em + 0.1875rem) center !important; /* Validation icon on right */
+            background-position: right calc(0.375em + 0.1875rem) center !important;
         }
 
-        /* Ensure icon stays in place even on validation error */
         .was-validated .property-input-group .property-input-icon,
         .property-input-group .property-form-input:invalid ~ .property-input-icon,
         .property-input-group .property-form-input.is-invalid ~ .property-input-icon {
@@ -251,20 +339,17 @@ unset($_SESSION['message']);
             position: absolute !important;
         }
 
-        /* Legacy input-group-icon class support (for backwards compatibility) */
         .property-input-group .input-group-icon {
             position: absolute !important;
             left: 0.875rem !important;
             top: 11px !important;
             display: inline-block !important;
-            color: var(--text-muted) !important;
+            color: var(--text-secondary, #64748b) !important;
             pointer-events: none !important;
             z-index: 100 !important;
             line-height: 1 !important;
         }
 
-        /* ===== END CUSTOM PROPERTY INPUT GROUP STYLES ===== */
-        
         /* Reset padding for inputs NOT in our custom group */
         .form-control:not(.property-form-input) {
             padding-left: 0.875rem;
@@ -286,7 +371,28 @@ unset($_SESSION['message']);
             --bs-gutter-y: 1rem;
         }
 
-        /* Amenities Section */
+        /* Custom Property Form Inputs */
+        .property-form-input {
+            border-radius: 4px !important;
+        }
+
+        .property-form-select {
+            border-radius: 4px !important;
+        }
+
+        .property-input-group .form-control {
+            border-radius: 4px !important;
+        }
+
+        .property-input-group .input-group-text {
+            border-radius: 4px !important;
+        }
+
+        .property-form-textarea {
+            border-radius: 4px !important;
+        }
+
+        /* ===== AMENITIES SECTION ===== */
         .amenities-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -295,34 +401,20 @@ unset($_SESSION['message']);
         }
 
         .amenities-container {
-            max-height: 400px; /* Adjust height as needed */
+            max-height: 400px;
             overflow-y: auto;
             padding-right: 0.5rem;
             margin-top: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
             padding: 1rem;
             background-color: #fff;
         }
 
-        /* Custom Scrollbar for Amenities */
-        .amenities-container::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .amenities-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-        
-        .amenities-container::-webkit-scrollbar-thumb {
-            background: #d1d5db;
-            border-radius: 4px;
-        }
-        
-        .amenities-container::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af;
-        }
+        .amenities-container::-webkit-scrollbar { width: 6px; }
+        .amenities-container::-webkit-scrollbar-track { background: transparent; }
+        .amenities-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .amenities-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         .amenities-search {
             position: relative;
@@ -334,112 +426,89 @@ unset($_SESSION['message']);
             left: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--text-muted);
+            color: var(--text-secondary, #64748b);
         }
 
         .amenities-search input {
             padding-left: 2.5rem;
-            border-radius: 8px !important; 
+            border-radius: 4px !important;
         }
 
-        /* Make amenity cards more compact for the scrollable list */
         .form-check {
-            background: #f9fafb;
+            background: #f8fafc;
             padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            transition: all 0.15s ease;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
             margin-bottom: 0;
             display: flex;
             align-items: center;
         }
 
         .form-check:hover {
-            background: #fefcf3;
-            border-color: var(--secondary-color);
+            background: rgba(212, 175, 55, 0.04);
+            border-color: rgba(212, 175, 55, 0.3);
         }
 
         .form-check-input {
-            border-radius: 4px !important;
-            margin-top: 0; /* Align checkbox vertically */
+            border-radius: 3px !important;
+            margin-top: 0;
             margin-right: 0.5rem;
         }
 
         .form-check-input:checked {
-            background-color: var(--secondary-color);
-            border-color: var(--secondary-color);
+            background-color: var(--gold-dark);
+            border-color: var(--gold-dark);
         }
 
         .form-check-input:focus {
-            box-shadow: 0 0 0 0.2rem rgba(188, 158, 66, 0.25);
+            box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.2);
         }
 
         .form-check-label {
             font-weight: 500;
-            color: var(--primary-color);
+            color: var(--text-primary, #0f172a);
             cursor: pointer;
             font-size: 0.9375rem;
         }
 
-        /* Custom Property Form Inputs - Consistent Rounded Corners */
-        .property-form-input {
-            border-radius: 8px !important;
-        }
-
-        .property-form-select {
-            border-radius: 8px !important;
-        }
-
-        .property-input-group .form-control {
-            border-radius: 8px !important;
-        }
-
-        .property-input-group .input-group-text {
-            border-radius: 8px !important;
-        }
-
-        /* Ensure textarea maintains rounded corners */
-        .property-form-textarea {
-            border-radius: 8px !important;
-        }
-
-        /* Image Upload Section */
+        /* ===== IMAGE UPLOAD SECTION ===== */
         .image-upload-section {
-            border: 2px dashed var(--border-color);
-            border-radius: 12px;
+            border: 2px dashed #e2e8f0;
+            border-radius: 4px;
             padding: 2rem;
             text-align: center;
-            background: #fafafa;
-            transition: all 0.15s ease;
+            background: #f8fafc;
+            transition: all 0.2s ease;
             position: relative;
         }
 
         .image-upload-section:hover {
-            border-color: var(--secondary-color);
-            background: #fefcf3;
+            border-color: rgba(212, 175, 55, 0.5);
+            background: rgba(212, 175, 55, 0.02);
         }
 
         .image-upload-section.dragover {
-            border-color: var(--secondary-color);
-            background: rgba(188, 158, 66, 0.08);
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
         }
 
         .upload-icon {
             font-size: 2.5rem;
-            color: var(--secondary-color);
+            color: var(--gold-dark);
             margin-bottom: 1rem;
         }
 
         .upload-text {
             font-size: 1rem;
-            font-weight: 600;
-            color: var(--primary-color);
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
             margin-bottom: 0.375rem;
         }
 
         .upload-subtext {
-            color: var(--text-muted);
-            font-size: 0.875rem;
+            color: var(--text-secondary, #64748b);
+            font-size: 0.85rem;
         }
 
         .file-input-wrapper {
@@ -452,22 +521,34 @@ unset($_SESSION['message']);
         }
 
         .file-input-button {
-            background: linear-gradient(135deg, var(--secondary-color), #a08636);
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
             color: #fff;
             border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
+            padding: 0.6rem 1.25rem;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.85rem;
             cursor: pointer;
-            transition: all 0.15s ease;
-            box-shadow: var(--shadow-light);
-            font-size: 0.9375rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-input-button::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
         }
 
         .file-input-button:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-medium);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
         }
+
+        .file-input-button:hover::before { left: 100%; }
 
         /* Image Preview Grid */
         .image-preview-grid {
@@ -480,10 +561,10 @@ unset($_SESSION['message']);
         .image-preview-item {
             position: relative;
             background: #fff;
-            border-radius: 8px;
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: var(--shadow-light);
-            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
         }
 
         .preview-image {
@@ -495,8 +576,8 @@ unset($_SESSION['message']);
         .image-info {
             padding: 0.625rem;
             font-size: 0.75rem;
-            color: var(--text-muted);
-            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary, #64748b);
+            border-top: 1px solid #e2e8f0;
         }
 
         .remove-image {
@@ -506,25 +587,25 @@ unset($_SESSION['message']);
             background: rgba(220, 38, 38, 0.9);
             color: #fff;
             border: none;
-            border-radius: 6px;
+            border-radius: 4px;
             width: 26px;
             height: 26px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
         }
 
         .remove-image:hover {
             background: #dc2626;
         }
 
-        /* Floor Upload Sections */
+        /* ===== FLOOR UPLOAD SECTIONS ===== */
         .floor-upload-card {
-            background: #fafafa;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
             padding: 1.5rem;
             margin-bottom: 1.25rem;
         }
@@ -540,68 +621,70 @@ unset($_SESSION['message']);
             justify-content: space-between;
             margin-bottom: 1rem;
             padding-bottom: 0.75rem;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid #e2e8f0;
         }
 
         .floor-title {
             font-size: 1rem;
-            font-weight: 600;
-            color: var(--primary-color);
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
         .floor-title i {
-            color: var(--secondary-color);
+            color: var(--gold-dark);
         }
 
         .floor-badge {
-            background: linear-gradient(135deg, var(--secondary-color), #a08636);
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
             color: white;
-            padding: 0.375rem 0.875rem;
-            border-radius: 6px;
-            font-size: 0.8125rem;
-            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 2px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .floor-upload-area {
-            border: 2px dashed var(--border-color);
-            border-radius: 10px;
+            border: 2px dashed #e2e8f0;
+            border-radius: 4px;
             padding: 1.5rem;
             text-align: center;
             background: white;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             cursor: pointer;
         }
 
         .floor-upload-area:hover {
-            border-color: var(--secondary-color);
-            background: #fefcf3;
+            border-color: rgba(212, 175, 55, 0.5);
+            background: rgba(212, 175, 55, 0.02);
         }
 
         .floor-upload-area.has-files {
             border-style: solid;
-            border-color: var(--secondary-color);
-            background: rgba(188, 158, 66, 0.05);
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.03);
         }
 
         .floor-upload-icon {
             font-size: 1.75rem;
-            color: var(--secondary-color);
+            color: var(--gold-dark);
             margin-bottom: 0.625rem;
         }
 
         .floor-upload-text {
             font-size: 0.9375rem;
-            font-weight: 600;
-            color: var(--primary-color);
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
             margin-bottom: 0.25rem;
         }
 
         .floor-upload-subtext {
             font-size: 0.8125rem;
-            color: var(--text-muted);
+            color: var(--text-secondary, #64748b);
         }
 
         .floor-preview-grid {
@@ -614,10 +697,10 @@ unset($_SESSION['message']);
         .floor-preview-item {
             position: relative;
             background: white;
-            border-radius: 8px;
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: var(--shadow-light);
-            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
         }
 
         .floor-preview-image {
@@ -629,9 +712,9 @@ unset($_SESSION['message']);
         .floor-image-info {
             padding: 0.5rem;
             font-size: 0.7rem;
-            color: var(--text-muted);
-            background: #f9fafb;
-            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary, #64748b);
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
         }
 
         .remove-floor-image {
@@ -641,14 +724,14 @@ unset($_SESSION['message']);
             background: rgba(220, 38, 38, 0.9);
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 4px;
             width: 24px;
             height: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             font-size: 0.75rem;
         }
 
@@ -656,120 +739,106 @@ unset($_SESSION['message']);
             background: #dc2626;
         }
 
-        /* Submit Button */
+        /* ===== SUBMIT SECTION ===== */
         .submit-section {
-            background: white;
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            border-radius: 4px;
             padding: 1.5rem 2rem;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
             text-align: center;
             margin-top: 1.5rem;
-            box-shadow: var(--shadow-light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-section::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
         }
 
         .btn-submit {
-            background: linear-gradient(135deg, var(--secondary-color), #a08636);
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
             color: #fff;
             border: none;
-            padding: 0.875rem 2.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.15s ease;
-            box-shadow: var(--shadow-light);
+            padding: 0.7rem 2rem;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
         }
 
         .btn-submit:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-medium);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+            color: #fff;
         }
 
+        .btn-submit:hover::before { left: 100%; }
+
         .btn-cancel {
-            background: #fff;
-            color: var(--text-muted);
-            border: 1px solid var(--border-color);
-            padding: 0.875rem 2rem;
-            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-secondary, #64748b);
+            border: 1px solid #e2e8f0;
+            padding: 0.7rem 1.75rem;
+            border-radius: 4px;
             font-weight: 600;
+            font-size: 0.9rem;
             margin-right: 1rem;
-            transition: all 0.15s ease;
+            transition: all 0.3s ease;
             text-decoration: none;
             display: inline-block;
         }
 
         .btn-cancel:hover {
-            border-color: var(--secondary-color);
-            color: var(--secondary-color);
-            background: #fefcf3;
+            border-color: var(--blue);
+            color: var(--blue);
+            background: rgba(37, 99, 235, 0.03);
         }
 
-        /* Alert Messages */
+        /* ===== ALERTS ===== */
         .alert {
-            border-radius: 8px;
+            border-radius: 4px;
             border: 1px solid;
             padding: 1rem 1.25rem;
             margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-light);
         }
 
         .alert-success {
-            background: #f0fdf4;
-            border-color: #86efac;
+            background: rgba(34, 197, 94, 0.06);
+            border-color: rgba(34, 197, 94, 0.2);
             color: #166534;
         }
 
         .alert-danger {
-            background: #fef2f2;
-            border-color: #fca5a5;
+            background: rgba(239, 68, 68, 0.06);
+            border-color: rgba(239, 68, 68, 0.2);
             color: #991b1b;
         }
 
-        /* Progress Indicator */
-        .form-progress {
-            background: white;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-light);
-            border: 1px solid var(--border-color);
-        }
-
-        .progress-bar {
-            height: 4px;
-            background: var(--border-color);
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--secondary-color), #a08636);
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
-        .progress-text {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            text-align: center;
-        }
-
-        /* Responsive Design */
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-            }
-            
             .form-section {
                 padding: 1.5rem;
             }
-            
+
             .amenities-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .image-preview-grid {
                 grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
             }
@@ -777,22 +846,17 @@ unset($_SESSION['message']);
             .page-header h1 {
                 font-size: 1.5rem;
             }
+
+            .page-header {
+                padding: 1.5rem;
+            }
         }
 
-        /* Form text helper */
+        /* ===== UTILITIES ===== */
         .form-text {
             font-size: 0.8125rem;
-            color: var(--text-muted);
+            color: var(--text-secondary, #64748b);
             margin-top: 0.375rem;
-        }
-
-        /* Info message */
-        .text-muted {
-            color: var(--text-muted) !important;
-        }
-
-        .text-center {
-            text-align: center;
         }
     </style>
 </head>
@@ -809,7 +873,17 @@ unset($_SESSION['message']);
     <?php include 'admin_navbar.php'; ?>
 
     <!-- Main Content Area -->
-    <div class="main-content">
+    <div class="admin-content">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-inner">
+                <div>
+                    <h1><i class="bi bi-plus-circle me-2" style="color: var(--gold);"></i>Add New Property</h1>
+                    <p class="subtitle">Fill in the details below to create a new property listing</p>
+                </div>
+            </div>
+        </div>
     
         <!-- Form Progress Indicator -->
         <div class="form-progress">
@@ -856,12 +930,12 @@ unset($_SESSION['message']);
                                        placeholder="City name" required>
                             </div>
                             <div class="col-md-2">
-                                <label for="State" class="form-label">
-                                    State <span class="required">*</span>
+                                <label for="Province" class="form-label">
+                                    Province <span class="required">*</span>
                                 </label>
-                                <input type="text" id="State" name="State" maxlength="2" class="form-control property-form-input" 
-                                       placeholder="PH" pattern="[A-Za-z]{2}" 
-                                       title="Please enter a 2-character state abbreviation" required>
+                                <input type="text" id="Province" name="Province" class="form-control property-form-input" 
+                                       placeholder="e.g., Cebu" 
+                                       title="Enter your province" required>
                             </div>
                             <div class="col-md-1">
                                 <label for="ZIP" class="form-label">
@@ -871,9 +945,9 @@ unset($_SESSION['message']);
                         placeholder="ZIP code" pattern="\d{4}" maxlength="4" inputmode="numeric" title="Enter a 4-digit PH postal code" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="County" class="form-label">County <span class="required">*</span></label>
-                                <input type="text" id="County" name="County" class="form-control property-form-input" 
-                                       placeholder="County name" required>
+                                <label for="Barangay" class="form-label">Barangay <span class="optional">(Optional)</span></label>
+                                <input type="text" id="Barangay" name="Barangay" class="form-control property-form-input" 
+                                       placeholder="e.g., Brgy. San Jose">
                             </div>
                             <div class="col-md-3">
                                 <label for="PropertyType" class="form-label">
@@ -913,29 +987,29 @@ unset($_SESSION['message']);
                         <div class="row g-2 align-items-start">
                             <div class="col">
                                 <div class="form-group">
-                                    <label for="YearBuilt" class="form-label">Year Built <span class="required">*</span></label>
-                                    <input type="number" id="YearBuilt" name="YearBuilt" class="form-control property-form-input" min="1800" max="<?php echo date("Y") + 5; ?>" placeholder="e.g., 2020" required>
+                                    <label for="YearBuilt" class="form-label">Year Built <span class="optional">(Optional)</span></label>
+                                    <input type="number" id="YearBuilt" name="YearBuilt" class="form-control property-form-input" min="1800" max="<?php echo date("Y") + 5; ?>" placeholder="e.g., 2020">
                                 </div>
                             </div>
 
                             <div class="col">
                                 <div class="form-group">
-                                    <label for="NumberOfFloors" class="form-label">Floors <span class="required">*</span></label>
-                                    <input type="number" id="NumberOfFloors" name="NumberOfFloors" class="form-control property-form-input" min="1" max="10" placeholder="1-10" value="1" required>
+                                    <label for="NumberOfFloors" class="form-label">Floors <span class="optional">(Optional)</span></label>
+                                    <input type="number" id="NumberOfFloors" name="NumberOfFloors" class="form-control property-form-input" min="1" max="10" placeholder="1-10" value="1">
                                 </div>
                             </div>
 
                             <div class="col">
                                 <div class="form-group">
-                                    <label for="Bedrooms" class="form-label">Bedrooms <span class="required">*</span></label>
-                                    <input type="number" id="Bedrooms" name="Bedrooms" class="form-control property-form-input" min="0" placeholder="e.g., 3" required>
+                                    <label for="Bedrooms" class="form-label">Bedrooms <span class="optional">(Optional)</span></label>
+                                    <input type="number" id="Bedrooms" name="Bedrooms" class="form-control property-form-input" min="0" placeholder="e.g., 3">
                                 </div>
                             </div>
 
                             <div class="col">
                                 <div class="form-group">
-                                    <label for="Bathrooms" class="form-label">Bathrooms <span class="required">*</span></label>
-                                    <input type="number" step="0.5" id="Bathrooms" name="Bathrooms" class="form-control property-form-input" min="0" placeholder="e.g., 2.5" required>
+                                    <label for="Bathrooms" class="form-label">Bathrooms <span class="optional">(Optional)</span></label>
+                                    <input type="number" step="0.5" id="Bathrooms" name="Bathrooms" class="form-control property-form-input" min="0" placeholder="e.g., 2.5">
                                 </div>
                             </div>
 
@@ -961,15 +1035,15 @@ unset($_SESSION['message']);
 
                             <div class="col-md-3">
                                 <div class="form-group">
-                                    <label for="LotSize" class="form-label" id="LotSizeLabel">Lot Size (acres) <span class="required">*</span></label>
-                                    <input type="number" step="0.01" id="LotSize" name="LotSize" class="form-control property-form-input" min="0" placeholder="e.g., 0.25" required>
+                                    <label for="LotSize" class="form-label" id="LotSizeLabel">Lot Size (acres) <span class="optional">(Optional)</span></label>
+                                    <input type="number" step="0.01" id="LotSize" name="LotSize" class="form-control property-form-input" min="0" placeholder="e.g., 0.25">
                                 </div>
                             </div>
 
                             <div class="col-md-3">
                                 <div class="form-group">
-                                    <label for="ParkingType" class="form-label">Parking Type <span class="required">*</span></label>
-                                    <input type="text" id="ParkingType" name="ParkingType" class="form-control property-form-input" placeholder="e.g., Garage, Driveway" required>
+                                    <label for="ParkingType" class="form-label">Parking Type <span class="optional">(Optional)</span></label>
+                                    <input type="text" id="ParkingType" name="ParkingType" class="form-control property-form-input" placeholder="e.g., Garage, Driveway">
                                 </div>
                             </div>
 
@@ -1174,7 +1248,8 @@ unset($_SESSION['message']);
                     </div>
                 </form>
     </div>
-</body>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="script/add_property_script.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
@@ -1506,18 +1581,8 @@ document.addEventListener('DOMContentLoaded', function(){
             // add required to rental fields
             rentalRequiredFields.forEach(el => { if (el) el.setAttribute('required', 'required'); });
 
-            // Make Square Footage and Lot Size optional
-            if (squareInput) {
-                squareInput.removeAttribute('required');
-                squareInput.classList.remove('is-invalid');
-                squareInput.classList.add('optional-field');
-            }
-            if (lotInput) {
-                lotInput.removeAttribute('required');
-                lotInput.classList.remove('is-invalid');
-                lotInput.classList.add('optional-field');
-            }
-            if (squareLabel) squareLabel.innerHTML = 'Square Footage <span class="optional">(Optional)</span>';
+            // SquareFootage stays required; LotSize is optional for rentals
+            if (squareLabel) squareLabel.innerHTML = 'Square Footage (ft²) <span class="required">*</span>';
             if (lotLabel) lotLabel.innerHTML = 'Lot Size (acres) <span class="optional">(Optional)</span>';
         } else {
             rentalSection.classList.add('d-none');
@@ -1525,17 +1590,9 @@ document.addEventListener('DOMContentLoaded', function(){
             if (priceInput) priceInput.placeholder = 'e.g., 500000';
             rentalRequiredFields.forEach(el => { if (el) el.removeAttribute('required'); });
 
-            // Require Square Footage and Lot Size for non-rent listings
-            if (squareInput) {
-                squareInput.setAttribute('required', 'required');
-                squareInput.classList.remove('optional-field');
-            }
-            if (lotInput) {
-                lotInput.setAttribute('required', 'required');
-                lotInput.classList.remove('optional-field');
-            }
-            if (squareLabel) squareLabel.innerHTML = 'Square Footage <span class="required">*</span>';
-            if (lotLabel) lotLabel.innerHTML = 'Lot Size (acres) <span class="required">*</span>';
+            // SquareFootage stays required; LotSize optional
+            if (squareLabel) squareLabel.innerHTML = 'Square Footage (ft²) <span class="required">*</span>';
+            if (lotLabel) lotLabel.innerHTML = 'Lot Size (acres) <span class="optional">(Optional)</span>';
         }
     }
 
@@ -1610,3 +1667,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 });
 </script>
+
+</body>
+</html>

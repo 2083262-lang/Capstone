@@ -18,7 +18,7 @@ if ($property_id <= 0) {
     // Fetch property details (include ViewsCount)
     $property_sql = "
         SELECT
-            p.property_ID, p.StreetAddress, p.City, p.State, p.County, p.PropertyType,
+            p.property_ID, p.StreetAddress, p.City, p.Province, p.Barangay, p.PropertyType,
             p.YearBuilt, p.SquareFootage, p.LotSize, p.Bedrooms, p.Bathrooms,
             p.ListingPrice, p.Status, p.ListingDate, p.ListingDescription,
             p.ParkingType, p.MLSNumber, p.approval_status, COALESCE(p.ViewsCount,0) AS ViewsCount
@@ -1454,7 +1454,7 @@ $conn->close();
                                     <?php endif; ?>
                                 </div>
                                 <div class="property-address">
-                                    <?php echo htmlspecialchars($property_data['StreetAddress'] . ', ' . $property_data['City'] . ', ' . $property_data['State']); ?>
+                                    <?php echo htmlspecialchars($property_data['StreetAddress'] . ', ' . $property_data['City'] . ', ' . $property_data['Province']); ?>
                                 </div>
                                 <div class="property-meta">
                                     <span><strong><?php echo $property_data['Bedrooms']; ?></strong> bd</span>
@@ -1543,8 +1543,12 @@ $conn->close();
                                 <div class="fact-value"><?php echo $property_data['Bathrooms']; ?></div>
                             </div>
                             <div class="fact-item">
-                                <div class="fact-label">County</div>
-                                <div class="fact-value"><?php echo htmlspecialchars($property_data['County'] ?? 'N/A'); ?></div>
+                                <div class="fact-label">Barangay</div>
+                                <div class="fact-value"><?php echo htmlspecialchars($property_data['Barangay'] ?? 'N/A'); ?></div>
+                            </div>
+                            <div class="fact-item">
+                                <div class="fact-label">Province</div>
+                                <div class="fact-value"><?php echo htmlspecialchars($property_data['Province']); ?></div>
                             </div>
                             <div class="fact-item">
                                 <div class="fact-label">Parking</div>
@@ -1554,6 +1558,12 @@ $conn->close();
                                 <div class="fact-label">MLS Number</div>
                                 <div class="fact-value"><?php echo htmlspecialchars($property_data['MLSNumber'] ?? 'N/A'); ?></div>
                             </div>
+                            <?php if (!empty($property_data['Source'])): ?>
+                            <div class="fact-item">
+                                <div class="fact-label">Source (MLS)</div>
+                                <div class="fact-value"><?php echo htmlspecialchars($property_data['Source']); ?></div>
+                            </div>
+                            <?php endif; ?>
                             <div class="fact-item">
                                 <div class="fact-label">Status</div>
                                 <div class="fact-value"><?php echo htmlspecialchars($property_data['Status']); ?></div>

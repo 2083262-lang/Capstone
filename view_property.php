@@ -1987,7 +1987,7 @@ include 'admin_navbar.php';
 
     <?php if ($property_data): ?>
         <?php
-            $full_address = htmlspecialchars($property_data['StreetAddress'] . ', ' . $property_data['City']);
+            $full_address = htmlspecialchars($property_data['StreetAddress'] . ', ' . $property_data['City'] . ', ' . $property_data['Province'] . ' ' . $property_data['ZIP']);
             $status_class = 'badge-' . strtolower($property_data['approval_status']);
             $is_approved = $property_data['approval_status'] === 'approved';
             $is_admin_poster = ($agent_info && $agent_info['account_id'] == $admin_account_id);
@@ -2069,6 +2069,9 @@ include 'admin_navbar.php';
                                 <span><i class="bi bi-droplet me-2"></i><?php echo $property_data['Bathrooms']; ?> baths</span>
                                 <?php if (!empty($property_data['SquareFootage'])): ?>
                                 <span><i class="bi bi-rulers me-2"></i><?php echo number_format($property_data['SquareFootage']); ?> sqft</span>
+                                <?php endif; ?>
+                                <?php if (!empty($property_data['MLSNumber'])): ?>
+                                <span><i class="bi bi-hash me-2"></i>MLS: <?php echo htmlspecialchars($property_data['MLSNumber']); ?></span>
                                 <?php endif; ?>
                                 <span><i class="bi bi-calendar me-2"></i><?php echo ($days_on_market !== null ? $days_on_market : '—'); ?> days on market</span>
                             </div>
@@ -2224,10 +2227,35 @@ include 'admin_navbar.php';
                                 <div class="fact-item">
                                     <div class="fact-label">
                                         <i class="bi bi-geo-alt"></i>
-                                        County
+                                        Barangay
                                     </div>
-                                    <div class="fact-value"><?php echo htmlspecialchars($property_data['County'] ?? 'N/A'); ?></div>
+                                    <div class="fact-value"><?php echo htmlspecialchars($property_data['Barangay'] ?? 'N/A'); ?></div>
                                 </div>
+                                <div class="fact-item">
+                                    <div class="fact-label">
+                                        <i class="bi bi-map"></i>
+                                        Province
+                                    </div>
+                                    <div class="fact-value"><?php echo htmlspecialchars($property_data['Province']); ?></div>
+                                </div>
+                                <?php if (!empty($property_data['Source'])): ?>
+                                <div class="fact-item">
+                                    <div class="fact-label">
+                                        <i class="bi bi-building"></i>
+                                        Source (MLS)
+                                    </div>
+                                    <div class="fact-value"><?php echo htmlspecialchars($property_data['Source']); ?></div>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($property_data['MLSNumber'])): ?>
+                                <div class="fact-item">
+                                    <div class="fact-label">
+                                        <i class="bi bi-hash"></i>
+                                        MLS Number
+                                    </div>
+                                    <div class="fact-value"><?php echo htmlspecialchars($property_data['MLSNumber']); ?></div>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         </div>
 

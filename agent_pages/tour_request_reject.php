@@ -37,7 +37,7 @@ if ($tour_id <= 0 || $reason === '') {
 }
 
 // Verify ownership and fetch needed data
-$sql = "SELECT tr.*, p.StreetAddress, p.City, p.State, p.ZIP, a.first_name AS agent_first_name, a.last_name AS agent_last_name
+$sql = "SELECT tr.*, p.StreetAddress, p.City, p.Province, p.ZIP, a.first_name AS agent_first_name, a.last_name AS agent_last_name
         FROM tour_requests tr
         JOIN property p ON tr.property_id = p.property_ID
         JOIN accounts a ON tr.agent_account_id = a.account_id
@@ -78,7 +78,7 @@ if (!$upd->execute()) {
 $upd->close();
 
 // Compose email
-$property_address = $tour['StreetAddress'] . ', ' . $tour['City'] . ', ' . $tour['State'] . ' ' . $tour['ZIP'];
+$property_address = $tour['StreetAddress'] . ', ' . $tour['City'] . ', ' . $tour['Province'] . ' ' . $tour['ZIP'];
 $formattedDate = date('F j, Y', strtotime($tour['tour_date']));
 $formattedTime = date('g:i A', strtotime($tour['tour_time']));
 

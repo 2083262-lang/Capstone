@@ -1894,16 +1894,16 @@ include 'agent_navbar.php';
                                     <input type="text" class="form-control" name="City" required>
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label">State (2-char) <span class="required">*</span></label>
-                                    <input type="text" class="form-control" name="State" required maxlength="2" pattern="[A-Za-z]{2}" title="Enter a 2-character state abbreviation" placeholder="PH">
+                                    <label class="form-label">Province <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="Province" required placeholder="e.g., Cebu">
                                 </div>
                                 <div class="col-md-1">
                                     <label class="form-label">ZIP <span class="required">*</span></label>
                                     <input type="text" class="form-control" name="ZIP" required pattern="\d{4}" maxlength="4" inputmode="numeric" title="Enter a 4-digit PH postal code" placeholder="ZIP">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">County <span class="required">*</span></label>
-                                    <input type="text" class="form-control" name="County" placeholder="County name" required>
+                                    <label class="form-label">Barangay <span class="optional">(Optional)</span></label>
+                                    <input type="text" class="form-control" name="Barangay" placeholder="e.g., Brgy. San Jose">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Property Type <span class="required">*</span></label>
@@ -1933,20 +1933,20 @@ include 'agent_navbar.php';
                             <h5 class="form-section-title">Property Details</h5>
                             <div class="row g-3">
                                 <div class="col-md-2">
-                                    <label class="form-label">Year Built <span class="required">*</span></label>
-                                    <input type="number" class="form-control" name="YearBuilt" min="1800" max="<?php echo date('Y') + 5; ?>" placeholder="e.g., 2020" required>
+                                    <label class="form-label">Year Built <span class="optional">(Optional)</span></label>
+                                    <input type="number" class="form-control" name="YearBuilt" min="1800" max="<?php echo date('Y') + 5; ?>" placeholder="e.g., 2020">
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label">Floors <span class="required">*</span></label>
-                                    <input type="number" class="form-control" name="NumberOfFloors" id="modalNumberOfFloors" min="1" max="10" value="1" required>
+                                    <label class="form-label">Floors <span class="optional">(Optional)</span></label>
+                                    <input type="number" class="form-control" name="NumberOfFloors" id="modalNumberOfFloors" min="1" max="10" value="1">
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label">Bedrooms <span class="required">*</span></label>
-                                    <input type="number" class="form-control" name="Bedrooms" min="0" placeholder="e.g., 3" required>
+                                    <label class="form-label">Bedrooms <span class="optional">(Optional)</span></label>
+                                    <input type="number" class="form-control" name="Bedrooms" min="0" placeholder="e.g., 3">
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label">Bathrooms <span class="required">*</span></label>
-                                    <input type="number" class="form-control" name="Bathrooms" step="0.5" min="0" placeholder="e.g., 2.5" required>
+                                    <label class="form-label">Bathrooms <span class="optional">(Optional)</span></label>
+                                    <input type="number" class="form-control" name="Bathrooms" step="0.5" min="0" placeholder="e.g., 2.5">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Listing Date <span class="required">*</span></label>
@@ -1959,12 +1959,12 @@ include 'agent_navbar.php';
                                     <input type="number" class="form-control" name="SquareFootage" id="modalSquareFootage" min="1" placeholder="e.g., 2500" required>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label" id="modalLotSizeLabel">Lot Size (acres) <span class="required">*</span></label>
-                                    <input type="number" class="form-control" name="LotSize" id="modalLotSize" step="0.01" min="0" placeholder="e.g., 0.25" required>
+                                    <label class="form-label" id="modalLotSizeLabel">Lot Size (acres) <span class="optional">(Optional)</span></label>
+                                    <input type="number" class="form-control" name="LotSize" id="modalLotSize" step="0.01" min="0" placeholder="e.g., 0.25">
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label">Parking Type <span class="required">*</span></label>
-                                    <input type="text" class="form-control" name="ParkingType" placeholder="e.g., Garage, Driveway" required>
+                                    <label class="form-label">Parking Type <span class="optional">(Optional)</span></label>
+                                    <input type="text" class="form-control" name="ParkingType" placeholder="e.g., Garage, Driveway">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label" id="modalPriceLabel">Listing Price <span class="required">*</span></label>
@@ -2200,21 +2200,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (priceLabel) priceLabel.innerHTML = 'Monthly Rent <span class="required">*</span>';
                 if (priceInput) priceInput.placeholder = 'e.g., 25000';
                 rentalFields.forEach(el => { if (el) el.setAttribute('required', 'required'); });
-                // Make sqft and lot optional for rentals
-                if (sqftInput) { sqftInput.removeAttribute('required'); }
-                if (lotInput) { lotInput.removeAttribute('required'); }
-                if (sqftLabel) sqftLabel.innerHTML = 'Square Footage (ft²) <span class="optional">(Optional)</span>';
-                if (lotLabel) lotLabel.innerHTML = 'Lot Size (acres) <span class="optional">(Optional)</span>';
             } else {
                 rentalSection.classList.add('d-none');
                 if (priceLabel) priceLabel.innerHTML = 'Listing Price <span class="required">*</span>';
                 if (priceInput) priceInput.placeholder = 'e.g., 500000';
                 rentalFields.forEach(el => { if (el) el.removeAttribute('required'); });
-                if (sqftInput) { sqftInput.setAttribute('required', 'required'); }
-                if (lotInput) { lotInput.setAttribute('required', 'required'); }
-                if (sqftLabel) sqftLabel.innerHTML = 'Square Footage (ft²) <span class="required">*</span>';
-                if (lotLabel) lotLabel.innerHTML = 'Lot Size (acres) <span class="required">*</span>';
             }
+            // SquareFootage is always required; LotSize is always optional
+            if (sqftLabel) sqftLabel.innerHTML = 'Square Footage (ft²) <span class="required">*</span>';
+            if (lotLabel) lotLabel.innerHTML = 'Lot Size (acres) <span class="optional">(Optional)</span>';
         }
         if (statusSelect) {
             statusSelect.addEventListener('change', toggleRentalFields);

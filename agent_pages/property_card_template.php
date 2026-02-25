@@ -95,7 +95,7 @@ $photos = (int)($property['photo_count'] ?? 0);
             </div>
             <div class="prop-location">
                 <i class="bi bi-geo-alt-fill"></i>
-                <?php echo htmlspecialchars($property['City']); ?>, <?php echo htmlspecialchars($property['State']); ?> <?php echo htmlspecialchars($property['ZIP']); ?>
+                <?php echo htmlspecialchars($property['City']); ?>, <?php echo htmlspecialchars($property['Province']); ?> <?php echo htmlspecialchars($property['ZIP']); ?>
             </div>
 
             <!-- Property Details Row -->

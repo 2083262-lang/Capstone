@@ -39,14 +39,14 @@
                                 <input type="text" class="form-control" name="City" value="<?php echo htmlspecialchars($property_data['City']); ?>" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">County <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="County" value="<?php echo htmlspecialchars($property_data['County'] ?? ''); ?>" placeholder="County name" required>
+                                <label class="form-label">Barangay</label>
+                                <input type="text" class="form-control" name="Barangay" value="<?php echo htmlspecialchars($property_data['Barangay'] ?? ''); ?>" placeholder="e.g., Brgy. San Jose">
                             </div>
                         </div>
                         <div class="row g-3 mt-1">
                             <div class="col-md-2">
-                                <label class="form-label">State <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="State" value="<?php echo htmlspecialchars($property_data['State']); ?>" maxlength="2" pattern="[A-Za-z]{2}" title="2-character state code" placeholder="PH" required>
+                                <label class="form-label">Province <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="Province" value="<?php echo htmlspecialchars($property_data['Province']); ?>" placeholder="e.g., Cebu" required>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">ZIP <span class="text-danger">*</span></label>

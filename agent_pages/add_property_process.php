@@ -40,16 +40,10 @@ $statusEarly = isset($_POST['Status']) ? trim($_POST['Status']) : '';
 
 // Required fields (same as admin)
 $required_fields = [
-    'StreetAddress', 'City', 'State', 'ZIP', 'County', 'PropertyType',
-    'YearBuilt', 'SquareFootage', 'LotSize', 'ParkingType', 'Bedrooms',
-    'Bathrooms', 'ListingPrice', 'ListingDate', 'Source', 'MLSNumber',
-    'ListingDescription', 'Status'
+    'StreetAddress', 'City', 'Province', 'ZIP', 'PropertyType',
+    'ListingPrice', 'ListingDate', 'ListingDescription', 'Status',
+    'SquareFootage', 'Source', 'MLSNumber'
 ];
-
-// For rentals, SquareFootage and LotSize are optional
-if ($statusEarly === 'For Rent') {
-    $required_fields = array_values(array_diff($required_fields, ['SquareFootage', 'LotSize']));
-}
 
 foreach ($required_fields as $field) {
     if (empty(trim($_POST[$field] ?? ''))) {
@@ -68,9 +62,9 @@ if (strlen($City) > 100) {
     $errors[] = "City cannot exceed 100 characters.";
 }
 
-$State = trim($_POST['State'] ?? '');
-if (!preg_match('/^[A-Za-z]{2}$/', $State)) {
-    $errors[] = "State must be a 2-character abbreviation.";
+$Province = trim($_POST['Province'] ?? '');
+if (strlen($Province) > 100) {
+    $errors[] = "Province cannot exceed 100 characters.";
 }
 
 $ZIP = trim($_POST['ZIP'] ?? '');
@@ -255,9 +249,9 @@ if (empty($errors)) {
     // Sanitized variables
     $StreetAddress     = trim($_POST['StreetAddress']);
     $City              = trim($_POST['City']);
-    $State             = trim($_POST['State']);
+    $Province          = trim($_POST['Province']);
     $ZIP               = trim($_POST['ZIP']);
-    $County            = !empty($_POST['County']) ? trim($_POST['County']) : null;
+    $Barangay          = !empty($_POST['Barangay']) ? trim($_POST['Barangay']) : null;
     $PropertyType      = trim($_POST['PropertyType']);
     $ListingPrice      = (float)$_POST['ListingPrice'];
     $Status            = trim($_POST['Status']);
@@ -286,7 +280,7 @@ if (empty($errors)) {
     try {
         // ---- Insert Property ----
         $sql = "INSERT INTO property (
-            StreetAddress, City, County, State, ZIP, PropertyType, YearBuilt, SquareFootage, LotSize,
+            StreetAddress, City, Barangay, Province, ZIP, PropertyType, YearBuilt, SquareFootage, LotSize,
             Bedrooms, Bathrooms, ListingPrice, Status, ListingDate,
             Source, MLSNumber, ListingDescription, ParkingType, approval_status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -294,7 +288,7 @@ if (empty($errors)) {
         $stmt = $conn->prepare($sql);
         $stmt->bind_param(
             "ssssssiididssssssss",
-            $StreetAddress, $City, $County, $State, $ZIP, $PropertyType,
+            $StreetAddress, $City, $Barangay, $Province, $ZIP, $PropertyType,
             $YearBuilt, $SquareFootage, $LotSize, $Bedrooms, $Bathrooms,
             $ListingPrice, $Status, $ListingDate, $Source, $MLSNumber,
             $ListingDescription, $ParkingType, $approval_status

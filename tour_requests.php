@@ -19,7 +19,7 @@ $now_ph = date('Y-m-d H:i:s');
 // Find Pending requests for admin-listed properties where tour date/time has passed
 $expire_find_sql = "
     SELECT tr.tour_id, tr.user_name, tr.user_email, tr.tour_date, tr.tour_time,
-           p.StreetAddress, p.City, p.State
+           p.StreetAddress, p.City, p.Province
     FROM tour_requests tr
     JOIN property p ON tr.property_id = p.property_ID
     JOIN property_log pl ON pl.property_id = p.property_ID AND pl.action = 'CREATED'
@@ -54,7 +54,7 @@ if (!empty($expired_tours)) {
     $stmt->close();
     
     foreach ($expired_tours as $exp) {
-        $property_address = $exp['StreetAddress'] . ', ' . $exp['City'] . ', ' . $exp['State'];
+        $property_address = $exp['StreetAddress'] . ', ' . $exp['City'] . ', ' . $exp['Province'];
         $formattedDate = date('F j, Y', strtotime($exp['tour_date']));
         $formattedTime = date('g:i A', strtotime($exp['tour_time']));
         

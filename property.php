@@ -1379,11 +1379,8 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
         <div class="page-header">
             <div class="page-header-inner">
                 <div>
-                    <h1><i class="bi bi-building me-2" style="color: var(--gold);"></i>Property Management</h1>
+                    <h1></i>Property Management</h1>
                     <p class="subtitle">Monitor, review, and manage all property listings across the platform</p>
-                </div>
-                <div>
-                    <span class="header-badge"><i class="bi bi-shield-check me-1"></i> Admin Control Panel</span>
                 </div>
             </div>
         </div>
@@ -1698,9 +1695,9 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                             </select>
                         </div>
                         <div class="col-6">
-                            <label class="form-label" style="font-size: 0.875rem; font-weight: 600;">County</label>
+                            <label class="form-label" style="font-size: 0.875rem; font-weight: 600;">Barangay</label>
                             <select id="countyFilter" class="filter-select">
-                                <option value="">All Counties</option>
+                                <option value="">All Barangays</option>
                                 <option value="Bukidnon">Bukidnon</option>
                                 <option value="Misamis Oriental">Misamis Oriental</option>
                             </select>
@@ -1816,7 +1813,7 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                 'property_ID' => $p['property_ID'] ?? null,
                 'StreetAddress' => $p['StreetAddress'] ?? '',
                 'City' => $p['City'] ?? '',
-                'State' => $p['State'] ?? '',
+                'Province' => $p['Province'] ?? '',
                 'ZIP' => $p['ZIP'] ?? '',
                 'ListingPrice' => isset($p['ListingPrice']) ? (float)$p['ListingPrice'] : 0,
                 'ListingDate' => $p['ListingDate'] ?? null,
@@ -1931,7 +1928,7 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                 }
                 // text search
                 if (q) {
-                    const hay = ((p.StreetAddress||'') + ' ' + (p.City||'') + ' ' + (p.State||'') + ' ' + (p.PropertyType||'')).toLowerCase();
+                    const hay = ((p.StreetAddress||'') + ' ' + (p.City||'') + ' ' + (p.Province||'') + ' ' + (p.PropertyType||'')).toLowerCase();
                     if (!hay.includes(q)) return false;
                 }
                 return true;
@@ -2133,7 +2130,7 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                 
                 // Location
                 if (comprehensiveFilters.city && property.City !== comprehensiveFilters.city) return false;
-                if (comprehensiveFilters.county && property.County !== comprehensiveFilters.county) return false;
+                if (comprehensiveFilters.county && property.Barangay !== comprehensiveFilters.county) return false;
                 
                 // Status
                 if (!comprehensiveFilters.statuses.has(property.Status)) return false;

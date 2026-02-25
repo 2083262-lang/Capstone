@@ -41,7 +41,7 @@ if ($agent_id <= 0) {
     if ($agent) {
         $prop_sql = "
             SELECT 
-                p.property_ID, p.StreetAddress, p.City, p.State, p.PropertyType,
+                p.property_ID, p.StreetAddress, p.City, p.Province, p.PropertyType,
                 p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice, p.Status,
                 p.ListingDate, COALESCE(p.ViewsCount, 0) AS ViewsCount, COALESCE(p.Likes, 0) AS Likes,
                 (SELECT pi.PhotoURL FROM property_images pi WHERE pi.property_ID = p.property_ID ORDER BY pi.SortOrder ASC LIMIT 1) AS PhotoURL

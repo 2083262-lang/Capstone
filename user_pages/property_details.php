@@ -18,7 +18,7 @@ if ($property_id <= 0) {
     // Fetch property details
     $property_sql = "
         SELECT
-            p.property_ID, p.StreetAddress, p.City, p.State, p.County, p.PropertyType,
+            p.property_ID, p.StreetAddress, p.City, p.Province, p.Barangay, p.PropertyType,
             p.YearBuilt, p.SquareFootage, p.LotSize, p.Bedrooms, p.Bathrooms,
             p.ListingPrice, p.Status, p.ListingDate, p.ListingDescription,
             p.ParkingType, p.MLSNumber, p.approval_status, p.Likes,
@@ -133,7 +133,7 @@ if ($property_id <= 0) {
         
         $similar_sql = "
             SELECT 
-                p.property_ID, p.StreetAddress, p.City, p.State, p.PropertyType,
+                p.property_ID, p.StreetAddress, p.City, p.Province, p.PropertyType,
                 p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice, p.Status,
                 p.ListingDate, COALESCE(p.ViewsCount, 0) AS ViewsCount, COALESCE(p.Likes, 0) AS Likes,
                 (SELECT pi.PhotoURL FROM property_images pi WHERE pi.property_ID = p.property_ID ORDER BY pi.SortOrder ASC LIMIT 1) AS PhotoURL
@@ -1241,7 +1241,7 @@ $conn->close();
         <h1 class="property-title"><?php echo htmlspecialchars($property_data['StreetAddress']); ?></h1>
         <div class="property-address">
             <i class="bi bi-geo-alt-fill"></i>
-            <?php echo htmlspecialchars($property_data['City'] . ', ' . $property_data['State']); ?>
+            <?php echo htmlspecialchars($property_data['City'] . ', ' . $property_data['Province']); ?>
         </div>
         <div class="property-meta">
             <div class="property-price">₱<?php echo number_format($property_data['ListingPrice']); ?></div>
@@ -1356,13 +1356,21 @@ $conn->close();
                         <div style="color: var(--white); font-weight: 600;"><?php echo htmlspecialchars($property_data['PropertyType']); ?></div>
                     </div>
                     <div>
-                        <div style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: 4px;">County</div>
-                        <div style="color: var(--white); font-weight: 600;"><?php echo htmlspecialchars($property_data['County']); ?></div>
+                        <div style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: 4px;">Barangay</div>
+                        <div style="color: var(--white); font-weight: 600;"><?php echo htmlspecialchars($property_data['Barangay'] ?? 'N/A'); ?></div>
                     </div>
-                    <?php if($property_data['MLSNumber']): ?>
+                    <div>
+                        <div style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: 4px;">Province</div>
+                        <div style="color: var(--white); font-weight: 600;"><?php echo htmlspecialchars($property_data['Province']); ?></div>
+                    </div>
                     <div>
                         <div style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: 4px;">MLS Number</div>
                         <div style="color: var(--white); font-weight: 600;"><?php echo htmlspecialchars($property_data['MLSNumber']); ?></div>
+                    </div>
+                    <?php if (!empty($property_data['Source'])): ?>
+                    <div>
+                        <div style="color: var(--gray-400); font-size: 0.875rem; margin-bottom: 4px;">Source (MLS)</div>
+                        <div style="color: var(--white); font-weight: 600;"><?php echo htmlspecialchars($property_data['Source']); ?></div>
                     </div>
                     <?php endif; ?>
                     <div>

@@ -28,16 +28,16 @@
                                 <input type="text" class="form-control" id="edit_City" name="City" required>
                             </div>
                             <div class="col-12 col-sm-6 col-md-2">
-                                <label for="edit_State" class="form-label">State <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="edit_State" name="State" maxlength="2" pattern="[A-Za-z]{2}" required>
+                                <label for="edit_Province" class="form-label">Province <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_Province" name="Province" required>
                             </div>
                             <div class="col-12 col-sm-6 col-md-1">
                                 <label for="edit_ZIP" class="form-label">ZIP <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="edit_ZIP" name="ZIP" maxlength="4" pattern="\d{4}" required>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label for="edit_County" class="form-label">County <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="edit_County" name="County" required>
+                                <label for="edit_Barangay" class="form-label">Barangay</label>
+                                <input type="text" class="form-control" id="edit_Barangay" name="Barangay" placeholder="e.g., Brgy. San Jose">
                             </div>
                             <div class="col-12 col-sm-6 col-md-3">
                                 <label for="edit_PropertyType" class="form-label">Property Type <span class="text-danger">*</span></label>
@@ -832,9 +832,9 @@ function populateEditForm(property, allAmenities, selectedAmenities) {
     document.getElementById('edit_property_id').value = property.property_ID || '';
     document.getElementById('edit_StreetAddress').value = property.StreetAddress || '';
     document.getElementById('edit_City').value = property.City || '';
-    document.getElementById('edit_State').value = property.State || '';
+    document.getElementById('edit_Province').value = property.Province || '';
     document.getElementById('edit_ZIP').value = property.ZIP || '';
-    document.getElementById('edit_County').value = property.County || '';
+    document.getElementById('edit_Barangay').value = property.Barangay || '';
     document.getElementById('edit_PropertyType').value = property.PropertyType || '';
     document.getElementById('edit_Status').value = property.Status || '';
     

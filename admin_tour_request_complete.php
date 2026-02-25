@@ -15,7 +15,7 @@ if ($tour_id <= 0) {
     exit;
 }
 
-$sql = "SELECT tr.*, p.StreetAddress, p.City, p.State, p.ZIP
+$sql = "SELECT tr.*, p.StreetAddress, p.City, p.Province, p.ZIP
         FROM tour_requests tr
         JOIN property p ON tr.property_id = p.property_ID
         JOIN property_log pl ON pl.property_id = p.property_ID AND pl.action = 'CREATED'
@@ -52,7 +52,7 @@ if (!$ok) {
     exit;
 }
 
-$property_address = $tour['StreetAddress'] . ', ' . $tour['City'] . ', ' . $tour['State'] . ' ' . $tour['ZIP'];
+$property_address = $tour['StreetAddress'] . ', ' . $tour['City'] . ', ' . $tour['Province'] . ' ' . $tour['ZIP'];
 $formattedDate = date('F j, Y', strtotime($tour['tour_date']));
 $formattedTime = date('g:i A', strtotime($tour['tour_time']));
 

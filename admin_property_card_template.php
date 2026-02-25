@@ -18,7 +18,7 @@ $lease_display = $is_for_rent && isset($property['rd_lease_term_months']) ? ((in
 $furnish_display = $is_for_rent ? htmlspecialchars($property['rd_furnishing'] ?? 'N/A') : null;
 $avail_display = $is_for_rent && !empty($property['rd_available_from']) ? date("M d, Y", strtotime($property['rd_available_from'])) : null;
 
-$full_location = htmlspecialchars(implode(', ', array_filter([$property['City'], $property['State']])) . ' ' . $property['ZIP']);
+$full_location = htmlspecialchars(implode(', ', array_filter([$property['City'], $property['Province']])) . ' ' . $property['ZIP']);
 $listing_date = date("M d, Y", strtotime($property['ListingDate']));
 
 $listingDateObj = new DateTime($property['ListingDate']);

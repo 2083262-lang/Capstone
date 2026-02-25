@@ -28,7 +28,7 @@ if ($property_id <= 0) {
     // Fetch property details and poster
     $prop_sql = "
         SELECT 
-            p.property_ID, p.StreetAddress, p.City, p.State, p.Status, p.approval_status,
+            p.property_ID, p.StreetAddress, p.City, p.Province, p.Status, p.approval_status,
             a.first_name AS poster_first_name, a.last_name AS poster_last_name,
             ur.role_name AS poster_role
         FROM property p
