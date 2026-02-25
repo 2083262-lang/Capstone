@@ -18,7 +18,7 @@ $date_registered = '';
 $admin_profile = null; // will hold admin_information if exists
 if (isset($_SESSION['account_id']) && isset($conn)) {
     $account_id = (int)$_SESSION['account_id'];
-    $stmt = $conn->prepare("SELECT a.first_name, a.last_name, a.email, a.date_registered, ai.license_number, ai.specialization, ai.years_experience, ai.profile_picture_url FROM accounts a LEFT JOIN admin_information ai ON a.account_id = ai.account_id WHERE a.account_id = ? LIMIT 1");
+    $stmt = $conn->prepare("SELECT a.first_name, a.last_name, a.email, a.date_registered, ai.license_number, ai.years_experience, ai.profile_picture_url FROM accounts a LEFT JOIN admin_information ai ON a.account_id = ai.account_id WHERE a.account_id = ? LIMIT 1");
     $stmt->bind_param("i", $account_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -27,10 +27,9 @@ if (isset($_SESSION['account_id']) && isset($conn)) {
         $last_name = $row['last_name'] ?? '';
         $user_email = $row['email'] ?? '';
         $date_registered = $row['date_registered'] ?? '';
-        if (!empty($row['license_number']) || !empty($row['specialization']) || !empty($row['years_experience']) || !empty($row['profile_picture_url'])) {
+        if (!empty($row['license_number']) || !empty($row['years_experience']) || !empty($row['profile_picture_url'])) {
             $admin_profile = [
                 'license_number' => $row['license_number'] ?? null,
-                'specialization' => $row['specialization'] ?? null,
                 'years_experience' => $row['years_experience'] ?? null,
                 'profile_picture_url' => $row['profile_picture_url'] ?? null
             ];
@@ -72,6 +71,8 @@ $page_titles = [
     'tour_requests.php' => 'Tour Requests',
     'admin_property_sale_approvals.php' => 'Property Sale Approvals',
     'admin_notifications.php' => 'Notifications',
+    'admin_profile.php' => 'My Profile',
+    'admin_settings.php' => 'System Settings',
 ];
 
 $current_page = basename($_SERVER['PHP_SELF']);
@@ -500,247 +501,137 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
         color: #dc3545;
     }
 
-    /* Enhanced Profile Dropdown Styles */
+    /* ===== CLEAN PROFILE DROPDOWN ===== */
     .profile-dropdown-menu {
         background: #fff;
         border: none;
-        border-radius: 20px;
-        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
         padding: 0;
-        margin-top: 1rem;
+        margin-top: 0.75rem;
         overflow: hidden;
-        animation: dropdownSlideIn 0.3s ease-out;
+        min-width: 280px !important;
+        max-width: 280px;
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+        transform-origin: top right;
+        transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
     }
 
-    @keyframes dropdownSlideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .profile-dropdown-menu.show {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
     }
 
-    .profile-dropdown-header {
-        background: linear-gradient(135deg, #161209 0%, #2c241a 100%);
-        padding: 1.5rem;
-        position: relative;
-        overflow: hidden;
+    .pdd-header {
+        padding: 1.25rem 1.25rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
     }
 
-    .profile-dropdown-header::before {
-        content: '';
-        position: absolute;
-        top: -50px;
-        right: -50px;
-        width: 150px;
-        height: 150px;
-        background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
-        border-radius: 50%;
-    }
-
-    .profile-dropdown-header .profile-avatar-large {
-        width: 64px;
-        height: 64px;
+    .pdd-avatar {
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
         object-fit: cover;
-        border: 3px solid var(--gold);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 16px rgba(212, 175, 55, 0.4);
+        border: 2px solid var(--gold);
+        flex-shrink: 0;
     }
 
-    .profile-dropdown-header .profile-name {
-        color: #fff;
-        font-size: 1.1rem;
+    .pdd-header-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .pdd-name {
         font-weight: 700;
-        margin: 0;
-    }
-
-    .profile-dropdown-header .profile-email {
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 0.85rem;
-        margin: 0;
-    }
-
-    .profile-dropdown-body {
-        padding: 1.25rem;
-        background: #fafbfc;
-    }
-
-    .profile-info-section {
-        background: #fff;
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border: 1px solid #e9ecef;
-    }
-
-    .profile-info-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #6c757d;
-        margin-bottom: 0.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .profile-info-label i {
-        color: var(--gold);
-        font-size: 0.85rem;
-    }
-
-    .profile-info-value {
         font-size: 0.95rem;
-        font-weight: 600;
-        color: #161209;
-    }
-
-    .profile-stats {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-    }
-
-    .profile-stat-item {
-        background: #fff;
-        border-radius: 10px;
-        padding: 0.75rem;
-        text-align: center;
-        border: 1px solid #e9ecef;
-        transition: all 0.3s ease;
-    }
-
-    .profile-stat-item:hover {
-        border-color: var(--gold);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
-    }
-
-    .profile-stat-label {
-        font-size: 0.7rem;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.25rem;
-    }
-
-    .profile-stat-value {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #161209;
-    }
-
-    .admin-profile-details {
-        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-left: 4px solid var(--gold);
-    }
-
-    .admin-profile-title {
-        font-size: 0.8rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #161209;
-        margin-bottom: 0.75rem;
+        color: #111;
+        line-height: 1.3;
         display: flex;
         align-items: center;
         gap: 0.5rem;
     }
 
-    .admin-profile-title i {
-        color: var(--gold);
-    }
-
-    .admin-profile-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #e9ecef;
-    }
-
-    .admin-profile-item:last-child {
-        border-bottom: none;
-    }
-
-    .admin-profile-item-label {
-        font-size: 0.85rem;
-        color: #6c757d;
-        font-weight: 500;
-    }
-
-    .admin-profile-item-value {
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: #161209;
-    }
-
-    .profile-dropdown-footer {
-        padding: 1rem 1.25rem;
-        background: #fff;
-        border-top: 1px solid #e9ecef;
-    }
-
-    .profile-action-btn {
-        border-radius: 10px;
-        font-weight: 600;
-        font-size: 0.85rem;
-        padding: 0.65rem 1rem;
-        transition: all 0.3s ease;
-        border: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-    .profile-action-btn.btn-profile {
-        background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
-        color: var(--black);
-        box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
-        font-weight: 700;
-    }
-
-    .profile-action-btn.btn-profile:hover {
-        background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4);
-    }
-
-    .profile-action-btn.btn-logout {
-        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-        color: #fff;
-        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-    }
-
-    .profile-action-btn.btn-logout:hover {
-        background: linear-gradient(135deg, #c82333 0%, #dc3545 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
-    }
-
-    .member-since-badge {
+    .pdd-role-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        background: rgba(212, 175, 55, 0.1);
-        color: var(--gold);
-        padding: 0.4rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: 0.6rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+        color: #111;
+        line-height: 1.3;
     }
 
-    .member-since-badge i {
+    .pdd-subtitle {
         font-size: 0.8rem;
+        color: #6b7280;
+        margin-top: 0.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .pdd-divider {
+        height: 1px;
+        background: #f0f0f0;
+        margin: 0;
+    }
+
+    .pdd-section {
+        padding: 0.5rem 0;
+    }
+
+    .pdd-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        padding: 0.7rem 1.25rem;
+        text-decoration: none;
+        color: #1f2937;
+        font-size: 0.88rem;
+        font-weight: 500;
+        transition: background 0.15s ease, padding-left 0.2s ease;
+        cursor: pointer;
+    }
+
+    .pdd-menu-item:hover {
+        background: #f9fafb;
+        color: #1f2937;
+        padding-left: 1.4rem;
+    }
+
+    .pdd-menu-item i {
+        font-size: 1.15rem;
+        width: 22px;
+        text-align: center;
+        color: #6b7280;
+        flex-shrink: 0;
+        transition: color 0.15s ease;
+    }
+
+    .pdd-menu-item:hover i {
+        color: var(--blue);
+    }
+
+    .pdd-menu-item.logout-item {
+        color: #dc2626;
+    }
+
+    .pdd-menu-item.logout-item i {
+        color: #dc2626;
+    }
+
+    .pdd-menu-item.logout-item:hover {
+        background: rgba(220, 38, 38, 0.04);
     }
 
     /* Search Bar */
@@ -991,53 +882,38 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
                         <div class="user-role"><?php echo htmlspecialchars($user_role); ?></div>
                     </div>
                 </a>
-                <div class="dropdown-menu dropdown-menu-end profile-dropdown-menu" style="min-width: 350px;">
-                    <!-- Profile Header -->
-                    <div class="profile-dropdown-header">
-                        <div class="d-flex align-items-center gap-3">
-                            <img src="<?php echo $avatar_src; ?>" alt="avatar" class="profile-avatar-large">
-                            <div class="flex-grow-1">
-                                <div class="profile-name"><?php echo htmlspecialchars($first_name . ' ' . ($last_name ?? '')); ?></div>
-                                <div class="profile-email"><?php echo htmlspecialchars($user_email); ?></div>
+                <div class="dropdown-menu dropdown-menu-end profile-dropdown-menu">
+                    <!-- Header -->
+                    <div class="pdd-header">
+                        <img src="<?php echo $avatar_src; ?>" alt="avatar" class="pdd-avatar">
+                        <div class="pdd-header-info">
+                            <div class="pdd-name">
+                                <?php echo htmlspecialchars($first_name . ' ' . ($last_name ?? '')); ?>
+                                <span class="pdd-role-badge"><?php echo htmlspecialchars(ucfirst($user_role)); ?></span>
                             </div>
+                            <div class="pdd-subtitle"><?php echo htmlspecialchars($user_email); ?></div>
                         </div>
                     </div>
 
-                    <!-- Profile Body -->
-                    <div class="profile-dropdown-body">
-                        <!-- Role, Member Since & License (if available) -->
-                        <div class="profile-stats">
-                            <div class="profile-stat-item">
-                                <div class="profile-stat-label">Role</div>
-                                <div class="profile-stat-value"><?php echo htmlspecialchars(ucfirst($user_role)); ?></div>
-                            </div>
-                            <div class="profile-stat-item">
-                                <div class="profile-stat-label">Member Since</div>
-                                <div class="profile-stat-value" style="font-size: 0.85rem;">
-                                    <?php echo !empty($date_registered) ? date('M Y', strtotime($date_registered)) : 'N/A'; ?>
-                                </div>
-                            </div>
-                            <div class="profile-stat-item">
-                                <div class="profile-stat-label">License</div>
-                                <div class="profile-stat-value" style="font-size: 0.95rem;">
-                                    <?php echo (!empty($admin_profile['license_number'])) ? htmlspecialchars($admin_profile['license_number']) : 'N/A'; ?>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="pdd-divider"></div>
+
+                    <!-- Navigation -->
+                    <div class="pdd-section">
+                        <a href="admin_profile.php" class="pdd-menu-item">
+                            <i class="bi bi-person"></i> View Profile
+                        </a>
+                        <a href="admin_settings.php" class="pdd-menu-item">
+                            <i class="bi bi-gear"></i> Account Settings
+                        </a>
                     </div>
 
-                    <!-- Profile Footer -->
-                    <div class="profile-dropdown-footer">
-                        <div class="d-flex gap-2">
-                            <a class="btn profile-action-btn btn-profile w-100" href="profile.php">
-                                <i class="bi bi-person"></i>
-                                My Profile
-                            </a>
-                            <a class="btn profile-action-btn btn-logout w-100" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
-                                <i class="bi bi-box-arrow-right"></i>
-                                Logout
-                            </a>
-                        </div>
+                    <div class="pdd-divider"></div>
+
+                    <!-- Logout -->
+                    <div class="pdd-section">
+                        <a href="#" class="pdd-menu-item logout-item" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                            <i class="bi bi-box-arrow-right"></i> Log Out
+                        </a>
                     </div>
                 </div>
             </div>

@@ -18,9 +18,6 @@ $menu_items = [
     'admin_property_sale_approvals.php' => ['icon' => 'bi bi-check-circle', 'title' => 'Property Sale Approvals'],
     'admin_notifications.php' => ['icon' => 'bi bi-bell', 'title' => 'Notifications'],
     'reports.php' => ['icon' => 'bi bi-graph-up', 'title' => 'Reports'],
-    // 'clients.php' => ['icon' => 'bi bi-people', 'title' => 'Clients'],
-    // 'contracts.php' => ['icon' => 'bi bi-file-text', 'title' => 'Contracts'],
-    // 'settings.php' => ['icon' => 'bi bi-gear', 'title' => 'Settings']
 ];
 ?>
 
