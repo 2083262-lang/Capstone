@@ -39,6 +39,12 @@ if ($req['request_status'] === 'Confirmed' && !empty($req['confirmed_at'])) {
     exit;
 }
 
+// Only Pending tours can be confirmed
+if ($req['request_status'] !== 'Pending') {
+    echo json_encode(['success' => false, 'message' => 'Only pending tour requests can be confirmed. Current status: ' . $req['request_status']]);
+    exit;
+}
+
 $conn->begin_transaction();
 try {
     // Lock the row first to prevent race conditions
@@ -50,22 +56,63 @@ try {
     $lock->close();
     if (!$locked) throw new Exception('Tour not found.');
 
+    // Re-check status under lock to prevent race conditions
+    $statusCheck = $conn->prepare("SELECT request_status FROM tour_requests WHERE tour_id = ?");
+    $statusCheck->bind_param('i', $tour_id);
+    $statusCheck->execute();
+    $currentStatus = $statusCheck->get_result()->fetch_assoc();
+    $statusCheck->close();
+    if ($currentStatus['request_status'] !== 'Pending') {
+        throw new Exception('Tour is no longer pending. Current status: ' . $currentStatus['request_status']);
+    }
+
     // Prevent conflicts with public/private grouping rules
-    $check = $conn->prepare("SELECT tour_id, tour_type, property_id FROM tour_requests WHERE agent_account_id = ? AND tour_date = ? AND tour_time = ? AND tour_id <> ? AND request_status = 'Confirmed'");
+    // Check for exact time match AND tours within 30-minute proximity (agent can't physically be at two places)
+    $check = $conn->prepare("
+        SELECT tr.tour_id, tr.tour_type, tr.property_id, tr.tour_time
+        FROM tour_requests tr
+        JOIN property p ON tr.property_id = p.property_ID
+        JOIN property_log pl ON pl.property_id = p.property_ID AND pl.action = 'CREATED'
+        JOIN accounts a ON a.account_id = pl.account_id
+        JOIN user_roles ur ON ur.role_id = a.role_id
+        WHERE ur.role_name = 'admin'
+          AND tr.tour_date = ?
+          AND tr.tour_id <> ?
+          AND tr.request_status = 'Confirmed'
+          AND ABS(TIMESTAMPDIFF(MINUTE, tr.tour_time, ?)) < 30
+    ");
     if (!$check) throw new Exception('Prepare failed: ' . $conn->error);
-    $check->bind_param('issi', $req['agent_account_id'], $req['tour_date'], $req['tour_time'], $tour_id);
+    $check->bind_param('sis', $req['tour_date'], $tour_id, $req['tour_time']);
     if (!$check->execute()) throw new Exception('Conflict check failed: ' . ($check->error ?: $conn->error));
     $res = $check->get_result();
     $hasConflict = false;
     while ($row = $res->fetch_assoc()) {
-        if ($req['tour_type'] === 'private') { $hasConflict = true; break; }
+        $isExactTime = ($row['tour_time'] === $req['tour_time']);
+        if ($req['tour_type'] === 'private') {
+            // Private tours conflict with anything at exact same time
+            // or anything within 30 min at a different property
+            if ($isExactTime || (int)$row['property_id'] !== (int)$req['property_id']) {
+                $hasConflict = true; break;
+            }
+        }
         if ($req['tour_type'] === 'public') {
-            if ($row['tour_type'] === 'private' || (int)$row['property_id'] !== (int)$req['property_id']) { $hasConflict = true; break; }
+            if ($isExactTime) {
+                // Exact time: conflict with private, or public at different property
+                if ($row['tour_type'] === 'private' || (int)$row['property_id'] !== (int)$req['property_id']) {
+                    $hasConflict = true; break;
+                }
+                // Public + same property + exact time = grouping allowed, no conflict
+            } else {
+                // Within 30 min but not exact: conflict if different property
+                if ((int)$row['property_id'] !== (int)$req['property_id']) {
+                    $hasConflict = true; break;
+                }
+            }
         }
     }
     $check->close();
     if ($hasConflict) {
-        throw new Exception('Cannot confirm: another tour at the same date and time is already confirmed.');
+        throw new Exception('Cannot confirm: another confirmed tour conflicts with this time slot (exact match or within 30-minute buffer).');
     }
 
     $upd = $conn->prepare("UPDATE tour_requests SET request_status = 'Confirmed', confirmed_at = NOW(), decision_reason = NULL, decision_by = 'admin', decision_at = NULL WHERE tour_id = ?");
