@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt = $conn->prepare("
         SELECT 
-            a.account_id, a.email, a.first_name, a.last_name,
+            a.account_id, a.email, a.first_name, a.last_name, a.role_id,
             p.StreetAddress, p.City
         FROM property p
         JOIN property_log pl ON p.property_ID = pl.property_id
@@ -73,7 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $agent_info = [
             'id' => $row['account_id'],
             'email' => $row['email'],
-            'name' => $row['first_name'] . ' ' . $row['last_name']
+            'name' => $row['first_name'] . ' ' . $row['last_name'],
+            'role_id' => (int)$row['role_id']
         ];
         $property_info = [
             'address' => $row['StreetAddress'] . ', ' . $row['City']
@@ -102,16 +103,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tour_id = $stmt->insert_id;
         $stmt->close();
 
-        // 4. Insert into notifications table
-        $notification_message = "New " . ($tour_type === 'public' ? 'public (group)' : 'private') . " tour request from {$user_name} for property #{$property_id}.";
-        $insert_notification_sql = "
-            INSERT INTO notifications (item_id, item_type, message) 
-            VALUES (?, 'tour', ?)
-        ";
-        $stmt = $conn->prepare($insert_notification_sql);
-        $stmt->bind_param("is", $tour_id, $notification_message);
-        $stmt->execute();
-        $stmt->close();
+        // 4. Insert into admin notifications table (ONLY if property is managed by an admin)
+        if ($agent_info['role_id'] === 1) {
+            $notification_message = "New " . ($tour_type === 'public' ? 'public (group)' : 'private') . " tour request for property #" . (int)$property_id . ".";
+            $insert_notification_sql = "
+                INSERT INTO notifications (item_id, item_type, message) 
+                VALUES (?, 'tour', ?)
+            ";
+            $stmt = $conn->prepare($insert_notification_sql);
+            $stmt->bind_param("is", $tour_id, $notification_message);
+            $stmt->execute();
+            $stmt->close();
+        }
 
         // 4b. Agent notification — new tour request
         require_once __DIR__ . '/../agent_pages/agent_notification_helper.php';

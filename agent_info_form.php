@@ -243,7 +243,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $agent_full_name = $agent_name_result['first_name'] . ' ' . $agent_name_result['last_name'];
                     $name_stmt->close();
 
-                    $notification_message = "Agent '" . $conn->real_escape_string($agent_full_name) . "' submitted their profile for approval.";
+                    $notification_message = "An agent has submitted their profile for approval. (Agent ID: " . (int)$account_id . ")";
                     $notif_stmt = $conn->prepare("INSERT INTO notifications (item_id, item_type, message) VALUES (?, 'agent', ?)");
                     $notif_stmt->bind_param("is", $account_id, $notification_message);
                     $notif_stmt->execute();

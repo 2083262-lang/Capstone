@@ -41,24 +41,81 @@ if (isset($_SESSION['account_id']) && isset($conn)) {
 // Get unread notifications count and recent notifications
 $unread_notifications = 0;
 $recent_notifications = [];
-if (isset($conn)) {
-    // Count unread
-    $notif_stmt = $conn->prepare("SELECT COUNT(*) as count FROM notifications WHERE is_read = 0 OR is_read IS NULL");
-    $notif_stmt->execute();
-    $notif_result = $notif_stmt->get_result();
-    if ($notif_row = $notif_result->fetch_assoc()) {
-        $unread_notifications = $notif_row['count'];
+if (isset($conn) && isset($_SESSION['account_id'])) {
+    $nav_admin_id = (int)$_SESSION['account_id'];
+
+    // Security: Only count/show tour notifications for properties managed by this admin
+    $nav_tour_filter = "AND (n.item_type != 'tour' OR EXISTS (SELECT 1 FROM tour_requests tr JOIN property_log pl ON tr.property_id = pl.property_id AND pl.action = 'CREATED' WHERE tr.tour_id = n.item_id AND pl.account_id = $nav_admin_id))";
+
+    // Count unread (filtered)
+    $notif_count_result = $conn->query("SELECT COUNT(*) as count FROM notifications n WHERE (n.is_read = 0 OR n.is_read IS NULL) $nav_tour_filter");
+    if ($notif_count_result && $notif_row = $notif_count_result->fetch_assoc()) {
+        $unread_notifications = (int)$notif_row['count'];
     }
-    $notif_stmt->close();
-    
-    // Get recent 5 notifications
-    $recent_stmt = $conn->prepare("SELECT notification_id, item_type, message, created_at, is_read FROM notifications ORDER BY created_at DESC LIMIT 5");
-    $recent_stmt->execute();
-    $recent_result = $recent_stmt->get_result();
+
+    // Check if new columns exist
+    $navbar_has_new_cols = false;
+    $col_chk = $conn->query("SHOW COLUMNS FROM notifications LIKE 'title'");
+    if ($col_chk && $col_chk->num_rows > 0) $navbar_has_new_cols = true;
+
+    // Get recent 5 notifications (prioritise unread first, filtered for admin-managed tour properties)
+    if ($navbar_has_new_cols) {
+        $recent_sql = "SELECT n.notification_id, n.item_id, n.item_type, n.title, n.message, n.category, n.priority, n.action_url, n.icon, n.created_at, n.is_read FROM notifications n WHERE 1=1 $nav_tour_filter ORDER BY n.is_read ASC, n.created_at DESC LIMIT 5";
+    } else {
+        $recent_sql = "SELECT n.notification_id, n.item_id, n.item_type, n.message, n.created_at, n.is_read FROM notifications n WHERE 1=1 $nav_tour_filter ORDER BY n.is_read ASC, n.created_at DESC LIMIT 5";
+    }
+    $recent_result = $conn->query($recent_sql);
     while ($notif = $recent_result->fetch_assoc()) {
+        // Fill defaults for old schema
+        if (!$navbar_has_new_cols) {
+            $notif['title'] = '';
+            $notif['category'] = 'update';
+            $notif['priority'] = 'normal';
+            $notif['action_url'] = null;
+            $notif['icon'] = null;
+            $notif['item_id'] = $notif['item_id'] ?? 0;
+        }
+        // Auto-derive missing fields
+        if (empty($notif['title'])) {
+            switch ($notif['item_type']) {
+                case 'agent':        $notif['title'] = 'Agent Profile Submission'; break;
+                case 'tour':         $notif['title'] = 'New Tour Request'; break;
+                case 'property':     $notif['title'] = 'Property Update'; break;
+                case 'property_sale':$notif['title'] = 'Sale Verification'; break;
+                default:             $notif['title'] = 'Notification'; break;
+            }
+        }
+        if (empty($notif['icon'])) {
+            switch ($notif['item_type']) {
+                case 'agent':        $notif['icon'] = 'bi-person-badge'; break;
+                case 'tour':         $notif['icon'] = 'bi-calendar-check'; break;
+                case 'property':     $notif['icon'] = 'bi-building'; break;
+                case 'property_sale':$notif['icon'] = 'bi-cash-stack'; break;
+                default:             $notif['icon'] = 'bi-bell'; break;
+            }
+        }
+        if (empty($notif['action_url'])) {
+            switch ($notif['item_type']) {
+                case 'agent':        $notif['action_url'] = 'review_agent_details.php?id=' . ($notif['item_id'] ?? 0); break;
+                case 'tour':         $notif['action_url'] = 'admin_tour_request_details.php?id=' . ($notif['item_id'] ?? 0); break;
+                case 'property':     $notif['action_url'] = 'view_property.php?id=' . ($notif['item_id'] ?? 0); break;
+                case 'property_sale':$notif['action_url'] = 'admin_property_sale_approvals.php'; break;
+                default:             $notif['action_url'] = 'admin_notifications.php'; break;
+            }
+        }
         $recent_notifications[] = $notif;
     }
-    $recent_stmt->close();
+
+    // Live counts for navbar quick indicators
+    $navbar_pending_actions = 0;
+    $r = $conn->query("SELECT COUNT(*) as c FROM agent_information WHERE is_approved = 0");
+    if ($r) $navbar_pending_actions += (int)$r->fetch_assoc()['c'];
+    $r = $conn->query("SELECT COUNT(*) as c FROM property WHERE approval_status = 'pending'");
+    if ($r) $navbar_pending_actions += (int)$r->fetch_assoc()['c'];
+    $r = $conn->query("SELECT COUNT(*) as c FROM tour_requests WHERE request_status = 'Pending'");
+    if ($r) $navbar_pending_actions += (int)$r->fetch_assoc()['c'];
+    $r = $conn->query("SELECT COUNT(*) as c FROM sale_verifications WHERE status = 'Pending'");
+    if ($r) $navbar_pending_actions += (int)$r->fetch_assoc()['c'];
 }
 
 // Define page titles for dynamic navbar title
@@ -794,9 +851,14 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
                         <!-- Notification Header -->
                         <div class="notification-dropdown-header">
                             <span><i class="bi bi-bell me-2"></i>Notifications</span>
-                            <?php if ($unread_notifications > 0): ?>
-                                <span class="unread-count"><?php echo $unread_notifications; ?> new</span>
-                            <?php endif; ?>
+                            <div class="d-flex align-items-center gap-2">
+                                <?php if ($unread_notifications > 0): ?>
+                                    <span class="unread-count"><?php echo $unread_notifications; ?> new</span>
+                                <?php endif; ?>
+                                <?php if (isset($navbar_pending_actions) && $navbar_pending_actions > 0): ?>
+                                    <span class="unread-count" style="background: linear-gradient(135deg, #dc3545, #e74c5e);"><?php echo $navbar_pending_actions; ?> action<?php echo $navbar_pending_actions > 1 ? 's' : ''; ?></span>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         
                         <!-- Notification List -->
@@ -810,23 +872,15 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
                             foreach ($recent_notifications as $notif):
                                 $is_unread = !isset($notif['is_read']) || (int)$notif['is_read'] === 0;
                                 $item_type = $notif['item_type'] ?? 'general';
+                                $notif_icon = $notif['icon'] ?? 'bi-bell';
+                                $notif_title = $notif['title'] ?? 'Notification';
+                                $notif_action_url = $notif['action_url'] ?? 'admin_notifications.php';
+                                $notif_priority = $notif['priority'] ?? 'normal';
                                 
-                                // Determine icon based on item type
-                                $icon_class = 'bi bi-bell';
-                                $icon_wrapper_class = 'tour';
-                                if (strpos($item_type, 'property') !== false) {
-                                    $icon_class = 'bi bi-house';
-                                    $icon_wrapper_class = 'property';
-                                } elseif (strpos($item_type, 'agent') !== false) {
-                                    $icon_class = 'bi bi-person-badge';
-                                    $icon_wrapper_class = 'agent';
-                                } elseif (strpos($item_type, 'sale') !== false) {
-                                    $icon_class = 'bi bi-currency-dollar';
-                                    $icon_wrapper_class = 'sale';
-                                } elseif (strpos($item_type, 'tour') !== false) {
-                                    $icon_class = 'bi bi-calendar-check';
-                                    $icon_wrapper_class = 'tour';
-                                }
+                                // Icon wrapper class
+                                $icon_wrapper_class = $item_type;
+                                if (strpos($item_type, 'property_sale') !== false) $icon_wrapper_class = 'sale';
+                                elseif (strpos($item_type, 'property') !== false) $icon_wrapper_class = 'property';
                                 
                                 $time_ago = '';
                                 if (!empty($notif['created_at'])) {
@@ -834,26 +888,38 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
                                     if ($time_diff < 60) {
                                         $time_ago = 'Just now';
                                     } elseif ($time_diff < 3600) {
-                                        $time_ago = floor($time_diff / 60) . ' minutes ago';
+                                        $time_ago = floor($time_diff / 60) . 'm ago';
                                     } elseif ($time_diff < 86400) {
-                                        $time_ago = floor($time_diff / 3600) . ' hours ago';
+                                        $time_ago = floor($time_diff / 3600) . 'h ago';
+                                    } elseif ($time_diff < 172800) {
+                                        $time_ago = 'Yesterday';
                                     } else {
-                                        $time_ago = date('M d, Y', strtotime($notif['created_at']));
+                                        $time_ago = date('M d', strtotime($notif['created_at']));
                                     }
                                 }
                             ?>
-                                <div class="dropdown-item <?php echo $is_unread ? 'unread' : ''; ?>">
-                                    <div class="notification-icon-wrapper <?php echo $icon_wrapper_class; ?>">
-                                        <i class="<?php echo $icon_class; ?>"></i>
+                                <a href="<?php echo htmlspecialchars($notif_action_url); ?>" class="dropdown-item <?php echo $is_unread ? 'unread' : ''; ?>" style="text-decoration:none;">
+                                    <div class="notification-icon-wrapper <?php echo htmlspecialchars($icon_wrapper_class); ?>">
+                                        <i class="bi <?php echo htmlspecialchars($notif_icon); ?>"></i>
                                     </div>
                                     <div class="notification-content">
-                                        <div class="notification-message" title="<?php echo htmlspecialchars($notif['message'] ?? 'New notification'); ?>"><?php echo htmlspecialchars($notif['message'] ?? 'New notification'); ?></div>
-                                        <div class="notification-time"><?php echo $time_ago; ?></div>
+                                        <div class="notification-message" style="font-weight:<?php echo $is_unread ? '700' : '500'; ?>;" title="<?php echo htmlspecialchars($notif_title . ': ' . ($notif['message'] ?? '')); ?>">
+                                            <?php if ($notif_priority === 'urgent' || $notif_priority === 'high'): ?>
+                                                <i class="bi bi-exclamation-circle-fill" style="color:#d97706;font-size:0.7rem;margin-right:3px;"></i>
+                                            <?php endif; ?>
+                                            <?php echo htmlspecialchars($notif_title); ?>
+                                        </div>
+                                        <div style="font-size:0.78rem;color:#64748b;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            <?php echo htmlspecialchars($notif['message'] ?? ''); ?>
+                                        </div>
+                                        <div class="notification-time">
+                                            <i class="bi bi-clock" style="font-size:0.65rem;margin-right:2px;"></i><?php echo $time_ago; ?>
+                                        </div>
                                     </div>
-                                    <div class="notification-actions-dropdown">
-                                        <a href="admin_notifications.php?view_id=<?php echo urlencode($notif['notification_id']); ?>" class="btn btn-sm btn-outline-primary">View</a>
-                                    </div>
-                                </div>
+                                    <?php if ($is_unread): ?>
+                                    <div style="width:8px;height:8px;border-radius:50%;background:var(--blue,#2563eb);flex-shrink:0;margin-left:auto;"></div>
+                                    <?php endif; ?>
+                                </a>
                             <?php endforeach; ?>
                         <?php endif; ?>
                         
