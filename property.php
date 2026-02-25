@@ -83,28 +83,73 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
     
     <style>
         /* ================================================
-           ADMIN PROPERTY PAGE - LIGHT THEME
-           Matches agent/user design language with white admin styling
+           ADMIN PROPERTY PAGE
+           Structure matches admin_dashboard.php exactly:
+           - Simple :root for page-specific vars only
+           - Hardcoded sidebar/content layout (no variable overrides)
+           - No wildcard resets
+           - No preload hacks
            ================================================ */
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary-color: #161209;
+            --secondary-color: #bc9e42;
+            --accent-color: #a08636;
+            --bg-light: #f8f9fa;
+            --border-color: #e0e0e0;
+        }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-primary);
-            line-height: 1.6;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: #212529;
         }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, var(--gold), var(--gold-dark));
-            border-radius: 4px;
+        .admin-sidebar {
+            background: linear-gradient(180deg, #161209 0%, #1f1a0f 100%);
+            color: #fff;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 290px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, var(--gold-light), var(--gold));
+
+        .admin-content {
+            margin-left: 290px;
+            padding: 2rem;
+            min-height: 100vh;
+            max-width: 1800px;
+        }
+
+        @media (max-width: 1200px) {
+            .admin-content {
+                margin-left: 0 !important;
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-content {
+                margin-left: 0 !important;
+                padding: 1rem;
+            }
+        }
+
+        /* ===== PAGE-SPECIFIC VARIABLES (used only by property page elements) ===== */
+        .admin-content {
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --gold-dark: #b8941f;
+            --blue: #2563eb;
+            --blue-light: #3b82f6;
+            --blue-dark: #1e40af;
+            --card-bg: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
         }
 
         /* ===== PAGE HEADER ===== */
@@ -382,6 +427,9 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
         }
 
         /* ===== TABS ===== */
+        /* NOTE: .property-tabs .nav-link styles below are scoped to property tabs only */
+        /* Sidebar .nav-link styles are in admin_sidebar.php (scoped to .admin-sidebar) */
+        /* This prevents CSS conflicts between sidebar navigation and property tabs */
         .property-tabs {
             background: var(--card-bg);
             border: 1px solid rgba(37, 99, 235, 0.1);

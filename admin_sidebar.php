@@ -126,11 +126,17 @@ $menu_items = [
         flex: 1;
     }
 
-    .nav-item {
+    /* ================================================
+       SIDEBAR NAVIGATION LINKS
+       IMPORTANT: All .nav-link styles are scoped to .admin-sidebar to prevent
+       conflicts with property tabs or other .nav-link elements on the page.
+       Each page's tabs should define their own scoped .nav-link styles.
+       ================================================ */
+    .admin-sidebar .nav-item {
         margin-bottom: 0.25rem;
     }
 
-    .nav-link {
+    .admin-sidebar .nav-link {
         display: flex;
         align-items: center;
         padding: 1rem 1.5rem;
@@ -143,21 +149,21 @@ $menu_items = [
         border-left: 4px solid transparent;
     }
 
-    .nav-link i {
+    .admin-sidebar .nav-link i {
         width: 20px;
         margin-right: 0.75rem;
         font-size: 1.1rem;
         text-align: center;
     }
 
-    .nav-link:hover {
+    .admin-sidebar .nav-link:hover {
         background: linear-gradient(90deg, rgba(37, 99, 235, 0.15), transparent);
         color: var(--white);
         border-left-color: var(--blue);
         padding-left: 2rem;
     }
 
-    .nav-link.active {
+    .admin-sidebar .nav-link.active {
         background: linear-gradient(90deg, var(--gold-dark) 0%, var(--gold) 50%, rgba(212, 175, 55, 0.8) 100%);
         color: var(--black);
         font-weight: 700;
@@ -165,7 +171,7 @@ $menu_items = [
         box-shadow: 0 4px 16px rgba(212, 175, 55, 0.25), inset 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
-    .nav-link.active i {
+    .admin-sidebar .nav-link.active i {
         color: var(--black);
     }
 
@@ -187,18 +193,18 @@ $menu_items = [
         opacity: 0.5;
     }
 
-    .nav-link.logout-link {
+    .admin-sidebar .nav-link.logout-link {
         color: #ff6b6b;
         font-weight: 600;
     }
 
-    .nav-link.logout-link:hover {
+    .admin-sidebar .nav-link.logout-link:hover {
         background: linear-gradient(90deg, rgba(255, 107, 107, 0.15), transparent);
         color: #ff8a8a;
         border-left-color: #ff6b6b;
     }
 
-    .nav-link.logout-link i {
+    .admin-sidebar .nav-link.logout-link i {
         color: #ff6b6b;
     }
 
