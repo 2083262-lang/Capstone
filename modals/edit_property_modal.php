@@ -43,12 +43,14 @@
                                 <label for="edit_PropertyType" class="form-label">Property Type <span class="text-danger">*</span></label>
                                 <select class="form-select" id="edit_PropertyType" name="PropertyType" required>
                                     <option value="">Select Type</option>
-                                    <option value="Single-Family Home">Single-Family Home</option>
-                                    <option value="Condominium">Condominium</option>
-                                    <option value="Townhouse">Townhouse</option>
-                                    <option value="Multi-Family">Multi-Family</option>
-                                    <option value="Land">Land</option>
-                                    <option value="Commercial">Commercial</option>
+                                    <?php
+                                        $pt_result = $conn->query("SELECT type_name FROM property_types ORDER BY type_name ASC");
+                                        if ($pt_result) {
+                                            while ($pt = $pt_result->fetch_assoc()) {
+                                                echo '<option value="' . htmlspecialchars($pt['type_name']) . '">' . htmlspecialchars($pt['type_name']) . '</option>';
+                                            }
+                                        }
+                                    ?>
                                 </select>
                             </div>
                             <div class="col-12 col-sm-6 col-md-3">

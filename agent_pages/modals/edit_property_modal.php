@@ -74,11 +74,13 @@
                                         <select class="form-select" name="PropertyType" required>
                                             <option disabled value="">Select Property Type</option>
                                             <?php
-                                                $types = ['Single-Family Home','Condominium','Townhouse','Multi-Family','Land','Commercial'];
+                                                $pt_result = $conn->query("SELECT type_name FROM property_types ORDER BY type_name ASC");
                                                 $cur = trim((string)$property_data['PropertyType']);
-                                                foreach ($types as $t) {
-                                                    $sel = strcasecmp($cur,$t)===0 ? 'selected' : '';
-                                                    echo '<option value="'.htmlspecialchars($t).'" '.$sel.'>'.htmlspecialchars($t).'</option>';
+                                                if ($pt_result) {
+                                                    while ($pt = $pt_result->fetch_assoc()) {
+                                                        $sel = strcasecmp($cur, $pt['type_name']) === 0 ? 'selected' : '';
+                                                        echo '<option value="' . htmlspecialchars($pt['type_name']) . '" ' . $sel . '>' . htmlspecialchars($pt['type_name']) . '</option>';
+                                                    }
                                                 }
                                             ?>
                                         </select>

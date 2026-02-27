@@ -17,8 +17,14 @@ $specializations = [];
 $r = $conn->query("SELECT specialization_id, specialization_name FROM specializations ORDER BY specialization_name ASC");
 if ($r) { while ($row = $r->fetch_assoc()) $specializations[] = $row; }
 
+// Fetch property types
+$property_types = [];
+$r = $conn->query("SELECT property_type_id, type_name FROM property_types ORDER BY type_name ASC");
+if ($r) { while ($row = $r->fetch_assoc()) $property_types[] = $row; }
+
 $total_amenities = count($amenities);
 $total_specializations = count($specializations);
+$total_property_types = count($property_types);
 
 ?>
 <!DOCTYPE html>
@@ -68,7 +74,7 @@ $total_specializations = count($specializations);
         .page-header .header-badge { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 0.3rem 0.85rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* ===== KPI STAT CARDS ===== */
-        .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
         .kpi-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 1.75rem 1.5rem; position: relative; overflow: hidden; transition: all 0.3s ease; }
         .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--blue), transparent); opacity: 0; transition: opacity 0.3s ease; }
         .kpi-card:hover { border-color: rgba(37,99,235,0.25); box-shadow: 0 8px 32px rgba(37,99,235,0.08); transform: translateY(-3px); }
@@ -80,7 +86,7 @@ $total_specializations = count($specializations);
         .kpi-icon.cyan { background: linear-gradient(135deg, rgba(6,182,212,0.06), rgba(6,182,212,0.12)); color: #0891b2; border: 1px solid rgba(6,182,212,0.15); }
         .kpi-card .kpi-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 0.25rem; }
         .kpi-card .kpi-value { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
-        @media (max-width: 992px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 992px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 576px) { .kpi-grid { grid-template-columns: 1fr; } }
 
         /* ===== SETTINGS TABS ===== */
@@ -241,6 +247,11 @@ $total_specializations = count($specializations);
                 <div class="kpi-label">Specializations</div>
                 <div class="kpi-value"><?php echo $total_specializations; ?></div>
             </div>
+            <div class="kpi-card">
+                <div class="kpi-icon gold"><i class="bi bi-house-door"></i></div>
+                <div class="kpi-label">Property Types</div>
+                <div class="kpi-value"><?php echo $total_property_types; ?></div>
+            </div>
         </div>
 
         <!-- Settings Tabs -->
@@ -256,6 +267,12 @@ $total_specializations = count($specializations);
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-specializations" type="button" role="tab">
                         <i class="bi bi-tags"></i> Specializations
                         <span class="tab-badge"><?php echo $total_specializations; ?></span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-property-types" type="button" role="tab">
+                        <i class="bi bi-house-door"></i> Property Types
+                        <span class="tab-badge"><?php echo $total_property_types; ?></span>
                     </button>
                 </li>
 
@@ -334,6 +351,41 @@ $total_specializations = count($specializations);
                     </div>
                 </div>
 
+                <!-- === PROPERTY TYPES TAB === -->
+                <div class="tab-pane fade" id="tab-property-types" role="tabpanel">
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <div class="header-left">
+                                <i class="bi bi-house-door"></i>
+                                <div>
+                                    <h3>Property Types</h3>
+                                    <p>Manage the property types available for property listings</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="settings-card-body">
+                            <div class="add-form" id="ptypeAddForm">
+                                <input type="text" id="ptypeInput" placeholder="Enter a new property type name..." maxlength="100" autocomplete="off">
+                                <button class="btn-blue" onclick="addItem('ptype')"><i class="bi bi-plus-lg"></i> Add Property Type</button>
+                            </div>
+
+                            <div class="item-search">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="ptypeSearch" placeholder="Search property types..." oninput="filterItems('ptype')">
+                            </div>
+
+                            <div class="items-grid" id="ptypeGrid">
+                                <?php foreach ($property_types as $pt): ?>
+                                    <div class="item-chip" data-id="<?php echo $pt['property_type_id']; ?>" data-name="<?php echo htmlspecialchars(strtolower($pt['type_name'])); ?>">
+                                        <span class="chip-name"><?php echo htmlspecialchars($pt['type_name']); ?></span>
+                                        <button class="chip-delete" title="Delete" onclick="confirmDelete('ptype', <?php echo $pt['property_type_id']; ?>, '<?php echo htmlspecialchars(addslashes($pt['type_name'])); ?>')"><i class="bi bi-x"></i></button>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="item-count" id="ptypeCount"><?php echo $total_property_types; ?> property types total</div>
+                        </div>
+                    </div>
+                </div>
 
 
             </div>
@@ -364,7 +416,7 @@ $total_specializations = count($specializations);
 
     // ===== ADD ITEM =====
     function addItem(type) {
-        const inputId = type === 'amenity' ? 'amenityInput' : 'specInput';
+        const inputId = type === 'amenity' ? 'amenityInput' : (type === 'ptype' ? 'ptypeInput' : 'specInput');
         const input = document.getElementById(inputId);
         const name = input.value.trim();
 
@@ -373,7 +425,7 @@ $total_specializations = count($specializations);
 
         const fd = new FormData();
         fd.append('action', 'add');
-        fd.append('type', type === 'amenity' ? 'amenity' : 'specialization');
+        fd.append('type', type === 'amenity' ? 'amenity' : (type === 'ptype' ? 'property_type' : 'specialization'));
         fd.append('name', name);
 
         fetch('admin_settings_api.php', { method: 'POST', body: fd })
@@ -383,7 +435,7 @@ $total_specializations = count($specializations);
                     input.value = '';
                     showToast('success', data.message);
                     // Add chip dynamically
-                    const grid = document.getElementById(type === 'amenity' ? 'amenityGrid' : 'specGrid');
+                    const grid = document.getElementById(type === 'amenity' ? 'amenityGrid' : (type === 'ptype' ? 'ptypeGrid' : 'specGrid'));
                     const chip = document.createElement('div');
                     chip.className = 'item-chip';
                     chip.dataset.id = data.id;
@@ -403,11 +455,12 @@ $total_specializations = count($specializations);
     // Allow Enter key to add
     document.getElementById('amenityInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addItem('amenity'); } });
     document.getElementById('specInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addItem('spec'); } });
+    document.getElementById('ptypeInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addItem('ptype'); } });
 
     // ===== DELETE =====
     function confirmDelete(type, id, name) {
         pendingDelete = { type, id, name };
-        document.getElementById('deleteItemType').textContent = type === 'amenity' ? 'Amenity' : 'Specialization';
+        document.getElementById('deleteItemType').textContent = type === 'amenity' ? 'Amenity' : (type === 'ptype' ? 'Property Type' : 'Specialization');
         document.getElementById('deleteItemName').textContent = name;
         document.getElementById('deleteConfirmOverlay').style.display = 'flex';
     }
@@ -422,14 +475,14 @@ $total_specializations = count($specializations);
 
         const fd = new FormData();
         fd.append('action', 'delete');
-        fd.append('type', pendingDelete.type === 'amenity' ? 'amenity' : 'specialization');
+        fd.append('type', pendingDelete.type === 'amenity' ? 'amenity' : (pendingDelete.type === 'ptype' ? 'property_type' : 'specialization'));
         fd.append('id', pendingDelete.id);
 
         fetch('admin_settings_api.php', { method: 'POST', body: fd })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    const grid = document.getElementById(pendingDelete.type === 'amenity' ? 'amenityGrid' : 'specGrid');
+                    const grid = document.getElementById(pendingDelete.type === 'amenity' ? 'amenityGrid' : (pendingDelete.type === 'ptype' ? 'ptypeGrid' : 'specGrid'));
                     const chip = grid.querySelector(`.item-chip[data-id="${pendingDelete.id}"]`);
                     if (chip) {
                         chip.style.transition = 'all 0.3s ease';
@@ -453,8 +506,8 @@ $total_specializations = count($specializations);
 
     // ===== FILTER/SEARCH =====
     function filterItems(type) {
-        const searchId = type === 'amenity' ? 'amenitySearch' : 'specSearch';
-        const gridId = type === 'amenity' ? 'amenityGrid' : 'specGrid';
+        const searchId = type === 'amenity' ? 'amenitySearch' : (type === 'ptype' ? 'ptypeSearch' : 'specSearch');
+        const gridId = type === 'amenity' ? 'amenityGrid' : (type === 'ptype' ? 'ptypeGrid' : 'specGrid');
         const q = document.getElementById(searchId).value.toLowerCase().trim();
         const chips = document.getElementById(gridId).querySelectorAll('.item-chip');
         let visible = 0;
@@ -467,18 +520,18 @@ $total_specializations = count($specializations);
 
     // ===== UTILITIES =====
     function updateCount(type) {
-        const gridId = type === 'amenity' ? 'amenityGrid' : 'specGrid';
-        const countId = type === 'amenity' ? 'amenityCount' : 'specCount';
-        const label = type === 'amenity' ? 'amenities' : 'specializations';
+        const gridId = type === 'amenity' ? 'amenityGrid' : (type === 'ptype' ? 'ptypeGrid' : 'specGrid');
+        const countId = type === 'amenity' ? 'amenityCount' : (type === 'ptype' ? 'ptypeCount' : 'specCount');
+        const label = type === 'amenity' ? 'amenities' : (type === 'ptype' ? 'property types' : 'specializations');
         const total = document.getElementById(gridId).querySelectorAll('.item-chip').length;
         document.getElementById(countId).textContent = total + ' ' + label + ' total';
     }
 
     function updateBadge(type) {
-        const gridId = type === 'amenity' ? 'amenityGrid' : 'specGrid';
+        const gridId = type === 'amenity' ? 'amenityGrid' : (type === 'ptype' ? 'ptypeGrid' : 'specGrid');
         const total = document.getElementById(gridId).querySelectorAll('.item-chip').length;
         // Update the tab badge
-        const tabIndex = type === 'amenity' ? 0 : 1;
+        const tabIndex = type === 'amenity' ? 0 : (type === 'spec' ? 1 : 2);
         const badges = document.querySelectorAll('.settings-tabs .tab-badge');
         if (badges[tabIndex]) badges[tabIndex].textContent = total;
     }

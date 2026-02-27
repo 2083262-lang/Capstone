@@ -73,10 +73,14 @@ if (!preg_match('/^\d{4}$/', $ZIP)) {
 }
 
 $PropertyType = trim($_POST['PropertyType'] ?? '');
-$valid_property_types = ['Single-Family Home', 'Condominium', 'Townhouse', 'Multi-Family', 'Land', 'Commercial'];
-if (!in_array($PropertyType, $valid_property_types)) {
+// Validate property type against database
+$pt_check = $conn->prepare("SELECT property_type_id FROM property_types WHERE type_name = ? LIMIT 1");
+$pt_check->bind_param("s", $PropertyType);
+$pt_check->execute();
+if ($pt_check->get_result()->num_rows === 0) {
     $errors[] = "Invalid Property Type selected.";
 }
+$pt_check->close();
 
 $Status = trim($_POST['Status'] ?? '');
 $valid_statuses = ['For Sale', 'For Rent'];

@@ -18,7 +18,7 @@ if (!in_array($action, ['add', 'delete'])) {
     exit();
 }
 
-if (!in_array($type, ['amenity', 'specialization'])) {
+if (!in_array($type, ['amenity', 'specialization', 'property_type'])) {
     echo json_encode(['success' => false, 'message' => 'Invalid type']);
     exit();
 }
@@ -31,6 +31,13 @@ if ($type === 'amenity') {
     $pivot_table = 'property_amenities';
     $pivot_fk = 'amenity_id';
     $label = 'Amenity';
+} elseif ($type === 'property_type') {
+    $table = 'property_types';
+    $id_col = 'property_type_id';
+    $name_col = 'type_name';
+    $pivot_table = 'property';
+    $pivot_fk = 'PropertyType';
+    $label = 'Property Type';
 } else {
     $table = 'specializations';
     $id_col = 'specialization_id';
@@ -108,12 +115,29 @@ if ($action === 'delete') {
 
     // Check usage count (for informational message)
     $usage = 0;
-    $u_stmt = $conn->prepare("SELECT COUNT(*) AS c FROM $pivot_table WHERE $pivot_fk = ?");
-    $u_stmt->bind_param("i", $id);
-    $u_stmt->execute();
-    $u_row = $u_stmt->get_result()->fetch_assoc();
-    $usage = (int)$u_row['c'];
-    $u_stmt->close();
+    if ($type === 'property_type') {
+        // For property types, check how many properties use this type name
+        $name_stmt = $conn->prepare("SELECT $name_col FROM $table WHERE $id_col = ? LIMIT 1");
+        $name_stmt->bind_param("i", $id);
+        $name_stmt->execute();
+        $name_row = $name_stmt->get_result()->fetch_assoc();
+        $name_stmt->close();
+        $type_name_val = $name_row[$name_col] ?? '';
+        
+        $u_stmt = $conn->prepare("SELECT COUNT(*) AS c FROM property WHERE PropertyType = ?");
+        $u_stmt->bind_param("s", $type_name_val);
+        $u_stmt->execute();
+        $u_row = $u_stmt->get_result()->fetch_assoc();
+        $usage = (int)$u_row['c'];
+        $u_stmt->close();
+    } else {
+        $u_stmt = $conn->prepare("SELECT COUNT(*) AS c FROM $pivot_table WHERE $pivot_fk = ?");
+        $u_stmt->bind_param("i", $id);
+        $u_stmt->execute();
+        $u_row = $u_stmt->get_result()->fetch_assoc();
+        $usage = (int)$u_row['c'];
+        $u_stmt->close();
+    }
 
     // Delete (CASCADE will handle pivot rows)
     $del = $conn->prepare("DELETE FROM $table WHERE $id_col = ?");

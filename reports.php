@@ -221,7 +221,7 @@ $cities = [];
 $city_result = $conn->query("SELECT DISTINCT City FROM property ORDER BY City ASC");
 if ($city_result) { while ($row = $city_result->fetch_assoc()) { $cities[] = $row['City']; } }
 $property_types = [];
-$type_result_filter = $conn->query("SELECT DISTINCT PropertyType FROM property ORDER BY PropertyType ASC");
+$type_result_filter = $conn->query("SELECT type_name AS PropertyType FROM property_types ORDER BY type_name ASC");
 if ($type_result_filter) { while ($row = $type_result_filter->fetch_assoc()) { $property_types[] = $row['PropertyType']; } }
 $agents_list = [];
 $agents_list_result = $conn->query("SELECT a.account_id, CONCAT(a.first_name, ' ', a.last_name) AS full_name FROM accounts a WHERE a.role_id = 2 ORDER BY a.first_name ASC");

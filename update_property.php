@@ -69,6 +69,15 @@ try {
         throw new Exception('Required fields are missing');
     }
     
+    // Validate property type against database
+    $pt_check = $conn->prepare("SELECT property_type_id FROM property_types WHERE type_name = ? LIMIT 1");
+    $pt_check->bind_param("s", $fields['PropertyType']);
+    $pt_check->execute();
+    if ($pt_check->get_result()->num_rows === 0) {
+        throw new Exception('Invalid Property Type selected.');
+    }
+    $pt_check->close();
+    
     if ($fields['ListingPrice'] <= 0) {
         throw new Exception('Listing price must be greater than 0');
     }

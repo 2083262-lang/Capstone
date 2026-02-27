@@ -102,7 +102,7 @@ $properties = $properties_result->fetch_all(MYSQLI_ASSOC);
 $cities_result = $conn->query("SELECT DISTINCT City FROM property WHERE approval_status = 'approved' ORDER BY City ASC");
 $cities = $cities_result->fetch_all(MYSQLI_ASSOC);
 
-$types_result = $conn->query("SELECT DISTINCT PropertyType FROM property WHERE approval_status = 'approved' ORDER BY PropertyType ASC");
+$types_result = $conn->query("SELECT type_name AS PropertyType FROM property_types ORDER BY type_name ASC");
 $types = $types_result->fetch_all(MYSQLI_ASSOC);
 
 // Get dynamic price range bounds

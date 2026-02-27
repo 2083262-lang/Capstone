@@ -63,6 +63,10 @@ $total_likes = array_sum(array_column($all_properties, 'Likes'));
 $amenities_result = $conn->query("SELECT * FROM amenities ORDER BY amenity_name");
 $amenities = $amenities_result->fetch_all(MYSQLI_ASSOC);
 
+// Fetch property types for the modal form and filter
+$property_types_result = $conn->query("SELECT * FROM property_types ORDER BY type_name");
+$property_types = $property_types_result->fetch_all(MYSQLI_ASSOC);
+
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -1627,13 +1631,9 @@ include 'agent_navbar.php';
                         </label>
                         <select id="filterPropertyType" class="filter-select">
                             <option value="">All Types</option>
-                            <option value="Single-Family Home">Single-Family Home</option>
-                            <option value="Condominium">Condominium</option>
-                            <option value="Townhouse">Townhouse</option>
-                            <option value="Apartment">Apartment</option>
-                            <option value="Land">Land</option>
-                            <option value="Commercial">Commercial</option>
-                            <option value="Multi-Family">Multi-Family</option>
+                            <?php foreach ($property_types as $pt): ?>
+                                <option value="<?php echo htmlspecialchars($pt['type_name']); ?>"><?php echo htmlspecialchars($pt['type_name']); ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
@@ -1909,12 +1909,9 @@ include 'agent_navbar.php';
                                     <label class="form-label">Property Type <span class="required">*</span></label>
                                     <select class="form-select" name="PropertyType" id="modalPropertyType" required>
                                         <option selected disabled value="">Select Property Type</option>
-                                        <option value="Single-Family Home">Single-Family Home</option>
-                                        <option value="Condominium">Condominium</option>
-                                        <option value="Townhouse">Townhouse</option>
-                                        <option value="Multi-Family">Multi-Family</option>
-                                        <option value="Commercial">Commercial</option>
-                                        <option value="Land">Land</option>
+                                        <?php foreach ($property_types as $pt): ?>
+                                            <option value="<?php echo htmlspecialchars($pt['type_name']); ?>"><?php echo htmlspecialchars($pt['type_name']); ?></option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="col-md-3">

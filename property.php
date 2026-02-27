@@ -68,6 +68,10 @@ $rejected_properties = array_filter($properties, fn($p) => ($p['approval_status'
 $pending_sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && strtolower(trim($p['Status'])) === 'pending sold');
 $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && strtolower(trim($p['Status'])) === 'sold');
 
+// Fetch property types for filters
+$property_types_db = [];
+$pt_result = $conn->query("SELECT type_name FROM property_types ORDER BY type_name ASC");
+if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_db[] = $pt_row['type_name']; } }
 
 ?>
 <!DOCTYPE html>
@@ -1664,22 +1668,12 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                         Property Type
                     </div>
                     <div class="filter-chips">
+                        <?php foreach ($property_types_db as $pt_name): ?>
                         <label class="filter-chip">
-                            <input type="checkbox" class="property-type-filter" value="Single-Family Home" checked>
-                            <span>Single-Family</span>
+                            <input type="checkbox" class="property-type-filter" value="<?php echo htmlspecialchars($pt_name); ?>" checked>
+                            <span><?php echo htmlspecialchars($pt_name); ?></span>
                         </label>
-                        <label class="filter-chip">
-                            <input type="checkbox" class="property-type-filter" value="Condominium" checked>
-                            <span>Condo</span>
-                        </label>
-                        <label class="filter-chip">
-                            <input type="checkbox" class="property-type-filter" value="Multi-Family" checked>
-                            <span>Multi-Family</span>
-                        </label>
-                        <label class="filter-chip">
-                            <input type="checkbox" class="property-type-filter" value="House" checked>
-                            <span>House</span>
-                        </label>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
@@ -2202,7 +2196,7 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
             search: '',
             priceMin: 0,
             priceMax: Infinity,
-            propertyTypes: new Set(['Single-Family Home', 'Condominium', 'Multi-Family', 'House']),
+            propertyTypes: new Set(Array.from(document.querySelectorAll('.property-type-filter')).map(c => c.value)),
             bedrooms: null,
             bathrooms: null,
             sqftMin: null,
@@ -2542,7 +2536,7 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
                 search: '',
                 priceMin: 0,
                 priceMax: Infinity,
-                propertyTypes: new Set(['Single-Family Home', 'Condominium', 'Multi-Family', 'House']),
+                propertyTypes: new Set(Array.from(document.querySelectorAll('.property-type-filter')).map(c => c.value)),
                 bedrooms: null,
                 bathrooms: null,
                 sqftMin: null,

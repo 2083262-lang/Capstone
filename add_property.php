@@ -11,6 +11,9 @@ if (!isset($_SESSION['account_id']) || !in_array($_SESSION['user_role'], ['admin
 // Fetch all amenities for the checklist
 $amenities_result = $conn->query("SELECT * FROM amenities ORDER BY amenity_name");
 
+// Fetch all property types for the dropdown
+$property_types_result = $conn->query("SELECT * FROM property_types ORDER BY type_name");
+
 // Check for session messages
 $message_type = $_SESSION['message']['type'] ?? '';
 $message_text = $_SESSION['message']['text'] ?? '';
@@ -955,12 +958,9 @@ unset($_SESSION['message']);
                                 </label>
                                 <select id="PropertyType" name="PropertyType" class="form-select property-form-select" required>
                                     <option value="">Select Property Type</option>
-                                    <option value="Single-Family Home">Single-Family Home</option>
-                                    <option value="Condominium">Condominium</option>
-                                    <option value="Townhouse">Townhouse</option>
-                                    <option value="Multi-Family">Multi-Family</option>
-                                    <option value="Land">Land</option>
-                                    <option value="Commercial">Commercial</option>
+                                    <?php while ($pt = $property_types_result->fetch_assoc()): ?>
+                                        <option value="<?php echo htmlspecialchars($pt['type_name']); ?>"><?php echo htmlspecialchars($pt['type_name']); ?></option>
+                                    <?php endwhile; ?>
                                 </select>
                             </div>
                             <div class="col-md-3">
