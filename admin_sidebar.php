@@ -9,20 +9,22 @@ if (isset($active_page) && !empty($active_page)) {
     $current_page = basename($_SERVER['PHP_SELF']);
 }
 
-// Define menu items with their corresponding files and icons (Bootstrap Icons)
+// Define menu items with their corresponding files and icons (Flaticon Uicons - Regular Straight)
 $menu_items = [
-    'admin_dashboard.php' => ['icon' => 'bi bi-speedometer2', 'title' => 'Dashboard'],
-    'property.php' => ['icon' => 'bi bi-building', 'title' => 'Properties'],
-    'agent.php' => ['icon' => 'bi bi-person-badge', 'title' => 'Agents'],
-    'tour_requests.php' => ['icon' => 'bi bi-calendar-check', 'title' => 'Tour Requests'],
-    'admin_property_sale_approvals.php' => ['icon' => 'bi bi-check-circle', 'title' => 'Property Sale Approvals'],
-    'admin_notifications.php' => ['icon' => 'bi bi-bell', 'title' => 'Notifications'],
-    'reports.php' => ['icon' => 'bi bi-graph-up', 'title' => 'Reports'],
+    'admin_dashboard.php' => ['icon' => 'fi fi-rs-dashboard-monitor', 'title' => 'Dashboard'],
+    'property.php' => ['icon' => 'fi fi-rs-apartment', 'title' => 'Properties'],
+    'agent.php' => ['icon' => 'fi fi-rs-employees', 'title' => 'Agents'],
+    'tour_requests.php' => ['icon' => 'fi fi-rs-map-marker-home', 'title' => 'Tour Requests'],
+    'admin_property_sale_approvals.php' => ['icon' => 'fi fi-rs-sold-house', 'title' => 'Sale Approvals'],
+    'admin_notifications.php' => ['icon' => 'fi fi-rs-bell', 'title' => 'Notifications'],
+    'reports.php' => ['icon' => 'fi fi-rs-chart-pie-simple-circle-dollar', 'title' => 'Reports'],
 ];
 ?>
 
 <!-- Ensure Bootstrap Icons are available on any page that includes the sidebar -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<!-- Flaticon Uicons Regular Straight - used for sidebar navigation icons -->
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-straight/css/uicons-regular-straight.css">
 <!-- Standardized Admin Layout CSS -->
 <link rel="stylesheet" href="css/admin_layout.css">
 
@@ -151,6 +153,9 @@ $menu_items = [
         margin-right: 0.75rem;
         font-size: 1.1rem;
         text-align: center;
+        display: inline-block;
+        line-height: 1;
+        vertical-align: middle;
     }
 
     .admin-sidebar .nav-link:hover {
@@ -269,7 +274,7 @@ $menu_items = [
     <div class="sidebar-footer">
         <div class="nav-item">
             <a href="#" class="nav-link logout-link" data-bs-toggle="modal" data-bs-target="#logoutModal">
-                <i class="bi bi-box-arrow-right"></i>
+                <i class="fi fi-rs-sign-out-alt"></i>
                 Logout
             </a>
         </div>
