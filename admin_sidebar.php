@@ -205,17 +205,17 @@ $menu_items = [
         color: #ff6b6b;
     }
 
-    /* Mobile Responsive */
-    @media (max-width: 768px) {
+    /* Tablets (769px–1200px): sidebar hides off-screen, no toggle button */
+    @media (max-width: 1200px) {
         .admin-sidebar {
             transform: translateX(-100%);
+            width: 290px;
             z-index: 1050;
+            transition: transform 0.3s ease;
         }
-
         .admin-sidebar.show {
             transform: translateX(0);
         }
-
         .sidebar-overlay {
             position: fixed;
             top: 0;
@@ -226,9 +226,20 @@ $menu_items = [
             z-index: 1049;
             display: none;
         }
-
         .sidebar-overlay.show {
             display: block;
+        }
+    }
+
+    /* Mobile Responsive (phones ≤768px): same behaviour, toggle button visible */
+    @media (max-width: 768px) {
+        .admin-sidebar {
+            transform: translateX(-100%);
+            width: 290px;
+            z-index: 1050;
+        }
+        .admin-sidebar.show {
+            transform: translateX(0);
         }
     }
 
@@ -308,9 +319,9 @@ $menu_items = [
             });
         }
 
-        // Close sidebar on window resize if mobile
+        // Close sidebar on window resize if above tablet breakpoint
         window.addEventListener('resize', function() {
-            if (window.innerWidth > 768) {
+            if (window.innerWidth > 1200) {
                 sidebar.classList.remove('show');
                 overlay.classList.remove('show');
             }

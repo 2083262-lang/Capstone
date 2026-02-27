@@ -87,7 +87,30 @@ $total_property_types = count($property_types);
         .kpi-card .kpi-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 0.25rem; }
         .kpi-card .kpi-value { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
         @media (max-width: 992px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 576px) { .kpi-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            .admin-content { padding: 1rem; }
+            .page-header { padding: 1.25rem 1rem; }
+            .page-header h1 { font-size: 1.3rem; }
+            .page-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+            .kpi-card { padding: 1rem; }
+            .settings-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .settings-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+            .settings-tabs .nav-link { white-space: nowrap; padding: 0.85rem 1rem; }
+            .settings-tabs .tab-content { padding: 1rem; }
+        }
+        @media (max-width: 576px) {
+            .admin-content { padding: 0.75rem; }
+            .page-header { padding: 1rem; }
+            .page-header h1 { font-size: 1.15rem; }
+            .kpi-grid { grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+            .kpi-card { padding: 0.85rem; }
+            .kpi-card .kpi-value { font-size: 1.15rem; }
+            .settings-tabs .nav-link { padding: 0.75rem 0.85rem; font-size: 0.8rem; }
+        }
+        @media (max-width: 400px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+        }
 
         /* ===== SETTINGS TABS ===== */
         .settings-tabs { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; margin-bottom: 1.5rem; overflow: hidden; }
@@ -190,7 +213,9 @@ $total_property_types = count($property_types);
 
         @media (max-width: 768px) {
             .add-form { flex-direction: column; }
-            .settings-tabs .nav-link { padding: 0.75rem 1rem; font-size: 0.82rem; }
+            .add-form input { width: 100%; }
+            .settings-card-header { flex-direction: column; align-items: flex-start; }
+            .settings-card-body { padding: 1rem; }
         }
 
         /* Delete confirmation */

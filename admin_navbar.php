@@ -810,19 +810,25 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
         font-size: 0.9rem;
     }
 
+    /* Tablet and below — show sidebar toggle, remove navbar left margin */
+    @media (max-width: 1200px) {
+        .admin-navbar {
+            margin-left: 0;
+        }
+
+        .sidebar-toggle {
+            display: block;
+        }
+    }
+
     /* Mobile Responsive */
     @media (max-width: 768px) {
         .admin-navbar {
-            margin-left: 0;
             padding: 0 1rem;
         }
 
         .navbar-container {
             padding: 0;
-        }
-
-        .sidebar-toggle {
-            display: block;
         }
 
         .page-title {

@@ -1552,6 +1552,7 @@ ob_end_flush();
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
+            .admin-content { padding: 1rem; }
             .property-price-header { font-size: 1.75rem; }
             .property-address-header { font-size: 0.95rem; }
             .property-specs-bar { 
@@ -1564,8 +1565,9 @@ ob_end_flush();
                 height: 300px;
             }
             .gallery-grid-sidebar { display: none; }
-            .view-selector-container { padding: 0 1rem; }
-            .view-selector-btn { font-size: 0.7rem; padding: 0.4rem 0.8rem; }
+            .view-selector-container { padding: 0 1rem; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .view-selector-container::-webkit-scrollbar { display: none; }
+            .view-selector-btn { font-size: 0.7rem; padding: 0.4rem 0.8rem; white-space: nowrap; flex-shrink: 0; }
             .content-section { padding: 1.25rem 1rem; }
             .facts-grid { grid-template-columns: 1fr; gap: 0.75rem; }
             .rental-details-card { padding: 1.25rem 1rem; }
@@ -1575,6 +1577,18 @@ ob_end_flush();
             .lightbox-prev { left: 0.75rem; }
             .lightbox-next { right: 0.75rem; }
             .lightbox-prev, .lightbox-next { width: 40px; height: 40px; font-size: 1rem; }
+        }
+
+        @media (max-width: 576px) {
+            .admin-content { padding: 0.75rem; }
+            .property-price-header { font-size: 1.5rem; }
+            .property-address-header { font-size: 0.88rem; }
+            .gallery-grid { height: 240px; }
+            .content-section { padding: 1rem 0.85rem; }
+            .action-card { padding: 1rem; }
+            .action-card .d-flex { flex-wrap: wrap; gap: 0.5rem; }
+            .action-card .btn { flex: 1 1 auto; min-width: 0; justify-content: center; font-size: 0.8rem; }
+            .agent-card { padding: 1rem 0.85rem; }
         }
 
         /* Alerts */

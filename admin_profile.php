@@ -200,7 +200,24 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
         .kpi-card .kpi-value { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
 
         @media (max-width: 992px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 576px) { .kpi-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            .admin-content { padding: 1rem; }
+            .page-header { padding: 1.25rem 1rem; }
+            .page-header h1 { font-size: 1.3rem; }
+            .page-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+            .kpi-card { padding: 1rem; }
+            .kpi-card .kpi-value { font-size: 1.25rem; }
+        }
+        @media (max-width: 576px) {
+            .admin-content { padding: 0.75rem; }
+            .page-header { padding: 1rem; }
+            .page-header h1 { font-size: 1.15rem; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+            .kpi-card { padding: 0.85rem; }
+            .kpi-card .kpi-value { font-size: 1.1rem; }
+            .kpi-card .kpi-label { font-size: 0.65rem; }
+        }
 
         /* ===== DETAIL CARDS ===== */
         .detail-card {
@@ -304,8 +321,15 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
         .empty-state i { font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem; }
 
         @media (max-width: 768px) {
-            .profile-hero-body { padding: 0 1.5rem 1.5rem; }
-            .profile-hero-info { flex-direction: column; gap: 1rem; }
+            .profile-hero-body { padding: 0 1.25rem 1.25rem; }
+            .profile-hero-info { flex-direction: column; gap: 1rem; align-items: flex-start; }
+            .profile-hero-actions { flex-wrap: wrap; }
+            .profile-hero-actions .btn { flex: 1 1 auto; min-width: 0; justify-content: center; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 576px) {
+            .profile-hero-body { padding: 0 0.85rem 0.85rem; }
+            .profile-hero-avatar { width: 72px; height: 72px; font-size: 1.75rem; }
         }
     </style>
 </head>

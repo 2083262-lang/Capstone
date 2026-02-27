@@ -567,11 +567,28 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .processing-box { display: flex; align-items: center; gap: 0.75rem; background: var(--card-bg); color: var(--text-primary); padding: 1rem 1.5rem; border-radius: 4px; border: 1px solid rgba(37,99,235,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
 
         /* ===== RESPONSIVE ===== */
-        @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 1200px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
         @media (max-width: 768px) {
-            .kpi-grid { grid-template-columns: 1fr; }
+            .admin-content { padding: 1rem; }
+            .page-header { padding: 1.25rem 1rem; }
+            .page-header h1 { font-size: 1.3rem; }
+            .page-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+            .kpi-card { padding: 1rem; }
+            .sale-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .sale-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+            .sale-tabs .nav-link { white-space: nowrap; padding: 0.75rem 0.85rem; font-size: 0.8rem; }
             .sales-grid { grid-template-columns: 1fr; }
             .modal-container { width: 98%; }
+        }
+        @media (max-width: 576px) {
+            .admin-content { padding: 0.75rem; }
+            .page-header { padding: 1rem; }
+            .page-header h1 { font-size: 1.15rem; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+            .sale-tabs .nav-link { padding: 0.6rem 0.7rem; font-size: 0.75rem; }
         }
 
         /* ===== FINALIZE MODAL OVERRIDES ===== */

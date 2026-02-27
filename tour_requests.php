@@ -1397,18 +1397,35 @@ switch ($active_status) {
       .kpi-grid { grid-template-columns: repeat(3, 1fr); }
     }
     @media (max-width: 768px) {
-      .page-header { padding: 1.25rem 1.5rem; }
-      .page-header-inner { flex-direction: column; align-items: flex-start; }
+      .admin-content { padding: 1rem !important; }
+      .page-header { padding: 1.25rem 1rem; }
+      .page-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
       .page-header .header-actions { width: 100%; }
       .page-header .header-actions button { flex: 1; }
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-      .request-row { padding: 1rem 1.25rem; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+      .kpi-card { padding: 1rem; }
+      .kpi-card .kpi-value { font-size: 1.25rem; }
+      .status-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .status-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+      .status-tabs .nav-link { white-space: nowrap; padding: 0.75rem 0.85rem; font-size: 0.8rem; }
+      .request-row { padding: 1rem 1.25rem; flex-wrap: wrap; }
+      .request-info { width: 100%; }
       .calendar-sidebar-content { width: 100%; max-width: 100%; }
       .filter-sidebar-content { width: 100%; max-width: 100%; }
     }
+    @media (max-width: 576px) {
+      .admin-content { padding: 0.75rem !important; }
+      .page-header { padding: 1rem; }
+      .page-header h1 { font-size: 1.15rem; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+      .kpi-card { padding: 0.85rem; }
+      .kpi-card .kpi-value { font-size: 1.1rem; }
+      .kpi-card .kpi-label { font-size: 0.65rem; }
+      .tab-count { display: none; }
+    }
     @media (max-width: 480px) {
-      .kpi-grid { grid-template-columns: 1fr; }
-      .request-meta { gap: 0.75rem; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .request-meta { gap: 0.75rem; flex-wrap: wrap; }
       .page-header .header-actions { flex-direction: column; gap: 0.5rem; }
     }
   </style>

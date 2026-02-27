@@ -330,6 +330,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         .chart-grid { display: grid; gap: 1.5rem; margin-bottom: 1.5rem; }
         .chart-grid-2 { grid-template-columns: 1fr 1fr; }
         .chart-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .chart-grid-overview { grid-template-columns: 2fr 1fr 1fr; }
         .chart-grid-2-1 { grid-template-columns: 2fr 1fr; }
         .chart-grid-1-2 { grid-template-columns: 1fr 2fr; }
 
@@ -478,11 +479,117 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         .export-modal-footer .export-info strong { color: var(--text-primary); }
 
         /* ===== RESPONSIVE ===== */
-        @media (max-width: 1400px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .chart-grid-3 { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 992px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } .chart-grid-2, .chart-grid-2-1, .chart-grid-1-2 { grid-template-columns: 1fr; } .chart-grid-3 { grid-template-columns: 1fr; } }
-        @media (max-width: 768px) { .page-header { padding: 1.5rem; } .page-header h1 { font-size: 1.4rem; } .page-header-inner { flex-direction: column; align-items: flex-start; } .section-bar { flex-direction: column; align-items: flex-start; } .report-tabs .nav-link { padding: 0.65rem 0.75rem; font-size: 0.8rem; } .kpi-grid { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 576px) { .report-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; } .report-tabs .nav-link { white-space: nowrap; } }
-        @media print { .admin-sidebar, .section-bar, .filter-sidebar, .export-modal-overlay { display: none !important; } .admin-content { margin-left: 0 !important; padding: 0.5rem !important; } }
+
+        /* 1600px — large desktops */
+        @media (max-width: 1600px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        /* 1400px — medium desktops */
+        @media (max-width: 1400px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+            .chart-grid-3 { grid-template-columns: 1fr 1fr; }
+            .chart-grid-overview { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* 1100px — small desktops / large tablets */
+        @media (max-width: 1100px) {
+            .chart-grid-overview { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* 992px — tablets */
+        @media (max-width: 992px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .chart-grid-2, .chart-grid-2-1, .chart-grid-1-2 { grid-template-columns: 1fr; }
+            .chart-grid-3, .chart-grid-overview { grid-template-columns: 1fr; }
+            .chart-container.h-280 { height: 240px; }
+            .chart-container.h-300 { height: 260px; }
+            .chart-container.h-320 { height: 280px; }
+            .chart-container.h-350 { height: 300px; }
+            .page-header { padding: 1.5rem 1.75rem; }
+            .chart-card { padding: 1.25rem; }
+            .tab-content { padding: 1.25rem; }
+        }
+
+        /* 768px — large phones / small tablets */
+        @media (max-width: 768px) {
+            .admin-content { padding: 1rem; }
+            .page-header { padding: 1.25rem 1rem; }
+            .page-header h1 { font-size: 1.3rem; }
+            .page-header .subtitle { font-size: 0.85rem; }
+            .page-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+            .kpi-card { padding: 1rem; }
+            .kpi-card .kpi-value { font-size: 1.25rem; }
+            .section-bar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .action-buttons { width: 100%; flex-wrap: wrap; gap: 0.5rem; }
+            .action-buttons > * { flex: 1 1 auto; min-width: 0; justify-content: center; font-size: 0.8rem; padding: 0.55rem 0.85rem; }
+            .report-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 0; }
+            .report-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+            .report-tabs .nav-link { padding: 0.65rem 0.85rem; font-size: 0.8rem; white-space: nowrap; }
+            .tab-content { padding: 1rem; }
+            .chart-card { padding: 1rem; }
+            .chart-card-header { flex-wrap: wrap; gap: 0.5rem; }
+            .chart-container.h-250 { height: 200px; }
+            .chart-container.h-280 { height: 210px; }
+            .chart-container.h-300 { height: 220px; }
+            .chart-container.h-320 { height: 240px; }
+            .chart-container.h-350 { height: 260px; }
+            .chart-kpi-row { gap: 0.5rem; }
+            .chart-kpi { padding: 0.4rem; min-width: 60px; }
+            .chart-kpi-val { font-size: 1rem; }
+            .report-table-wrapper { max-height: 400px !important; }
+            .report-pagination { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+            .export-modal-footer { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+            .export-modal-footer .d-flex { flex-wrap: wrap; justify-content: stretch; }
+            .export-modal-footer .d-flex > * { flex: 1 1 auto; justify-content: center; }
+            .export-modal { max-height: 95vh; }
+            .filter-sidebar-content { width: 100%; max-width: 100%; }
+        }
+
+        /* 576px — phones */
+        @media (max-width: 576px) {
+            .admin-content { padding: 0.75rem; }
+            .page-header { padding: 1rem; }
+            .page-header h1 { font-size: 1.15rem; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+            .kpi-card { padding: 0.85rem; }
+            .kpi-card .kpi-value { font-size: 1.1rem; }
+            .kpi-card .kpi-label { font-size: 0.65rem; }
+            .kpi-card .kpi-sub { font-size: 0.65rem; }
+            .kpi-card .kpi-icon { width: 34px; height: 34px; font-size: 0.95rem; }
+            .chart-grid { gap: 0.75rem; }
+            .chart-card { padding: 0.85rem; }
+            .chart-card-title { font-size: 0.78rem; }
+            .chart-container.h-250 { height: 180px; }
+            .chart-container.h-280 { height: 190px; }
+            .chart-container.h-300 { height: 200px; }
+            .chart-container.h-320 { height: 210px; }
+            .chart-container.h-350 { height: 220px; }
+            .report-tabs .nav-link { padding: 0.55rem 0.7rem; font-size: 0.75rem; }
+            .tab-badge { display: none; }
+            .tab-content { padding: 0.75rem; }
+            .action-buttons > * { font-size: 0.75rem; padding: 0.5rem 0.6rem; }
+            .section-bar { padding: 0.85rem 1rem; }
+            .section-bar-title { font-size: 0.95rem; }
+            .filter-body { padding: 1rem; }
+            .export-modal-body { padding: 1rem; }
+            .export-modal-header { padding: 1rem 1.25rem; }
+            .export-modal-footer { padding: 1rem 1.25rem; }
+        }
+
+        /* 400px — very small phones */
+        @media (max-width: 400px) {
+            .kpi-grid { grid-template-columns: 1fr 1fr; }
+            .kpi-card .kpi-value { font-size: 1rem; }
+            .page-header h1 { font-size: 1rem; }
+            .report-tabs .nav-link { padding: 0.5rem 0.6rem; font-size: 0.72rem; }
+        }
+
+        @media print {
+            .admin-sidebar, .section-bar, .filter-sidebar, .export-modal-overlay { display: none !important; }
+            .admin-content { margin-left: 0 !important; padding: 0.5rem !important; }
+        }
     </style>
 </head>
 <body>
@@ -549,7 +656,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         <!-- ==================== CHARTS SECTION ==================== -->
 
         <!-- Row 1: Content Overview (line) + Properties by Type (doughnut) + Listing Status (doughnut) -->
-        <div class="chart-grid chart-grid-3" style="grid-template-columns: 2fr 1fr 1fr;">
+        <div class="chart-grid chart-grid-overview">
             <div class="chart-card">
                 <div class="chart-card-header">
                     <div>

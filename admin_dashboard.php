@@ -1080,18 +1080,39 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
 
         @media (max-width: 992px) {
             .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .quick-actions-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         @media (max-width: 768px) {
-            .page-header { padding: 1.5rem; }
-            .page-header h1 { font-size: 1.4rem; }
-            .page-header-inner { flex-direction: column; align-items: flex-start; }
-            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-            .quick-actions-grid { grid-template-columns: 1fr; }
+            .admin-content { padding: 1rem; }
+            .page-header { padding: 1.25rem 1rem; }
+            .page-header h1 { font-size: 1.3rem; }
+            .page-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+            .kpi-card { padding: 1rem; }
+            .kpi-card .kpi-value { font-size: 1.5rem; }
+            .quick-actions-grid { grid-template-columns: repeat(2, 1fr); }
+            .dash-card { padding: 1.25rem; }
+            .dash-card-header { flex-wrap: wrap; gap: 0.5rem; }
+            .dash-table thead th { font-size: 0.72rem; padding: 0.7rem 0.75rem; }
+            .dash-table tbody td { font-size: 0.8rem; padding: 0.65rem 0.75rem; }
         }
 
         @media (max-width: 576px) {
+            .admin-content { padding: 0.75rem; }
+            .page-header { padding: 1rem; }
+            .page-header h1 { font-size: 1.15rem; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+            .kpi-card { padding: 0.85rem; }
+            .kpi-card .kpi-value { font-size: 1.25rem; }
+            .kpi-card .kpi-label { font-size: 0.65rem; }
+            .quick-actions-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+            .dash-card { padding: 1rem; }
+        }
+
+        @media (max-width: 400px) {
             .kpi-grid { grid-template-columns: 1fr 1fr; }
+            .kpi-card .kpi-value { font-size: 1.1rem; }
         }
 
         /* ===== ROW EQUAL HEIGHT ===== */

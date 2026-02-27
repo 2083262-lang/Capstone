@@ -739,23 +739,38 @@ $agents_rejected = array_filter($all_agents, fn($agent) => !$agent['is_active'] 
         }
 
         @media (max-width: 992px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
             .agents-grid { grid-template-columns: 1fr; }
             .search-container { width: 100%; }
         }
 
         @media (max-width: 768px) {
-            .page-header { padding: 1.5rem; }
-            .page-header h1 { font-size: 1.4rem; }
-            .page-header-inner { flex-direction: column; align-items: flex-start; }
-            .action-bar { flex-direction: column; align-items: flex-start; }
-            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-            .agent-tabs .nav-link { padding: 0.65rem 0.75rem; font-size: 0.8rem; }
+            .admin-content { padding: 1rem; }
+            .page-header { padding: 1.25rem 1rem; }
+            .page-header h1 { font-size: 1.3rem; }
+            .page-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .action-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+            .action-bar > * { width: 100%; }
+            .search-container { width: 100%; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+            .kpi-card { padding: 1rem; }
+            .kpi-card .kpi-value { font-size: 1.25rem; }
+            .agent-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .agent-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+            .agent-tabs .nav-link { padding: 0.65rem 0.85rem; font-size: 0.8rem; white-space: nowrap; }
+            .pagination-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
         }
 
         @media (max-width: 576px) {
-            .kpi-grid { grid-template-columns: 1fr 1fr; }
-            .agent-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; }
-            .agent-tabs .nav-link { white-space: nowrap; }
+            .admin-content { padding: 0.75rem; }
+            .page-header { padding: 1rem; }
+            .page-header h1 { font-size: 1.15rem; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+            .kpi-card { padding: 0.85rem; }
+            .kpi-card .kpi-value { font-size: 1.1rem; }
+            .kpi-card .kpi-label { font-size: 0.65rem; }
+            .agent-tabs .nav-link { padding: 0.55rem 0.7rem; font-size: 0.75rem; }
+            .tab-badge { display: none; }
             .agents-grid { grid-template-columns: 1fr; }
         }
 

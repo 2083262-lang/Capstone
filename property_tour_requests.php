@@ -122,7 +122,19 @@ if ($property_id <= 0) {
     <style>
         body { background: #f8f9fa; }
         .content-wrapper { margin-left: 290px; padding: 2rem; }
-        @media (max-width: 768px) { .content-wrapper { margin-left: 0; padding: 1rem; } }
+        @media (max-width: 1200px) { .content-wrapper { margin-left: 0; padding: 1.5rem; } }
+        @media (max-width: 768px) {
+            .content-wrapper { margin-left: 0; padding: 1rem; }
+            .d-flex.justify-content-between { flex-direction: column; align-items: flex-start !important; gap: 0.75rem; }
+            .d-flex.flex-wrap.gap-2 { overflow-x: auto; flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch; padding-bottom: 0.25rem; scrollbar-width: none; }
+            .d-flex.flex-wrap.gap-2::-webkit-scrollbar { display: none; }
+            .filter-btn { white-space: nowrap; flex-shrink: 0; font-size: 0.8rem; padding: 0.375rem 0.65rem; }
+            .truncate { max-width: 200px; }
+        }
+        @media (max-width: 576px) {
+            .content-wrapper { padding: 0.75rem; }
+            h2 { font-size: 1.15rem; }
+        }
         .card-shadow { box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e9ecef; }
         .status-badge { font-weight: 700; font-size: .8rem; }
         .text-muted-2 { color: #6c757d; }
