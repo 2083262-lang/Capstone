@@ -1,16 +1,25 @@
 <?php
 include '../connection.php'; // Your database connection
 
+header('Content-Type: application/json');
+
 // Check if the property_id is sent via POST
 if (isset($_POST['property_id'])) {
     $property_id = (int)$_POST['property_id'];
+    $action = isset($_POST['action']) ? $_POST['action'] : 'like';
 
     if ($property_id > 0) {
         // Start a transaction to ensure data integrity
         $conn->begin_transaction();
         try {
-            // Update the 'Likes' count by incrementing it by 1
-            $update_sql = "UPDATE property SET Likes = Likes + 1 WHERE property_ID = ?";
+            if ($action === 'unlike') {
+                // Decrement likes but never go below 0
+                $update_sql = "UPDATE property SET Likes = GREATEST(Likes - 1, 0) WHERE property_ID = ?";
+            } else {
+                // Increment likes
+                $update_sql = "UPDATE property SET Likes = Likes + 1 WHERE property_ID = ?";
+            }
+
             $stmt_update = $conn->prepare($update_sql);
             $stmt_update->bind_param("i", $property_id);
             $stmt_update->execute();
@@ -29,20 +38,16 @@ if (isset($_POST['property_id'])) {
             $conn->commit();
 
             // Return the new like count as a JSON response
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'likes' => $new_likes]);
+            echo json_encode(['success' => true, 'likes' => (int)$new_likes]);
 
         } catch (mysqli_sql_exception $e) {
             $conn->rollback();
-            header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => 'Database error.']);
         }
     } else {
-        header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Invalid property ID.']);
     }
 } else {
-    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'No property ID provided.']);
 }
 

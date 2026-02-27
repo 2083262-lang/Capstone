@@ -989,6 +989,16 @@ $conn->close();
             color: var(--white);
         }
 
+        /* Like count pulse animation for real-time updates */
+        @keyframes likePulse {
+            0%   { transform: scale(1); }
+            40%  { transform: scale(1.25); color: var(--gold); }
+            100% { transform: scale(1); }
+        }
+        .like-pulse {
+            animation: likePulse 0.45s ease-out;
+        }
+
         @keyframes heartBeat {
             0%, 100% { transform: scale(1); }
             10%, 30% { transform: scale(0.9); }
@@ -1486,7 +1496,7 @@ $conn->close();
                 </div>
                 <div class="stat-item likes">
                     <i class="bi bi-heart-fill"></i>
-                    <span class="stat-value"><?php echo number_format($property_data['Likes']); ?></span>
+                    <span class="stat-value" id="statLikeCount"><?php echo number_format($property_data['Likes']); ?></span>
                     <span style="color: var(--gray-400);">likes</span>
                 </div>
             </div>
@@ -2336,40 +2346,33 @@ function checkLikeStatus() {
 function toggleLike() {
     if (isProcessing) return;
     
-    // Optimistic UI update
     const wasLiked = isLiked;
     isLiked = !isLiked;
     
+    // Optimistic UI update
+    const currentCount = parseInt(likeCount.textContent.replace(/,/g, ''));
+    const statLike = document.getElementById('statLikeCount');
     if (isLiked) {
         likeButton.classList.add('liked');
         likeTooltip.textContent = 'You liked this property';
-        
-        // Save to database
-        saveLikeToDatabase();
-        
-        // Save to localStorage
-        const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
-        if (!likedProperties.includes(propertyId)) {
-            likedProperties.push(propertyId);
-            localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
-        }
+        const newVal = (currentCount + 1).toLocaleString();
+        likeCount.textContent = newVal;
+        if (statLike) statLike.textContent = newVal;
     } else {
         likeButton.classList.remove('liked');
         likeTooltip.textContent = 'Click to like this property';
-        
-        // Remove from localStorage
-        let likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
-        likedProperties = likedProperties.filter(id => id !== propertyId);
-        localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
-        
-        // Update count immediately (decrement)
-        const currentCount = parseInt(likeCount.textContent.replace(/,/g, ''));
-        likeCount.textContent = (currentCount - 1).toLocaleString();
+        const newVal = Math.max(currentCount - 1, 0).toLocaleString();
+        likeCount.textContent = newVal;
+        if (statLike) statLike.textContent = newVal;
     }
+    
+    // Send action to server
+    const action = isLiked ? 'like' : 'unlike';
+    saveLikeToDatabase(action, wasLiked, currentCount);
 }
 
-// Save like to database via AJAX
-function saveLikeToDatabase() {
+// Save like/unlike to database via AJAX
+function saveLikeToDatabase(action, previousLikedState, previousCount) {
     isProcessing = true;
     
     fetch('like_property.php', {
@@ -2377,27 +2380,62 @@ function saveLikeToDatabase() {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: 'property_id=' + propertyId
+        body: 'property_id=' + propertyId + '&action=' + action
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Update the like count with the actual database value
-            likeCount.textContent = data.likes.toLocaleString();
+            // Sync both like count displays with the actual database value
+            if (window._syncLikeCounts) {
+                window._syncLikeCounts(data.likes);
+            } else {
+                likeCount.textContent = data.likes.toLocaleString();
+            }
+            
+            // Update localStorage
+            let likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '[]');
+            if (action === 'like') {
+                if (!likedProperties.includes(propertyId)) {
+                    likedProperties.push(propertyId);
+                }
+            } else {
+                likedProperties = likedProperties.filter(id => id !== propertyId);
+            }
+            localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
         } else {
-            console.error('Failed to save like:', data.message);
+            console.error('Failed to ' + action + ' property:', data.message);
             // Revert UI on error
-            isLiked = false;
-            likeButton.classList.remove('liked');
-            likeTooltip.textContent = 'Click to like this property';
+            isLiked = previousLikedState;
+            if (window._syncLikeCounts) {
+                window._syncLikeCounts(previousCount);
+            } else {
+                likeCount.textContent = previousCount.toLocaleString();
+            }
+            if (previousLikedState) {
+                likeButton.classList.add('liked');
+                likeTooltip.textContent = 'You liked this property';
+            } else {
+                likeButton.classList.remove('liked');
+                likeTooltip.textContent = 'Click to like this property';
+            }
         }
     })
     .catch(error => {
         console.error('Error:', error);
         // Revert UI on error
-        isLiked = false;
-        likeButton.classList.remove('liked');
-        likeTooltip.textContent = 'Click to like this property';
+        isLiked = previousLikedState;
+        if (window._syncLikeCounts) {
+            window._syncLikeCounts(previousCount);
+        } else {
+            likeCount.textContent = previousCount.toLocaleString();
+        }
+        if (previousLikedState) {
+            likeButton.classList.add('liked');
+            likeTooltip.textContent = 'You liked this property';
+        } else {
+            likeButton.classList.remove('liked');
+            likeTooltip.textContent = 'Click to like this property';
+        }
     })
     .finally(() => {
         isProcessing = false;
@@ -2406,6 +2444,56 @@ function saveLikeToDatabase() {
 
 // Initialize like status on page load
 checkLikeStatus();
+
+// ============================
+// Real-time like count polling
+// ============================
+(function() {
+    const POLL_INTERVAL = 5000; // 5 seconds
+    const statLikeCount = document.getElementById('statLikeCount');
+    let lastKnownLikes = parseInt((likeCount ? likeCount.textContent : '0').replace(/,/g, ''));
+
+    function applyPulse(el) {
+        if (!el) return;
+        el.classList.remove('like-pulse');
+        // Force reflow to restart animation
+        void el.offsetWidth;
+        el.classList.add('like-pulse');
+    }
+
+    function updateDisplayedLikes(newCount) {
+        const formatted = newCount.toLocaleString();
+        const changed = newCount !== lastKnownLikes;
+
+        if (likeCount) likeCount.textContent = formatted;
+        if (statLikeCount) statLikeCount.textContent = formatted;
+
+        if (changed) {
+            applyPulse(likeCount);
+            applyPulse(statLikeCount);
+        }
+        lastKnownLikes = newCount;
+    }
+
+    function pollLikes() {
+        // Skip polling while a like/unlike request is in flight
+        if (isProcessing) return;
+
+        fetch('get_likes.php?property_id=' + propertyId)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && !isProcessing) {
+                    updateDisplayedLikes(data.likes);
+                }
+            })
+            .catch(() => { /* silent */ });
+    }
+
+    setInterval(pollLikes, POLL_INTERVAL);
+
+    // Also expose helper so saveLikeToDatabase can sync both counts
+    window._syncLikeCounts = updateDisplayedLikes;
+})();
 
 // Tour Type Card Selection Handler
 document.addEventListener('DOMContentLoaded', function() {
