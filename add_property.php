@@ -414,11 +414,6 @@ unset($_SESSION['message']);
             background-color: #fff;
         }
 
-        .amenities-container::-webkit-scrollbar { width: 6px; }
-        .amenities-container::-webkit-scrollbar-track { background: transparent; }
-        .amenities-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .amenities-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
         .amenities-search {
             position: relative;
             margin-bottom: 1rem;

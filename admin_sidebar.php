@@ -243,24 +243,6 @@ $menu_items = [
         }
     }
 
-    /* Scrollbar Styling */
-    .admin-sidebar::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .admin-sidebar::-webkit-scrollbar-track {
-        background: rgba(10, 10, 10, 0.5);
-    }
-
-    .admin-sidebar::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, var(--gold-dark) 0%, var(--gold) 100%);
-        border-radius: 3px;
-    }
-
-    .admin-sidebar::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, var(--gold) 0%, var(--gold-light) 100%);
-    }
-
 </style>
 
 <div class="admin-sidebar" id="adminSidebar">

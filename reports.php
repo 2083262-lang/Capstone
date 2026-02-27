@@ -364,8 +364,6 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
 
         /* ===== DATA TABLES ===== */
         .report-table-wrapper { overflow-x: auto; border-radius: 6px; border: 1px solid rgba(37,99,235,0.1); box-shadow: 0 1px 4px rgba(0,0,0,0.04); background: #fff; }
-        .report-table-wrapper::-webkit-scrollbar { height: 6px; }
-        .report-table-wrapper::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
         .report-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.82rem; }
         .report-table thead th { position: sticky; top: 0; z-index: 3; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: rgba(255,255,255,0.75); font-weight: 700; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; padding: 0.9rem 1rem; border-bottom: 2px solid var(--gold-dark); white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.06); }
         .report-table thead th:first-child { border-radius: 6px 0 0 0; width: 44px; text-align: center; color: rgba(212,175,55,0.7); }
@@ -434,8 +432,6 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         .btn-close-filter { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 36px; height: 36px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; font-size: 1rem; }
         .btn-close-filter:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); }
         .filter-body { flex: 1; overflow-y: auto; padding: 1.5rem; background: #f8fafc; }
-        .filter-body::-webkit-scrollbar { width: 6px; }
-        .filter-body::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
         .filter-section { background: #fff; border-radius: 4px; padding: 1.25rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
         .filter-section-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #334155; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e2e8f0; }
         .filter-section-title i { color: var(--gold-dark); font-size: 0.95rem; }
@@ -466,8 +462,6 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         .export-modal-header { background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; padding: 1.25rem 2rem; display: flex; align-items: center; justify-content: space-between; position: relative; }
         .export-modal-header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), var(--blue), var(--gold)); }
         .export-modal-body { flex: 1; overflow: auto; padding: 1.5rem 2rem; background: #f8fafc; }
-        .export-modal-body::-webkit-scrollbar { width: 6px; }
-        .export-modal-body::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
         .export-preview-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .export-preview-table thead th { background: linear-gradient(180deg, #f8fafc, #f1f5f9); color: var(--text-secondary); font-weight: 700; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.75rem 0.85rem; border-bottom: 2px solid #e2e8f0; white-space: nowrap; position: sticky; top: 0; z-index: 2; }
         .export-preview-table tbody td { padding: 0.6rem 0.85rem; border-bottom: 1px solid #f1f5f9; color: var(--text-primary); }
@@ -524,8 +518,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
             .section-bar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
             .action-buttons { width: 100%; flex-wrap: wrap; gap: 0.5rem; }
             .action-buttons > * { flex: 1 1 auto; min-width: 0; justify-content: center; font-size: 0.8rem; padding: 0.55rem 0.85rem; }
-            .report-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 0; }
-            .report-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+            .report-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 0; }
             .report-tabs .nav-link { padding: 0.65rem 0.85rem; font-size: 0.8rem; white-space: nowrap; }
             .tab-content { padding: 1rem; }
             .chart-card { padding: 1rem; }

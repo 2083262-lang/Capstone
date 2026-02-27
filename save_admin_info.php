@@ -16,7 +16,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate inputs
     $errors = [];
     
-    // Required fields
+    // Account-level fields (optional update)
+    $first_name = isset($_POST['first_name']) ? trim($_POST['first_name']) : null;
+    $middle_name = isset($_POST['middle_name']) ? trim($_POST['middle_name']) : null;
+    $last_name = isset($_POST['last_name']) ? trim($_POST['last_name']) : null;
+    $phone_number = isset($_POST['phone_number']) ? trim($_POST['phone_number']) : null;
+    $email = isset($_POST['email']) ? trim($_POST['email']) : null;
+
+    // If account fields are provided, validate them
+    if ($first_name !== null && $first_name === '') $errors[] = 'First name is required';
+    if ($last_name !== null && $last_name === '') $errors[] = 'Last name is required';
+    if ($email !== null && $email === '') $errors[] = 'Email is required';
+    if ($email !== null && $email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email format';
+    if ($phone_number !== null && $phone_number !== '' && !preg_match('/^[0-9+\-\s()]{7,20}$/', $phone_number)) $errors[] = 'Invalid phone number format';
+
+    // Check email uniqueness if changed
+    if ($email !== null && $email !== '' && empty($errors)) {
+        $email_check = $conn->prepare("SELECT account_id FROM accounts WHERE email = ? AND account_id != ?");
+        $email_check->bind_param("si", $email, $account_id);
+        $email_check->execute();
+        if ($email_check->get_result()->num_rows > 0) $errors[] = 'Email is already used by another account';
+        $email_check->close();
+    }
+
+    // Required professional fields
     $required_fields = ['license_number', 'specialization', 'years_experience', 'bio'];
     foreach ($required_fields as $field) {
         if (empty($_POST[$field])) {
@@ -127,6 +150,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insert_stmt->close();
         }
         $check_stmt->close();
+
+        // Update account-level fields if provided and admin_information save succeeded
+        if ($response['success'] && $first_name !== null) {
+            $acct_sql = "UPDATE accounts SET first_name = ?, middle_name = ?, last_name = ?, phone_number = ?, email = ? WHERE account_id = ?";
+            $acct_stmt = $conn->prepare($acct_sql);
+            $acct_stmt->bind_param("sssssi", $first_name, $middle_name, $last_name, $phone_number, $email, $account_id);
+            if (!$acct_stmt->execute()) {
+                $response['success'] = false;
+                $response['message'] = 'Profile saved but failed to update account info: ' . $acct_stmt->error;
+            }
+            $acct_stmt->close();
+        }
     } else {
         // Return validation errors
         $response['message'] = implode(', ', $errors);

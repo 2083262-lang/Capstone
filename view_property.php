@@ -1332,11 +1332,6 @@ ob_end_flush();
             padding-bottom: 20px;
         }
         
-        .action-panel::-webkit-scrollbar { width: 5px; }
-        .action-panel::-webkit-scrollbar-track { background: transparent; }
-        .action-panel::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
-        .action-panel::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
         .action-card {
             background: var(--card-bg);
             border: 1px solid rgba(37, 99, 235, 0.1);
@@ -1565,8 +1560,7 @@ ob_end_flush();
                 height: 300px;
             }
             .gallery-grid-sidebar { display: none; }
-            .view-selector-container { padding: 0 1rem; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-            .view-selector-container::-webkit-scrollbar { display: none; }
+            .view-selector-container { padding: 0 1rem; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
             .view-selector-btn { font-size: 0.7rem; padding: 0.4rem 0.8rem; white-space: nowrap; flex-shrink: 0; }
             .content-section { padding: 1.25rem 1rem; }
             .facts-grid { grid-template-columns: 1fr; gap: 0.75rem; }
@@ -1647,12 +1641,6 @@ ob_end_flush();
             border-top: 1px solid #e2e8f0;
             background: #f8fafc;
         }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-light); }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         /* Error State */
         .error-state {

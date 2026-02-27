@@ -126,8 +126,7 @@ if ($property_id <= 0) {
         @media (max-width: 768px) {
             .content-wrapper { margin-left: 0; padding: 1rem; }
             .d-flex.justify-content-between { flex-direction: column; align-items: flex-start !important; gap: 0.75rem; }
-            .d-flex.flex-wrap.gap-2 { overflow-x: auto; flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch; padding-bottom: 0.25rem; scrollbar-width: none; }
-            .d-flex.flex-wrap.gap-2::-webkit-scrollbar { display: none; }
+            .d-flex.flex-wrap.gap-2 { overflow-x: auto; flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch; padding-bottom: 0.25rem; }
             .filter-btn { white-space: nowrap; flex-shrink: 0; font-size: 0.8rem; padding: 0.375rem 0.65rem; }
             .truncate { max-width: 200px; }
         }

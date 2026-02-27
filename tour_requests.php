@@ -1405,8 +1405,7 @@ switch ($active_status) {
       .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
       .kpi-card { padding: 1rem; }
       .kpi-card .kpi-value { font-size: 1.25rem; }
-      .status-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-      .status-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+      .status-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
       .status-tabs .nav-link { white-space: nowrap; padding: 0.75rem 0.85rem; font-size: 0.8rem; }
       .request-row { padding: 1rem 1.25rem; flex-wrap: wrap; }
       .request-info { width: 100%; }

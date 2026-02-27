@@ -126,3 +126,98 @@ body {
 .card-body {
     padding: 1.5rem;
 }
+
+/* ================================================
+   GLOBAL CUSTOM SCROLLBAR
+   Consistent across all admin pages
+   ================================================ */
+
+/* Theme scrollbar colors */
+:root {
+    --scrollbar-gold: #d4af37;
+    --scrollbar-gold-dark: #b8941f;
+    --scrollbar-gold-light: #f4d03f;
+    --scrollbar-blue: #2563eb;
+    --scrollbar-blue-dark: #1e40af;
+    --scrollbar-blue-light: #3b82f6;
+    --scrollbar-track: #f1f1f1;
+}
+
+/* Global page scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--scrollbar-gold), var(--scrollbar-gold-dark)); border-radius: 4px; border: 2px solid var(--scrollbar-track); }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--scrollbar-gold-light), var(--scrollbar-gold)); }
+
+/* Sidebar scrollbar - slim & subtle */
+.admin-sidebar::-webkit-scrollbar { width: 4px; }
+.admin-sidebar::-webkit-scrollbar-track { background: transparent; }
+.admin-sidebar::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.35); border-radius: 4px; }
+.admin-sidebar::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.65); }
+
+/* Notification dropdown scrollbar */
+.admin-notif-dropdown-body::-webkit-scrollbar { width: 5px; }
+.admin-notif-dropdown-body::-webkit-scrollbar-track { background: transparent; }
+.admin-notif-dropdown-body::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 3px; }
+.admin-notif-dropdown-body::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.5); }
+
+/* Modal / overlay body scrollbar (blue accent) */
+.modal-body::-webkit-scrollbar,
+.edit-modal-body::-webkit-scrollbar,
+.export-modal-body::-webkit-scrollbar,
+.sale-details-body::-webkit-scrollbar { width: 6px; }
+.modal-body::-webkit-scrollbar-track,
+.edit-modal-body::-webkit-scrollbar-track,
+.export-modal-body::-webkit-scrollbar-track,
+.sale-details-body::-webkit-scrollbar-track { background: rgba(37, 99, 235, 0.04); border-radius: 4px; }
+.modal-body::-webkit-scrollbar-thumb,
+.edit-modal-body::-webkit-scrollbar-thumb,
+.export-modal-body::-webkit-scrollbar-thumb,
+.sale-details-body::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--scrollbar-blue), var(--scrollbar-blue-dark)); border-radius: 4px; }
+.modal-body::-webkit-scrollbar-thumb:hover,
+.edit-modal-body::-webkit-scrollbar-thumb:hover,
+.export-modal-body::-webkit-scrollbar-thumb:hover,
+.sale-details-body::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--scrollbar-blue-light), var(--scrollbar-blue)); }
+
+/* Filter sidebar scrollbar (gold accent) */
+.filter-body::-webkit-scrollbar { width: 6px; }
+.filter-body::-webkit-scrollbar-track { background: transparent; }
+.filter-body::-webkit-scrollbar-thumb { background: var(--scrollbar-gold); border-radius: 3px; }
+.filter-body::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-gold-dark); }
+
+/* Scrollable lists / grids */
+.dash-scrollable::-webkit-scrollbar,
+.items-grid::-webkit-scrollbar,
+.action-panel::-webkit-scrollbar,
+.amenities-container::-webkit-scrollbar { width: 5px; }
+.dash-scrollable::-webkit-scrollbar-track,
+.items-grid::-webkit-scrollbar-track,
+.action-panel::-webkit-scrollbar-track,
+.amenities-container::-webkit-scrollbar-track { background: transparent; }
+.dash-scrollable::-webkit-scrollbar-thumb,
+.items-grid::-webkit-scrollbar-thumb,
+.action-panel::-webkit-scrollbar-thumb,
+.amenities-container::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.35); border-radius: 3px; }
+.dash-scrollable::-webkit-scrollbar-thumb:hover,
+.items-grid::-webkit-scrollbar-thumb:hover,
+.action-panel::-webkit-scrollbar-thumb:hover,
+.amenities-container::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.6); }
+
+/* Table wrapper horizontal scrollbar */
+.report-table-wrapper::-webkit-scrollbar,
+.table-responsive::-webkit-scrollbar { height: 6px; }
+.report-table-wrapper::-webkit-scrollbar-track,
+.table-responsive::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+.report-table-wrapper::-webkit-scrollbar-thumb,
+.table-responsive::-webkit-scrollbar-thumb { background: var(--scrollbar-gold); border-radius: 3px; }
+.report-table-wrapper::-webkit-scrollbar-thumb:hover,
+.table-responsive::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-gold-dark); }
+
+/* Hidden scrollbar for tab navigation */
+.nav-tabs { scrollbar-width: none; }
+.nav-tabs::-webkit-scrollbar { display: none; }
+
+/* Firefox fallback */
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar-gold-dark) var(--scrollbar-track); }
+.admin-sidebar { scrollbar-width: thin; scrollbar-color: rgba(212,175,55,0.35) transparent; }
+.modal-body, .edit-modal-body, .export-modal-body, .sale-details-body { scrollbar-width: thin; scrollbar-color: var(--scrollbar-blue) rgba(37,99,235,0.04); }

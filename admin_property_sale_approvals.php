@@ -577,8 +577,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             .page-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
             .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
             .kpi-card { padding: 1rem; }
-            .sale-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-            .sale-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+            .sale-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
             .sale-tabs .nav-link { white-space: nowrap; padding: 0.75rem 0.85rem; font-size: 0.8rem; }
             .sales-grid { grid-template-columns: 1fr; }
             .modal-container { width: 98%; }

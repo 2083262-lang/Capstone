@@ -812,13 +812,6 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
             overflow-y: auto;
         }
 
-        .dash-scrollable::-webkit-scrollbar { width: 5px; }
-        .dash-scrollable::-webkit-scrollbar-track { background: transparent; }
-        .dash-scrollable::-webkit-scrollbar-thumb {
-            background: var(--gold);
-            border-radius: 3px;
-        }
-
         /* ===== CHART CONTAINER ===== */
         .chart-container {
             position: relative;

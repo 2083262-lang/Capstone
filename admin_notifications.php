@@ -702,9 +702,6 @@ function notif_time_ago($datetime) {
         .filter-body {
             flex: 1; overflow-y: auto; padding: 1.5rem; background: #f8fafc;
         }
-        .filter-body::-webkit-scrollbar { width: 6px; }
-        .filter-body::-webkit-scrollbar-track { background: transparent; }
-        .filter-body::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
         .filter-section {
             background: #fff; border-radius: 4px; padding: 1.25rem;
             margin-bottom: 1rem; border: 1px solid #e2e8f0;
@@ -779,8 +776,7 @@ function notif_time_ago($datetime) {
             .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
             .kpi-card { padding: 1rem; }
             .kpi-card .kpi-value { font-size: 1.25rem; }
-            .notif-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-            .notif-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+            .notif-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
             .notif-tabs .nav-link { padding: 0.65rem 0.85rem; font-size: 0.8rem; white-space: nowrap; }
             .notif-item { padding: 1rem; gap: 0.75rem; }
         }

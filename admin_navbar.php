@@ -406,13 +406,7 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
     .admin-notif-dropdown-body {
         flex: 1;
         overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(0,0,0,0.12) transparent;
     }
-
-    .admin-notif-dropdown-body::-webkit-scrollbar { width: 5px; }
-    .admin-notif-dropdown-body::-webkit-scrollbar-track { background: transparent; }
-    .admin-notif-dropdown-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
 
     .admin-notif-item {
         display: flex;

@@ -869,8 +869,7 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
             .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
             .kpi-card { padding: 1rem; }
             .kpi-card .kpi-value { font-size: 1.25rem; }
-            .property-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-            .property-tabs .nav-tabs::-webkit-scrollbar { display: none; }
+            .property-tabs .nav-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
             .property-tabs .nav-link { padding: 0.65rem 0.85rem; font-size: 0.8rem; white-space: nowrap; }
             .pagination-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
         }
@@ -992,16 +991,6 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
             overflow-y: auto;
             padding: 1.5rem;
             background: #f8fafc;
-        }
-
-        .filter-body::-webkit-scrollbar { width: 6px; }
-        .filter-body::-webkit-scrollbar-track { background: transparent; }
-        .filter-body::-webkit-scrollbar-thumb {
-            background: var(--gold);
-            border-radius: 3px;
-        }
-        .filter-body::-webkit-scrollbar-thumb:hover {
-            background: var(--gold-dark);
         }
 
         .filter-section {

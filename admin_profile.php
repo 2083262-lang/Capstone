@@ -69,6 +69,15 @@ while ($a = $action_result->fetch_assoc()) {
 }
 $action_stmt->close();
 
+// Fetch all specializations for multi-select
+$all_specs = [];
+$spec_r = $conn->query("SELECT specialization_id, specialization_name FROM specializations ORDER BY specialization_name ASC");
+if ($spec_r) { while ($row = $spec_r->fetch_assoc()) $all_specs[] = $row; }
+
+// Parse current admin specializations (stored as comma-separated names)
+$current_specs_raw = $admin['specialization'] ?? '';
+$current_specs = array_filter(array_map('trim', explode(',', $current_specs_raw)));
+
 // Helper
 $avatar_src = 'https://via.placeholder.com/150/2563eb/ffffff?text=' . strtoupper(substr($admin['first_name'] ?? 'A', 0, 1));
 if (!empty($admin['profile_picture_url'])) {
@@ -320,6 +329,282 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
         .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary); }
         .empty-state i { font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem; }
 
+        /* ===== SEE MORE ===== */
+        .activity-item.activity-hidden { display: none; }
+        .see-more-btn {
+            width: 100%;
+            padding: 0.65rem;
+            margin-top: 0.25rem;
+            background: transparent;
+            border: 1px dashed rgba(37, 99, 235, 0.25);
+            border-radius: 4px;
+            color: var(--blue);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+        .see-more-btn:hover { background: rgba(37, 99, 235, 0.05); border-color: var(--blue); }
+        .see-more-btn i { transition: transform 0.25s ease; }
+        .see-more-btn.expanded i { transform: rotate(180deg); }
+
+        /* ===== EDIT PROFILE OVERLAY ===== */
+        .edit-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        .edit-overlay.active { display: flex; }
+        .edit-modal {
+            background: var(--card-bg);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 4px;
+            width: 100%;
+            max-width: 900px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+            animation: editSlideIn 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        @keyframes editSlideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .edit-modal-header {
+            padding: 1.25rem 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.08);
+            position: relative;
+        }
+        .edit-modal-header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
+        .edit-modal-header h3 { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+        .edit-modal-header h3 i { color: var(--blue); }
+        .edit-modal-close {
+            width: 32px; height: 32px;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 4px;
+            background: transparent;
+            color: var(--text-secondary);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1.1rem;
+        }
+        .edit-modal-close:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.25); color: #dc2626; }
+        .edit-modal-body { padding: 1.75rem; max-height: calc(100vh - 200px); overflow-y: auto; }
+        .edit-section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--blue);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .edit-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+        .edit-form-grid .full-width { grid-column: 1 / -1; }
+        .edit-form-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .edit-form-group label .required { color: #dc2626; }
+        .edit-form-group input,
+        .edit-form-group textarea,
+        .edit-form-group select {
+            width: 100%;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            border: 1px solid rgba(0,0,0,0.12);
+            border-radius: 4px;
+            background: #fff;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        .edit-form-group input:focus,
+        .edit-form-group textarea:focus,
+        .edit-form-group select:focus {
+            outline: none;
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .edit-form-group textarea { resize: vertical; min-height: 90px; }
+
+        /* Specialization multi-select chips */
+        .spec-chips-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(37, 99, 235, 0.02);
+            border: 1px solid rgba(0,0,0,0.12);
+            border-radius: 4px;
+            min-height: 54px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .spec-chips-wrap:focus-within {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .spec-chip input[type="checkbox"] { display: none; }
+        .spec-chip label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.35rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 20px;
+            background: #fff;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.18s ease;
+            user-select: none;
+            text-transform: none;
+            letter-spacing: 0;
+            margin: 0;
+        }
+        .spec-chip label:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+            background: rgba(37, 99, 235, 0.05);
+        }
+        .spec-chip input[type="checkbox"]:checked + label {
+            background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.22));
+            border-color: var(--gold-dark);
+            color: var(--gold-dark);
+            box-shadow: 0 2px 8px rgba(212,175,55,0.15);
+        }
+        .spec-chip input[type="checkbox"]:checked + label::before {
+            content: '\2713';
+            font-size: 0.7rem;
+            font-weight: 800;
+        }
+        .spec-none-msg { font-size: 0.78rem; color: var(--text-secondary); font-style: italic; display: none; }
+        .spec-none-msg.visible { display: block; }
+        .edit-avatar-upload {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            padding: 1rem;
+            background: rgba(37, 99, 235, 0.03);
+            border: 1px dashed rgba(37, 99, 235, 0.2);
+            border-radius: 4px;
+        }
+        .edit-avatar-preview {
+            width: 72px; height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+        .edit-avatar-info { flex: 1; }
+        .edit-avatar-info .upload-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+            color: #fff;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.45rem 0.9rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .edit-avatar-info .upload-label:hover { background: linear-gradient(135deg, var(--blue), var(--blue-light)); }
+        .edit-avatar-info .upload-hint { font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.35rem; }
+        .edit-avatar-info input[type="file"] { display: none; }
+        .edit-modal-footer {
+            padding: 1.25rem 1.75rem;
+            border-top: 1px solid rgba(37, 99, 235, 0.08);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+        .btn-cancel-edit {
+            background: transparent;
+            border: 1px solid rgba(0,0,0,0.15);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.6rem 1.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-cancel-edit:hover { border-color: rgba(0,0,0,0.3); color: var(--text-primary); }
+        .btn-save-edit {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            color: #fff;
+            border: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 0.6rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-save-edit:hover { background: linear-gradient(135deg, var(--gold), var(--gold-light)); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(212,175,55,0.3); }
+        .btn-save-edit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Toast */
+        .profile-toast {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 10001;
+            padding: 0.85rem 1.25rem;
+            border-radius: 4px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .profile-toast.show { transform: translateX(0); }
+        .profile-toast.success { background: #16a34a; color: #fff; }
+        .profile-toast.error { background: #dc2626; color: #fff; }
+
+        @media (max-width: 768px) {
+            .edit-overlay { padding: 1rem; }
+            .edit-modal-body { padding: 1.25rem; }
+            .edit-form-grid { grid-template-columns: 1fr; }
+            .edit-modal-header, .edit-modal-footer { padding: 1rem 1.25rem; }
+        }
+        @media (max-width: 576px) {
+            .edit-overlay { padding: 0.5rem; }
+            .edit-modal-body { padding: 1rem; }
+            .edit-avatar-upload { flex-direction: column; text-align: center; }
+        }
+
         @media (max-width: 768px) {
             .profile-hero-body { padding: 0 1.25rem 1.25rem; }
             .profile-hero-info { flex-direction: column; gap: 1rem; align-items: flex-start; }
@@ -371,6 +656,7 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                         </div>
                     </div>
                     <div class="profile-hero-actions">
+                        <button type="button" class="btn-gold" id="openEditProfile"><i class="bi bi-pencil-square"></i> Edit Profile</button>
                         <a href="admin_settings.php" class="btn-outline-admin"><i class="bi bi-gear"></i> Settings</a>
                     </div>
                 </div>
@@ -524,9 +810,9 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                         <?php if (empty($recent_logs)): ?>
                             <div class="empty-state"><i class="bi bi-clock"></i><p>No login activity yet</p></div>
                         <?php else: ?>
-                            <ul class="activity-list">
-                                <?php foreach ($recent_logs as $log): ?>
-                                    <li class="activity-item">
+                            <ul class="activity-list" id="loginActivityList">
+                                <?php foreach ($recent_logs as $i => $log): ?>
+                                    <li class="activity-item<?php echo $i >= 4 ? ' activity-hidden' : ''; ?>">
                                         <div class="activity-icon login"><i class="bi bi-box-arrow-in-right"></i></div>
                                         <div class="activity-content">
                                             <div class="activity-title">Admin Login</div>
@@ -535,6 +821,12 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                                     </li>
                                 <?php endforeach; ?>
                             </ul>
+                            <?php if (count($recent_logs) > 4): ?>
+                                <button class="see-more-btn" id="loginSeeMoreBtn" onclick="toggleActivityList('loginActivityList', 'loginSeeMoreBtn', <?php echo count($recent_logs); ?>)">
+                                    <i class="bi bi-chevron-down"></i>
+                                    <span>See <?php echo count($recent_logs) - 4; ?> more</span>
+                                </button>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -549,9 +841,9 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                         <?php if (empty($action_logs)): ?>
                             <div class="empty-state"><i class="bi bi-journal"></i><p>No review actions yet</p></div>
                         <?php else: ?>
-                            <ul class="activity-list">
-                                <?php foreach ($action_logs as $al): ?>
-                                    <li class="activity-item">
+                            <ul class="activity-list" id="reviewActionsList">
+                                <?php foreach ($action_logs as $i => $al): ?>
+                                    <li class="activity-item<?php echo $i >= 4 ? ' activity-hidden' : ''; ?>">
                                         <div class="activity-icon <?php echo htmlspecialchars($al['action']); ?>">
                                             <i class="bi bi-<?php echo $al['action'] === 'approved' ? 'check-lg' : 'x-lg'; ?>"></i>
                                         </div>
@@ -566,6 +858,12 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                                     </li>
                                 <?php endforeach; ?>
                             </ul>
+                            <?php if (count($action_logs) > 4): ?>
+                                <button class="see-more-btn" id="reviewSeeMoreBtn" onclick="toggleActivityList('reviewActionsList', 'reviewSeeMoreBtn', <?php echo count($action_logs); ?>)">
+                                    <i class="bi bi-chevron-down"></i>
+                                    <span>See <?php echo count($action_logs) - 4; ?> more</span>
+                                </button>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -573,6 +871,221 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
         </div>
     </div>
 
+    <!-- Edit Profile Overlay -->
+    <div class="edit-overlay" id="editProfileOverlay">
+        <div class="edit-modal">
+            <div class="edit-modal-header">
+                <h3><i class="bi bi-pencil-square"></i> Edit Profile</h3>
+                <button type="button" class="edit-modal-close" id="closeEditProfile"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form id="editProfileForm" enctype="multipart/form-data">
+                <div class="edit-modal-body">
+                    <!-- Profile Photo -->
+                    <div class="edit-section-title"><i class="bi bi-camera"></i> Profile Photo</div>
+                    <div class="edit-avatar-upload" style="margin-bottom: 1.5rem;">
+                        <img src="<?php echo $avatar_src; ?>" alt="Avatar" class="edit-avatar-preview" id="editAvatarPreview">
+                        <div class="edit-avatar-info">
+                            <label class="upload-label" for="editProfilePicture">
+                                <i class="bi bi-cloud-upload"></i> Change Photo
+                            </label>
+                            <input type="file" id="editProfilePicture" name="profile_picture" accept="image/jpeg,image/png,image/gif">
+                            <div class="upload-hint">JPG, PNG or GIF. Max 5MB.</div>
+                        </div>
+                    </div>
+
+                    <!-- Account Information -->
+                    <div class="edit-section-title"><i class="bi bi-person-vcard"></i> Account Information</div>
+                    <div class="edit-form-grid">
+                        <div class="edit-form-group">
+                            <label for="editFirstName">First Name <span class="required">*</span></label>
+                            <input type="text" id="editFirstName" name="first_name" value="<?php echo htmlspecialchars($admin['first_name'] ?? ''); ?>" required>
+                        </div>
+                        <div class="edit-form-group">
+                            <label for="editMiddleName">Middle Name</label>
+                            <input type="text" id="editMiddleName" name="middle_name" value="<?php echo htmlspecialchars($admin['middle_name'] ?? ''); ?>">
+                        </div>
+                        <div class="edit-form-group">
+                            <label for="editLastName">Last Name <span class="required">*</span></label>
+                            <input type="text" id="editLastName" name="last_name" value="<?php echo htmlspecialchars($admin['last_name'] ?? ''); ?>" required>
+                        </div>
+                        <div class="edit-form-group">
+                            <label for="editPhone">Phone Number</label>
+                            <input type="text" id="editPhone" name="phone_number" value="<?php echo htmlspecialchars($admin['phone_number'] ?? ''); ?>" placeholder="e.g. +63 912 345 6789">
+                        </div>
+                        <div class="edit-form-group full-width">
+                            <label for="editEmail">Email Address <span class="required">*</span></label>
+                            <input type="email" id="editEmail" name="email" value="<?php echo htmlspecialchars($admin['email'] ?? ''); ?>" required>
+                        </div>
+                    </div>
+
+                    <!-- Professional Details -->
+                    <div class="edit-section-title"><i class="bi bi-briefcase"></i> Professional Details</div>
+                    <div class="edit-form-grid">
+                        <div class="edit-form-group">
+                            <label for="editLicense">License Number <span class="required">*</span></label>
+                            <input type="text" id="editLicense" name="license_number" value="<?php echo htmlspecialchars($admin['license_number'] ?? ''); ?>" required>
+                        </div>
+                        <div class="edit-form-group">
+                            <label for="editExperience">Years of Experience <span class="required">*</span></label>
+                            <input type="number" id="editExperience" name="years_experience" value="<?php echo htmlspecialchars($admin['years_experience'] ?? ''); ?>" min="0" max="60" required>
+                        </div>
+                        <div class="edit-form-group full-width">
+                            <label>Specialization <span class="required">*</span></label>
+                            <input type="hidden" id="editSpecializationHidden" name="specialization" value="<?php echo htmlspecialchars($admin['specialization'] ?? ''); ?>">
+                            <div class="spec-chips-wrap" id="specChipsWrap">
+                                <?php foreach ($all_specs as $spec): ?>
+                                    <?php
+                                        $spec_name = $spec['specialization_name'];
+                                        $is_checked = in_array($spec_name, $current_specs);
+                                        $chip_id = 'spec_' . $spec['specialization_id'];
+                                    ?>
+                                    <div class="spec-chip">
+                                        <input type="checkbox" id="<?php echo $chip_id; ?>" value="<?php echo htmlspecialchars($spec_name); ?>"<?php echo $is_checked ? ' checked' : ''; ?> onchange="updateSpecHidden()">
+                                        <label for="<?php echo $chip_id; ?>"><?php echo htmlspecialchars($spec_name); ?></label>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <span class="spec-none-msg" id="specNoneMsg">Select at least one specialization.</span>
+                        </div>
+                        <div class="edit-form-group full-width">
+                            <label for="editBio">Professional Bio <span class="required">*</span></label>
+                            <textarea id="editBio" name="bio" rows="4" required><?php echo htmlspecialchars($admin['bio'] ?? ''); ?></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="edit-modal-footer">
+                    <button type="button" class="btn-cancel-edit" id="cancelEditProfile">Cancel</button>
+                    <button type="submit" class="btn-save-edit" id="saveEditProfile">
+                        <i class="bi bi-check-lg"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="profile-toast" id="profileToast"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+    <script>
+        function toggleActivityList(listId, btnId, total) {
+            const list = document.getElementById(listId);
+            const btn  = document.getElementById(btnId);
+            const hidden = list.querySelectorAll('.activity-hidden');
+            const expanded = btn.classList.contains('expanded');
+
+            if (expanded) {
+                hidden.forEach(item => item.style.display = 'none');
+                btn.classList.remove('expanded');
+                btn.querySelector('span').textContent = 'See ' + hidden.length + ' more';
+            } else {
+                hidden.forEach(item => item.style.display = 'flex');
+                btn.classList.add('expanded');
+                btn.querySelector('span').textContent = 'See less';
+            }
+        }
+
+        // ===== EDIT PROFILE =====
+        const overlay = document.getElementById('editProfileOverlay');
+        const editForm = document.getElementById('editProfileForm');
+        const fileInput = document.getElementById('editProfilePicture');
+        const avatarPreview = document.getElementById('editAvatarPreview');
+
+        function openEditProfile() {
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeEditProfile() {
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('openEditProfile').addEventListener('click', openEditProfile);
+        document.getElementById('closeEditProfile').addEventListener('click', closeEditProfile);
+        document.getElementById('cancelEditProfile').addEventListener('click', closeEditProfile);
+
+        // Close on overlay background click
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) closeEditProfile();
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && overlay.classList.contains('active')) closeEditProfile();
+        });
+
+        // Image preview on file selection
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    avatarPreview.src = e.target.result;
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        // Show toast
+        function showToast(message, type) {
+            const toast = document.getElementById('profileToast');
+            toast.className = 'profile-toast ' + type;
+            toast.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill') + '"></i> ' + message;
+            toast.classList.add('show');
+            setTimeout(function() {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // Specialization chips → hidden input
+        function updateSpecHidden() {
+            const checked = document.querySelectorAll('#specChipsWrap .spec-chip input[type="checkbox"]:checked');
+            const values = Array.from(checked).map(cb => cb.value);
+            document.getElementById('editSpecializationHidden').value = values.join(', ');
+            document.getElementById('specNoneMsg').classList.toggle('visible', values.length === 0);
+        }
+
+        // Form submission via AJAX
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Validate specialization
+            const specVal = document.getElementById('editSpecializationHidden').value.trim();
+            if (!specVal) {
+                document.getElementById('specNoneMsg').classList.add('visible');
+                document.getElementById('specChipsWrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            const saveBtn = document.getElementById('saveEditProfile');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
+
+            const formData = new FormData(editForm);
+
+            fetch('save_admin_info.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Profile updated successfully!', 'success');
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    showToast(data.message || 'Failed to update profile.', 'error');
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalText;
+                }
+            })
+            .catch(function() {
+                showToast('An error occurred. Please try again.', 'error');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            });
+        });
+    </script>
+    <style>\n        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n        .spin { animation: spin 1s linear infinite; }\n    </style>
 </html>
