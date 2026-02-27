@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include 'connection.php'; // Make sure this file correctly connects to your MySQL database
 
@@ -127,9 +128,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 try {
                     $stmt_insert_account->execute();
-                    $success_message = "Registration successful! You can now <a href='login.php' class='alert-link'>log in</a> to complete your agent profile.";
-                    // clear preserved fields on success
-                    $first_name = $middle_name = $last_name = $username = $email = $phone_number = '';
+                    // Redirect to login page with registration success notice
+                    header("Location: login.php?registered=1");
+                    exit();
                 } catch (mysqli_sql_exception $e) {
                     // Duplicate entry
                     if ($e->getCode() == 1062) {
@@ -210,79 +211,196 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             display: flex;
             min-height: 100vh;
             width: 100%;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.07) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.06) 0%, transparent 50%),
+                linear-gradient(rgba(10, 10, 10, 0.78), rgba(10, 10, 10, 0.85)),
+                url('images/register-bg.jpg') center/cover no-repeat fixed;
+            justify-content: center;
+            align-items: center;
+            padding: 1.25rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Subtle particle-like dots overlay */
+        .main-container::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle, rgba(212,175,55,0.08) 1px, transparent 1px),
+                radial-gradient(circle, rgba(37,99,235,0.05) 1px, transparent 1px);
+            background-size: 60px 60px, 90px 90px;
+            background-position: 0 0, 30px 30px;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .form-section {
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-grow: 1;
-            padding: 2rem;
-            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
-            position: relative;
-        }
-
-        .form-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.04) 0%, transparent 50%);
-            pointer-events: none;
-        }
-
-        .register-wrapper {
             width: 100%;
-            max-width: 700px;
-            background: transparent;
-            border: none;
-            border-radius: 4px;
-            padding: 48px 40px;
             position: relative;
             z-index: 1;
         }
 
-        .logo-container {
-            text-align: center;
-            margin-bottom: 32px;
+        .form-section::before { display: none; }
+
+        .register-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
         }
 
-        .logo-container img {
+        /* ── Left branding panel ── */
+        .register-brand-panel {
+            width: 280px;
+            flex-shrink: 0;
+            background: linear-gradient(160deg,
+                rgba(212,175,55,0.12) 0%,
+                rgba(37,99,235,0.08) 60%,
+                rgba(10,10,10,0.2) 100%);
+            border-right: 1px solid rgba(212, 175, 55, 0.12);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 36px 28px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .register-brand-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 50% 30%, rgba(212,175,55,0.15) 0%, transparent 60%),
+                radial-gradient(circle at 50% 80%, rgba(37,99,235,0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .register-brand-panel img {
             width: 80px;
             height: auto;
-            filter: drop-shadow(0 4px 12px rgba(212, 175, 55, 0.3));
-            margin-bottom: 16px;
+            filter: drop-shadow(0 6px 18px rgba(212,175,55,0.45));
+            margin-bottom: 20px;
+            position: relative;
         }
-
-        .register-wrapper h1 {
+        .register-brand-panel .brand-name {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 3.5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .register-brand-panel h2 {
+            font-size: 1.45rem;
             font-weight: 700;
             color: var(--white);
-            margin-bottom: 0.5rem;
-            font-size: 2rem;
+            margin-bottom: 12px;
+            line-height: 1.3;
+            position: relative;
+        }
+        .register-brand-panel p {
+            font-size: 0.82rem;
+            color: var(--gray-400);
+            line-height: 1.7;
+            position: relative;
+        }
+        .brand-gold-line {
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            border-radius: 2px;
+            margin: 16px auto;
+            position: relative;
+        }
+        .brand-features {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0 0 0;
+            text-align: left;
+            position: relative;
+            width: 100%;
+        }
+        .brand-features li {
+            font-size: 0.78rem;
+            color: var(--gray-400);
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-features li i {
+            color: var(--gold);
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        /* ── Right form panel ── */
+        .register-form-panel {
+            flex: 1;
+            padding: 28px 40px;
+        }
+
+        /* Decorative divider */
+        .register-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .register-divider::before,
+        .register-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent);
+        }
+        .register-divider span {
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .register-form-panel h1 {
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.25rem;
+            font-size: 1.55rem;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
-        .register-wrapper > p {
+        .register-form-panel > p {
             color: var(--gray-400);
-            margin-bottom: 32px;
+            margin-bottom: 16px;
+            font-size: 0.88rem;
         }
 
         .register-wrapper .form-label {
             font-weight: 500;
             color: var(--gray-300);
-            margin-bottom: 8px;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
         }
 
         .register-wrapper .form-control {
-            height: 50px;
+            height: 42px;
             border-radius: 2px;
             border: 1px solid rgba(37, 99, 235, 0.3);
             background: rgba(10, 10, 10, 0.6);
             color: var(--white);
+            font-size: 0.88rem;
             transition: all 0.3s ease;
         }
 
@@ -325,7 +443,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
             color: var(--black);
             border: none;
-            padding: 14px;
+            padding: 12px;
             border-radius: 2px;
             font-weight: 700;
             width: 100%;
@@ -382,59 +500,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             color: var(--gold);
         }
 
-        .image-section {
-            width: 50%;
-            background: 
-                radial-gradient(circle at 30% 50%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 70% 50%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
-                linear-gradient(rgba(10, 10, 10, 0.7), rgba(10, 10, 10, 0.8)),
-                url('images/register-bg.jpg');
-            background-size: cover;
-            background-position: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: var(--white);
-            text-align: center;
-            padding: 2rem;
-            border-left: 1px solid rgba(37, 99, 235, 0.2);
-            position: relative;
-        }
-
-        .image-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 1px;
-            height: 100%;
-            background: linear-gradient(180deg, 
-                transparent 0%, 
-                rgba(212, 175, 55, 0.5) 50%, 
-                transparent 100%);
-        }
-
-        .image-section img {
-            max-width: 280px;
-            height: auto;
-            filter: drop-shadow(0 4px 20px rgba(212, 175, 55, 0.4));
-            margin-bottom: 32px;
-        }
-
-        .image-section h2 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-        }
-
-        .image-section p {
-            font-size: 1.1rem;
-            max-width: 400px;
-            color: var(--gray-300);
-            line-height: 1.8;
-        }
+        .image-section { display: none; }
 
         .login-link {
             text-align: center;
@@ -455,24 +521,94 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             text-decoration: none;
         }
 
-        /* Responsive Design */
-        @media (max-width: 992px) {
-            .image-section {
-                display: none;
-            }
-            .form-section {
-                width: 100%;
-            }
+        /* Responsive: collapse to single column on small screens */
+        @media (max-width: 768px) {
+            .register-brand-panel { display: none; }
+            .register-form-panel { padding: 32px 24px; }
+            .register-wrapper { max-width: 100%; }
         }
 
-        @media (max-width: 576px) {
-            .register-wrapper {
-                padding: 32px 24px;
-            }
+        /* ===== Enhanced Design System ===== */
 
-            .register-wrapper h1 {
-                font-size: 1.75rem;
-            }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--black); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--gold-dark), var(--gold), var(--gold-dark));
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--gold), var(--gold-light), var(--gold));
+        }
+        ::-webkit-scrollbar-corner { background: var(--black); }
+        html { scrollbar-width: thin; scrollbar-color: var(--gold-dark) var(--black); }
+
+        /* Glassmorphism Card */
+        .register-wrapper {
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.06);
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        /* Refined Inputs */
+        .register-wrapper .form-control {
+            border-radius: 10px;
+            height: 44px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .register-wrapper .form-control:focus {
+            transform: translateY(-1px);
+        }
+
+        /* Refined Button */
+        .register-btn {
+            border-radius: 10px;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Enhanced Input Group */
+        .input-group-text {
+            border-radius: 10px 0 0 10px;
+        }
+        .input-group .form-control {
+            border-radius: 0 10px 10px 0;
+        }
+
+        /* Phone Input Enhancement */
+        .phone-input-wrapper .input-group-text {
+            background: rgba(212, 175, 55, 0.08);
+            border-color: rgba(212, 175, 55, 0.2);
+            color: var(--gold);
+            font-weight: 600;
+            font-size: 0.9rem;
+            gap: 4px;
+        }
+
+        /* Enhanced Alerts */
+        .alert { border-radius: 12px; }
+
+        /* Entrance Animation — slide in from right */
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(60px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .register-wrapper {
+            animation: slideInRight 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .form-section { overflow-y: visible; }
+
+        /* Page exit transition */
+        @keyframes slideOutRight {
+            to { opacity: 0; transform: translateX(60px); }
+        }
+        .page-exit .register-wrapper {
+            animation: slideOutRight 0.35s cubic-bezier(0.4, 0, 1, 1) forwards;
         }
     </style>
 </head>
@@ -481,18 +617,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <div class="main-container">
     <div class="form-section">
         <div class="register-wrapper">
-            <h1>Create an Account</h1>
-            <p class="mb-4">Join our team of professional real estate agents.</p>
 
-            <?php if ($error_message): ?>
-                <div class="alert alert-danger"><?php echo $error_message; ?></div>
-            <?php endif; ?>
-            <?php if ($success_message): ?>
-                <div class="alert alert-success"><?php echo $success_message; ?></div>
-            <?php endif; ?>
+            <!-- Left branding panel -->
+            <div class="register-brand-panel">
+                <img src="images/Logo.png" alt="HomeEstate Realty">
+                <span class="brand-name">HomeEstate Realty</span>
+                <div class="brand-gold-line"></div>
+                <h2>Join Our Elite Team</h2>
+                <p>Gain access to exclusive listings and powerful tools for your success.</p>
+                <ul class="brand-features">
+                    <li><i class="fas fa-check-circle"></i> Manage property listings</li>
+                    <li><i class="fas fa-check-circle"></i> Connect with buyers directly</li>
+                    <li><i class="fas fa-check-circle"></i> Track commissions & sales</li>
+                    <li><i class="fas fa-check-circle"></i> Professional agent profile</li>
+                </ul>
+            </div>
 
-            <form action="register.php" method="POST">
-                <div class="row g-3">
+            <!-- Right form panel -->
+            <div class="register-form-panel">
+                <div class="register-divider"><span>Agent Registration</span></div>
+                <h1>Create an Account</h1>
+                <p>Join our team of professional real estate agents.</p>
+
+                <?php if ($error_message): ?>
+                    <div class="alert alert-danger"><?php echo $error_message; ?></div>
+                <?php endif; ?>
+                <?php if ($success_message): ?>
+                    <div class="alert alert-success"><?php echo $success_message; ?></div>
+                <?php endif; ?>
+
+                <form action="register.php" method="POST">
+                    <div class="row g-2">
                     <div class="col-md-4">
                         <label class="form-label required">First Name</label>
                         <input type="text" name="first_name" id="first_name" class="form-control" value="<?php echo $first_name; ?>">
@@ -514,12 +669,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="invalid-feedback" id="emailError"></div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label required">Phone Number</label>
-                        <div class="input-group">
-                            <span class="input-group-text">+63</span>
-                            <input type="text" name="phone_local" id="phone_local" class="form-control" value="<?php echo htmlspecialchars($phone_local_display ?? '', ENT_QUOTES); ?>" placeholder="9XXXXXXXXX">
+                        <label class="form-label required"><i class="fas fa-phone me-1"></i>Phone Number</label>
+                        <div class="input-group phone-input-wrapper">
+                            <span class="input-group-text"><span class="me-1">🇵🇭</span>+63</span>
+                            <input type="text" name="phone_local" id="phone_local" class="form-control" value="<?php echo htmlspecialchars($phone_local_display ?? '', ENT_QUOTES); ?>" placeholder="9XX XXX XXXX" maxlength="12" inputmode="numeric">
                         </div>
                         <input type="hidden" name="phone_number" id="phone_number" value="<?php echo htmlspecialchars($phone_number ?? '', ENT_QUOTES); ?>">
+                        <div class="form-text"><small>Philippine mobile number (10 digits starting with 9)</small></div>
                         <div class="invalid-feedback d-block" id="phoneError" style="display:none"></div>
                     </div>
                     <div class="col-md-12">
@@ -539,25 +695,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="invalid-feedback" id="passwordConfirmError"></div>
                     </div>
                 </div>
-                <div class="mt-4">
-                    <button type="submit" class="btn register-btn">Register Account</button>
+                    <div class="mt-3">
+                        <button type="submit" class="btn register-btn" style="padding:10px;">Register Account</button>
+                    </div>
+                </form>
+
+                <div class="login-link">
+                    Already have an account? <a href="login.php">Sign in here</a>
                 </div>
-            </form>
+            </div><!-- end register-form-panel -->
 
-            <div class="login-link">
-                Already have an account? <a href="login.php">Sign in here</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="image-section">
-        <img src="images/Logo.png" alt="HomeEstate Realty Logo">
-        <h2>Join Our Elite Team</h2>
-        <p>Gain access to exclusive listings, powerful tools, and a network of professionals dedicated to your success.</p>
-    </div>
-</div>
+        </div><!-- end register-wrapper -->
+    </div><!-- end form-section -->
+</div><!-- end main-container -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Smooth page transition on Sign in link click
+    document.querySelectorAll('.login-link a').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            var href = this.getAttribute('href');
+            document.querySelector('.main-container').classList.add('page-exit');
+            setTimeout(function() { window.location.href = href; }, 350);
+        });
+    });
+</script>
 <script>
     // Real-time client-side validation
     const usernameEl = document.getElementById('username');
@@ -620,24 +783,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         clearError(usernameEl, 'usernameError'); return true;
     }
 
+    function formatPhoneNumber(value) {
+        let digits = value.replace(/\D/g, '').replace(/^0+/, '');
+        if (digits.length > 10) digits = digits.substring(0, 10);
+        let formatted = '';
+        if (digits.length > 0) formatted = digits.substring(0, 3);
+        if (digits.length > 3) formatted += ' ' + digits.substring(3, 6);
+        if (digits.length > 6) formatted += ' ' + digits.substring(6, 10);
+        return formatted;
+    }
+
     function validatePhone() {
         const v = phoneLocalEl.value.trim();
-        if (!v) { // optional
-            clearError(phoneLocalEl, 'phoneError');
-            phoneHiddenEl.value = '';
-            return true;
-        }
-        const digits = v.replace(/\D/g, '');
-        // accept leading 0 or not
-        let normalized = digits.replace(/^0+/, '');
-        // must now be 10 digits starting with 9 (e.g., 9171234567)
-        if (!/^[9]\d{9}$/.test(normalized)) {
-            showError(phoneLocalEl, 'phoneError', 'Enter local mobile number without 0 (e.g. 9171234567)');
+        if (!v) {
+            showError(phoneLocalEl, 'phoneError', 'Phone number is required.');
             phoneHiddenEl.value = '';
             return false;
         }
-        // set hidden full number
-        phoneHiddenEl.value = '+63' + normalized;
+        const digits = v.replace(/\D/g, '').replace(/^0+/, '');
+        if (!/^9\d{9}$/.test(digits)) {
+            showError(phoneLocalEl, 'phoneError', 'Enter a valid PH mobile number (e.g. 917 123 4567)');
+            phoneHiddenEl.value = '';
+            return false;
+        }
+        phoneHiddenEl.value = '+63' + digits;
         clearError(phoneLocalEl, 'phoneError'); return true;
     }
 
@@ -657,7 +826,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     usernameEl && usernameEl.addEventListener('input', validateUsername);
     emailEl && emailEl.addEventListener('input', validateEmail);
-    phoneLocalEl && phoneLocalEl.addEventListener('input', validatePhone);
+    phoneLocalEl && phoneLocalEl.addEventListener('input', function() {
+        const cursorPos = this.selectionStart;
+        const oldLen = this.value.length;
+        this.value = formatPhoneNumber(this.value);
+        const newLen = this.value.length;
+        const newPos = Math.max(0, cursorPos + (newLen - oldLen));
+        this.setSelectionRange(newPos, newPos);
+        validatePhone();
+    });
     const firstNameEl = document.getElementById('first_name');
     const middleNameEl = document.getElementById('middle_name');
     const lastNameEl = document.getElementById('last_name');

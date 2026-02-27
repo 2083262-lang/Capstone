@@ -4,6 +4,7 @@ ob_start();
 session_start();
 
 include 'connection.php'; // Ensure this connects to your database
+include 'mail_helper.php'; // For sending emails
 
 $error_message = '';
 $success_message = '';
@@ -186,6 +187,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             $db_operation_successful = false;
             $agent_info_id = null;
+            $is_first_submission = false;
 
             if ($existing_row) {
                 $agent_info_id = (int)$existing_row['agent_info_id'];
@@ -207,6 +209,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $agent_info_id = (int)$conn->insert_id;
                     $success_message = "Agent information submitted for review!";
                     $db_operation_successful = true;
+                    $is_first_submission = true;
                 } else {
                     $error_message = "Error saving information: " . $stmt_insert->error;
                 }
@@ -250,6 +253,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $notif_stmt->close();
                 }
                 $notif_check_stmt->close();
+
+                // --- SEND CONFIRMATION EMAIL & REDIRECT (first submission only) ---
+                if ($is_first_submission) {
+                    $email_stmt = $conn->prepare("SELECT email, first_name, last_name FROM accounts WHERE account_id = ?");
+                    $email_stmt->bind_param("i", $account_id);
+                    $email_stmt->execute();
+                    $email_row = $email_stmt->get_result()->fetch_assoc();
+                    $email_stmt->close();
+
+                    if ($email_row && !empty($email_row['email'])) {
+                        $agent_first = htmlspecialchars($email_row['first_name']);
+                        $agent_email = $email_row['email'];
+                        $email_subject = 'Profile Submitted — Pending Approval';
+                        $email_body = '
+                        <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 12px; overflow: hidden;">
+                            <div style="background: linear-gradient(135deg, #1a1a1a, #111); padding: 32px 28px; text-align: center; border-bottom: 1px solid rgba(212,175,55,0.15);">
+                                <h1 style="color: #d4af37; font-size: 22px; margin: 0 0 6px;">HomeEstate Realty</h1>
+                                <p style="color: #7a8a99; font-size: 13px; margin: 0;">Agent Profile Submission</p>
+                            </div>
+                            <div style="padding: 28px;">
+                                <p style="color: #e8e9eb; font-size: 15px; line-height: 1.7;">Hi ' . $agent_first . ',</p>
+                                <p style="color: #b8bec4; font-size: 14px; line-height: 1.8;">Thank you for completing your agent profile! Your information has been submitted and is now <strong style="color: #f4d03f;">pending approval</strong> by our administration team.</p>
+                                <div style="background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.2); border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
+                                    <p style="color: #93c5fd; font-size: 14px; margin: 0;"><strong>What happens next?</strong></p>
+                                    <ul style="color: #9ca4ab; font-size: 13px; line-height: 1.9; padding-left: 18px; margin: 8px 0 0;">
+                                        <li>Our team will review your profile details.</li>
+                                        <li>Once approved, you will gain full access to the system.</li>
+                                        <li>You will receive another email once your account is approved.</li>
+                                    </ul>
+                                </div>
+                                <p style="color: #7a8a99; font-size: 13px; line-height: 1.7;">Please be patient while we verify your credentials. This usually takes 1–2 business days.</p>
+                            </div>
+                            <div style="background: #111; padding: 18px 28px; text-align: center; border-top: 1px solid rgba(212,175,55,0.1);">
+                                <p style="color: #5d6d7d; font-size: 12px; margin: 0;">&copy; ' . date('Y') . ' HomeEstate Realty. All rights reserved.</p>
+                            </div>
+                        </div>';
+
+                        sendEmail($agent_email, $email_subject, $email_body, $agent_first);
+                    }
+
+                    // Redirect to login page & destroy session
+                    $conn->close();
+                    session_destroy();
+                    header("Location: login.php?profile_submitted=1");
+                    ob_end_flush();
+                    exit();
+                }
             }
     } else {
         // Aggregate validation errors for display
@@ -319,34 +369,127 @@ ob_end_flush();
             display: flex;
             min-height: 100vh;
             width: 100%;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.07) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.06) 0%, transparent 50%),
+                linear-gradient(rgba(10, 10, 10, 0.78), rgba(10, 10, 10, 0.85)),
+                url('images/agent-info-bg.jpg') center/cover no-repeat fixed;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Subtle particle-like dots overlay */
+        .main-container::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle, rgba(212,175,55,0.08) 1px, transparent 1px),
+                radial-gradient(circle, rgba(37,99,235,0.05) 1px, transparent 1px);
+            background-size: 60px 60px, 90px 90px;
+            background-position: 0 0, 30px 30px;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .form-section {
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-grow: 1;
-            padding: 2rem;
-            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .form-section::before { display: none; }
+
+        /* ── Two-column card wrapper ── */
+        .agent-wrapper {
+            width: 100%;
+            max-width: 1300px;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── Left branding panel ── */
+        .agent-brand-panel {
+            width: 280px;
+            flex-shrink: 0;
+            background: linear-gradient(160deg,
+                rgba(212,175,55,0.12) 0%,
+                rgba(37,99,235,0.08) 60%,
+                rgba(10,10,10,0.2) 100%);
+            border-right: 1px solid rgba(212, 175, 55, 0.12);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 48px 28px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .agent-brand-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 50% 30%, rgba(212,175,55,0.15) 0%, transparent 60%),
+                radial-gradient(circle at 50% 80%, rgba(37,99,235,0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .agent-brand-panel img {
+            width: 100px;
+            height: auto;
+            filter: drop-shadow(0 6px 18px rgba(212,175,55,0.45));
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .agent-brand-panel .brand-name {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 3.5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .agent-brand-panel h2 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 12px;
+            line-height: 1.3;
+            position: relative;
+        }
+        .agent-brand-panel p {
+            font-size: 0.82rem;
+            color: var(--gray-400);
+            line-height: 1.7;
+            position: relative;
+        }
+        .brand-gold-line {
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            border-radius: 2px;
+            margin: 16px auto;
             position: relative;
         }
 
-        .form-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.04) 0%, transparent 50%);
-            pointer-events: none;
+        /* ── Right form panel ── */
+        .agent-form-panel {
+            flex: 1;
+            padding: 28px 36px;
         }
 
         .form-wrapper {
             width: 100%;
-            max-width: 700px;
             position: relative;
             z-index: 1;
         }
@@ -431,58 +574,75 @@ ob_end_flush();
             left: 100%;
         }
 
-        .image-section {
-            width: 45%;
-            background: 
-                radial-gradient(circle at 30% 50%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 70% 50%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
-                linear-gradient(rgba(10, 10, 10, 0.7), rgba(10, 10, 10, 0.8)),
-                url('images/agent-info-bg.jpg');
-            background-size: cover;
-            background-position: center;
+        /* ── Modern Profile Picture Upload ── */
+        .profile-upload-zone {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            color: var(--white);
-            text-align: center;
-            padding: 2rem;
-            border-right: 1px solid rgba(37, 99, 235, 0.2);
-            position: relative;
+            gap: 24px;
+            padding: 20px 24px;
+            background: rgba(10, 10, 10, 0.5);
+            border: 2px dashed rgba(37, 99, 235, 0.25);
+            border-radius: 14px;
+            transition: all 0.3s ease;
+            cursor: pointer;
         }
-
-        .image-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 1px;
-            height: 100%;
-            background: linear-gradient(180deg, 
-                transparent 0%, 
-                rgba(212, 175, 55, 0.5) 50%, 
-                transparent 100%);
+        .profile-upload-zone:hover {
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.04);
         }
-
-        .image-section h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+        .profile-upload-zone.dragover {
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.08);
         }
-
-        .image-section p {
-            color: var(--gray-300);
-            line-height: 1.8;
-        }
-
         .profile-pic-preview {
-            width: 100px;
-            height: 100px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
             object-fit: cover;
             border: 3px solid rgba(37, 99, 235, 0.3);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0;
+            transition: border-color 0.3s ease;
+        }
+        .profile-upload-zone:hover .profile-pic-preview {
+            border-color: var(--gold);
+        }
+        .upload-info {
+            flex: 1;
+        }
+        .upload-info .upload-title {
+            font-weight: 600;
+            color: var(--white);
+            font-size: 0.92rem;
+            margin-bottom: 2px;
+        }
+        .upload-info .upload-title i {
+            color: var(--gold);
+            margin-right: 6px;
+        }
+        .upload-info .upload-subtitle {
+            font-size: 0.78rem;
+            color: var(--gray-500);
+        }
+        .upload-info .upload-btn-text {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 5px 16px;
+            background: rgba(37, 99, 235, 0.12);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--blue-light);
+            transition: all 0.2s ease;
+        }
+        .profile-upload-zone:hover .upload-btn-text {
+            background: rgba(212, 175, 55, 0.12);
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+        #profile_picture_file {
+            display: none;
         }
 
         .status-message {
@@ -611,39 +771,178 @@ ob_end_flush();
             color: #ff6b6b !important;
         }
 
-        a.text-muted {
-            transition: color 0.3s ease;
+        /* ── Search Bar for Specializations ── */
+        .spec-search-wrap {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .spec-search-wrap i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-500);
+            font-size: 0.85rem;
+            pointer-events: none;
+            transition: color 0.2s ease;
+        }
+        .spec-search-wrap input {
+            width: 100%;
+            padding: 9px 14px 9px 38px;
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            border-radius: 10px;
+            color: var(--white);
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .spec-search-wrap input::placeholder { color: var(--gray-600); }
+        .spec-search-wrap input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+        .spec-search-wrap input:focus + i { color: var(--blue-light); }
+        .spec-no-match {
+            display: none;
+            padding: 12px;
+            text-align: center;
+            color: var(--gray-500);
+            font-size: 0.85rem;
         }
 
-        a.text-muted:hover {
-            color: var(--blue-light) !important;
+        /* ── Dark Back Button ── */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 22px;
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            color: var(--gray-400);
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+        .back-btn:hover {
+            background: rgba(37, 99, 235, 0.1);
+            border-color: rgba(37, 99, 235, 0.3);
+            color: var(--white);
+        }
+        .back-btn i {
+            font-size: 0.75rem;
+            transition: transform 0.2s ease;
+        }
+        .back-btn:hover i {
+            transform: translateX(-3px);
         }
 
-        @media (max-width: 992px) {
-            .image-section {
-                display: none;
-            }
-            .form-section {
-                width: 100%;
-            }
+        @media (max-width: 768px) {
+            .agent-brand-panel { display: none; }
+            .agent-form-panel { padding: 28px 24px; }
             .specialization-grid {
                 grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
                 gap: 0.5rem;
             }
         }
+
+        /* ===== Enhanced Design System ===== */
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--black); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--gold-dark), var(--gold), var(--gold-dark));
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--gold), var(--gold-light), var(--gold));
+        }
+        ::-webkit-scrollbar-corner { background: var(--black); }
+        html { scrollbar-width: thin; scrollbar-color: var(--gold-dark) var(--black); }
+
+        /* Glassmorphism Card */
+        .agent-wrapper {
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.06);
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        /* Refined Inputs */
+        .form-section .form-control {
+            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .form-section .form-control:focus {
+            transform: translateY(-1px);
+        }
+        textarea.form-control { height: auto; }
+
+        /* Refined Button */
+        .form-section .btn-primary {
+            border-radius: 10px;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Enhanced Alerts */
+        .alert { border-radius: 12px; }
+
+        /* Gradient Text for Brand Panel */
+        .agent-brand-panel h2 {
+            background: linear-gradient(135deg, var(--white) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Enhanced Specialization Grid Scrollbar */
+        .specialization-grid::-webkit-scrollbar { width: 4px; }
+        .specialization-grid::-webkit-scrollbar-track { background: rgba(10, 10, 10, 0.4); border-radius: 2px; }
+        .specialization-grid::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--gold-dark), var(--gold));
+            border-radius: 2px;
+        }
+
+        /* Entrance Animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .agent-wrapper {
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .form-section { overflow-y: visible; }
+
+
     </style>
 </head>
 <body>
 
 <div class="main-container">
-    <div class="image-section">
-        <h1>Final Step</h1>
-        <p>Complete your professional profile to build trust with clients and get access to our full suite of tools. This information will be reviewed by our team.</p>
-    </div>
-
     <div class="form-section">
+        <div class="agent-wrapper">
+
+            <!-- Left branding panel -->
+            <div class="agent-brand-panel">
+                <img src="images/Logo.png" alt="HomeEstate Realty">
+                <span class="brand-name">HomeEstate Realty</span>
+                <div class="brand-gold-line"></div>
+                <h2>Final Step</h2>
+                <p>Complete your professional profile to build trust with clients and get access to our full suite of tools.</p>
+            </div>
+
+            <!-- Right form panel -->
+            <div class="agent-form-panel">
         <div class="form-wrapper">
-            <div class="text-center mb-4">
+            <div class="text-center mb-3">
                 <p class="text-muted fw-bold">Fill out the details below to complete your registration.</p>
             </div>
 
@@ -670,15 +969,16 @@ ob_end_flush();
                 <div class="row g-3">
                     <div class="col-12">
                         <h3>Identity & Photo</h3>
-                        <div class="d-flex align-items-center gap-3">
+                        <div class="profile-upload-zone" id="uploadZone" onclick="document.getElementById('profile_picture_file').click()">
                             <img src="<?php echo !empty($profile_picture_url) ? htmlspecialchars($profile_picture_url) : 'images/profile.png'; ?>" alt="Preview" id="imagePreview" class="profile-pic-preview">
-                            <div class="flex-grow-1">
-                                <label for="profile_picture_file" class="form-label">Profile Picture</label>
-                                <input type="file" name="profile_picture_file" id="profile_picture_file" class="form-control" accept="image/jpeg,image/png,image/gif">
-                                <div class="form-text">JPG/JPEG/PNG/GIF, max 5MB.</div>
-                                <div id="imageError" class="text-danger small mt-1" style="display: none;"></div>
+                            <input type="file" name="profile_picture_file" id="profile_picture_file" accept="image/jpeg,image/png,image/gif">
+                            <div class="upload-info">
+                                <div class="upload-title"><i class="bi bi-cloud-arrow-up"></i> Upload Profile Picture</div>
+                                <div class="upload-subtitle">JPG, PNG or GIF &bull; Max 5 MB</div>
+                                <span class="upload-btn-text">Choose File</span>
                             </div>
                         </div>
+                        <div id="imageError" class="text-danger small mt-2" style="display: none;"></div>
                     </div>
 
                     <div class="col-12 mt-4">
@@ -708,6 +1008,10 @@ ob_end_flush();
                                 $selected_specializations = array_filter(array_map('trim', explode(',', (string)$specialization)));
                             }
                         ?>
+                        <div class="spec-search-wrap">
+                            <input type="text" id="specSearch" placeholder="Search specializations..." autocomplete="off">
+                            <i class="bi bi-search"></i>
+                        </div>
                         <div class="specialization-grid">
                             <?php foreach ($specialization_options as $opt): 
                                 $isChecked = in_array($opt, $selected_specializations, true) ? 'checked' : '';
@@ -725,6 +1029,7 @@ ob_end_flush();
                                 </div>
                             <?php endforeach; ?>
                         </div>
+                        <div class="spec-no-match" id="specNoMatch">No specializations found.</div>
                         <div class="form-text">
                             Select all areas that apply to your expertise.
                             <span class="specialization-count" id="specCount" style="display: none;">0 selected</span>
@@ -746,12 +1051,14 @@ ob_end_flush();
                     </button>
                 </div>
                  <div class="text-center mt-3">
-                    <a href="login.php" class="text-muted small">Go Back</a>
+                    <a href="login.php" class="back-btn"><i class="bi bi-arrow-left"></i> Go Back</a>
                 </div>
             </form>
         </div>
-    </div>
-</div>
+            </div><!-- end agent-form-panel -->
+        </div><!-- end agent-wrapper -->
+    </div><!-- end form-section -->
+</div><!-- end main-container -->
 
 <script>
     // Live preview for profile picture upload
@@ -773,6 +1080,24 @@ ob_end_flush();
         return null; // valid
     }
 
+    // Drag & drop support on upload zone
+    const uploadZone = document.getElementById('uploadZone');
+    ['dragenter', 'dragover'].forEach(evt => {
+        uploadZone.addEventListener(evt, function(e) { e.preventDefault(); this.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(evt => {
+        uploadZone.addEventListener(evt, function(e) { e.preventDefault(); this.classList.remove('dragover'); });
+    });
+    uploadZone.addEventListener('drop', function(e) {
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            profilePictureInput.files = dt.files;
+            profilePictureInput.dispatchEvent(new Event('change'));
+        }
+    });
+
     profilePictureInput.addEventListener('change', function(event) {
         const file = event.target.files && event.target.files[0];
         
@@ -784,10 +1109,8 @@ ob_end_flush();
         
         const errorMsg = validateImageClient(file);
         if (errorMsg) {
-            // Show inline error
             imageError.textContent = errorMsg;
             imageError.style.display = 'block';
-            // Reset input
             profilePictureInput.value = '';
             return;
         }
@@ -798,6 +1121,26 @@ ob_end_flush();
             imagePreview.src = e.target.result;
         };
         reader.readAsDataURL(file);
+    });
+
+    // ── Specialization Search ──
+    const specSearchInput = document.getElementById('specSearch');
+    const specNoMatch = document.getElementById('specNoMatch');
+    const specWrappers = document.querySelectorAll('.spec-checkbox-wrapper');
+
+    specSearchInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        let visibleCount = 0;
+        specWrappers.forEach(function(wrapper) {
+            const label = wrapper.querySelector('.spec-checkbox-label').textContent.trim().toLowerCase();
+            if (query === '' || label.includes(query)) {
+                wrapper.style.display = '';
+                visibleCount++;
+            } else {
+                wrapper.style.display = 'none';
+            }
+        });
+        specNoMatch.style.display = visibleCount === 0 ? 'block' : 'none';
     });
 
     // Specialization checkbox validation and count
@@ -812,10 +1155,10 @@ ob_end_flush();
         if (count > 0) {
             specCount.textContent = count + ' selected';
             specCount.style.display = 'inline-block';
-            specValidator.value = 'valid'; // Set hidden field to pass required validation
+            specValidator.value = 'valid';
         } else {
             specCount.style.display = 'none';
-            specValidator.value = ''; // Clear to trigger validation error
+            specValidator.value = '';
         }
     }
 

@@ -2,6 +2,14 @@
 session_start();
 include 'connection.php'; // Ensure this file establishes your $conn (MySQLi) connection
 $error_message = '';
+$registration_notice = '';
+$profile_notice = '';
+if (isset($_GET['registered']) && $_GET['registered'] == '1') {
+    $registration_notice = "Registration successful! Please log in with your credentials to complete your agent profile.";
+}
+if (isset($_GET['profile_submitted']) && $_GET['profile_submitted'] == '1') {
+    $profile_notice = "Your profile has been submitted for review. Please wait for admin approval before logging in. Check your email for details.";
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = trim($_POST['username']);
@@ -143,69 +151,136 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             display: flex;
             min-height: 100vh;
             width: 100%;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.07) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.06) 0%, transparent 50%),
+                linear-gradient(rgba(10, 10, 10, 0.78), rgba(10, 10, 10, 0.85)),
+                url('images/login-bg.jpg') center/cover no-repeat fixed;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Subtle particle-like dots overlay */
+        .main-container::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle, rgba(212,175,55,0.08) 1px, transparent 1px),
+                radial-gradient(circle, rgba(37,99,235,0.05) 1px, transparent 1px);
+            background-size: 60px 60px, 90px 90px;
+            background-position: 0 0, 30px 30px;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .form-section {
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-grow: 1;
-            padding: 2rem;
-            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
-            position: relative;
-        }
-
-        .form-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.04) 0%, transparent 50%);
-            pointer-events: none;
-        }
-
-        .login-wrapper {
             width: 100%;
-            max-width: 450px;
-            background: transparent;
-            border: none;
-            border-radius: 4px;
-            padding: 48px 40px;
             position: relative;
             z-index: 1;
         }
 
-        .login-wrapper::before {
-            display: none;
+        .form-section::before { display: none; }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 860px;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
         }
 
-        .logo-container {
+        /* ── Left branding panel ── */
+        .login-brand-panel {
+            width: 300px;
+            flex-shrink: 0;
+            background: linear-gradient(160deg,
+                rgba(212,175,55,0.12) 0%,
+                rgba(37,99,235,0.08) 60%,
+                rgba(10,10,10,0.2) 100%);
+            border-right: 1px solid rgba(212, 175, 55, 0.12);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 48px 32px;
             text-align: center;
-            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
         }
-
-        .logo-container img {
+        .login-brand-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 50% 30%, rgba(212,175,55,0.15) 0%, transparent 60%),
+                radial-gradient(circle at 50% 80%, rgba(37,99,235,0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .login-brand-panel img {
             width: 80px;
             height: auto;
-            filter: drop-shadow(0 4px 12px rgba(212, 175, 55, 0.3));
+            filter: drop-shadow(0 6px 18px rgba(212,175,55,0.45));
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .login-brand-panel .brand-name {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 3.5px;
+            text-transform: uppercase;
+            color: var(--gold);
             margin-bottom: 16px;
+            position: relative;
+        }
+        .login-brand-panel h2 {
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 12px;
+            line-height: 1.3;
+            position: relative;
+        }
+        .login-brand-panel p {
+            font-size: 0.82rem;
+            color: var(--gray-400);
+            line-height: 1.7;
+            position: relative;
+        }
+        .brand-gold-line {
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            border-radius: 2px;
+            margin: 16px auto;
+            position: relative;
         }
 
-        .login-wrapper h1 {
+        /* ── Right form panel ── */
+        .login-form-panel {
+            flex: 1;
+            padding: 48px 44px;
+        }
+
+        .login-form-panel h1 {
             font-weight: 700;
             color: var(--white);
             margin-bottom: 0.5rem;
-            font-size: 2rem;
+            font-size: 1.75rem;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
-        .login-wrapper p {
+        .login-form-panel > p {
             color: var(--gray-400);
-            margin-bottom: 32px;
+            margin-bottom: 28px;
+            font-size: 0.9rem;
         }
 
         .login-wrapper .form-label {
@@ -215,7 +290,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .login-wrapper .form-control {
-            height: 50px;
+            height: 46px;
             border-radius: 2px;
             border: 1px solid rgba(37, 99, 235, 0.3);
             background: rgba(10, 10, 10, 0.6);
@@ -283,59 +358,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin-bottom: 24px;
         }
 
-        .image-section {
-            width: 50%;
-            background: 
-                radial-gradient(circle at 30% 50%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 70% 50%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
-                linear-gradient(rgba(10, 10, 10, 0.7), rgba(10, 10, 10, 0.8)),
-                url('images/login-bg.jpg');
-            background-size: cover;
-            background-position: center;
+        /* Decorative gold line above form title */
+        .login-divider {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            color: var(--white);
-            text-align: center;
-            padding: 2rem;
-            border-right: 1px solid rgba(37, 99, 235, 0.2);
-            position: relative;
+            gap: 12px;
+            margin-bottom: 28px;
         }
-
-        .image-section::before {
+        .login-divider::before,
+        .login-divider::after {
             content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 1px;
-            height: 100%;
-            background: linear-gradient(180deg, 
-                transparent 0%, 
-                rgba(212, 175, 55, 0.5) 50%, 
-                transparent 100%);
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent);
+        }
+        .login-divider span {
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+            font-weight: 600;
+            white-space: nowrap;
         }
 
-        .image-section img {
-            max-width: 280px;
-            height: auto;
-            filter: drop-shadow(0 4px 20px rgba(212, 175, 55, 0.4));
-            margin-bottom: 32px;
-        }
-
-        .image-section h2 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-        }
-
-        .image-section p {
-            font-size: 1.1rem;
-            max-width: 400px;
-            color: var(--gray-300);
-            line-height: 1.8;
-        }
+        .image-section { display: none; }
 
         .register-link {
             text-align: center;
@@ -366,43 +412,180 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             color: var(--blue-light);
         }
 
-        /* Responsive Design */
-        @media (max-width: 992px) {
-            .image-section {
-                display: none;
-            }
-            .form-section {
-                width: 100%;
-            }
+        /* Responsive: collapse to single column on small screens */
+        @media (max-width: 680px) {
+            .login-brand-panel { display: none; }
+            .login-form-panel { padding: 36px 28px; }
         }
 
-        @media (max-width: 576px) {
-            .login-wrapper {
-                padding: 32px 24px;
-            }
+        /* ===== Enhanced Design System ===== */
 
-            .login-wrapper h1 {
-                font-size: 1.75rem;
-            }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--black); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--gold-dark), var(--gold), var(--gold-dark));
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--gold), var(--gold-light), var(--gold));
+        }
+        ::-webkit-scrollbar-corner { background: var(--black); }
+        html { scrollbar-width: thin; scrollbar-color: var(--gold-dark) var(--black); }
+
+        /* Glassmorphism Card */
+        .login-wrapper {
+            background: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.06);
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        /* Enhanced Alerts */
+        .alert { border-radius: 12px; }
+        .alert-danger { border-radius: 12px; }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 28px;
+            right: 28px;
+            z-index: 1100;
+        }
+        .custom-toast {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            border-radius: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        0 0 0 1px rgba(37, 99, 235, 0.1);
+            padding: 16px 20px;
+            color: #93c5fd;
+            min-width: 340px;
+            max-width: 480px;
+            animation: toastSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .custom-toast .toast-icon { color: var(--gold); font-size: 1.25rem; }
+        .custom-toast strong { color: var(--gold-light); }
+        .custom-toast .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+            opacity: 0.6;
+        }
+        .custom-toast .btn-close:hover { opacity: 1; }
+        .custom-toast .toast-progress {
+            height: 3px;
+            background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-dark));
+            border-radius: 0 0 14px 14px;
+            margin: 12px -20px -16px -20px;
+            transform-origin: left;
+            animation: toastProgress 7s linear forwards;
+        }
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateX(60px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes toastSlideOut {
+            to { opacity: 0; transform: translateX(60px); }
+        }
+        @keyframes toastProgress {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0); }
+        }
+        .toast-hiding {
+            animation: toastSlideOut 0.3s ease forwards;
+        }
+
+        /* Gradient Text for Image Section */
+        .image-section h2 {
+            background: linear-gradient(135deg, var(--white) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Entrance Animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .login-wrapper {
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .form-section { overflow-y: visible; }
+        /* Remove old override */
+
+        /* Page exit transition */
+        @keyframes slideOutLeft {
+            to { opacity: 0; transform: translateX(-60px); }
+        }
+        .page-exit .login-wrapper {
+            animation: slideOutLeft 0.35s cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+
+        /* Login submit transition */
+        @keyframes fadeOutScale {
+            to { opacity: 0; transform: scale(0.96); }
+        }
+        .login-submitting .login-wrapper {
+            animation: fadeOutScale 0.4s cubic-bezier(0.4, 0, 1, 1) forwards;
         }
     </style>
 </head>
 <body>
 
-<div class="main-container">
-    <div class="image-section">
-        <img src="images/LogoName.png" alt="HomeEstate Realty Logo">
-        <h2>Welcome Back</h2>
-        <p>Your premier partner in finding the perfect property. Log in to manage your listings and connect with clients.</p>
+<?php if ($registration_notice): ?>
+<div class="toast-container">
+    <div class="custom-toast" id="registrationToast">
+        <div class="d-flex align-items-start gap-3">
+            <i class="fas fa-check-circle toast-icon mt-1"></i>
+            <div class="flex-grow-1">
+                <strong>Almost there!</strong> <?php echo $registration_notice; ?>
+            </div>
+            <button type="button" class="btn-close ms-2" onclick="dismissToast('registrationToast')" aria-label="Close"></button>
+        </div>
+        <div class="toast-progress"></div>
     </div>
+</div>
+<?php endif; ?>
 
+<?php if ($profile_notice): ?>
+<div class="toast-container" <?php echo $registration_notice ? 'style="top: 100px;"' : ''; ?>>
+    <div class="custom-toast" id="profileToast">
+        <div class="d-flex align-items-start gap-3">
+            <i class="fas fa-envelope toast-icon mt-1" style="color: #3b82f6;"></i>
+            <div class="flex-grow-1">
+                <strong>Profile Submitted!</strong> <?php echo $profile_notice; ?>
+            </div>
+            <button type="button" class="btn-close ms-2" onclick="dismissToast('profileToast')" aria-label="Close"></button>
+        </div>
+        <div class="toast-progress"></div>
+    </div>
+</div>
+<?php endif; ?>
+
+<div class="main-container">
     <div class="form-section">
         <div class="login-wrapper">
-            <div class="logo-container">
-                <img src="images/Logo.png" alt="Logo">
+
+            <!-- Left branding panel -->
+            <div class="login-brand-panel">
+                <img src="images/Logo.png" alt="HomeEstate Realty">
+                <span class="brand-name">HomeEstate Realty</span>
+                <div class="brand-gold-line"></div>
+                <h2>Welcome Back</h2>
+                <p>Your premier partner in finding the perfect property. Log in to manage your listings.</p>
             </div>
-            <h1>Sign In</h1>
-            <p class="mb-4 ">Enter your credentials to access your account.</p>
+
+            <!-- Right form panel -->
+            <div class="login-form-panel">
+                <div class="login-divider"><span>Sign In to Your Account</span></div>
+                <h1>Sign In</h1>
+                <p class="mb-4">Enter your credentials to access your account.</p>
 
             <?php if ($error_message): ?>
                 <div class="alert alert-danger" role="alert">
@@ -428,10 +611,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="register-link">
                 Don't have an agent account? <a href="register.php">Register here</a>
             </div>
-        </div>
-    </div>
-</div>
+            </div><!-- end login-form-panel -->
+
+        </div><!-- end login-wrapper -->
+    </div><!-- end form-section -->
+</div><!-- end main-container -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Toast notification auto-dismiss (supports multiple toasts by ID)
+    function dismissToast(toastId) {
+        var toast = document.getElementById(toastId);
+        if (toast) {
+            toast.classList.add('toast-hiding');
+            setTimeout(function() {
+                var container = toast.parentElement;
+                if (container) container.remove();
+            }, 300);
+        }
+    }
+
+    // Auto-dismiss all toasts after 7 seconds
+    (function() {
+        ['registrationToast', 'profileToast'].forEach(function(id) {
+            var toast = document.getElementById(id);
+            if (toast) {
+                setTimeout(function() { dismissToast(id); }, 7000);
+            }
+        });
+    })();
+
+    // Smooth page transition on Register link click
+    document.querySelectorAll('.register-link a').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            var href = this.getAttribute('href');
+            document.querySelector('.main-container').classList.add('page-exit');
+            setTimeout(function() { window.location.href = href; }, 350);
+        });
+    });
+
+    // Smooth login form submit transition
+    document.querySelector('form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var form = this;
+        document.querySelector('.main-container').classList.add('login-submitting');
+        setTimeout(function() { form.submit(); }, 400);
+    });
+</script>
 </body>
 </html>
