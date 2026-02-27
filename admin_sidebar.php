@@ -69,10 +69,27 @@ $menu_items = [
         top: 0;
         left: 0;
         width: var(--sidebar-width);
-        overflow-y: auto;
+        overflow-y: scroll;
         z-index: 1000;
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
         border-right: 1px solid rgba(37, 99, 235, 0.2);
+        /* Hide scrollbar but keep scroll functionality */
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+
+    .admin-sidebar::-webkit-scrollbar {
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent !important;
+    }
+
+    .admin-sidebar::-webkit-scrollbar-thumb {
+        background: transparent !important;
+    }
+
+    .admin-sidebar::-webkit-scrollbar-track {
+        background: transparent !important;
     }
 
     .sidebar-brand {
@@ -178,7 +195,7 @@ $menu_items = [
     }
 
     .sidebar-footer {
-        padding: 1.5rem;
+        padding: 0.5rem 0;
         border-top: 1px solid rgba(37, 99, 235, 0.2);
         background: rgba(10, 10, 10, 0.5);
         position: relative;
