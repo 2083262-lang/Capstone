@@ -310,17 +310,251 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
         width: 20px;
         height: 20px;
         font-size: 0.75rem;
-        display: flex;
+        display: none;
         align-items: center;
         justify-content: center;
         font-weight: 700;
         animation: pulse 2s infinite;
     }
 
+    .notification-badge.has-unread {
+        display: flex;
+    }
+
     @keyframes pulse {
         0% { transform: scale(1); opacity: 1; }
         50% { transform: scale(1.1); opacity: 0.8; }
         100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ===== Admin Notification Dropdown Panel (White Theme) ===== */
+    .admin-notif-dropdown-panel {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        width: 400px;
+        max-height: 520px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06);
+        z-index: 2000;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .admin-notif-dropdown-panel.show {
+        display: flex;
+    }
+
+    .admin-notif-dropdown-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        border-bottom: 1px solid #f0f0f0;
+        background: #fafafa;
+    }
+
+    .admin-notif-dropdown-header h6 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .admin-notif-dropdown-header h6 i {
+        color: var(--gold);
+    }
+
+    .admin-notif-unread-indicator {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        background: #dc3545;
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        border-radius: 10px;
+        line-height: 1;
+    }
+
+    .admin-notif-mark-all-btn {
+        background: none;
+        border: none;
+        color: var(--blue);
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .admin-notif-mark-all-btn:hover {
+        background: rgba(37, 99, 235, 0.08);
+        color: var(--blue-light);
+    }
+
+    .admin-notif-dropdown-body {
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0,0,0,0.12) transparent;
+    }
+
+    .admin-notif-dropdown-body::-webkit-scrollbar { width: 5px; }
+    .admin-notif-dropdown-body::-webkit-scrollbar-track { background: transparent; }
+    .admin-notif-dropdown-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+
+    .admin-notif-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px 18px;
+        border-bottom: 1px solid #f3f4f6;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        align-items: flex-start;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .admin-notif-item:hover {
+        background: #f8fafc;
+        color: inherit;
+    }
+
+    .admin-notif-item.unread {
+        background: rgba(37, 99, 235, 0.03);
+        border-left: 3px solid var(--blue);
+    }
+
+    .admin-notif-item.unread:hover {
+        background: rgba(37, 99, 235, 0.06);
+    }
+
+    .admin-notif-item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+
+    .admin-notif-item-icon.tour       { background: rgba(13, 202, 240, 0.1); color: #0891b2; }
+    .admin-notif-item-icon.property    { background: rgba(37, 99, 235, 0.1); color: #2563eb; }
+    .admin-notif-item-icon.agent       { background: rgba(34, 197, 94, 0.1); color: #16a34a; }
+    .admin-notif-item-icon.sale        { background: rgba(212, 175, 55, 0.1); color: #b8941f; }
+    .admin-notif-item-icon.property_sale { background: rgba(212, 175, 55, 0.1); color: #b8941f; }
+    .admin-notif-item-icon.general     { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+
+    .admin-notif-item-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .admin-notif-item-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .admin-notif-item.unread .admin-notif-item-title { 
+        color: #111827;
+        font-weight: 700;
+    }
+
+    .admin-notif-item-msg {
+        font-size: 0.78rem;
+        color: #6b7280;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .admin-notif-item-time {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin-top: 3px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .admin-notif-item-dot {
+        width: 7px;
+        height: 7px;
+        background: var(--blue);
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 4px;
+        box-shadow: 0 0 4px rgba(37, 99, 235, 0.4);
+    }
+
+    .admin-notif-item-priority {
+        color: #d97706;
+        font-size: 0.7rem;
+        margin-right: 3px;
+    }
+
+    .admin-notif-dropdown-footer {
+        padding: 10px 18px;
+        border-top: 1px solid #f0f0f0;
+        text-align: center;
+        background: #fafafa;
+    }
+
+    .admin-notif-dropdown-footer a {
+        color: var(--blue);
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .admin-notif-dropdown-footer a:hover {
+        color: var(--blue-light);
+    }
+
+    .admin-notif-empty {
+        padding: 40px 20px;
+        text-align: center;
+        color: #9ca3af;
+    }
+
+    .admin-notif-empty i {
+        font-size: 2.5rem;
+        color: #d1d5db;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .admin-notif-empty p {
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    @media (max-width: 480px) {
+        .admin-notif-dropdown-panel {
+            width: calc(100vw - 24px);
+            right: -60px;
+        }
     }
 
     .user-dropdown {
@@ -395,153 +629,6 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
         background: #fff;
         max-height: 500px;
         overflow-y: auto;
-    }
-
-    .dropdown-menu.notification-dropdown {
-        min-width: 380px;
-    }
-
-    .notification-dropdown-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, #2c241a 100%);
-        color: white;
-        padding: 1rem 1.25rem;
-        font-weight: 700;
-        font-size: 1rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .notification-dropdown-header .unread-count {
-        background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
-        color: var(--black);
-        padding: 0.2rem 0.6rem;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
-    }
-
-    .dropdown-item {
-        padding: 1rem 1.25rem;
-        font-size: 0.9rem;
-        color: var(--primary-color);
-        display: flex;
-        align-items: flex-start;
-        gap: 0.75rem;
-        transition: all 0.3s ease;
-        border-bottom: 1px solid var(--border-color);
-        text-decoration: none;
-    }
-
-    .dropdown-item:last-child {
-        border-bottom: none;
-    }
-
-    .dropdown-item.unread {
-        background: rgba(37, 99, 235, 0.05);
-        border-left: 3px solid var(--blue);
-    }
-
-    .dropdown-item:hover {
-        background: rgba(37, 99, 235, 0.1);
-        color: var(--primary-color);
-    }
-
-    .notification-icon-wrapper {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .notification-icon-wrapper.property {
-        background: rgba(13, 110, 253, 0.1);
-        color: #0d6efd;
-    }
-
-    .notification-icon-wrapper.agent {
-        background: rgba(25, 135, 84, 0.1);
-        color: #198754;
-    }
-
-    .notification-icon-wrapper.sale {
-        background: rgba(212, 175, 55, 0.1);
-        color: var(--gold);
-    }
-
-    .notification-icon-wrapper.tour {
-        background: rgba(13, 202, 240, 0.1);
-        color: #0dcaf0;
-    }
-
-    .notification-content {
-        flex: 1;
-    }
-
-    .notification-actions-dropdown {
-        margin-left: 0.5rem;
-        display: flex;
-        align-items: center;
-    }
-
-    .notification-content .notification-message {
-        font-size: 0.9rem;
-        line-height: 1.4;
-        margin-bottom: 0.25rem;
-        color: var(--primary-color);
-        max-width: 220px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .notification-content .notification-time {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-    }
-
-    .dropdown-footer {
-        padding: 0.75rem 1.25rem;
-        background: #f8f9fa;
-        border-top: 1px solid var(--border-color);
-        text-align: center;
-    }
-
-    .dropdown-footer .btn-view-all {
-        display: block;
-        width: 100%;
-        padding: 0.5rem;
-        background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
-        color: var(--black);
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.85rem;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 8px rgba(212, 175, 55, 0.2);
-    }
-
-    .dropdown-footer .btn-view-all:hover {
-        background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
-    }
-
-    .empty-notifications {
-        padding: 2rem 1.25rem;
-        text-align: center;
-        color: var(--text-muted);
-    }
-
-    .empty-notifications i {
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
-        opacity: 0.3;
     }
 
     .dropdown-divider {
@@ -839,95 +926,83 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
     
             <!-- Navbar Actions -->
             <div class="navbar-actions">
-                <!-- Notifications -->
-                <div class="dropdown">
-                    <a href="#" class="nav-icon" title="Notifications" data-bs-toggle="dropdown" aria-expanded="false">
+                <!-- Notifications (Custom Panel Dropdown) -->
+                <div class="position-relative" id="adminNotifDropdownWrapper">
+                    <button class="nav-icon" type="button" title="Notifications" id="adminNotifToggleBtn">
                         <i class="bi bi-bell"></i>
-                        <?php if ($unread_notifications > 0): ?>
-                            <span class="notification-badge"><?php echo $unread_notifications; ?></span>
-                        <?php endif; ?>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-end notification-dropdown">
-                        <!-- Notification Header -->
-                        <div class="notification-dropdown-header">
-                            <span><i class="bi bi-bell me-2"></i>Notifications</span>
-                            <div class="d-flex align-items-center gap-2">
+                        <span class="notification-badge <?php echo $unread_notifications > 0 ? 'has-unread' : ''; ?>" id="adminNotifBadge"><?php echo $unread_notifications > 0 ? ($unread_notifications > 99 ? '99+' : $unread_notifications) : ''; ?></span>
+                    </button>
+                    <div class="admin-notif-dropdown-panel" id="adminNotifDropdownPanel">
+                        <div class="admin-notif-dropdown-header">
+                            <h6>
+                                <i class="bi bi-bell"></i>Notifications
                                 <?php if ($unread_notifications > 0): ?>
-                                    <span class="unread-count"><?php echo $unread_notifications; ?> new</span>
+                                    <span class="admin-notif-unread-indicator"><?php echo $unread_notifications; ?></span>
                                 <?php endif; ?>
-                                <?php if (isset($navbar_pending_actions) && $navbar_pending_actions > 0): ?>
-                                    <span class="unread-count" style="background: linear-gradient(135deg, #dc3545, #e74c5e);"><?php echo $navbar_pending_actions; ?> action<?php echo $navbar_pending_actions > 1 ? 's' : ''; ?></span>
-                                <?php endif; ?>
-                            </div>
+                            </h6>
+                            <button class="admin-notif-mark-all-btn" id="adminNotifMarkAllBtn" title="Mark all as read">
+                                <i class="bi bi-check2-all me-1"></i>Mark all read
+                            </button>
                         </div>
-                        
-                        <!-- Notification List -->
-                        <?php if (empty($recent_notifications)): ?>
-                            <div class="empty-notifications">
-                                <i class="bi bi-bell-slash"></i>
-                                <p class="mb-0">No notifications yet</p>
-                            </div>
-                        <?php else: ?>
-                            <?php 
-                            foreach ($recent_notifications as $notif):
-                                $is_unread = !isset($notif['is_read']) || (int)$notif['is_read'] === 0;
-                                $item_type = $notif['item_type'] ?? 'general';
-                                $notif_icon = $notif['icon'] ?? 'bi-bell';
-                                $notif_title = $notif['title'] ?? 'Notification';
-                                $notif_action_url = $notif['action_url'] ?? 'admin_notifications.php';
-                                $notif_priority = $notif['priority'] ?? 'normal';
-                                
-                                // Icon wrapper class
-                                $icon_wrapper_class = $item_type;
-                                if (strpos($item_type, 'property_sale') !== false) $icon_wrapper_class = 'sale';
-                                elseif (strpos($item_type, 'property') !== false) $icon_wrapper_class = 'property';
-                                
-                                $time_ago = '';
-                                if (!empty($notif['created_at'])) {
-                                    $time_diff = time() - strtotime($notif['created_at']);
-                                    if ($time_diff < 60) {
-                                        $time_ago = 'Just now';
-                                    } elseif ($time_diff < 3600) {
-                                        $time_ago = floor($time_diff / 60) . 'm ago';
-                                    } elseif ($time_diff < 86400) {
-                                        $time_ago = floor($time_diff / 3600) . 'h ago';
-                                    } elseif ($time_diff < 172800) {
-                                        $time_ago = 'Yesterday';
-                                    } else {
-                                        $time_ago = date('M d', strtotime($notif['created_at']));
+                        <div class="admin-notif-dropdown-body" id="adminNotifDropdownBody">
+                            <?php if (empty($recent_notifications)): ?>
+                                <div class="admin-notif-empty">
+                                    <i class="bi bi-bell-slash"></i>
+                                    <p>No notifications yet</p>
+                                </div>
+                            <?php else: ?>
+                                <?php 
+                                foreach ($recent_notifications as $notif):
+                                    $is_unread = !isset($notif['is_read']) || (int)$notif['is_read'] === 0;
+                                    $item_type = $notif['item_type'] ?? 'general';
+                                    $notif_icon = $notif['icon'] ?? 'bi-bell';
+                                    $notif_title = $notif['title'] ?? 'Notification';
+                                    $notif_action_url = $notif['action_url'] ?? 'admin_notifications.php';
+                                    $notif_priority = $notif['priority'] ?? 'normal';
+                                    
+                                    // Icon wrapper class
+                                    $icon_wrapper_class = $item_type;
+                                    if (strpos($item_type, 'property_sale') !== false) $icon_wrapper_class = 'sale';
+                                    
+                                    $time_ago = '';
+                                    if (!empty($notif['created_at'])) {
+                                        $time_diff = time() - strtotime($notif['created_at']);
+                                        if ($time_diff < 60) {
+                                            $time_ago = 'Just now';
+                                        } elseif ($time_diff < 3600) {
+                                            $time_ago = floor($time_diff / 60) . 'm ago';
+                                        } elseif ($time_diff < 86400) {
+                                            $time_ago = floor($time_diff / 3600) . 'h ago';
+                                        } elseif ($time_diff < 172800) {
+                                            $time_ago = 'Yesterday';
+                                        } else {
+                                            $time_ago = date('M d', strtotime($notif['created_at']));
+                                        }
                                     }
-                                }
-                            ?>
-                                <a href="<?php echo htmlspecialchars($notif_action_url); ?>" class="dropdown-item <?php echo $is_unread ? 'unread' : ''; ?>" style="text-decoration:none;">
-                                    <div class="notification-icon-wrapper <?php echo htmlspecialchars($icon_wrapper_class); ?>">
-                                        <i class="bi <?php echo htmlspecialchars($notif_icon); ?>"></i>
-                                    </div>
-                                    <div class="notification-content">
-                                        <div class="notification-message" style="font-weight:<?php echo $is_unread ? '700' : '500'; ?>;" title="<?php echo htmlspecialchars($notif_title . ': ' . ($notif['message'] ?? '')); ?>">
-                                            <?php if ($notif_priority === 'urgent' || $notif_priority === 'high'): ?>
-                                                <i class="bi bi-exclamation-circle-fill" style="color:#d97706;font-size:0.7rem;margin-right:3px;"></i>
-                                            <?php endif; ?>
-                                            <?php echo htmlspecialchars($notif_title); ?>
+                                ?>
+                                    <a href="<?php echo htmlspecialchars($notif_action_url); ?>" class="admin-notif-item <?php echo $is_unread ? 'unread' : ''; ?>">
+                                        <div class="admin-notif-item-icon <?php echo htmlspecialchars($icon_wrapper_class); ?>">
+                                            <i class="bi <?php echo htmlspecialchars($notif_icon); ?>"></i>
                                         </div>
-                                        <div style="font-size:0.78rem;color:#64748b;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                            <?php echo htmlspecialchars($notif['message'] ?? ''); ?>
+                                        <?php if ($is_unread): ?>
+                                            <div class="admin-notif-item-dot"></div>
+                                        <?php endif; ?>
+                                        <div class="admin-notif-item-body">
+                                            <div class="admin-notif-item-title">
+                                                <?php if ($notif_priority === 'urgent' || $notif_priority === 'high'): ?>
+                                                    <i class="bi bi-exclamation-circle-fill admin-notif-item-priority"></i>
+                                                <?php endif; ?>
+                                                <?php echo htmlspecialchars($notif_title); ?>
+                                            </div>
+                                            <div class="admin-notif-item-msg"><?php echo htmlspecialchars($notif['message'] ?? ''); ?></div>
+                                            <div class="admin-notif-item-time"><i class="bi bi-clock"></i><?php echo $time_ago; ?></div>
                                         </div>
-                                        <div class="notification-time">
-                                            <i class="bi bi-clock" style="font-size:0.65rem;margin-right:2px;"></i><?php echo $time_ago; ?>
-                                        </div>
-                                    </div>
-                                    <?php if ($is_unread): ?>
-                                    <div style="width:8px;height:8px;border-radius:50%;background:var(--blue,#2563eb);flex-shrink:0;margin-left:auto;"></div>
-                                    <?php endif; ?>
-                                </a>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                        
-                        <!-- View All Footer -->
-                        <div class="dropdown-footer">
-                            <a href="admin_notifications.php" class="btn-view-all">
-                                <i class="bi bi-arrow-right me-2"></i>View All Notifications
-                            </a>
+                                    </a>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                        <div class="admin-notif-dropdown-footer">
+                            <a href="admin_notifications.php">View All Notifications <i class="bi bi-arrow-right ms-1"></i></a>
                         </div>
                     </div>
                 </div>
@@ -989,6 +1064,56 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // ===== NOTIFICATION DROPDOWN PANEL LOGIC =====
+        const adminNotifToggle = document.getElementById('adminNotifToggleBtn');
+        const adminNotifPanel = document.getElementById('adminNotifDropdownPanel');
+        const adminNotifBadge = document.getElementById('adminNotifBadge');
+        const adminNotifWrapper = document.getElementById('adminNotifDropdownWrapper');
+        const adminNotifMarkAllBtn = document.getElementById('adminNotifMarkAllBtn');
+        let adminNotifOpen = false;
+
+        // Toggle dropdown
+        if (adminNotifToggle) {
+            adminNotifToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                adminNotifOpen = !adminNotifOpen;
+                adminNotifPanel.classList.toggle('show', adminNotifOpen);
+            });
+        }
+
+        // Close on outside click
+        document.addEventListener('click', function(e) {
+            if (adminNotifOpen && adminNotifWrapper && !adminNotifWrapper.contains(e.target)) {
+                adminNotifOpen = false;
+                adminNotifPanel.classList.remove('show');
+            }
+        });
+
+        // Mark all read
+        if (adminNotifMarkAllBtn) {
+            adminNotifMarkAllBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                fetch('admin_notifications.php?mark_all_read=1', { method: 'GET' })
+                    .then(() => {
+                        // Remove unread styling from all items
+                        document.querySelectorAll('.admin-notif-item.unread').forEach(item => {
+                            item.classList.remove('unread');
+                        });
+                        // Remove dots
+                        document.querySelectorAll('.admin-notif-item-dot').forEach(dot => dot.remove());
+                        // Reset badge
+                        if (adminNotifBadge) {
+                            adminNotifBadge.textContent = '';
+                            adminNotifBadge.classList.remove('has-unread');
+                        }
+                        // Remove unread indicator in header
+                        const indicator = document.querySelector('.admin-notif-unread-indicator');
+                        if (indicator) indicator.remove();
+                    })
+                    .catch(() => {});
+            });
+        }
+
         // Global search functionality
         const globalSearch = document.getElementById('globalSearch');
         if (globalSearch) {
@@ -996,13 +1121,11 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
                 if (e.key === 'Enter') {
                     const searchTerm = this.value.trim();
                     if (searchTerm) {
-                        // Redirect to search page with query
                         window.location.href = `search_results.php?q=${encodeURIComponent(searchTerm)}`;
                     }
                 }
             });
 
-            // Add search suggestions functionality
             let searchTimeout;
             globalSearch.addEventListener('input', function() {
                 clearTimeout(searchTimeout);
@@ -1010,43 +1133,15 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
                 
                 if (query.length >= 2) {
                     searchTimeout = setTimeout(() => {
-                        // Add search suggestions logic here
                         console.log('Searching for:', query);
                     }, 300);
                 }
             });
         }
 
-        // Notification dropdown auto-close
-        const notificationDropdowns = document.querySelectorAll('.nav-icon[data-bs-toggle="dropdown"]');
-        notificationDropdowns.forEach(dropdown => {
-            dropdown.addEventListener('click', function(e) {
-                e.preventDefault();
-                // Add notification loading logic here
-            });
-        });
-
-        // Auto-hide navbar on scroll (optional)
-        let lastScrollTop = 0;
-        const navbar = document.querySelector('.admin-navbar');
-        
-        window.addEventListener('scroll', function() {
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            
-            if (scrollTop > lastScrollTop && scrollTop > 100) {
-                // Scrolling down
-                navbar.style.transform = 'translateY(-100%)';
-            } else {
-                // Scrolling up
-                navbar.style.transform = 'translateY(0)';
-            }
-            
-            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-        });
-
         // Highlight current page in any dynamic navigation
         const currentPage = '<?php echo $current_page; ?>';
-        const navLinks = document.querySelectorAll('.nav-link, .dropdown-item');
+        const navLinks = document.querySelectorAll('.nav-link');
         
         navLinks.forEach(link => {
             if (link.getAttribute('href') && link.getAttribute('href').includes(currentPage)) {

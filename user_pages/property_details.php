@@ -169,6 +169,54 @@ if ($property_id <= 0) {
         $similar_properties = $similar_result->fetch_all(MYSQLI_ASSOC);
         $stmt6->close();
     }
+
+    // Fetch price history for this property
+    $price_history = [];
+    $price_history_raw = []; // Raw data for chart
+    if ($property_data) {
+        $ph_sql = "SELECT event_date, event_type, price FROM price_history WHERE property_id = ? ORDER BY event_date ASC";
+        $ph_stmt = $conn->prepare($ph_sql);
+        if ($ph_stmt) {
+            $ph_stmt->bind_param("i", $property_id);
+            $ph_stmt->execute();
+            $ph_result = $ph_stmt->get_result();
+            $ph_raw = $ph_result->fetch_all(MYSQLI_ASSOC);
+            $ph_stmt->close();
+
+            // Build raw chart data (ascending order for chart)
+            foreach ($ph_raw as $row) {
+                $price_history_raw[] = [
+                    'date' => $row['event_date'],
+                    'price' => (float)$row['price'],
+                    'event_type' => $row['event_type'],
+                ];
+            }
+
+            // Build display data (descending for list, calculate % change)
+            $ph_desc = array_reverse($ph_raw);
+            for ($i = 0; $i < count($ph_desc); $i++) {
+                $current_event = $ph_desc[$i];
+                $previous_price = isset($ph_desc[$i + 1]) ? (float)$ph_desc[$i + 1]['price'] : null;
+                $change_percentage = null;
+                $change_direction = '';
+
+                if ($previous_price && $previous_price > 0) {
+                    $change = (((float)$current_event['price'] - $previous_price) / $previous_price) * 100;
+                    $change_percentage = round($change, 2);
+                    $change_direction = $change > 0 ? 'up' : ($change < 0 ? 'down' : '');
+                }
+
+                $price_history[] = [
+                    'event_date' => date('M d, Y', strtotime($current_event['event_date'])),
+                    'event_type' => $current_event['event_type'],
+                    'price' => '₱' . number_format((float)$current_event['price'], 2),
+                    'raw_price' => (float)$current_event['price'],
+                    'change_percentage' => $change_percentage,
+                    'change_direction' => $change_direction,
+                ];
+            }
+        }
+    }
 }
 
 $conn->close();
@@ -1154,6 +1202,187 @@ $conn->close();
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ===== Price History Chart ===== */
+        .ph-chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            margin-bottom: 20px;
+        }
+
+        .ph-chart-wrapper canvas {
+            border-radius: 8px;
+        }
+
+        /* Summary stats row */
+        .ph-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .ph-stat-card {
+            background: rgba(26, 26, 26, 0.6);
+            border: 1px solid var(--black-border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            text-align: center;
+            transition: border-color 0.25s, transform 0.25s;
+        }
+
+        .ph-stat-card:hover {
+            border-color: rgba(212, 175, 55, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .ph-stat-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .ph-stat-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+
+        .ph-stat-value.stat-up { color: #4ade80; }
+        .ph-stat-value.stat-down { color: #f87171; }
+
+        /* Date filter controls */
+        .ph-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .ph-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ph-filter-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--gray-400);
+            white-space: nowrap;
+        }
+
+        .ph-date-input {
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid var(--black-border);
+            border-radius: 6px;
+            color: var(--white);
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            min-width: 150px;
+        }
+
+        .ph-date-input:hover {
+            border-color: rgba(212, 175, 55, 0.3);
+        }
+
+        .ph-date-input:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        /* Webkit date picker customization */
+        .ph-date-input::-webkit-calendar-picker-indicator {
+            filter: invert(0.7) sepia(1) saturate(3) hue-rotate(10deg);
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .ph-date-input::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
+        .ph-date-input::-webkit-datetime-edit-fields-wrapper {
+            padding: 0;
+        }
+
+        .ph-date-input::-webkit-date-and-time-value {
+            text-align: left;
+        }
+
+        .ph-filter-separator {
+            color: var(--gray-500);
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+
+        .ph-filter-reset {
+            background: transparent;
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 6px;
+            color: var(--gold);
+            padding: 7px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .ph-filter-reset:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: var(--gold);
+        }
+
+        .ph-no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray-500);
+            font-size: 0.9rem;
+        }
+
+        .ph-no-data i {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 10px;
+            color: var(--gray-600);
+        }
+
+        @media (max-width: 768px) {
+            .ph-chart-wrapper {
+                height: 240px;
+            }
+            .ph-filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .ph-filter-group {
+                width: 100%;
+            }
+            .ph-date-input {
+                flex: 1;
+                min-width: unset;
+            }
+            .ph-stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
     </style>
 </head>
 <body>
@@ -1397,6 +1626,46 @@ $conn->close();
                     </div>
                 </div>
             </div>
+
+            <!-- Price History -->
+            <?php if (!empty($price_history)): ?>
+            <div class="content-card">
+                <h2 class="section-title">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    Price History
+                </h2>
+
+                <!-- Summary Stats -->
+                <div class="ph-stats-row" id="phStatsRow">
+                    <!-- Filled by JS -->
+                </div>
+
+                <!-- Date Range Filter -->
+                <div class="ph-filter-bar">
+                    <div class="ph-filter-group">
+                        <span class="ph-filter-label"><i class="bi bi-calendar3 me-1"></i>From</span>
+                        <input type="date" class="ph-date-input" id="phDateFrom">
+                    </div>
+                    <span class="ph-filter-separator">—</span>
+                    <div class="ph-filter-group">
+                        <span class="ph-filter-label">To</span>
+                        <input type="date" class="ph-date-input" id="phDateTo">
+                    </div>
+                    <button class="ph-filter-reset" id="phResetFilter" title="Reset date filter">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    </button>
+                </div>
+
+                <!-- Chart -->
+                <div class="ph-chart-wrapper">
+                    <canvas id="priceHistoryChart"></canvas>
+                </div>
+                <div class="ph-no-data" id="phNoData" style="display:none;">
+                    <i class="bi bi-bar-chart-line"></i>
+                    No price data found for the selected date range.
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- Sidebar -->
@@ -1897,6 +2166,8 @@ $conn->close();
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
 <script>
 // Property image data from PHP
@@ -2328,6 +2599,250 @@ if (tourDateInput) {
         })
         .catch(err => console.error('View count error:', err));
     }
+})();
+
+// ============================
+// Price History Chart
+// ============================
+(function() {
+    const rawData = <?php echo json_encode($price_history_raw ?? []); ?>;
+    if (!rawData || rawData.length === 0) return;
+
+    const canvas = document.getElementById('priceHistoryChart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dateFromInput = document.getElementById('phDateFrom');
+    const dateToInput = document.getElementById('phDateTo');
+    const resetBtn = document.getElementById('phResetFilter');
+    const noDataMsg = document.getElementById('phNoData');
+    const chartWrapper = canvas.closest('.ph-chart-wrapper');
+    const statsRow = document.getElementById('phStatsRow');
+
+    // Today's date string for max attribute
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Prevent future date selection
+    dateFromInput.setAttribute('max', todayStr);
+    dateToInput.setAttribute('max', todayStr);
+
+    // Set default range from data
+    const allDates = rawData.map(d => d.date);
+    const minDate = allDates[0];
+    const maxDate = allDates[allDates.length - 1];
+    dateFromInput.value = minDate;
+    dateToInput.value = maxDate > todayStr ? todayStr : maxDate;
+
+    // Ensure "from" cannot be after "to" and vice versa
+    dateFromInput.addEventListener('change', function() {
+        if (dateToInput.value && this.value > dateToInput.value) {
+            this.value = dateToInput.value;
+        }
+        dateToInput.setAttribute('min', this.value);
+        updateChart();
+    });
+
+    dateToInput.addEventListener('change', function() {
+        if (dateFromInput.value && this.value < dateFromInput.value) {
+            this.value = dateFromInput.value;
+        }
+        dateFromInput.setAttribute('max', this.value > todayStr ? todayStr : this.value);
+        updateChart();
+    });
+
+    resetBtn.addEventListener('click', function() {
+        dateFromInput.value = minDate;
+        dateToInput.value = maxDate > todayStr ? todayStr : maxDate;
+        dateFromInput.setAttribute('max', todayStr);
+        dateToInput.setAttribute('min', '');
+        updateChart();
+    });
+
+    // Format peso
+    function formatPeso(val) {
+        return '\u20b1' + val.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Filter data
+    function getFilteredData() {
+        const from = dateFromInput.value;
+        const to = dateToInput.value;
+        return rawData.filter(d => {
+            if (from && d.date < from) return false;
+            if (to && d.date > to) return false;
+            return true;
+        });
+    }
+
+    // Build stats
+    function updateStats(data) {
+        if (!statsRow) return;
+        if (data.length === 0) {
+            statsRow.innerHTML = '';
+            return;
+        }
+
+        const prices = data.map(d => d.price);
+        const latest = prices[prices.length - 1];
+        const earliest = prices[0];
+        const highest = Math.max(...prices);
+        const lowest = Math.min(...prices);
+        const overallChange = earliest > 0 ? ((latest - earliest) / earliest) * 100 : 0;
+        const changeDir = overallChange > 0 ? 'stat-up' : (overallChange < 0 ? 'stat-down' : '');
+        const changeIcon = overallChange > 0 ? '<i class="bi bi-arrow-up-short"></i>' : (overallChange < 0 ? '<i class="bi bi-arrow-down-short"></i>' : '');
+
+        statsRow.innerHTML = `
+            <div class="ph-stat-card">
+                <div class="ph-stat-label">Current Price</div>
+                <div class="ph-stat-value">${formatPeso(latest)}</div>
+            </div>
+            <div class="ph-stat-card">
+                <div class="ph-stat-label">Highest</div>
+                <div class="ph-stat-value" style="color:#4ade80;">${formatPeso(highest)}</div>
+            </div>
+            <div class="ph-stat-card">
+                <div class="ph-stat-label">Lowest</div>
+                <div class="ph-stat-value" style="color:#f87171;">${formatPeso(lowest)}</div>
+            </div>
+            <div class="ph-stat-card">
+                <div class="ph-stat-label">Overall Change</div>
+                <div class="ph-stat-value ${changeDir}">${changeIcon}${Math.abs(overallChange).toFixed(2)}%</div>
+            </div>
+        `;
+    }
+
+    // Chart instance
+    let chart = null;
+
+    function buildChart(data) {
+        if (chart) chart.destroy();
+
+        const labels = data.map(d => d.date);
+        const prices = data.map(d => d.price);
+
+        // Gradient fill
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.parentElement.clientHeight);
+        gradient.addColorStop(0, 'rgba(212, 175, 55, 0.35)');
+        gradient.addColorStop(0.5, 'rgba(212, 175, 55, 0.08)');
+        gradient.addColorStop(1, 'rgba(212, 175, 55, 0)');
+
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Price',
+                    data: prices,
+                    borderColor: '#d4af37',
+                    backgroundColor: gradient,
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#d4af37',
+                    pointBorderColor: '#0a0a0a',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: '#f4d03f',
+                    pointHoverBorderColor: '#0a0a0a',
+                    pointHoverBorderWidth: 3,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(10, 10, 10, 0.95)',
+                        borderColor: 'rgba(212, 175, 55, 0.4)',
+                        borderWidth: 1,
+                        titleColor: '#d4af37',
+                        bodyColor: '#ffffff',
+                        titleFont: { size: 12, weight: '600', family: 'Inter' },
+                        bodyFont: { size: 14, weight: '700', family: 'Inter' },
+                        padding: 14,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            title: function(items) {
+                                const d = new Date(items[0].label + 'T00:00:00');
+                                return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                            },
+                            label: function(item) {
+                                return formatPeso(item.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'category',
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.04)',
+                            drawBorder: false,
+                        },
+                        ticks: {
+                            color: '#7a8a99',
+                            font: { size: 11, family: 'Inter', weight: '500' },
+                            maxRotation: 45,
+                            callback: function(value, index) {
+                                const dateStr = this.getLabelForValue(index);
+                                const d = new Date(dateStr + 'T00:00:00');
+                                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            }
+                        },
+                        border: { display: false }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.04)',
+                            drawBorder: false,
+                        },
+                        ticks: {
+                            color: '#7a8a99',
+                            font: { size: 11, family: 'Inter', weight: '500' },
+                            callback: function(value) {
+                                if (value >= 1000000) return '\u20b1' + (value / 1000000).toFixed(1) + 'M';
+                                if (value >= 1000) return '\u20b1' + (value / 1000).toFixed(0) + 'K';
+                                return '\u20b1' + value.toLocaleString();
+                            },
+                            maxTicksLimit: 6,
+                        },
+                        border: { display: false },
+                        beginAtZero: false,
+                    }
+                },
+                animation: {
+                    duration: 700,
+                    easing: 'easeInOutQuart',
+                }
+            }
+        });
+    }
+
+    function updateChart() {
+        const filtered = getFilteredData();
+        updateStats(filtered);
+
+        if (filtered.length === 0) {
+            if (chart) chart.destroy();
+            chart = null;
+            chartWrapper.style.display = 'none';
+            noDataMsg.style.display = 'block';
+        } else {
+            chartWrapper.style.display = 'block';
+            noDataMsg.style.display = 'none';
+            buildChart(filtered);
+        }
+    }
+
+    // Initial render
+    updateChart();
 })();
 
 </script>
