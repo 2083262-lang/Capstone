@@ -760,7 +760,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
                 <div class="tab-pane fade" id="content-activity" role="tabpanel">
                     <h6 style="font-weight:700;color:#334155;margin-bottom:1rem;"><i class="bi bi-shield-lock me-2" style="color:var(--gold-dark);"></i>Admin Login Activity</h6>
                     <div class="report-table-wrapper" style="max-height:350px;overflow-y:auto;margin-bottom:2rem;">
-                        <table class="report-table"><thead><tr><th>#</th><th>Admin</th><th>Action</th><th>Description</th><th>Timestamp</th></tr></thead><tbody id="tbodyAdminLogs"></tbody></table>
+                        <table class="report-table"><thead><tr><th>#</th><th>Admin</th><th>Action</th><th>Timestamp</th></tr></thead><tbody id="tbodyAdminLogs"></tbody></table>
                     </div>
                     <h6 style="font-weight:700;color:#334155;margin-bottom:1rem;"><i class="bi bi-arrow-left-right me-2" style="color:var(--gold-dark);"></i>Status Changes</h6>
                     <div class="report-table-wrapper" style="max-height:350px;overflow-y:auto;margin-bottom:2rem;">
@@ -1156,8 +1156,8 @@ function renderToursTable(page) {
 }
 function renderActivityTables() {
     var ab = document.getElementById('tbodyAdminLogs');
-    if (FILTERED.adminLogs.length === 0) { ab.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>No admin logs</p></div></td></tr>'; }
-    else { var h=''; FILTERED.adminLogs.forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+esc(r.admin_name)+'</td><td>'+statusPill(r.action)+'</td><td>'+esc(r.description)+'</td><td>'+formatDateTime(r.log_timestamp)+'</td></tr>';}); ab.innerHTML=h; }
+    if (FILTERED.adminLogs.length === 0) { ab.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>No admin logs</p></div></td></tr>'; }
+    else { var h=''; FILTERED.adminLogs.forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+esc(r.admin_name)+'</td><td>'+statusPill(r.action)+'</td><td>'+formatDateTime(r.log_timestamp)+'</td></tr>';}); ab.innerHTML=h; }
     var sb = document.getElementById('tbodyStatusLogs');
     if (FILTERED.statusLogs.length === 0) { sb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No status logs</p></div></td></tr>'; }
     else { var h2=''; FILTERED.statusLogs.forEach(function(r,i){h2+='<tr><td>'+(i+1)+'</td><td>'+statusPill(r.item_type)+'</td><td>'+r.item_id+'</td><td>'+statusPill(r.action)+'</td><td>'+esc(r.reason_message)+'</td><td>'+esc(r.action_by)+'</td><td>'+formatDateTime(r.log_timestamp)+'</td></tr>';}); sb.innerHTML=h2; }
