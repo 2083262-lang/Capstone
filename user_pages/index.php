@@ -887,7 +887,7 @@ $conn->close();
                         <i class="bi bi-house-door"></i>
                         Browse Properties
                     </a>
-                    <a href="#" class="btn-outline-gold">
+                    <a href="agents.php" class="btn-outline-gold">
                         <i class="bi bi-telephone"></i>
                         Contact an Agent
                     </a>
@@ -918,7 +918,7 @@ $conn->close();
                 <h5>Resources</h5>
                 <ul class="list-unstyled">
                     <li><a href="#">Market Insights</a></li>
-                    <li><a href="#">Agent Directory</a></li>
+                    <li><a href="agents.php">Agent Directory</a></li>
                     <li><a href="#">Help Center</a></li>
                     <li><a href="#">Contact Support</a></li>
                 </ul>

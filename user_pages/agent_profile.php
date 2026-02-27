@@ -120,7 +120,12 @@ if ($agent) {
     $similar_sql = "
         SELECT 
             a.account_id, a.first_name, a.last_name,
-            ai.license_number, ai.specialization, ai.years_experience, ai.profile_picture_url,
+            ai.license_number,
+            COALESCE((SELECT GROUP_CONCAT(s.specialization_name ORDER BY s.specialization_name SEPARATOR ', ')
+                      FROM agent_specializations asp2
+                      JOIN specializations s ON asp2.specialization_id = s.specialization_id
+                      WHERE asp2.agent_info_id = ai.agent_info_id), '') AS specialization,
+            ai.years_experience, ai.profile_picture_url,
             (SELECT COUNT(*) FROM property p 
              JOIN property_log pl ON pl.property_id = p.property_ID 
              WHERE pl.account_id = a.account_id AND pl.action = 'CREATED' AND p.approval_status = 'approved') as listing_count,
@@ -134,12 +139,22 @@ if ($agent) {
             AND ai.profile_completed = 1
             AND a.is_active = 1
         ORDER BY 
-            CASE WHEN ai.specialization = ? THEN 0 ELSE 1 END,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM agent_specializations asp3
+                JOIN specializations s2 ON asp3.specialization_id = s2.specialization_id
+                WHERE asp3.agent_info_id = ai.agent_info_id
+                AND s2.specialization_name IN (
+                    SELECT s3.specialization_name FROM agent_specializations asp4
+                    JOIN specializations s3 ON asp4.specialization_id = s3.specialization_id
+                    JOIN agent_information ai2 ON asp4.agent_info_id = ai2.agent_info_id
+                    WHERE ai2.account_id = ?
+                )
+            ) THEN 0 ELSE 1 END,
             RAND()
         LIMIT 4
     ";
     $stmt5 = $conn->prepare($similar_sql);
-    $stmt5->bind_param("is", $agent_id, $agent['specialization']);
+    $stmt5->bind_param("ii", $agent_id, $agent_id);
     $stmt5->execute();
     $similar_result = $stmt5->get_result();
     $similar_agents = $similar_result->fetch_all(MYSQLI_ASSOC);
