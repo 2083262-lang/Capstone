@@ -1,68 +1,111 @@
 <?php
-// Endpoint to generate and send a 2FA email code
+// ═══════════════════════════════════════════════════════════════════
+// Endpoint: Generate and send a 2FA email verification code
+// Security: CSRF token, POST-only, server-side cooldown, per-account
+//           send-rate limit, pending-login expiration, code cleanup
+// ═══════════════════════════════════════════════════════════════════
 session_start();
-header('Content-Type: application/json');
 
+// ── Security headers ──
+header('Content-Type: application/json');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
+
+// ── POST method required ──
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed.']);
+    exit();
+}
+
+// ── Session guard ──
 if (!isset($_SESSION['pending_login']) || !is_array($_SESSION['pending_login'])) {
+    http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'No pending login.']);
+    exit();
+}
+
+// ── CSRF token validation ──
+$csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+if (empty($_SESSION['twofa_csrf_token']) || !hash_equals($_SESSION['twofa_csrf_token'], $csrfToken)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Invalid request token. Please refresh the page.']);
+    exit();
+}
+
+// ── Pending-login expiration check (max 10 min from login) ──
+$pendingAge = time() - ($_SESSION['pending_login']['created_at'] ?? 0);
+if ($pendingAge > 600) { // 10 minutes
+    unset($_SESSION['pending_login'], $_SESSION['twofa_csrf_token'], $_SESSION['twofa_init_sent']);
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Session expired. Please log in again.', 'expired' => true]);
     exit();
 }
 
 require_once __DIR__ . '/connection.php';
 require_once __DIR__ . '/mail_helper.php';
 
-$pending = $_SESSION['pending_login'];
+$pending   = $_SESSION['pending_login'];
 $accountId = (int) $pending['account_id'];
-$toEmail = $pending['email'] ?? null;
-$toName = trim(($pending['first_name'] ?? '') . ' ' . ($pending['last_name'] ?? '')) ?: ($pending['username'] ?? 'User');
+$toEmail   = $pending['email'] ?? null;
+$toName    = trim(($pending['first_name'] ?? '') . ' ' . ($pending['last_name'] ?? '')) ?: ($pending['username'] ?? 'User');
 
 if (!$toEmail) {
     echo json_encode(['success' => false, 'message' => 'Missing recipient email.']);
     exit();
 }
 
-// Throttle: small server-side safety (3s) to prevent double-clicks; expire codes after 60 seconds
-$throttleSeconds = 3;
-$ttlSeconds = 60;
+// ═══════════════════════════════════════════════
+// Security constants
+// ═══════════════════════════════════════════════
+$throttleSeconds   = 60;   // Min seconds between code sends (server-enforced)
+$ttlSeconds        = 300;  // Code valid for 5 minutes (NIST SP 800-63B recommendation for email OTP)
+$maxSendsPerWindow = 5;    // Max code sends per account per 15-minute window
+$sendWindowSeconds = 900;  // 15-minute window for send rate limiting
 
-// Ensure table exists (optional lightweight guard; comment out in production if managed by migrations)
-// $conn->query("CREATE TABLE IF NOT EXISTS two_factor_codes (
-//   code_id INT AUTO_INCREMENT PRIMARY KEY,
-//   account_id INT NOT NULL,
-//   code_hash VARCHAR(255) NOT NULL,
-//   expires_at DATETIME NOT NULL,
-//   attempts INT NOT NULL DEFAULT 0,
-//   consumed TINYINT(1) NOT NULL DEFAULT 0,
-//   delivery VARCHAR(32) NOT NULL DEFAULT 'email',
-//   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-//   INDEX idx_account_expires (account_id, expires_at)
-// ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+// ═══════════════════════════════════════════════
+// Server-side cooldown: prevent rapid resends
+// ═══════════════════════════════════════════════
+$stmt = $conn->prepare("SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds 
+                        FROM two_factor_codes 
+                        WHERE account_id = ? AND consumed = 0 
+                        ORDER BY code_id DESC LIMIT 1");
+$stmt->bind_param('i', $accountId);
+$stmt->execute();
+$res = $stmt->get_result();
+$stmt->close();
 
-// Optional throttle disabled (client enforces cooldown). If you want to enable server throttle,
-// set $throttleSeconds > 0 and re-enable this block.
-if ($throttleSeconds > 0) {
-    $stmt = $conn->prepare("SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds 
-                            FROM two_factor_codes 
-                            WHERE account_id = ? AND consumed = 0 
-                            ORDER BY code_id DESC LIMIT 1");
-    $stmt->bind_param('i', $accountId);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    $stmt->close();
-
-    if ($row = $res->fetch_assoc()) {
-        $age = is_null($row['age_seconds']) ? $throttleSeconds : (int)$row['age_seconds'];
-        if ($age < $throttleSeconds) {
-            echo json_encode(['success' => false, 'retryAfter' => $throttleSeconds - $age]);
-            exit();
-        }
+if ($row = $res->fetch_assoc()) {
+    $age = is_null($row['age_seconds']) ? $throttleSeconds : (int)$row['age_seconds'];
+    if ($age < $throttleSeconds) {
+        echo json_encode(['success' => false, 'retryAfter' => $throttleSeconds - $age]);
+        exit();
     }
 }
 
-// Generate a 6-digit numeric code
-$code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+// ═══════════════════════════════════════════════
+// Per-account send-rate limiting: max N codes per window
+// Prevents email bombing and code-generation abuse
+// ═══════════════════════════════════════════════
+$rateStmt = $conn->prepare("SELECT COUNT(*) AS send_count FROM two_factor_codes 
+                            WHERE account_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)");
+$rateStmt->bind_param('ii', $accountId, $sendWindowSeconds);
+$rateStmt->execute();
+$rateRow = $rateStmt->get_result()->fetch_assoc();
+$rateStmt->close();
+
+if ((int)($rateRow['send_count'] ?? 0) >= $maxSendsPerWindow) {
+    http_response_code(429);
+    echo json_encode(['success' => false, 'message' => 'Too many code requests. Please wait before trying again.']);
+    exit();
+}
+
+// ═══════════════════════════════════════════════
+// Generate secure 6-digit code
+// ═══════════════════════════════════════════════
+$code     = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 $codeHash = password_hash($code, PASSWORD_DEFAULT);
-$expiresAtSeconds = (int)$ttlSeconds; // Use DB NOW() for expiry
 
 // Invalidate any previously active codes for this account
 $invalidate = $conn->prepare("UPDATE two_factor_codes SET consumed = 1 WHERE account_id = ? AND consumed = 0");
@@ -70,10 +113,16 @@ $invalidate->bind_param('i', $accountId);
 $invalidate->execute();
 $invalidate->close();
 
+// Cleanup old expired/consumed codes (older than 24 hours) to prevent table bloat
+$cleanup = $conn->prepare("DELETE FROM two_factor_codes WHERE account_id = ? AND (consumed = 1 OR expires_at < NOW()) AND created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+$cleanup->bind_param('i', $accountId);
+$cleanup->execute();
+$cleanup->close();
+
 // Persist the new code; compute expiry using DB clock
 $ins = $conn->prepare("INSERT INTO two_factor_codes (account_id, code_hash, expires_at, attempts, consumed, delivery) 
-                       VALUES (?, ?, DATE_ADD(NOW(), INTERVAL $expiresAtSeconds SECOND), 0, 0, 'email')");
-$ins->bind_param('is', $accountId, $codeHash);
+                       VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND), 0, 0, 'email')");
+$ins->bind_param('isi', $accountId, $codeHash, $ttlSeconds);
 $ok = $ins->execute();
 $ins->close();
 
@@ -126,7 +175,7 @@ $html = '
                                     <div style="font-size:42px;font-weight:700;letter-spacing:12px;color:#ffffff;font-family:\'SF Mono\',\'Courier New\',monospace;">
                                         ' . htmlspecialchars($code) . '
                                     </div>
-                                    <p style="margin:12px 0 0 0;font-size:12px;color:#666666;">Expires in ' . (int)$ttlSeconds . ' seconds</p>
+                                    <p style="margin:12px 0 0 0;font-size:12px;color:#666666;">Expires in ' . ((int)$ttlSeconds >= 60 ? (int)($ttlSeconds / 60) . ' minute' . ((int)($ttlSeconds / 60) !== 1 ? 's' : '') : (int)$ttlSeconds . ' seconds') . '</p>
                                 </div>
                             </div>
                             
@@ -201,5 +250,5 @@ if (!$result['success']) {
 }
 
 // In development, optionally return the code for quick testing (never enable in production)
-echo json_encode(['success' => true]);
+echo json_encode(['success' => true, 'ttl' => $ttlSeconds]);
 exit();

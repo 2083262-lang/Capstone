@@ -173,6 +173,133 @@
     .btn-logout-confirm:hover i {
         transform: translateX(2px);
     }
+
+    /* ================================================
+       ADMIN LOGOUT TRANSITION OVERLAY
+       Light / professional theme matching the modal
+       ================================================ */
+    .adm-logout-overlay {
+        position: fixed; inset: 0;
+        z-index: 99999;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity .4s ease;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    }
+    .adm-logout-overlay.active {
+        pointer-events: all;
+        opacity: 1;
+    }
+
+    /* Animated icon */
+    .adm-logout-icon-wrap {
+        width: 96px; height: 96px;
+        border-radius: 50%;
+        background: rgba(212, 175, 55, 0.08);
+        border: 2px solid rgba(212, 175, 55, 0.2);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 28px;
+        position: relative;
+        opacity: 0;
+        transform: scale(0.5);
+        transition: opacity .4s ease .15s, transform .5s cubic-bezier(.34,1.56,.64,1) .15s;
+    }
+    .adm-logout-overlay.active .adm-logout-icon-wrap {
+        opacity: 1; transform: scale(1);
+    }
+    .adm-logout-icon-wrap::before {
+        content: ''; position: absolute; inset: -8px;
+        border-radius: 50%;
+        border: 2px dashed rgba(212,175,55,.15);
+    }
+    .adm-logout-icon-wrap i {
+        font-size: 2.5rem;
+        color: #d4af37;
+        filter: drop-shadow(0 0 12px rgba(212,175,55,.4));
+    }
+    /* Animated ring expand */
+    .adm-logout-ring {
+        position: absolute; inset: -8px;
+        border-radius: 50%;
+        border: 2px solid rgba(212,175,55,.3);
+        opacity: 0;
+    }
+    .adm-logout-overlay.active .adm-logout-ring {
+        animation: admLogoutRingPulse 1.4s ease-out .4s forwards;
+    }
+
+    .adm-logout-title {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.5rem; font-weight: 700;
+        color: #f1f5f9;
+        margin-bottom: 6px;
+        opacity: 0; transform: translateY(12px);
+        transition: opacity .4s ease .3s, transform .4s ease .3s;
+    }
+    .adm-logout-overlay.active .adm-logout-title {
+        opacity: 1; transform: translateY(0);
+    }
+
+    .adm-logout-subtitle {
+        font-family: 'Inter', sans-serif;
+        font-size: .88rem; color: #94a3b8;
+        margin-bottom: 28px;
+        opacity: 0; transform: translateY(12px);
+        transition: opacity .35s ease .42s, transform .35s ease .42s;
+    }
+    .adm-logout-overlay.active .adm-logout-subtitle {
+        opacity: 1; transform: translateY(0);
+    }
+
+    /* Gold progress bar */
+    .adm-logout-progress-track {
+        width: 200px; height: 3px;
+        background: rgba(255,255,255,.1);
+        border-radius: 4px; overflow: hidden;
+        margin-bottom: 12px;
+        opacity: 0;
+        transition: opacity .3s ease .5s;
+    }
+    .adm-logout-overlay.active .adm-logout-progress-track { opacity: 1; }
+    .adm-logout-progress-fill {
+        height: 100%; width: 0;
+        background: linear-gradient(90deg, #b8941f, #d4af37, #f4d03f);
+        border-radius: 4px;
+        transition: width 1.3s cubic-bezier(.4,0,.2,1) .6s;
+    }
+    .adm-logout-overlay.active .adm-logout-progress-fill { width: 100%; }
+
+    .adm-logout-label {
+        font-family: 'Inter', sans-serif;
+        font-size: .72rem; letter-spacing: 2px; text-transform: uppercase;
+        color: rgba(212,175,55,.6);
+        opacity: 0;
+        transition: opacity .3s ease .55s;
+    }
+    .adm-logout-overlay.active .adm-logout-label { opacity: 1; }
+
+    /* Gold line separator */
+    .adm-logout-gold-line {
+        width: 50px; height: 2px; margin: 0 auto 20px;
+        background: linear-gradient(90deg, transparent, #d4af37, transparent);
+        border-radius: 2px;
+        opacity: 0;
+        transition: opacity .3s ease .48s;
+    }
+    .adm-logout-overlay.active .adm-logout-gold-line { opacity: 1; }
+
+    @keyframes admLogoutRingPulse {
+        0%   { transform: scale(1); opacity: .6; }
+        100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    /* Final fade-out before navigation */
+    .adm-logout-overlay.exit {
+        opacity: 0;
+        transition: opacity .35s ease;
+    }
 </style>
 
 <div class="modal fade logout-modal" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
@@ -194,10 +321,53 @@
             </div>
             <div class="logout-modal-footer">
                 <button type="button" class="btn-logout-cancel" data-bs-dismiss="modal">Stay Logged In</button>
-                <a href="logout.php" class="btn-logout-confirm">
+                <a href="logout.php" class="btn-logout-confirm" id="admLogoutConfirmBtn">
                     Sign Out <i class="bi bi-box-arrow-right"></i>
                 </a>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Admin Logout Transition Overlay -->
+<div class="adm-logout-overlay" id="admLogoutOverlay">
+    <div class="adm-logout-icon-wrap">
+        <i class="bi bi-box-arrow-right"></i>
+        <div class="adm-logout-ring"></div>
+    </div>
+    <div class="adm-logout-title">Signing Out…</div>
+    <div class="adm-logout-gold-line"></div>
+    <div class="adm-logout-subtitle">Ending your admin session securely</div>
+    <div class="adm-logout-progress-track">
+        <div class="adm-logout-progress-fill"></div>
+    </div>
+    <div class="adm-logout-label">Admin Portal</div>
+</div>
+
+<script>
+(function() {
+    var btn = document.getElementById('admLogoutConfirmBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        var href = btn.getAttribute('href') || 'logout.php';
+        var overlay = document.getElementById('admLogoutOverlay');
+        if (!overlay) { window.location.href = href; return; }
+
+        // Hide the modal instantly
+        var modal = bootstrap.Modal.getInstance(document.getElementById('logoutModal'));
+        if (modal) modal.hide();
+
+        // Show overlay and trigger CSS transitions
+        overlay.classList.add('active');
+
+        // Progress bar fills 1.3s after .6s delay = 1.9s, then small buffer
+        setTimeout(function() {
+            overlay.classList.add('exit');
+            setTimeout(function() {
+                window.location.href = href;
+            }, 380);
+        }, 2100);
+    });
+})();
+</script>

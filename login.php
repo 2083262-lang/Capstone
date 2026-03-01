@@ -1,4 +1,11 @@
 <?php
+// ── Session cookie hardening (must be set before session_start) ──
+ini_set('session.use_strict_mode', 1);      // Reject uninitialized session IDs
+ini_set('session.use_only_cookies', 1);     // Never pass session ID via URL
+ini_set('session.cookie_httponly', 1);      // Block JS access to session cookie
+ini_set('session.cookie_samesite', 'Lax');  // Mitigate CSRF via cookie scope
+// ini_set('session.cookie_secure', 1);     // Uncomment when using HTTPS in production
+
 session_start();
 include 'connection.php'; // Ensure this file establishes your $conn (MySQLi) connection
 $error_message = '';
@@ -70,8 +77,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             'email' => $user['email'] ?? null,
                             'first_name' => $user['first_name'] ?? null,
                             'last_name' => $user['last_name'] ?? null,
-                            'redirect_to' => $redirect_to ?: 'login.php'
+                            'redirect_to' => $redirect_to ?: 'login.php',
+                            'created_at' => time() // Pending-login expiration timestamp
                         ];
+                        // Generate CSRF token for 2FA flow
+                        $_SESSION['twofa_csrf_token'] = bin2hex(random_bytes(32));
                         // Reset 2FA auto-send guard so the code is sent once on first arrival
                         if (isset($_SESSION['twofa_init_sent'])) {
                             unset($_SESSION['twofa_init_sent']);

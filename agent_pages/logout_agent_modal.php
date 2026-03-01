@@ -177,6 +177,131 @@
     .btn-logout-confirm:hover i {
         transform: translateX(2px);
     }
+
+    /* ================================================
+       AGENT LOGOUT TRANSITION OVERLAY
+       Full dark + gold accent theme
+       ================================================ */
+    .agt-logout-overlay {
+        position: fixed; inset: 0; z-index: 99999;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        pointer-events: none; opacity: 0;
+        transition: opacity .4s ease;
+        background:
+            radial-gradient(circle at 50% 40%, rgba(212,175,55,.06) 0%, transparent 55%),
+            linear-gradient(135deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%);
+    }
+    .agt-logout-overlay.active { pointer-events: all; opacity: 1; }
+
+    /* Subtle dot-grid (like login/2FA pages) */
+    .agt-logout-overlay::before {
+        content: ''; position: absolute; inset: 0;
+        background-image:
+            radial-gradient(circle, rgba(212,175,55,.06) 1px, transparent 1px),
+            radial-gradient(circle, rgba(37,99,235,.03) 1px, transparent 1px);
+        background-size: 60px 60px, 90px 90px;
+        background-position: 0 0, 30px 30px;
+        pointer-events: none;
+    }
+
+    /* Icon circle – gold glow */
+    .agt-logout-icon-wrap {
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(184,148,31,.15) 0%, rgba(212,175,55,.08) 100%);
+        border: 2px solid rgba(212,175,55,.25);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 28px; position: relative; z-index: 1;
+        opacity: 0; transform: scale(0.5);
+        transition: opacity .4s ease .15s, transform .5s cubic-bezier(.34,1.56,.64,1) .15s;
+    }
+    .agt-logout-overlay.active .agt-logout-icon-wrap { opacity: 1; transform: scale(1); }
+
+    .agt-logout-icon-wrap::before {
+        content: ''; position: absolute; inset: -9px;
+        border-radius: 50%;
+        border: 1.5px dashed rgba(212,175,55,.12);
+    }
+    .agt-logout-icon-wrap i {
+        font-size: 2.8rem; color: #d4af37;
+        filter: drop-shadow(0 0 16px rgba(212,175,55,.5));
+    }
+    /* Expanding gold ring */
+    .agt-logout-ring {
+        position: absolute; inset: -9px;
+        border-radius: 50%;
+        border: 2px solid rgba(212,175,55,.35);
+        opacity: 0; z-index: 0;
+    }
+    .agt-logout-overlay.active .agt-logout-ring {
+        animation: agtRingExpand 1.4s ease-out .4s forwards;
+    }
+
+    .agt-logout-title {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.6rem; font-weight: 700; color: #fff;
+        text-shadow: 0 2px 12px rgba(0,0,0,.4);
+        margin-bottom: 6px; position: relative; z-index: 1;
+        opacity: 0; transform: translateY(14px);
+        transition: opacity .4s ease .3s, transform .4s ease .3s;
+    }
+    .agt-logout-overlay.active .agt-logout-title { opacity: 1; transform: translateY(0); }
+
+    .agt-logout-gold-line {
+        width: 50px; height: 2px; margin: 0 auto 14px;
+        background: linear-gradient(90deg, transparent, #d4af37, transparent);
+        border-radius: 2px; position: relative; z-index: 1;
+        opacity: 0;
+        transition: opacity .3s ease .4s;
+    }
+    .agt-logout-overlay.active .agt-logout-gold-line { opacity: 1; }
+
+    .agt-logout-subtitle {
+        font-family: 'Inter', sans-serif;
+        font-size: .9rem; color: #9ca4ab;
+        margin-bottom: 30px; position: relative; z-index: 1;
+        opacity: 0; transform: translateY(12px);
+        transition: opacity .35s ease .44s, transform .35s ease .44s;
+    }
+    .agt-logout-overlay.active .agt-logout-subtitle { opacity: 1; transform: translateY(0); }
+
+    /* Progress bar – gold gradient */
+    .agt-logout-progress-track {
+        width: 200px; height: 3px;
+        background: rgba(255,255,255,.08);
+        border-radius: 4px; overflow: hidden;
+        margin-bottom: 14px; position: relative; z-index: 1;
+        opacity: 0;
+        transition: opacity .3s ease .5s;
+    }
+    .agt-logout-overlay.active .agt-logout-progress-track { opacity: 1; }
+    .agt-logout-progress-fill {
+        height: 100%; width: 0;
+        background: linear-gradient(90deg, #b8941f, #d4af37, #f4d03f);
+        border-radius: 4px;
+        transition: width 1.3s cubic-bezier(.4,0,.2,1) .6s;
+    }
+    .agt-logout-overlay.active .agt-logout-progress-fill { width: 100%; }
+
+    .agt-logout-label {
+        font-family: 'Inter', sans-serif;
+        font-size: .72rem; letter-spacing: 2.5px; text-transform: uppercase;
+        color: rgba(212,175,55,.5); position: relative; z-index: 1;
+        opacity: 0;
+        transition: opacity .3s ease .55s;
+    }
+    .agt-logout-overlay.active .agt-logout-label { opacity: 1; }
+
+    @keyframes agtRingExpand {
+        0%   { transform: scale(1); opacity: .6; }
+        100% { transform: scale(1.7); opacity: 0; }
+    }
+
+    .agt-logout-overlay.exit {
+        opacity: 0;
+        transition: opacity .35s ease;
+    }
 </style>
 
 <div class="modal fade logout-modal" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
@@ -198,10 +323,53 @@
             </div>
             <div class="logout-modal-footer">
                 <button type="button" class="btn-logout-cancel" data-bs-dismiss="modal">Stay Logged In</button>
-                <a href="logout.php" class="btn-logout-confirm">
+                <a href="logout.php" class="btn-logout-confirm" id="agtLogoutConfirmBtn">
                     Sign Out <i class="bi bi-box-arrow-right"></i>
                 </a>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Agent Logout Transition Overlay -->
+<div class="agt-logout-overlay" id="agtLogoutOverlay">
+    <div class="agt-logout-icon-wrap">
+        <i class="bi bi-box-arrow-right"></i>
+        <div class="agt-logout-ring"></div>
+    </div>
+    <div class="agt-logout-title">Signing Out…</div>
+    <div class="agt-logout-gold-line"></div>
+    <div class="agt-logout-subtitle">Ending your session securely</div>
+    <div class="agt-logout-progress-track">
+        <div class="agt-logout-progress-fill"></div>
+    </div>
+    <div class="agt-logout-label">Agent Portal</div>
+</div>
+
+<script>
+(function() {
+    var btn = document.getElementById('agtLogoutConfirmBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        var href = btn.getAttribute('href') || 'logout.php';
+        var overlay = document.getElementById('agtLogoutOverlay');
+        if (!overlay) { window.location.href = href; return; }
+
+        // Hide the modal instantly
+        var modal = bootstrap.Modal.getInstance(document.getElementById('logoutModal'));
+        if (modal) modal.hide();
+
+        // Show overlay – CSS transitions kick in
+        overlay.classList.add('active');
+
+        // Progress bar fills 1.3s after .6s delay = 1.9s; navigate after buffer
+        setTimeout(function() {
+            overlay.classList.add('exit');
+            setTimeout(function() {
+                window.location.href = href;
+            }, 380);
+        }, 2100);
+    });
+})();
+</script>

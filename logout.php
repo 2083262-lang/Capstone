@@ -1,8 +1,8 @@
-<?php 
+<?php
+session_start();
 include 'connection.php'; // Include the database connection
 
-// --- UPDATED: LOG ADMIN LOGOUT (WITHOUT IP ADDRESS) ---
-// Check if an admin is logged in before destroying the session
+// Log admin logout before destroying the session
 if (isset($_SESSION['account_id']) && isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin') {
     $admin_id = $_SESSION['account_id'];
 
@@ -12,7 +12,6 @@ if (isset($_SESSION['account_id']) && isset($_SESSION['user_role']) && $_SESSION
     $log_stmt->execute();
     $log_stmt->close();
 }
-// --- END OF UPDATED CODE ---
 
 // Unset all session variables
 session_unset();
