@@ -61,31 +61,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit();
 }
 
-// ── Filter Parameters ──────────────────────────────────────
-$filter      = isset($_GET['filter']) ? $_GET['filter'] : 'all';
-$type_filter = isset($_GET['type'])   ? $_GET['type']   : 'all';
+// ── Filter Parameters (only priority for the filter sidebar) ──
 $priority_filter = isset($_GET['priority']) ? $_GET['priority'] : 'all';
 
 // ── Build Query ────────────────────────────────────────────
+// Fetch ALL notifications at once; tab navigation is handled client-side
+// via Bootstrap tabs (same approach as property.php).
 // Security: Only show tour notifications for properties managed by the current admin.
-// Non-tour notifications (agent, property, property_sale) are admin-global.
 $admin_account_id = (int)$_SESSION['account_id'];
 
 $where_conditions = [];
-if ($filter === 'unread') {
-    $where_conditions[] = "(n.is_read = 0 OR n.is_read IS NULL)";
-} elseif ($filter === 'read') {
-    $where_conditions[] = "n.is_read = 1";
-}
-if ($type_filter !== 'all') {
-    $where_conditions[] = "n.item_type = '" . $conn->real_escape_string($type_filter) . "'";
-}
 if ($priority_filter !== 'all') {
     $where_conditions[] = "n.priority = '" . $conn->real_escape_string($priority_filter) . "'";
 }
 
-// Filter: exclude tour notifications for properties NOT managed by this admin
-// A tour notification's item_id = tour_requests.tour_id → tour_requests.property_id → property_log.account_id
+// Exclude tour notifications for properties NOT managed by this admin
 $where_conditions[] = "(
     n.item_type != 'tour'
     OR EXISTS (
@@ -166,10 +156,26 @@ $agent_count   = (int)$conn->query("SELECT COUNT(*) as c FROM notifications n WH
 $property_count= (int)$conn->query("SELECT COUNT(*) as c FROM notifications n WHERE n.item_type IN ('property','property_sale') $tour_filter_sql")->fetch_assoc()['c'];
 $tour_count    = (int)$conn->query("SELECT COUNT(*) as c FROM notifications n WHERE n.item_type = 'tour' $tour_filter_sql")->fetch_assoc()['c'];
 
-// ── "Today" vs "Earlier" grouping ──────────────────────────
+// ── "Today" vs "Earlier" grouping (for All tab) ────────────
 $today_start = date('Y-m-d') . ' 00:00:00';
 $today_notifications   = array_filter($notifications, fn($n) => $n['created_at'] >= $today_start);
 $earlier_notifications = array_filter($notifications, fn($n) => $n['created_at'] < $today_start);
+
+// ── Category arrays for each tab pane (like property.php) ──
+$unread_notifications   = array_filter($notifications, fn($n) => !isset($n['is_read']) || (int)$n['is_read'] === 0);
+$agent_notifications    = array_filter($notifications, fn($n) => ($n['item_type'] ?? '') === 'agent');
+$property_notifications = array_filter($notifications, fn($n) => in_array($n['item_type'] ?? '', ['property', 'property_sale']));
+$tour_notifications     = array_filter($notifications, fn($n) => ($n['item_type'] ?? '') === 'tour');
+
+// Today/Earlier splits for each category tab
+$unread_today    = array_filter($unread_notifications,   fn($n) => $n['created_at'] >= $today_start);
+$unread_earlier  = array_filter($unread_notifications,   fn($n) => $n['created_at'] < $today_start);
+$agent_today     = array_filter($agent_notifications,    fn($n) => $n['created_at'] >= $today_start);
+$agent_earlier   = array_filter($agent_notifications,    fn($n) => $n['created_at'] < $today_start);
+$property_today  = array_filter($property_notifications, fn($n) => $n['created_at'] >= $today_start);
+$property_earlier= array_filter($property_notifications, fn($n) => $n['created_at'] < $today_start);
+$tour_today      = array_filter($tour_notifications,     fn($n) => $n['created_at'] >= $today_start);
+$tour_earlier    = array_filter($tour_notifications,     fn($n) => $n['created_at'] < $today_start);
 
 // ── Live Data Summaries (daily insights) ──────────────────
 // Pending agent approvals
@@ -792,6 +798,163 @@ function notif_time_ago($datetime) {
             .tab-badge { display: none; }
             .insights-grid { grid-template-columns: 1fr; }
         }
+
+        /* =====================================================
+           MARK-ALL-READ CONFIRMATION MODAL
+           Prefix: mar- (mark-all-read) — isolated from all
+           other component styles to prevent class conflicts.
+           ===================================================== */
+        .mar-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 10500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 8, 4, 0.62);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.22s ease, visibility 0.22s ease;
+            padding: 1rem;
+        }
+        .mar-backdrop.mar-open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .mar-box {
+            position: relative;
+            background: #ffffff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 430px;
+            box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(212, 175, 55, 0.18);
+            overflow: hidden;
+            transform: scale(0.86) translateY(16px);
+            opacity: 0;
+            transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        opacity 0.24s ease;
+        }
+        .mar-backdrop.mar-open .mar-box {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+        /* Header */
+        .mar-header {
+            background: linear-gradient(135deg, #1a1408 0%, #26190a 100%);
+            padding: 1.35rem 1.5rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        .mar-icon-wrap {
+            flex-shrink: 0;
+            width: 46px;
+            height: 46px;
+            border-radius: 11px;
+            background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.22));
+            border: 1px solid rgba(212, 175, 55, 0.32);
+            color: #d4af37;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        .mar-header-text h5 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            line-height: 1.3;
+        }
+        .mar-header-text span {
+            display: block;
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 0.73rem;
+            margin-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        /* Body */
+        .mar-body {
+            padding: 1.5rem 1.5rem 1.25rem;
+            color: #374151;
+            font-size: 0.925rem;
+            line-height: 1.65;
+        }
+        .mar-body strong { color: #111827; }
+        .mar-hint {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            background: rgba(212, 175, 55, 0.07);
+            border: 1px solid rgba(212, 175, 55, 0.18);
+            border-radius: 9px;
+            padding: 0.7rem 0.9rem;
+            margin-top: 1rem;
+            font-size: 0.835rem;
+            color: #92700e;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        .mar-hint i { margin-top: 2px; flex-shrink: 0; }
+        /* Footer */
+        .mar-footer {
+            padding: 0.9rem 1.5rem 1.4rem;
+            display: flex;
+            gap: 0.6rem;
+            justify-content: flex-end;
+        }
+        .mar-btn-cancel {
+            padding: 0.55rem 1.2rem;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background: transparent;
+            color: #6b7280;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.18s, color 0.18s, background 0.18s;
+            line-height: 1;
+        }
+        .mar-btn-cancel:hover {
+            border-color: #9ca3af;
+            color: #374151;
+            background: #f3f4f6;
+        }
+        .mar-btn-confirm {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 1.35rem;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%);
+            color: #fff;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+            line-height: 1;
+        }
+        .mar-btn-confirm:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.42);
+        }
+        .mar-btn-confirm:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .mar-btn-confirm:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -938,10 +1101,8 @@ function notif_time_ago($datetime) {
                 <?php endif; ?>
                 <button type="button" class="btn-outline-admin" onclick="openFilterSidebar()">
                     <i class="bi bi-funnel"></i> Filters
-                    <?php
-                    $active_filter_count = ($filter !== 'all' ? 1 : 0) + ($type_filter !== 'all' ? 1 : 0) + ($priority_filter !== 'all' ? 1 : 0);
-                    if ($active_filter_count > 0): ?>
-                        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;background:var(--blue);color:#fff;border-radius:10px;font-size:0.7rem;font-weight:700;"><?php echo $active_filter_count; ?></span>
+                    <?php if ($priority_filter !== 'all'): ?>
+                        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;background:var(--blue);color:#fff;border-radius:10px;font-size:0.7rem;font-weight:700;">1</span>
                     <?php endif; ?>
                 </button>
                 <?php
@@ -954,106 +1115,160 @@ function notif_time_ago($datetime) {
             </div>
         </div>
 
-        <!-- ═══ Active Filters Display ═══ -->
-        <?php if ($filter !== 'all' || $type_filter !== 'all' || $priority_filter !== 'all'): ?>
-        <div class="active-filters">
-            <?php if ($filter !== 'all'): ?>
-                <span class="active-filter-badge">
-                    <i class="bi bi-funnel"></i> Status: <?php echo ucfirst($filter); ?>
-                    <a href="?filter=all&type=<?php echo urlencode($type_filter); ?>&priority=<?php echo urlencode($priority_filter); ?>" class="remove-filter"><i class="bi bi-x"></i></a>
-                </span>
-            <?php endif; ?>
-            <?php if ($type_filter !== 'all'): ?>
-                <span class="active-filter-badge">
-                    <i class="bi bi-tag"></i> Type: <?php echo ucfirst(str_replace('_', ' ', $type_filter)); ?>
-                    <a href="?filter=<?php echo urlencode($filter); ?>&type=all&priority=<?php echo urlencode($priority_filter); ?>" class="remove-filter"><i class="bi bi-x"></i></a>
-                </span>
-            <?php endif; ?>
-            <?php if ($priority_filter !== 'all'): ?>
-                <span class="active-filter-badge">
-                    <i class="bi bi-flag"></i> Priority: <?php echo ucfirst($priority_filter); ?>
-                    <a href="?filter=<?php echo urlencode($filter); ?>&type=<?php echo urlencode($type_filter); ?>&priority=all" class="remove-filter"><i class="bi bi-x"></i></a>
-                </span>
-            <?php endif; ?>
-            <a href="?" class="clear-all-filters">Clear All</a>
-        </div>
-        <?php endif; ?>
-
         <!-- ═══ Tabs ═══ -->
         <div class="notif-tabs">
             <ul class="nav nav-tabs" id="notifTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <a class="nav-link <?php echo $type_filter === 'all' ? 'active' : ''; ?>"
-                       href="?filter=<?php echo urlencode($filter); ?>&type=all&priority=<?php echo urlencode($priority_filter); ?>">
+                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-content" type="button" role="tab">
                         All <span class="tab-badge badge-total"><?php echo $total_count; ?></span>
-                    </a>
+                    </button>
                 </li>
                 <?php if ($unread_count > 0): ?>
                 <li class="nav-item" role="presentation">
-                    <a class="nav-link <?php echo $filter === 'unread' && $type_filter === 'all' ? 'active' : ''; ?>"
-                       href="?filter=unread&type=all&priority=<?php echo urlencode($priority_filter); ?>">
+                    <button class="nav-link" id="unread-tab" data-bs-toggle="tab" data-bs-target="#unread-content" type="button" role="tab">
                         Unread <span class="tab-badge badge-unread"><?php echo $unread_count; ?></span>
-                    </a>
+                    </button>
                 </li>
                 <?php endif; ?>
                 <?php if ($agent_count > 0): ?>
                 <li class="nav-item" role="presentation">
-                    <a class="nav-link <?php echo $type_filter === 'agent' ? 'active' : ''; ?>"
-                       href="?filter=<?php echo urlencode($filter); ?>&type=agent&priority=<?php echo urlencode($priority_filter); ?>">
+                    <button class="nav-link" id="agents-tab" data-bs-toggle="tab" data-bs-target="#agents-content" type="button" role="tab">
                         <i class="bi bi-person-badge me-1"></i>Agents <span class="tab-badge badge-agent"><?php echo $agent_count; ?></span>
-                    </a>
+                    </button>
                 </li>
                 <?php endif; ?>
                 <?php if ($property_count > 0): ?>
                 <li class="nav-item" role="presentation">
-                    <a class="nav-link <?php echo $type_filter === 'property' ? 'active' : ''; ?>"
-                       href="?filter=<?php echo urlencode($filter); ?>&type=property&priority=<?php echo urlencode($priority_filter); ?>">
+                    <button class="nav-link" id="properties-tab" data-bs-toggle="tab" data-bs-target="#properties-content" type="button" role="tab">
                         <i class="bi bi-building me-1"></i>Properties <span class="tab-badge badge-property"><?php echo $property_count; ?></span>
-                    </a>
+                    </button>
                 </li>
                 <?php endif; ?>
                 <?php if ($tour_count > 0): ?>
                 <li class="nav-item" role="presentation">
-                    <a class="nav-link <?php echo $type_filter === 'tour' ? 'active' : ''; ?>"
-                       href="?filter=<?php echo urlencode($filter); ?>&type=tour&priority=<?php echo urlencode($priority_filter); ?>">
+                    <button class="nav-link" id="tours-tab" data-bs-toggle="tab" data-bs-target="#tours-content" type="button" role="tab">
                         <i class="bi bi-calendar-check me-1"></i>Tours <span class="tab-badge badge-tour"><?php echo $tour_count; ?></span>
-                    </a>
+                    </button>
                 </li>
                 <?php endif; ?>
             </ul>
 
-            <div class="tab-content">
-                <!-- Notification List -->
-                <div class="notif-list-container">
+            <div class="tab-content" id="notifTabsContent">
 
-                    <?php if (empty($notifications)): ?>
-                        <div class="empty-state">
-                            <i class="bi bi-bell-slash"></i>
-                            <h4>No Notifications Found</h4>
-                            <p>
-                                <?php echo ($filter !== 'all' || $type_filter !== 'all' || $priority_filter !== 'all')
-                                    ? 'Try adjusting your filters to see more results.'
-                                    : "You're all caught up! No notifications at this time."; ?>
-                            </p>
-                        </div>
-                    <?php else: ?>
-
-                        <?php if (!empty($today_notifications)): ?>
-                            <div class="notif-group-label"><i class="bi bi-sun"></i> Today</div>
-                            <?php foreach ($today_notifications as $n): ?>
-                                <?php echo render_notification_item($n); ?>
-                            <?php endforeach; ?>
+                <!-- ── All Notifications ── -->
+                <div class="tab-pane fade show active" id="all-content" role="tabpanel">
+                    <div class="notif-list-container">
+                        <?php if (empty($notifications)): ?>
+                            <div class="empty-state">
+                                <i class="bi bi-bell-slash"></i>
+                                <h4>No Notifications Found</h4>
+                                <p><?php echo $priority_filter !== 'all' ? 'Try adjusting your filters to see more results.' : "You're all caught up! No notifications at this time."; ?></p>
+                            </div>
+                        <?php else: ?>
+                            <?php if (!empty($today_notifications)): ?>
+                                <div class="notif-group-label"><i class="bi bi-sun"></i> Today</div>
+                                <?php foreach ($today_notifications as $n): echo render_notification_item($n); endforeach; ?>
+                            <?php endif; ?>
+                            <?php if (!empty($earlier_notifications)): ?>
+                                <div class="notif-group-label"><i class="bi bi-clock-history"></i> Earlier</div>
+                                <?php foreach ($earlier_notifications as $n): echo render_notification_item($n); endforeach; ?>
+                            <?php endif; ?>
                         <?php endif; ?>
-
-                        <?php if (!empty($earlier_notifications)): ?>
-                            <div class="notif-group-label"><i class="bi bi-clock-history"></i> Earlier</div>
-                            <?php foreach ($earlier_notifications as $n): ?>
-                                <?php echo render_notification_item($n); ?>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-
-                    <?php endif; ?>
+                    </div>
                 </div>
+
+                <!-- ── Unread Notifications ── -->
+                <?php if ($unread_count > 0): ?>
+                <div class="tab-pane fade" id="unread-content" role="tabpanel">
+                    <div class="notif-list-container">
+                        <?php if (!empty($unread_today)): ?>
+                            <div class="notif-group-label"><i class="bi bi-sun"></i> Today</div>
+                            <?php foreach ($unread_today as $n): echo render_notification_item($n); endforeach; ?>
+                        <?php endif; ?>
+                        <?php if (!empty($unread_earlier)): ?>
+                            <div class="notif-group-label"><i class="bi bi-clock-history"></i> Earlier</div>
+                            <?php foreach ($unread_earlier as $n): echo render_notification_item($n); endforeach; ?>
+                        <?php endif; ?>
+                        <?php if (empty($unread_today) && empty($unread_earlier)): ?>
+                            <div class="empty-state">
+                                <i class="bi bi-envelope-open"></i>
+                                <h4>No Unread Notifications</h4>
+                                <p>You're all caught up!</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- ── Agent Notifications ── -->
+                <?php if ($agent_count > 0): ?>
+                <div class="tab-pane fade" id="agents-content" role="tabpanel">
+                    <div class="notif-list-container">
+                        <?php if (!empty($agent_today)): ?>
+                            <div class="notif-group-label"><i class="bi bi-sun"></i> Today</div>
+                            <?php foreach ($agent_today as $n): echo render_notification_item($n); endforeach; ?>
+                        <?php endif; ?>
+                        <?php if (!empty($agent_earlier)): ?>
+                            <div class="notif-group-label"><i class="bi bi-clock-history"></i> Earlier</div>
+                            <?php foreach ($agent_earlier as $n): echo render_notification_item($n); endforeach; ?>
+                        <?php endif; ?>
+                        <?php if (empty($agent_today) && empty($agent_earlier)): ?>
+                            <div class="empty-state">
+                                <i class="bi bi-person-badge"></i>
+                                <h4>No Agent Notifications</h4>
+                                <p>No agent activity to show.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- ── Property Notifications ── -->
+                <?php if ($property_count > 0): ?>
+                <div class="tab-pane fade" id="properties-content" role="tabpanel">
+                    <div class="notif-list-container">
+                        <?php if (!empty($property_today)): ?>
+                            <div class="notif-group-label"><i class="bi bi-sun"></i> Today</div>
+                            <?php foreach ($property_today as $n): echo render_notification_item($n); endforeach; ?>
+                        <?php endif; ?>
+                        <?php if (!empty($property_earlier)): ?>
+                            <div class="notif-group-label"><i class="bi bi-clock-history"></i> Earlier</div>
+                            <?php foreach ($property_earlier as $n): echo render_notification_item($n); endforeach; ?>
+                        <?php endif; ?>
+                        <?php if (empty($property_today) && empty($property_earlier)): ?>
+                            <div class="empty-state">
+                                <i class="bi bi-building"></i>
+                                <h4>No Property Notifications</h4>
+                                <p>No property activity to show.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- ── Tour Notifications ── -->
+                <?php if ($tour_count > 0): ?>
+                <div class="tab-pane fade" id="tours-content" role="tabpanel">
+                    <div class="notif-list-container">
+                        <?php if (!empty($tour_today)): ?>
+                            <div class="notif-group-label"><i class="bi bi-sun"></i> Today</div>
+                            <?php foreach ($tour_today as $n): echo render_notification_item($n); endforeach; ?>
+                        <?php endif; ?>
+                        <?php if (!empty($tour_earlier)): ?>
+                            <div class="notif-group-label"><i class="bi bi-clock-history"></i> Earlier</div>
+                            <?php foreach ($tour_earlier as $n): echo render_notification_item($n); endforeach; ?>
+                        <?php endif; ?>
+                        <?php if (empty($tour_today) && empty($tour_earlier)): ?>
+                            <div class="empty-state">
+                                <i class="bi bi-calendar-check"></i>
+                                <h4>No Tour Notifications</h4>
+                                <p>No tour activity to show.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
             </div>
         </div>
 
@@ -1069,41 +1284,6 @@ function notif_time_ago($datetime) {
             </div>
             <form id="filterForm" method="GET" action="">
             <div class="filter-body">
-                <!-- Status -->
-                <div class="filter-section">
-                    <div class="filter-section-title"><i class="bi bi-check-circle"></i> Read Status</div>
-                    <?php foreach (['all' => 'All', 'unread' => 'Unread', 'read' => 'Read'] as $val => $label): ?>
-                    <div class="filter-option">
-                        <input type="radio" name="filter" id="f_status_<?php echo $val; ?>" value="<?php echo $val; ?>" <?php echo $filter === $val ? 'checked' : ''; ?>>
-                        <label for="f_status_<?php echo $val; ?>">
-                            <?php echo $label; ?>
-                            <?php if ($val === 'all'): ?><span class="filter-count"><?php echo $total_count; ?></span><?php endif; ?>
-                            <?php if ($val === 'unread'): ?><span class="filter-count"><?php echo $unread_count; ?></span><?php endif; ?>
-                        </label>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <!-- Type -->
-                <div class="filter-section">
-                    <div class="filter-section-title"><i class="bi bi-tags"></i> Notification Type</div>
-                    <?php
-                    $types = [
-                        'all' => ['All Types', $total_count, 'bi-list-ul'],
-                        'agent' => ['Agent', $agent_count, 'bi-person-badge'],
-                        'property' => ['Property', $property_count, 'bi-building'],
-                        'tour' => ['Tour', $tour_count, 'bi-calendar-check'],
-                        'property_sale' => ['Sale', $pending_sales_count, 'bi-cash-stack'],
-                    ];
-                    foreach ($types as $val => $info): ?>
-                    <div class="filter-option">
-                        <input type="radio" name="type" id="f_type_<?php echo $val; ?>" value="<?php echo $val; ?>" <?php echo $type_filter === $val ? 'checked' : ''; ?>>
-                        <label for="f_type_<?php echo $val; ?>">
-                            <span><i class="bi <?php echo $info[2]; ?> me-1"></i> <?php echo $info[0]; ?></span>
-                            <span class="filter-count"><?php echo $info[1]; ?></span>
-                        </label>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
                 <!-- Priority -->
                 <div class="filter-section">
                     <div class="filter-section-title"><i class="bi bi-flag"></i> Priority</div>
@@ -1123,12 +1303,43 @@ function notif_time_ago($datetime) {
         </div>
     </div>
 
+    <!-- ═══ Mark-All-Read Confirmation Modal ═══ -->
+    <div class="mar-backdrop" id="marBackdrop" role="dialog" aria-modal="true" aria-labelledby="marModalTitle">
+        <div class="mar-box">
+            <div class="mar-header">
+                <div class="mar-icon-wrap"><i class="bi bi-check2-all"></i></div>
+                <div class="mar-header-text">
+                    <h5 id="marModalTitle">Mark All as Read</h5>
+                    <span>Notification management</span>
+                </div>
+            </div>
+            <div class="mar-body">
+                Are you sure you want to mark <strong>all notifications</strong> as read?
+                <div class="mar-hint">
+                    <i class="bi bi-info-circle"></i>
+                    <span>This will clear all unread indicators across every tab.</span>
+                </div>
+            </div>
+            <div class="mar-footer">
+                <button type="button" class="mar-btn-cancel" id="marCancelBtn">Cancel</button>
+                <button type="button" class="mar-btn-confirm" id="marConfirmBtn">
+                    <i class="bi bi-check2-all"></i> Mark All Read
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // ── Filter Sidebar ─────────────────────────────
         function openFilterSidebar()  { document.getElementById('filterSidebar').classList.add('active'); }
         function closeFilterSidebar() { document.getElementById('filterSidebar').classList.remove('active'); }
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFilterSidebar(); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                closeFilterSidebar();
+                closeMarkAllReadModal();
+            }
+        });
 
         // ── AJAX helpers ───────────────────────────────
         function ajaxPost(data) {
@@ -1143,10 +1354,41 @@ function notif_time_ago($datetime) {
             ajaxPost('mark_read=1&notification_id=' + id).then(d => { if (d.success) location.reload(); });
         }
 
-        function markAllAsRead() {
-            if (!confirm('Mark all notifications as read?')) return;
-            ajaxPost('mark_all_read=1').then(d => { if (d.success) location.reload(); });
+        // ── Mark-All-Read Modal ────────────────────────
+        const _marBackdrop = document.getElementById('marBackdrop');
+        const _marConfirm  = document.getElementById('marConfirmBtn');
+        const _marCancel   = document.getElementById('marCancelBtn');
+
+        function openMarkAllReadModal() {
+            _marBackdrop.classList.add('mar-open');
+            _marConfirm.disabled = false;
+            _marConfirm.innerHTML = '<i class="bi bi-check2-all"></i> Mark All Read';
         }
+        function closeMarkAllReadModal() {
+            _marBackdrop.classList.remove('mar-open');
+        }
+
+        _marCancel.addEventListener('click', closeMarkAllReadModal);
+        _marBackdrop.addEventListener('click', e => { if (e.target === _marBackdrop) closeMarkAllReadModal(); });
+
+        _marConfirm.addEventListener('click', () => {
+            _marConfirm.disabled = true;
+            _marConfirm.innerHTML = '<i class="bi bi-hourglass-split"></i> Marking…';
+            ajaxPost('mark_all_read=1').then(d => {
+                if (d.success) location.reload();
+                else {
+                    _marConfirm.disabled = false;
+                    _marConfirm.innerHTML = '<i class="bi bi-check2-all"></i> Mark All Read';
+                    closeMarkAllReadModal();
+                }
+            }).catch(() => {
+                _marConfirm.disabled = false;
+                _marConfirm.innerHTML = '<i class="bi bi-check2-all"></i> Mark All Read';
+                closeMarkAllReadModal();
+            });
+        });
+
+        function markAllAsRead() { openMarkAllReadModal(); }
 
         function deleteNotification(id) {
             if (!confirm('Delete this notification?')) return;
