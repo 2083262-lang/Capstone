@@ -65,11 +65,11 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
     /* ===== AGENT NAVBAR - Dark Theme (Gold, Black, Blue) ===== */
     .agent-navbar {
         background: linear-gradient(180deg, #0f0f0f 0%, #111111 100%) !important;
-        backdrop-filter: blur(10px);
         box-shadow: 0 2px 20px rgba(0,0,0,0.6), 0 1px 0 rgba(212, 175, 55, 0.1);
         padding: 0.75rem 0;
         border-bottom: 1px solid rgba(212, 175, 55, 0.15);
-        transition: all 0.3s ease;
+        transition: padding 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        will-change: padding;
         position: sticky;
         top: 0;
         z-index: 1050;
@@ -727,16 +727,24 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
 
 <!-- Navbar Scroll Effect -->
 <script>
+    // Throttled via requestAnimationFrame to prevent scroll jank
+    let _agentNavScrollTicking = false;
     window.addEventListener('scroll', function() {
-        const navbar = document.querySelector('.agent-navbar');
-        if (navbar) {
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
+        if (!_agentNavScrollTicking) {
+            requestAnimationFrame(function() {
+                const navbar = document.querySelector('.agent-navbar');
+                if (navbar) {
+                    if (window.scrollY > 50) {
+                        navbar.classList.add('scrolled');
+                    } else {
+                        navbar.classList.remove('scrolled');
+                    }
+                }
+                _agentNavScrollTicking = false;
+            });
+            _agentNavScrollTicking = true;
         }
-    });
+    }, { passive: true });
 </script>
 
 <!-- Notification Dropdown Logic -->

@@ -6,11 +6,11 @@
     /* Navigation - Professional Gold, Black, Blue Color Harmony */
         .navbar {
             background: linear-gradient(180deg, #0f0f0f 0%, #111111 100%) !important;
-            backdrop-filter: blur(10px);
             box-shadow: 0 2px 20px rgba(0,0,0,0.6), 0 1px 0 rgba(212, 175, 55, 0.1);
             padding: 1rem 0;
             border-bottom: 1px solid rgba(212, 175, 55, 0.15);
-            transition: all 0.3s ease;
+            transition: padding 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            will-change: padding;
         }
 
         .navbar.scrolled {
@@ -231,15 +231,24 @@
         });
     }
 
-    // Navbar scroll effect
+    // Navbar scroll effect (throttled via requestAnimationFrame to prevent scroll jank)
+    let _navScrollTicking = false;
     window.addEventListener('scroll', function() {
-        const navbar = document.querySelector('.navbar');
-        if (window.scrollY > 50) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
+        if (!_navScrollTicking) {
+            requestAnimationFrame(function() {
+                const navbar = document.querySelector('.navbar');
+                if (navbar) {
+                    if (window.scrollY > 50) {
+                        navbar.classList.add('scrolled');
+                    } else {
+                        navbar.classList.remove('scrolled');
+                    }
+                }
+                _navScrollTicking = false;
+            });
+            _navScrollTicking = true;
         }
-    });
+    }, { passive: true });
 
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -265,23 +274,28 @@
         });
     });
 
-    // Active nav link on scroll
+    // Active nav link on scroll (throttled via requestAnimationFrame to prevent scroll jank)
     const sections = document.querySelectorAll('section[id]');
+    let _sectionScrollTicking = false;
     window.addEventListener('scroll', function() {
-        let current = '';
-        sections.forEach(section => {
-            const sectionTop = section.offsetTop;
-            const sectionHeight = section.clientHeight;
-            if (window.pageYOffset >= sectionTop - 100) {
-                current = section.getAttribute('id');
-            }
-        });
-
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.remove('active');
-            if (link.getAttribute('href') === `#${current}`) {
-                link.classList.add('active');
-            }
-        });
-    });
+        if (!_sectionScrollTicking) {
+            requestAnimationFrame(function() {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (window.pageYOffset >= sectionTop - 100) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${current}`) {
+                        link.classList.add('active');
+                    }
+                });
+                _sectionScrollTicking = false;
+            });
+            _sectionScrollTicking = true;
+        }
+    }, { passive: true });
 </script>

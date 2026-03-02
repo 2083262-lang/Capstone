@@ -470,6 +470,8 @@ $conn->close();
             background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px; overflow: hidden;
             transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s; position: relative;
+            content-visibility: auto;
+            contain-intrinsic-size: auto 420px;
         }
         .property-card:hover {
             border-color: rgba(37,99,235,0.3); box-shadow: 0 12px 32px rgba(0,0,0,0.4);
@@ -477,7 +479,7 @@ $conn->close();
         }
         .property-card-link { text-decoration: none; color: inherit; display: block; }
         .property-image-container { position: relative; height: 220px; overflow: hidden; background-color: var(--black); }
-        .property-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+        .property-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; will-change: transform; }
         .property-card:hover .property-image { transform: scale(1.06); }
         .property-image-overlay {
             position: absolute; bottom: 0; left: 0; right: 0; height: 60%;
@@ -486,7 +488,7 @@ $conn->close();
         .property-stats { position: absolute; right: 12px; top: 12px; display: flex; gap: 6px; z-index: 2; }
         .stat-badge {
             display: flex; align-items: center; gap: 5px; padding: 5px 10px;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); border-radius: 6px;
+            background: rgba(0,0,0,0.85); border-radius: 6px;
             font-size: 0.75rem; font-weight: 600; color: var(--white);
             border: 1px solid rgba(255,255,255,0.1);
         }
