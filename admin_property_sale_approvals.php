@@ -392,67 +392,151 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .badge-approved { background: rgba(34,197,94,0.1);  color: #16a34a; border: 1px solid rgba(34,197,94,0.15); }
         .badge-rejected { background: rgba(239,68,68,0.1);  color: #dc2626; border: 1px solid rgba(239,68,68,0.15); }
 
+        /* ===== ACTION BAR ===== */
+        .action-bar { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 0.85rem 1.25rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; position: relative; overflow: hidden; }
+        .action-bar::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
+        .action-bar-left { display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 0; }
+        .action-bar-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .action-search-wrap { position: relative; flex: 1; }
+        .action-search-wrap input { width: 100%; padding: 0.5rem 1rem 0.5rem 2.35rem; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.85rem; color: var(--text-primary); background: #f8fafc; transition: all 0.2s; }
+        .action-search-wrap input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); outline: none; background: #fff; }
+        .action-search-wrap input::placeholder { color: #94a3b8; }
+        .action-search-wrap .ab-search-icon { position: absolute; left: 0.72rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.83rem; pointer-events: none; }
+        .btn-outline-admin { background: var(--card-bg); color: var(--text-secondary); border: 1px solid #e2e8f0; padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 600; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; cursor: pointer; }
+        .btn-outline-admin:hover { border-color: var(--blue); color: var(--blue); background: rgba(37,99,235,0.03); }
+        .btn-outline-admin.filter-active { border-color: var(--gold); color: var(--gold-dark); background: rgba(212,175,55,0.04); }
+        .filter-count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; background: var(--blue); color: #fff; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+        .sort-select { padding: 0.5rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.82rem; font-weight: 500; color: var(--text-primary); background: #f8fafc; cursor: pointer; transition: all 0.2s; }
+        .sort-select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); outline: none; }
+
+        /* ===== FILTER SIDEBAR ===== */
+        .sf-sidebar { position: fixed; top: 0; right: 0; width: 100%; height: 100%; z-index: 10050; pointer-events: none; }
+        .sf-sidebar.active { pointer-events: all; }
+        .sf-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.4); opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
+        .sf-sidebar.active .sf-overlay { opacity: 1; pointer-events: all; }
+        .sf-content { position: absolute; top: 0; right: 0; width: 480px; max-width: 92vw; height: 100%; background: #fff; border-left: 1px solid rgba(37,99,235,0.15); box-shadow: -8px 0 32px rgba(15,23,42,0.1); transform: translateX(100%); transition: transform 0.25s ease; display: flex; flex-direction: column; overflow: hidden; }
+        .sf-sidebar.active .sf-content { transform: translateX(0); }
+        .sf-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden; flex-shrink: 0; }
+        .sf-header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), var(--blue)); }
+        .sf-header h4 { font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 0.6rem; margin: 0; }
+        .sf-header h4 i { color: var(--gold); }
+        .sf-header-right { display: flex; align-items: center; gap: 0.6rem; }
+        .sf-active-pill { display: none; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; background: rgba(212,175,55,0.15); color: var(--gold); border: 1px solid rgba(212,175,55,0.25); border-radius: 10px; font-size: 0.72rem; font-weight: 700; }
+        .sf-active-pill.show { display: inline-flex; }
+        .btn-close-sf { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 34px; height: 34px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; flex-shrink: 0; }
+        .btn-close-sf:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); }
+        .sf-results-bar { background: rgba(37,99,235,0.04); border-bottom: 1px solid rgba(37,99,235,0.1); padding: 0.7rem 1.5rem; display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .sf-results-bar i { color: var(--blue); font-size: 0.95rem; }
+        .sf-results-num { font-size: 1.1rem; font-weight: 800; color: var(--blue); }
+        .sf-results-label { font-size: 0.78rem; color: var(--text-secondary); }
+        .sf-body { flex: 1; overflow-y: auto; padding: 1.1rem; background: #f8fafc; }
+        .sf-body::-webkit-scrollbar { width: 4px; }
+        .sf-body::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 4px; }
+        .sf-section { background: #fff; border-radius: 4px; padding: 1rem 1.1rem; margin-bottom: 0.75rem; border: 1px solid #e2e8f0; }
+        .sf-section:last-child { margin-bottom: 0; }
+        .sf-section-title { font-weight: 700; font-size: 0.73rem; color: var(--text-primary); margin-bottom: 0.8rem; padding-bottom: 0.5rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 0.45rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .sf-section-title i { color: var(--gold); font-size: 0.85rem; }
+        .sf-search-wrap { position: relative; }
+        .sf-search-wrap input { width: 100%; padding: 0.6rem 0.85rem 0.6rem 2.35rem; border-radius: 4px; border: 1px solid #e2e8f0; background: #fff; font-size: 0.85rem; color: var(--text-primary); transition: all 0.2s; }
+        .sf-search-wrap input::placeholder { color: #94a3b8; }
+        .sf-search-wrap input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); outline: none; }
+        .sf-search-wrap > i { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem; pointer-events: none; }
+        .price-slider-container { position: relative; height: 40px; margin-bottom: 1rem; }
+        .price-slider-track { position: absolute; top: 50%; left: 0; right: 0; height: 6px; background: #e2e8f0; border-radius: 3px; transform: translateY(-50%); }
+        .price-slider-range { position: absolute; height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold)); border-radius: 3px; }
+        .price-range-slider { position: absolute; width: 100%; height: 6px; top: 50%; transform: translateY(-50%); background: transparent; pointer-events: none; -webkit-appearance: none; appearance: none; }
+        .price-range-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 3px solid var(--gold); cursor: pointer; pointer-events: all; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: box-shadow 0.2s; }
+        .price-range-slider::-webkit-slider-thumb:hover { box-shadow: 0 3px 10px rgba(212,175,55,0.3); }
+        .price-range-inputs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.6rem; align-items: center; }
+        .price-input { position: relative; }
+        .price-input input { width: 100%; padding: 0.55rem 0.65rem 0.55rem 1.7rem; border-radius: 4px; border: 1px solid #e2e8f0; background: #fff; font-size: 0.82rem; font-weight: 600; color: var(--text-primary); transition: all 0.2s; }
+        .price-input input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); outline: none; }
+        .price-input .currency-sym { position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); color: var(--gold-dark); font-weight: 700; font-size: 0.76rem; pointer-events: none; }
+        .range-divider { color: #94a3b8; font-weight: 600; text-align: center; font-size: 0.9rem; }
+        .filter-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .filter-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.42rem 0.8rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 2px; cursor: pointer; transition: all 0.2s; font-size: 0.795rem; font-weight: 500; color: var(--text-primary); user-select: none; }
+        .filter-chip:hover { background: #f8fafc; border-color: var(--gold); }
+        .filter-chip.active { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: #fff; border-color: var(--gold-dark); font-weight: 600; }
+        .filter-chip input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--gold); }
+        .sf-select { width: 100%; padding: 0.55rem 0.8rem; border-radius: 4px; border: 1px solid #e2e8f0; background: #fff; font-size: 0.84rem; font-weight: 500; color: var(--text-primary); transition: all 0.2s; }
+        .sf-select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); outline: none; }
+        .date-range-inputs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.55rem; align-items: center; }
+        .date-range-inputs input { width: 100%; padding: 0.52rem 0.65rem; border-radius: 4px; border: 1px solid #e2e8f0; background: #fff; font-size: 0.8rem; font-weight: 500; color: var(--text-primary); min-width: 0; transition: all 0.2s; }
+        .date-range-inputs input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); outline: none; }
+        .quick-filters { display: flex; gap: 0.4rem; margin-top: 0.55rem; flex-wrap: wrap; }
+        .quick-filter-btn { padding: 0.32rem 0.72rem; border: 1px solid #e2e8f0; background: #fff; border-radius: 2px; font-size: 0.73rem; font-weight: 500; cursor: pointer; transition: all 0.2s; color: var(--text-primary); }
+        .quick-filter-btn:hover { border-color: var(--gold); background: #fffbeb; }
+        .quick-filter-btn.active { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: #fff; border-color: var(--gold-dark); font-weight: 600; }
+        .sf-footer { padding: 1rem 1.1rem; background: #fff; border-top: 1px solid #e2e8f0; display: flex; gap: 0.55rem; flex-shrink: 0; }
+        .sf-footer .btn { flex: 1; padding: 0.62rem 1rem; font-weight: 600; border-radius: 4px; font-size: 0.83rem; transition: all 0.2s; cursor: pointer; border: none; }
+        .sf-footer .btn-reset { background: #fff; border: 1px solid #e2e8f0 !important; color: var(--text-secondary); }
+        .sf-footer .btn-reset:hover { border-color: rgba(239,68,68,0.3) !important; color: #dc2626; background: rgba(239,68,68,0.03); }
+        .sf-footer .btn-apply { background: linear-gradient(135deg, var(--blue-dark, #1e40af), var(--blue)); color: #fff; }
+        .sf-footer .btn-apply:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
+        .sf-no-results { text-align: center; padding: 3rem 2rem; color: var(--text-secondary); display: none; }
+        .sf-no-results i { font-size: 2.5rem; opacity: 0.25; display: block; margin-bottom: 0.75rem; }
+        .sf-no-results p { margin: 0; font-size: 0.88rem; }
+
         /* ===== CONTENT AREA ===== */
         .tab-content { padding: 1.5rem; }
         .sales-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
 
         /* ===== SALE CARD (consistent with property.php card style) ===== */
-        .sale-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; overflow: hidden; transition: all 0.2s ease; height: 100%; display: flex; flex-direction: column; position: relative; }
-        .sale-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(212,175,55,0.02), rgba(37,99,235,0.01)); opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 1; }
-        .sale-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .sale-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; overflow: hidden; transition: all 0.3s ease; height: 100%; display: flex; flex-direction: column; position: relative; }
+        .sale-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), var(--blue)); opacity: 0; transition: opacity 0.3s ease; z-index: 5; }
+        .sale-card:hover { border-color: rgba(37,99,235,0.25); box-shadow: 0 8px 32px rgba(37,99,235,0.08); transform: translateY(-4px); }
         .sale-card:hover::before { opacity: 1; }
 
-        .card-img-wrap { position: relative; height: 200px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); overflow: hidden; }
-        .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
-        .sale-card:hover .card-img-wrap img { transform: scale(1.03); }
-        .card-img-wrap .img-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.5)); pointer-events: none; }
+        .card-img-wrap { position: relative; height: 180px; background: #f1f5f9; overflow: hidden; }
+        .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+        .sale-card:hover .card-img-wrap img { transform: scale(1.05); }
+        .card-img-wrap .img-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%); pointer-events: none; }
 
         /* Badges on image */
-        .card-img-wrap .type-badge { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.95); color: var(--text-primary); padding: 0.3rem 0.65rem; border-radius: 3px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; z-index: 2; backdrop-filter: blur(4px); border: 1px solid rgba(37,99,235,0.08); box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-        .card-img-wrap .status-badge { position: absolute; top: 10px; right: 10px; padding: 0.3rem 0.7rem; border-radius: 3px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
+        .card-img-wrap .type-badge { position: absolute; bottom: 12px; left: 14px; padding: 0.2rem 0.6rem; border-radius: 2px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; z-index: 3; background: rgba(0,0,0,0.7); color: #e2e8f0; backdrop-filter: blur(4px); display: inline-flex; align-items: center; gap: 0.3rem; }
+        .card-img-wrap .status-badge { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.65rem; border-radius: 2px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; z-index: 3; }
         .status-badge.pending  { background: rgba(245,158,11,0.9); color: #fff; }
         .status-badge.approved { background: rgba(34,197,94,0.9);  color: #fff; }
         .status-badge.rejected { background: rgba(239,68,68,0.9);  color: #fff; }
 
-        .card-img-wrap .price-overlay { position: absolute; bottom: 10px; left: 10px; z-index: 2; }
-        .card-img-wrap .price-overlay .price { font-size: 1.2rem; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .card-img-wrap .price-overlay { position: absolute; bottom: 12px; right: 14px; z-index: 3; }
+        .card-img-wrap .price-overlay .price { font-size: 1.3rem; font-weight: 800; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light, #e8c558) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
 
         /* Card Body */
-        .sale-card .card-body-content { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; position: relative; z-index: 2; }
-        .sale-card .prop-address { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-        .sale-card .prop-location { font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.75rem; }
-        .sale-card .prop-location i { color: var(--gold-dark); font-size: 0.7rem; }
+        .sale-card .card-body-content { padding: 1rem 1.25rem; flex: 1; display: flex; flex-direction: column; position: relative; z-index: 2; }
+        .sale-card .prop-address { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+        .sale-card .prop-location { font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.75rem; }
+        .sale-card .prop-location i { color: var(--blue); font-size: 0.75rem; }
 
-        /* Info rows */
-        .sale-info { background: rgba(37,99,235,0.03); padding: 0.75rem; border-radius: 3px; margin-bottom: 0.75rem; border: 1px solid rgba(37,99,235,0.06); }
-        .sale-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-        .sale-info-row:last-child { margin-bottom: 0; }
-        .sale-info-label { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; }
-        .sale-info-value { font-size: 0.85rem; color: var(--text-primary); font-weight: 600; }
-        .sale-info-value.sale-price { font-size: 0.95rem; color: var(--gold-dark); font-weight: 800; }
+        /* Meta Row (sale-specific) */
+        .sale-meta-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+        .sale-meta-item { display: inline-flex; align-items: center; gap: 0.3rem; background: #f8fafc; padding: 0.2rem 0.55rem; border-radius: 2px; border: 1px solid #e2e8f0; font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); }
+        .sale-meta-item i { color: #94a3b8; font-size: 0.7rem; }
+        .sale-meta-item.agent-meta i { color: var(--blue); }
+        .sale-meta-item.date-meta i { color: var(--gold-dark); }
 
-        /* People sections */
-        .people-section { padding: 0.65rem 0.75rem; border-radius: 3px; margin-bottom: 0.5rem; border: 1px solid rgba(37,99,235,0.06); }
-        .people-section.buyer { background: rgba(212,175,55,0.04); }
-        .people-section.agent { background: rgba(37,99,235,0.03); }
-        .people-section .section-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.35rem; }
-        .people-section.buyer .section-title { color: var(--gold-dark); }
-        .people-section.agent .section-title { color: var(--blue); }
-        .people-section .detail-line { font-size: 0.8rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.15rem; }
-        .people-section .detail-line i { font-size: 0.7rem; width: 14px; text-align: center; }
-        .people-section.buyer .detail-line i { color: var(--gold-dark); }
-        .people-section.agent .detail-line i { color: var(--blue); }
-        .doc-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--blue); font-weight: 600; margin-top: 0.25rem; }
+        /* Card footer */
+        .sale-card .card-footer-section { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid #e2e8f0; }
+        .sale-card .posted-by { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.6rem; text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.3rem; }
+        .sale-card .posted-by i { color: #cbd5e1; }
+        .sale-card .btn-manage { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; background: linear-gradient(135deg, var(--blue-dark, #1e40af) 0%, var(--blue) 100%); color: #fff; border: none; padding: 0.6rem; font-size: 0.8rem; font-weight: 700; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(37,99,235,0.2); }
+        .sale-card .btn-manage:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.3); transform: translateY(-1px); }
 
-        /* Card footer actions */
-        .card-actions { display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid rgba(37,99,235,0.08); }
-        .btn-action { flex: 1; padding: 0.55rem; font-size: 0.8rem; font-weight: 600; border: none; border-radius: 3px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.35rem; }
-        .btn-view { background: var(--text-primary); color: #fff; }
-        .btn-view:hover { background: var(--gold); color: var(--text-primary); }
-        .btn-approve { background: #22c55e; color: #fff; }
-        .btn-approve:hover { background: #16a34a; }
-        .btn-reject { background: #ef4444; color: #fff; }
-        .btn-reject:hover { background: #dc2626; }
+        /* Pending actions row */
+        .sale-card .pending-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+        .pending-actions .btn-approve-sm, .pending-actions .btn-reject-sm { flex: 1; padding: 0.45rem; font-size: 0.75rem; font-weight: 700; border: none; border-radius: 3px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.3rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .btn-approve-sm { background: rgba(34,197,94,0.12); color: #16a34a; border: 1px solid rgba(34,197,94,0.2) !important; }
+        .btn-approve-sm:hover { background: #22c55e; color: #fff; }
+        .btn-reject-sm { background: rgba(239,68,68,0.1); color: #dc2626; border: 1px solid rgba(239,68,68,0.18) !important; }
+        .btn-reject-sm:hover { background: #ef4444; color: #fff; }
+
+        /* ===== NEEDS FINALIZATION HIGHLIGHT ===== */
+        .sale-card.needs-finalization { border-color: rgba(212,175,55,0.35); box-shadow: 0 0 0 1px rgba(212,175,55,0.12); }
+        .sale-card.needs-finalization::before { opacity: 1; background: linear-gradient(90deg, var(--gold), var(--gold-dark), var(--gold)); }
+        .sale-card.needs-finalization::after { content: ''; position: absolute; inset: 0; border-radius: 4px; box-shadow: 0 0 12px rgba(212,175,55,0.1); pointer-events: none; z-index: 0; animation: finalize-pulse 2.5s ease-in-out infinite; }
+        @keyframes finalize-pulse { 0%, 100% { box-shadow: 0 0 8px rgba(212,175,55,0.08); } 50% { box-shadow: 0 0 18px rgba(212,175,55,0.18); } }
+        .finalize-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.55rem; border-radius: 2px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(180,130,10,0.88); color: #fff; border: 1px solid rgba(212,175,55,0.4); position: absolute; top: 12px; left: 12px; z-index: 4; backdrop-filter: blur(4px); }
+        .finalize-badge i { font-size: 0.6rem; }
 
         /* ===== EMPTY STATE ===== */
         .empty-state { text-align: center; padding: 4rem 2rem; background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; }
@@ -460,8 +544,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .empty-state h4 { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem; }
         .empty-state p { color: var(--text-secondary); margin: 0; }
 
-        /* ===== ALERTS ===== */
-        .alert { border-radius: 4px; border-left: 3px solid; margin-bottom: 1rem; padding: 0.85rem 1.25rem; font-size: 0.9rem; }
+        /* ===== (alerts converted to toast) ===== */
 
         /* ===== MODAL OVERLAY & CONTAINER ===== */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; z-index: 1050; opacity: 0; transition: opacity 0.25s ease; backdrop-filter: blur(2px); }
@@ -854,7 +937,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         /* ===== TOAST NOTIFICATIONS ===== */
         #toastContainer {
             position: fixed;
-            bottom: 1.5rem;
+            top: 1.5rem;
             right: 1.5rem;
             z-index: 9999;
             display: flex;
@@ -1368,12 +1451,28 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     ?>
 
     <div class="admin-content">
-        <!-- Success / Error messages -->
-        <?php if ($success_message): ?>
-            <div class="alert alert-success"><i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($success_message) ?></div>
-        <?php endif; ?>
-        <?php if ($error_message): ?>
-            <div class="alert alert-danger"><i class="bi bi-exclamation-circle me-2"></i><?= htmlspecialchars($error_message) ?></div>
+        <?php if ($success_message || $error_message): ?>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php if ($success_message): ?>
+                <?php
+                    $toast_title = 'Success';
+                    $toast_type  = 'success';
+                    if (isset($_GET['success'])) {
+                        switch ($_GET['success']) {
+                            case 'approved':  $toast_title = 'Sale Approved'; break;
+                            case 'rejected':  $toast_title = 'Verification Rejected'; break;
+                            case 'finalized': $toast_title = 'Commission Finalized'; break;
+                        }
+                    }
+                ?>
+                showToast('<?= $toast_type ?>', '<?= $toast_title ?>', '<?= addslashes(htmlspecialchars($success_message)) ?>', 5000);
+            <?php endif; ?>
+            <?php if ($error_message): ?>
+                showToast('error', 'Error', '<?= addslashes(htmlspecialchars($error_message)) ?>', 6000);
+            <?php endif; ?>
+        });
+        </script>
         <?php endif; ?>
 
         <!-- Page Header -->
@@ -1403,6 +1502,30 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             <div class="kpi-card">
                 <div class="kpi-icon red"><i class="fas fa-times-circle"></i></div>
                 <div><div class="kpi-label">Rejected</div><div class="kpi-value"><?= $status_counts['Rejected'] ?></div></div>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <div class="action-bar-left">
+                <div class="action-search-wrap">
+                    <i class="bi bi-search ab-search-icon"></i>
+                    <input type="text" id="quickSearchInput" placeholder="Search address, city, buyer or agent…" autocomplete="off">
+                </div>
+            </div>
+            <div class="action-bar-right">
+                <select id="sortSelect" class="sort-select" title="Sort by">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="price_high">Price: High → Low</option>
+                    <option value="price_low">Price: Low → High</option>
+                    <option value="agent_az">Agent A → Z</option>
+                </select>
+                <button class="btn-outline-admin" id="openFilterBtn">
+                    <i class="bi bi-funnel"></i>
+                    Filters
+                    <span class="filter-count-badge" id="filterCountBadge" style="display:none;">0</span>
+                </button>
             </div>
         </div>
 
@@ -1436,8 +1559,11 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                     </div>
                 <?php else: ?>
                     <div class="sales-grid">
-                        <?php foreach ($display as $sale): ?>
-                            <div class="sale-card" data-verification='<?= htmlspecialchars(json_encode($sale), ENT_QUOTES) ?>'>
+                        <?php foreach ($display as $sale):
+                            $needsFinalization = ($sale['status'] === 'Approved' && empty($sale['commission_amount']));
+                            $cardClass = 'sale-card' . ($needsFinalization ? ' needs-finalization' : '');
+                        ?>
+                            <div class="<?= $cardClass ?>" data-verification='<?= htmlspecialchars(json_encode($sale), ENT_QUOTES) ?>'>
                                 <!-- Image -->
                                 <div class="card-img-wrap">
                                     <?php if ($sale['property_image']): ?>
@@ -1446,7 +1572,10 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                                         <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#adb5bd;"><i class="bi bi-image" style="font-size:2.5rem;"></i></div>
                                     <?php endif; ?>
                                     <div class="img-overlay"></div>
-                                    <div class="type-badge"><i class="bi bi-house-door me-1"></i><?= htmlspecialchars($sale['PropertyType']) ?></div>
+                                    <?php if ($needsFinalization): ?>
+                                        <div class="finalize-badge"><i class="bi bi-cash-coin"></i> Needs Finalization</div>
+                                    <?php endif; ?>
+                                    <div class="type-badge"><i class="bi bi-house-door"></i> <?= htmlspecialchars($sale['PropertyType']) ?></div>
                                     <?php
                                         $badgeClass = strtolower($sale['status']);
                                         $badgeLabel = $sale['status'] === 'Approved' ? 'SOLD' : strtoupper($sale['status']);
@@ -1457,56 +1586,40 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
 
                                 <!-- Body -->
                                 <div class="card-body-content">
-                                    <h3 class="prop-address"><?= htmlspecialchars($sale['StreetAddress']) ?></h3>
+                                    <h3 class="prop-address" title="<?= htmlspecialchars($sale['StreetAddress']) ?>"><?= htmlspecialchars($sale['StreetAddress']) ?></h3>
                                     <div class="prop-location"><i class="bi bi-geo-alt-fill"></i><?= htmlspecialchars($sale['City']) ?></div>
 
-                                    <div class="sale-info">
-                                        <div class="sale-info-row">
-                                            <span class="sale-info-label">Sale Price</span>
-                                            <span class="sale-info-value sale-price">₱<?= number_format($sale['sale_price'], 2) ?></span>
-                                        </div>
-                                        <div class="sale-info-row">
-                                            <span class="sale-info-label">Listing Price</span>
-                                            <span class="sale-info-value">₱<?= number_format($sale['ListingPrice'], 2) ?></span>
-                                        </div>
-                                        <div class="sale-info-row">
-                                            <span class="sale-info-label">Sale Date</span>
-                                            <span class="sale-info-value"><?= htmlspecialchars($sale['sale_date_fmt']) ?></span>
-                                        </div>
-                                    </div>
-
-                                    <div class="people-section buyer">
-                                        <div class="section-title"><i class="bi bi-person-fill me-1"></i>Buyer</div>
-                                        <div class="detail-line"><i class="bi bi-person"></i><?= htmlspecialchars($sale['buyer_name']) ?></div>
-                                        <?php if (!empty($sale['buyer_email'])): ?>
-                                            <div class="detail-line"><i class="bi bi-envelope"></i><?= htmlspecialchars($sale['buyer_email']) ?></div>
-                                        <?php endif; ?>
-                                    </div>
-
-                                    <div class="people-section agent">
-                                        <div class="section-title"><i class="bi bi-person-badge me-1"></i>Agent</div>
-                                        <div class="detail-line"><i class="bi bi-person-check"></i><?= htmlspecialchars($sale['agent_first_name'] . ' ' . $sale['agent_last_name']) ?></div>
+                                    <div class="sale-meta-row">
+                                        <span class="sale-meta-item date-meta"><i class="bi bi-calendar3"></i> <?= htmlspecialchars($sale['sale_date_fmt']) ?></span>
+                                        <span class="sale-meta-item agent-meta"><i class="bi bi-person-badge"></i> <?= htmlspecialchars($sale['agent_first_name'] . ' ' . $sale['agent_last_name']) ?></span>
                                         <?php if ($sale['document_count'] > 0): ?>
-                                            <div class="doc-badge"><i class="bi bi-file-earmark-text"></i><?= $sale['document_count'] ?> Document<?= $sale['document_count'] > 1 ? 's' : '' ?></div>
+                                            <span class="sale-meta-item"><i class="bi bi-file-earmark-text"></i> <?= $sale['document_count'] ?> Doc<?= $sale['document_count'] > 1 ? 's' : '' ?></span>
                                         <?php endif; ?>
                                     </div>
 
-                                    <div class="card-actions">
-                                        <button class="btn-action btn-view" onclick="viewDetails(<?= $sale['verification_id'] ?>)">
-                                            <i class="bi bi-eye"></i> View
+                                    <div class="card-footer-section">
+                                        <div class="posted-by"><i class="bi bi-person-fill"></i> Buyer: <?= htmlspecialchars($sale['buyer_name']) ?></div>
+                                        <button class="btn-manage" onclick="viewDetails(<?= $sale['verification_id'] ?>)">
+                                            <i class="bi bi-eye"></i> View Details
                                         </button>
                                         <?php if ($sale['status'] === 'Pending'): ?>
-                                            <button class="btn-action btn-approve" onclick="approveVerification(<?= $sale['verification_id'] ?>)">
-                                                <i class="bi bi-check-lg"></i> Approve
-                                            </button>
-                                            <button class="btn-action btn-reject" onclick="rejectVerification(<?= $sale['verification_id'] ?>)">
-                                                <i class="bi bi-x-lg"></i> Reject
-                                            </button>
+                                            <div class="pending-actions">
+                                                <button class="btn-approve-sm" onclick="approveVerification(<?= $sale['verification_id'] ?>)">
+                                                    <i class="bi bi-check-lg"></i> Approve
+                                                </button>
+                                                <button class="btn-reject-sm" onclick="rejectVerification(<?= $sale['verification_id'] ?>)">
+                                                    <i class="bi bi-x-lg"></i> Reject
+                                                </button>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
+                    </div>
+                    <div class="sf-no-results" id="sfNoResults" style="display:none;">
+                        <i class="bi bi-funnel"></i>
+                        <p>No verifications match your current filters. <a href="#" onclick="sfReset();return false;" style="color:var(--blue);font-weight:600;">Clear filters</a></p>
                     </div>
                 <?php endif; ?>
             </div>
@@ -1691,6 +1804,121 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         </div>
     </div>
 
+    <!-- Advanced Filter Sidebar -->
+    <div class="sf-sidebar" id="sfSidebar">
+        <div class="sf-overlay" id="sfOverlay"></div>
+        <div class="sf-content">
+            <div class="sf-header">
+                <h4><i class="bi bi-funnel-fill"></i> Advanced Filters</h4>
+                <div class="sf-header-right">
+                    <span class="sf-active-pill" id="sfActivePill"><i class="bi bi-check2"></i> <span id="sfActivePillText">0 active</span></span>
+                    <button class="btn-close-sf" id="sfCloseBtn"><i class="bi bi-x-lg"></i></button>
+                </div>
+            </div>
+
+            <div class="sf-results-bar">
+                <i class="bi bi-list-check"></i>
+                <span class="sf-results-num" id="sfResultsNum">—</span>
+                <span class="sf-results-label">verifications match your filters</span>
+            </div>
+
+            <div class="sf-body">
+                <!-- Search -->
+                <div class="sf-section">
+                    <div class="sf-section-title"><i class="bi bi-search"></i> Search</div>
+                    <div class="sf-search-wrap">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="sfSearchInput" placeholder="Address, city, buyer name, agent name…">
+                    </div>
+                </div>
+
+                <!-- Sale Price -->
+                <div class="sf-section">
+                    <div class="sf-section-title"><i class="bi bi-cash-stack"></i> Sale Price Range</div>
+                    <div class="price-slider-container">
+                        <div class="price-slider-track">
+                            <div class="price-slider-range" id="sfPriceSliderRange"></div>
+                        </div>
+                        <input type="range" id="sfPriceMinSlider" class="price-range-slider" min="0" max="100000000" value="0" step="100000">
+                        <input type="range" id="sfPriceMaxSlider" class="price-range-slider" min="0" max="100000000" value="100000000" step="100000">
+                    </div>
+                    <div class="price-range-inputs">
+                        <div class="price-input">
+                            <span class="currency-sym">₱</span>
+                            <input type="text" id="sfPriceMinDisplay" placeholder="Min" readonly>
+                        </div>
+                        <span class="range-divider">—</span>
+                        <div class="price-input">
+                            <span class="currency-sym">₱</span>
+                            <input type="text" id="sfPriceMaxDisplay" placeholder="Max" readonly>
+                        </div>
+                    </div>
+                    <div class="quick-filters">
+                        <button class="quick-filter-btn" data-price-range="0-5000000">Under 5M</button>
+                        <button class="quick-filter-btn" data-price-range="5000000-15000000">5M – 15M</button>
+                        <button class="quick-filter-btn" data-price-range="15000000-30000000">15M – 30M</button>
+                        <button class="quick-filter-btn" data-price-range="30000000-999999999">30M+</button>
+                    </div>
+                </div>
+
+                <!-- Property Type -->
+                <div class="sf-section">
+                    <div class="sf-section-title"><i class="bi bi-house-door"></i> Property Type</div>
+                    <div class="filter-chips" id="sfPropertyTypes"></div>
+                </div>
+
+                <!-- Commission Status -->
+                <div class="sf-section">
+                    <div class="sf-section-title"><i class="bi bi-cash-coin"></i> Commission Status</div>
+                    <div class="filter-chips">
+                        <div class="filter-chip active" data-commission-status="all">All</div>
+                        <div class="filter-chip" data-commission-status="needs_finalization"><i class="bi bi-exclamation-circle me-1 text-warning"></i>Needs Finalization</div>
+                        <div class="filter-chip" data-commission-status="finalized"><i class="bi bi-check-circle me-1" style="color:#16a34a"></i>Finalized</div>
+                    </div>
+                </div>
+
+                <!-- Sale Date -->
+                <div class="sf-section">
+                    <div class="sf-section-title"><i class="bi bi-calendar3"></i> Sale Date</div>
+                    <div class="date-range-inputs">
+                        <input type="date" id="sfDateFrom" title="Sale date from">
+                        <span class="range-divider">—</span>
+                        <input type="date" id="sfDateTo" title="Sale date to">
+                    </div>
+                    <div class="quick-filters">
+                        <button class="quick-filter-btn" data-date-range="this_month">This Month</button>
+                        <button class="quick-filter-btn" data-date-range="last_30">Last 30 Days</button>
+                        <button class="quick-filter-btn" data-date-range="this_year">This Year</button>
+                    </div>
+                </div>
+
+                <!-- Location & Agent -->
+                <div class="sf-section">
+                    <div class="sf-section-title"><i class="bi bi-geo-alt"></i> Location &amp; Agent</div>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">City</label>
+                            <select id="sfCitySelect" class="sf-select mt-1">
+                                <option value="">All Cities</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">Agent</label>
+                            <select id="sfAgentSelect" class="sf-select mt-1">
+                                <option value="">All Agents</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sf-footer">
+                <button class="btn btn-reset" id="sfResetBtn"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset All</button>
+                <button class="btn btn-apply" id="sfApplyBtn"><i class="bi bi-check2 me-1"></i>Apply Filters</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toastContainer"></div>
 
@@ -1702,8 +1930,10 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     let currentDocId = null, currentDocName = '';
 
     // ===== MODAL HELPERS =====
-    function openModal(id) { document.getElementById(id).classList.add('show'); document.body.style.overflow = 'hidden'; }
-    function closeModal(id) { document.getElementById(id).classList.remove('show'); document.body.style.overflow = ''; }
+    function _lockScroll()   { const sw = window.innerWidth - document.documentElement.clientWidth; document.body.style.paddingRight = sw + 'px'; document.body.style.overflow = 'hidden'; }
+    function _unlockScroll() { document.body.style.overflow = ''; document.body.style.paddingRight = ''; }
+    function openModal(id) { document.getElementById(id).classList.add('show'); _lockScroll(); }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); _unlockScroll(); }
     document.querySelectorAll('.modal-overlay').forEach(o => {
         o.addEventListener('click', e => { if (e.target === o) closeModal(o.id); });
     });
@@ -1786,7 +2016,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         }
 
         o.classList.add('show');
-        document.body.style.overflow = 'hidden';
+        _lockScroll();
     }
 
     function hideProcessing() {
@@ -1810,7 +2040,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
 
         setTimeout(() => {
             o.classList.remove('show');
-            document.body.style.overflow = '';
+            _unlockScroll();
         }, 400);
     }
 
@@ -1841,6 +2071,270 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         toast.classList.add('toast-out');
         setTimeout(() => toast.remove(), 320);
     }
+
+    // ===== ADVANCED FILTER SYSTEM =====
+    const sf = { search: '', priceMin: 0, priceMax: 999999999, typeFilter: new Set(), commissionStatus: 'all', saleDateFrom: '', saleDateTo: '', city: '', agent: '', sort: 'newest', _maxPrice: 0, _allTypes: [] };
+    let _cardMap = null;
+
+    function sfBuildCardMap() {
+        _cardMap = new Map();
+        document.querySelectorAll('.sale-card').forEach(card => {
+            try { const d = JSON.parse(card.dataset.verification); _cardMap.set(d.verification_id, card); } catch(e) {}
+        });
+    }
+
+    function sfInit() {
+        // Dynamic options from data
+        const types = [...new Set(saleVerifications.map(s => s.PropertyType).filter(Boolean))].sort();
+        sf._allTypes = types;
+        const typeWrap = document.getElementById('sfPropertyTypes');
+        if (typeWrap) {
+            typeWrap.innerHTML = types.map(t =>
+                `<label class="filter-chip active"><input type="checkbox" class="sf-type-cb" value="${esc(t)}" checked><span>${esc(t)}</span></label>`
+            ).join('');
+            typeWrap.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.addEventListener('click', e => {
+                    if (e.target.type === 'checkbox') return;
+                    e.preventDefault();
+                    const cb = chip.querySelector('input');
+                    cb.checked = !cb.checked;
+                    chip.classList.toggle('active', cb.checked);
+                });
+                chip.querySelector('input').addEventListener('change', function() {
+                    chip.classList.toggle('active', this.checked);
+                });
+            });
+        }
+
+        // Agents
+        const agentMap = new Map();
+        saleVerifications.forEach(s => { const n = ((s.agent_first_name||'')+' '+(s.agent_last_name||'')).trim(); if (s.agent_id && n) agentMap.set(String(s.agent_id), n); });
+        const agSel = document.getElementById('sfAgentSelect');
+        if (agSel) agSel.innerHTML = '<option value="">All Agents</option>' + [...agentMap.entries()].map(([id,n])=>`<option value="${id}">${esc(n)}</option>`).join('');
+
+        // Cities
+        const cities = [...new Set(saleVerifications.map(s => s.City).filter(Boolean))].sort();
+        const citySel = document.getElementById('sfCitySelect');
+        if (citySel) citySel.innerHTML = '<option value="">All Cities</option>' + cities.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+        // Price slider max
+        const prices = saleVerifications.map(s => Number(s.sale_price)).filter(p => p > 0);
+        const maxP = prices.length ? Math.ceil(Math.max(...prices) / 1000000) * 1000000 : 50000000;
+        sf._maxPrice = maxP;
+        const minSl = document.getElementById('sfPriceMinSlider'), maxSl = document.getElementById('sfPriceMaxSlider');
+        if (minSl) { minSl.max = maxP; minSl.value = 0; }
+        if (maxSl) { maxSl.max = maxP; maxSl.value = maxP; }
+        sfUpdatePriceSlider();
+
+        // Commission status chips
+        document.querySelectorAll('[data-commission-status]').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('[data-commission-status]').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+            });
+        });
+
+        // Price quick-filters
+        document.querySelectorAll('[data-price-range]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const [lo, hi] = btn.dataset.priceRange.split('-').map(Number);
+                if (minSl) { minSl.value = lo; }
+                if (maxSl) { maxSl.value = Math.min(hi, maxP); }
+                sfUpdatePriceSlider();
+                document.querySelectorAll('[data-price-range]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Date quick-filters
+        document.querySelectorAll('[data-date-range]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const now = new Date(), pad = n => String(n).padStart(2,'0');
+                const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                let from = '', to = fmt(now);
+                if (btn.dataset.dateRange === 'this_month') {
+                    from = `${now.getFullYear()}-${pad(now.getMonth()+1)}-01`;
+                } else if (btn.dataset.dateRange === 'last_30') {
+                    const d = new Date(now); d.setDate(d.getDate()-30); from = fmt(d);
+                } else if (btn.dataset.dateRange === 'this_year') {
+                    from = `${now.getFullYear()}-01-01`;
+                }
+                const df = document.getElementById('sfDateFrom'), dt = document.getElementById('sfDateTo');
+                if (df) df.value = from;
+                if (dt) dt.value = to;
+                document.querySelectorAll('[data-date-range]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Price slider live
+        ['sfPriceMinSlider','sfPriceMaxSlider'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', () => { sfUpdatePriceSlider(); document.querySelectorAll('[data-price-range]').forEach(b=>b.classList.remove('active')); });
+        });
+
+        // Quick search live
+        const qs = document.getElementById('quickSearchInput');
+        if (qs) qs.addEventListener('input', () => { document.getElementById('sfSearchInput') && (document.getElementById('sfSearchInput').value = qs.value); sfApply(); });
+
+        // Sort live
+        const sortSel = document.getElementById('sortSelect');
+        if (sortSel) sortSel.addEventListener('change', sfApply);
+
+        // Sidebar open/close
+        document.getElementById('openFilterBtn')?.addEventListener('click', sfOpen);
+        document.getElementById('sfCloseBtn')?.addEventListener('click', sfClose);
+        document.getElementById('sfOverlay')?.addEventListener('click', sfClose);
+        document.getElementById('sfApplyBtn')?.addEventListener('click', () => { sfApply(); sfClose(); });
+        document.getElementById('sfResetBtn')?.addEventListener('click', sfReset);
+
+        // Search inside sidebar live
+        document.getElementById('sfSearchInput')?.addEventListener('input', sfPreview);
+
+        sfBuildCardMap();
+        sfApply(); // initial run
+    }
+
+    function sfUpdatePriceSlider() {
+        const lo = Number(document.getElementById('sfPriceMinSlider')?.value || 0);
+        const hi = Number(document.getElementById('sfPriceMaxSlider')?.value || sf._maxPrice);
+        const max = sf._maxPrice || 1;
+        const loP = (lo / max * 100).toFixed(2);
+        const hiP = (hi / max * 100).toFixed(2);
+        const range = document.getElementById('sfPriceSliderRange');
+        if (range) { range.style.left = loP + '%'; range.style.width = (hiP - loP) + '%'; }
+        const fmt = n => '₱' + Number(n).toLocaleString('en-PH', {maximumFractionDigits:0});
+        const dMin = document.getElementById('sfPriceMinDisplay'), dMax = document.getElementById('sfPriceMaxDisplay');
+        if (dMin) dMin.value = lo > 0 ? fmt(lo) : '';
+        if (dMax) dMax.value = hi < sf._maxPrice ? fmt(hi) : '';
+    }
+
+    function sfReadState() {
+        sf.search = (document.getElementById('sfSearchInput')?.value || document.getElementById('quickSearchInput')?.value || '').toLowerCase().trim();
+        sf.priceMin = Number(document.getElementById('sfPriceMinSlider')?.value || 0);
+        sf.priceMax = Number(document.getElementById('sfPriceMaxSlider')?.value || sf._maxPrice || 999999999);
+        // types
+        const cbs = document.querySelectorAll('.sf-type-cb');
+        sf.typeFilter = new Set();
+        let anyUnchecked = false;
+        cbs.forEach(cb => { if (!cb.checked) anyUnchecked = true; else sf.typeFilter.add(cb.value); });
+        sf._typeFilterActive = anyUnchecked;
+        // commission
+        const commChip = document.querySelector('[data-commission-status].active');
+        sf.commissionStatus = commChip ? commChip.dataset.commissionStatus : 'all';
+        sf.saleDateFrom = document.getElementById('sfDateFrom')?.value || '';
+        sf.saleDateTo   = document.getElementById('sfDateTo')?.value || '';
+        sf.city  = document.getElementById('sfCitySelect')?.value || '';
+        sf.agent = document.getElementById('sfAgentSelect')?.value || '';
+        sf.sort  = document.getElementById('sortSelect')?.value || 'newest';
+    }
+
+    function sfCountActive() {
+        let n = 0;
+        if (sf.search) n++;
+        if (sf.priceMin > 0) n++;
+        if (sf.priceMax < (sf._maxPrice || 999999999)) n++;
+        if (sf._typeFilterActive) n++;
+        if (sf.commissionStatus !== 'all') n++;
+        if (sf.saleDateFrom) n++;
+        if (sf.saleDateTo)   n++;
+        if (sf.city)  n++;
+        if (sf.agent) n++;
+        return n;
+    }
+
+    function sfGetTabStatus() {
+        return document.querySelector('.sale-tabs .nav-link.active')?.dataset.tab || 'All';
+    }
+
+    function sfFilterAndSort() {
+        sfReadState();
+        const tabStatus = sfGetTabStatus();
+        let matches = saleVerifications.filter(s => {
+            if (tabStatus !== 'All' && s.status !== tabStatus) return false;
+            if (sf.search) {
+                const hay = [s.StreetAddress, s.City, s.buyer_name, s.buyer_email, s.agent_first_name, s.agent_last_name, s.PropertyType].join(' ').toLowerCase();
+                if (!hay.includes(sf.search)) return false;
+            }
+            const price = Number(s.sale_price);
+            if (sf.priceMin > 0 && price < sf.priceMin) return false;
+            if (sf.priceMax < (sf._maxPrice || 999999999) && price > sf.priceMax) return false;
+            if (sf._typeFilterActive && !sf.typeFilter.has(s.PropertyType)) return false;
+            if (sf.commissionStatus === 'needs_finalization' && !(s.status === 'Approved' && !s.commission_amount)) return false;
+            if (sf.commissionStatus === 'finalized' && !s.commission_amount) return false;
+            if (sf.saleDateFrom && s.sale_date && s.sale_date < sf.saleDateFrom) return false;
+            if (sf.saleDateTo   && s.sale_date && s.sale_date > sf.saleDateTo)   return false;
+            if (sf.city  && s.City !== sf.city) return false;
+            if (sf.agent && String(s.agent_id) !== String(sf.agent)) return false;
+            return true;
+        });
+        matches.sort((a, b) => {
+            switch (sf.sort) {
+                case 'oldest':     return new Date(a.submitted_at||0) - new Date(b.submitted_at||0);
+                case 'price_high': return Number(b.sale_price) - Number(a.sale_price);
+                case 'price_low':  return Number(a.sale_price) - Number(b.sale_price);
+                case 'agent_az':   return (a.agent_first_name||'').localeCompare(b.agent_first_name||'');
+                default:           return new Date(b.submitted_at||0) - new Date(a.submitted_at||0);
+            }
+        });
+        return matches;
+    }
+
+    function sfApply() {
+        if (!_cardMap) sfBuildCardMap();
+        const matches = sfFilterAndSort();
+        const matchIds = new Set(matches.map(s => s.verification_id));
+        const grid = document.querySelector('.sales-grid');
+        if (grid) {
+            _cardMap.forEach((card, vid) => { card.style.display = matchIds.has(vid) ? '' : 'none'; });
+            // Re-order DOM
+            matches.forEach(s => { const c = _cardMap.get(s.verification_id); if (c) grid.appendChild(c); });
+        }
+        // Tab total
+        const tabStatus = sfGetTabStatus();
+        const total = tabStatus === 'All' ? saleVerifications.length : saleVerifications.filter(s => s.status === tabStatus).length;
+
+        const sfNum = document.getElementById('sfResultsNum');
+        if (sfNum) sfNum.textContent = matches.length;
+        const n = sfCountActive();
+        const badge = document.getElementById('filterCountBadge'); if (badge) { badge.textContent = n; badge.style.display = n > 0 ? 'inline-flex' : 'none'; }
+        const pill = document.getElementById('sfActivePill'); if (pill) { pill.classList.toggle('show', n > 0); }
+        const pillTxt = document.getElementById('sfActivePillText'); if (pillTxt) pillTxt.textContent = n + (n === 1 ? ' active' : ' active');
+        const btn = document.getElementById('openFilterBtn'); if (btn) btn.classList.toggle('filter-active', n > 0);
+        // No-results per grid
+        const noR = document.getElementById('sfNoResults'); if (noR) noR.style.display = matches.length === 0 && total > 0 ? 'block' : 'none';
+    }
+
+    function sfPreview() { sfApply(); }
+
+    function sfOpen() {
+        sfBuildCardMap();
+        document.getElementById('sfSidebar').classList.add('active');
+        _lockScroll();
+    }
+    function sfClose() {
+        document.getElementById('sfSidebar').classList.remove('active');
+        _unlockScroll();
+    }
+
+    function sfReset() {
+        document.getElementById('sfSearchInput') && (document.getElementById('sfSearchInput').value = '');
+        document.getElementById('quickSearchInput') && (document.getElementById('quickSearchInput').value = '');
+        const minSl = document.getElementById('sfPriceMinSlider'), maxSl = document.getElementById('sfPriceMaxSlider');
+        if (minSl) minSl.value = 0;
+        if (maxSl) maxSl.value = sf._maxPrice;
+        sfUpdatePriceSlider();
+        document.querySelectorAll('.sf-type-cb').forEach(cb => { cb.checked = true; cb.closest('.filter-chip')?.classList.add('active'); });
+        document.querySelectorAll('[data-commission-status]').forEach(c => c.classList.toggle('active', c.dataset.commissionStatus === 'all'));
+        document.getElementById('sfDateFrom') && (document.getElementById('sfDateFrom').value = '');
+        document.getElementById('sfDateTo')   && (document.getElementById('sfDateTo').value = '');
+        document.getElementById('sfCitySelect')  && (document.getElementById('sfCitySelect').value = '');
+        document.getElementById('sfAgentSelect') && (document.getElementById('sfAgentSelect').value = '');
+        document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+        sfApply();
+    }
+
+    document.addEventListener('DOMContentLoaded', sfInit);
 
     // ===== VIEW DETAILS (enhanced) =====
     function viewDetails(vid) {
