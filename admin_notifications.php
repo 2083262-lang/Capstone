@@ -967,16 +967,8 @@ function notif_time_ago($datetime) {
         <div class="page-header">
             <div class="page-header-inner">
                 <div>
-                    <h1><i class="bi bi-bell" style="color: var(--gold-dark);"></i> Notifications</h1>
+                    <h1><i class="" style="color: var(--gold-dark);"></i> Notifications</h1>
                     <div class="subtitle">Stay updated with system activity, requests, and important alerts</div>
-                </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <?php if ($unread_count > 0): ?>
-                        <span class="header-badge"><i class="bi bi-envelope-exclamation me-1"></i><?php echo $unread_count; ?> Unread</span>
-                    <?php endif; ?>
-                    <span class="header-badge" style="background: linear-gradient(135deg, var(--blue-dark), var(--blue));">
-                        <i class="bi bi-collection me-1"></i><?php echo $total_count; ?> Total
-                    </span>
                 </div>
             </div>
         </div>

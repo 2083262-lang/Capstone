@@ -597,7 +597,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         <div class="page-header">
             <div class="page-header-inner">
                 <div>
-                    <h1><i class="bi bi-graph-up me-2" style="color:var(--gold-dark);"></i>Reports & Analytics</h1>
+                    <h1><i class="" style="color:var(--gold-dark);"></i>Reports & Analytics</h1>
                     <p class="subtitle">Comprehensive analytics dashboard with charts, data tables, and export tools</p>
                 </div>
                 <div class="d-flex align-items-center gap-2">
