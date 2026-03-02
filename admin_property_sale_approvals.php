@@ -1451,7 +1451,11 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     ?>
 
     <div class="admin-content">
-        <?php if ($success_message || $error_message): ?>
+        <?php
+            $needs_finalization_count = count(array_filter($sale_verifications, fn($s) =>
+                $s['status'] === 'Approved' && empty($s['commission_amount'])
+            ));
+        ?>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             <?php if ($success_message): ?>
@@ -1471,9 +1475,20 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             <?php if ($error_message): ?>
                 showToast('error', 'Error', '<?= addslashes(htmlspecialchars($error_message)) ?>', 6000);
             <?php endif; ?>
+            <?php if ($needs_finalization_count > 0): ?>
+                setTimeout(function() {
+                    showToast(
+                        'info',
+                        '<?= $needs_finalization_count === 1 ? "1 Sale Needs Finalization" : $needs_finalization_count . " Sales Need Finalization" ?>',
+                        '<?= $needs_finalization_count === 1
+                            ? "1 approved sale is still waiting for commission to be finalized. Open the card and click <strong>Finalize Commission</strong> to complete it."
+                            : $needs_finalization_count . " approved sales are still waiting for commission finalization. Look for the <strong>Needs Finalization</strong> badge on the cards." ?>',
+                        8000
+                    );
+                }, <?= ($success_message || $error_message) ? 600 : 300 ?>);
+            <?php endif; ?>
         });
         </script>
-        <?php endif; ?>
 
         <!-- Page Header -->
         <div class="page-header">
