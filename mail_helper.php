@@ -44,6 +44,9 @@ function sendSystemMail(string $toEmail, string $toName, string $subject, string
         $mail->addAddress($toEmail, $toName);
         $mail->addReplyTo(MAIL_FROM_EMAIL, MAIL_FROM_NAME);
 
+        // Suppress PHPMailer version in X-Mailer header (information disclosure)
+        $mail->XMailer = ' ';
+
         $mail->isHTML(true);
         $mail->Subject = $subject;
         $mail->Body    = $htmlBody;
@@ -53,9 +56,10 @@ function sendSystemMail(string $toEmail, string $toName, string $subject, string
         return ['success' => true];
     } catch (Exception $e) {
         if (MAIL_LOG_FILE) {
+            // Log only a sanitised message — never include recipient data
             @error_log('[MAIL ERROR] ' . ($mail->ErrorInfo ?: $e->getMessage()) . "\n", 3, MAIL_LOG_FILE);
         }
-        return ['success' => false];
+        return ['success' => false, 'error' => 'Mail delivery failed.'];
     }
 }
 

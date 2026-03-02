@@ -2,6 +2,7 @@
 session_start();
 require_once 'connection.php';
 require_once 'mail_helper.php';
+require_once __DIR__ . '/email_template.php';
 
 // Admin-only access
 if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'admin') {
@@ -196,78 +197,60 @@ if (isset($_GET['success'])) {
 
 // ===== EMAIL BUILDER FUNCTIONS =====
 function buildApprovalEmailAgent($name, $address, $type, $price, $date, $buyer) {
-    return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-    <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;background:#0a0a0a;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:60px 20px;"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
-    <tr><td style="background:linear-gradient(90deg,#22c55e 0%,#16a34a 50%,#22c55e 100%);height:3px;"></td></tr>
-    <tr><td style="padding:48px 48px 32px;text-align:center;border-bottom:1px solid #1f1f1f;"><h1 style="margin:0 0 12px;color:#22c55e;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Sale Approved</h1><p style="margin:0;color:#666;font-size:15px;">Congratulations on the successful sale!</p></td></tr>
-    <tr><td style="padding:48px;">
-        <p style="margin:0 0 24px;font-size:14px;color:#999;">Hello <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($name) . '</span>,</p>
-        <p style="margin:0 0 32px;font-size:15px;color:#ccc;line-height:1.8;">Your property sale verification has been <strong style="color:#22c55e;">approved</strong> by the admin team.</p>
-        <div style="background:#0d1117;border-left:2px solid #d4af37;padding:20px 24px;margin:0 0 24px;">
-            <p style="margin:0 0 12px;font-size:13px;color:#d4af37;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Sale Details</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Property:</strong> ' . htmlspecialchars($address) . '</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Type:</strong> ' . htmlspecialchars($type) . '</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Sale Price:</strong> <span style="color:#22c55e;font-weight:700;">' . $price . '</span></p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Sale Date:</strong> ' . $date . '</p>
-            <p style="margin:0;font-size:14px;color:#999;"><strong style="color:#ccc;">Buyer:</strong> ' . htmlspecialchars($buyer) . '</p>
-        </div>
-        <div style="background:#0d1117;border-left:2px solid #2563eb;padding:16px 20px;margin:0 0 24px;">
-            <p style="margin:0;font-size:13px;color:#999;line-height:1.6;"><strong style="color:#2563eb;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">What\'s Next</strong>The property has been marked as SOLD. Commission processing will follow shortly. This sale will be reflected in your dashboard.</p>
-        </div>
-    </td></tr>
-    <tr><td style="background:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;text-align:center;"><p style="margin:0 0 8px;font-size:13px;color:#666;"><strong style="color:#d4af37;">HomeEstate Realty</strong></p><p style="margin:0;font-size:11px;color:#444;">© ' . date('Y') . ' All rights reserved</p></td></tr>
-    </table></td></tr></table></body></html>';
+    $bodyContent  = emailGreeting($name);
+    $bodyContent .= emailParagraph('Your property sale verification has been <strong style="color:#22c55e;">approved</strong> by the admin team.');
+    $bodyContent .= emailInfoCard('Sale Details', [
+        'Property'   => htmlspecialchars($address),
+        'Type'       => htmlspecialchars($type),
+        'Sale Price' => '<span style="color:#22c55e;font-weight:700;">' . $price . '</span>',
+        'Sale Date'  => $date,
+        'Buyer'      => htmlspecialchars($buyer),
+    ]);
+    $bodyContent .= emailNotice("What's Next", 'The property has been marked as SOLD. Commission processing will follow shortly. This sale will be reflected in your dashboard.', '#2563eb');
+    return buildEmailTemplate([
+        'accentColor' => '#22c55e',
+        'heading'     => 'Sale Approved',
+        'subtitle'    => 'Congratulations on the successful sale!',
+        'body'        => $bodyContent,
+    ]);
 }
 
 function buildApprovalEmailBuyer($name, $address, $type, $price, $date, $agent) {
-    return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-    <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;background:#0a0a0a;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:60px 20px;"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
-    <tr><td style="background:linear-gradient(90deg,#d4af37 0%,#f4d03f 50%,#d4af37 100%);height:3px;"></td></tr>
-    <tr><td style="padding:48px 48px 32px;text-align:center;border-bottom:1px solid #1f1f1f;"><h1 style="margin:0 0 12px;color:#d4af37;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Purchase Confirmed</h1><p style="margin:0;color:#666;font-size:15px;">Congratulations on your new property!</p></td></tr>
-    <tr><td style="padding:48px;">
-        <p style="margin:0 0 24px;font-size:14px;color:#999;">Dear <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($name) . '</span>,</p>
-        <p style="margin:0 0 32px;font-size:15px;color:#ccc;line-height:1.8;">Your property purchase has been officially <strong style="color:#22c55e;">confirmed</strong>. Welcome to your new home!</p>
-        <div style="background:#0d1117;border-left:2px solid #d4af37;padding:20px 24px;margin:0 0 24px;">
-            <p style="margin:0 0 12px;font-size:13px;color:#d4af37;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Property Details</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Address:</strong> ' . htmlspecialchars($address) . '</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Type:</strong> ' . htmlspecialchars($type) . '</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Purchase Price:</strong> <span style="color:#d4af37;font-weight:700;">' . $price . '</span></p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Sale Date:</strong> ' . $date . '</p>
-            <p style="margin:0;font-size:14px;color:#999;"><strong style="color:#ccc;">Your Agent:</strong> ' . htmlspecialchars($agent) . '</p>
-        </div>
-        <div style="background:#0d1117;border-left:2px solid #22c55e;padding:16px 20px;margin:0 0 24px;">
-            <p style="margin:0;font-size:13px;color:#999;line-height:1.6;"><strong style="color:#22c55e;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Next Steps</strong>Your agent will contact you to finalize documentation. Ensure all legal paperwork is completed. Schedule your property handover and key collection.</p>
-        </div>
-    </td></tr>
-    <tr><td style="background:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;text-align:center;"><p style="margin:0 0 8px;font-size:13px;color:#666;"><strong style="color:#d4af37;">HomeEstate Realty</strong></p><p style="margin:0;font-size:11px;color:#444;">© ' . date('Y') . ' All rights reserved</p></td></tr>
-    </table></td></tr></table></body></html>';
+    $bodyContent  = emailGreeting($name, 'Dear');
+    $bodyContent .= emailParagraph('Your property purchase has been officially <strong style="color:#22c55e;">confirmed</strong>. Welcome to your new home!');
+    $bodyContent .= emailInfoCard('Property Details', [
+        'Address'        => htmlspecialchars($address),
+        'Type'           => htmlspecialchars($type),
+        'Purchase Price' => '<span style="color:#d4af37;font-weight:700;">' . $price . '</span>',
+        'Sale Date'      => $date,
+        'Your Agent'     => htmlspecialchars($agent),
+    ]);
+    $bodyContent .= emailNotice('Next Steps', 'Your agent will contact you to finalize documentation. Ensure all legal paperwork is completed. Schedule your property handover and key collection.', '#22c55e');
+    return buildEmailTemplate([
+        'accentColor' => '#d4af37',
+        'heading'     => 'Purchase Confirmed',
+        'subtitle'    => 'Congratulations on your new property!',
+        'body'        => $bodyContent,
+    ]);
 }
 
 function buildRejectionEmailAgent($name, $address, $type, $price, $buyer, $reason) {
-    return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-    <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;background:#0a0a0a;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:60px 20px;"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
-    <tr><td style="background:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#ef4444 100%);height:3px;"></td></tr>
-    <tr><td style="padding:48px 48px 32px;text-align:center;border-bottom:1px solid #1f1f1f;"><h1 style="margin:0 0 12px;color:#ef4444;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Sale Rejected</h1><p style="margin:0;color:#666;font-size:15px;">Your sale verification requires attention</p></td></tr>
-    <tr><td style="padding:48px;">
-        <p style="margin:0 0 24px;font-size:14px;color:#999;">Hello <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($name) . '</span>,</p>
-        <p style="margin:0 0 32px;font-size:15px;color:#ccc;line-height:1.8;">Your sale verification has been <strong style="color:#ef4444;">rejected</strong>. Please review the details below.</p>
-        <div style="background:#0d1117;border-left:2px solid #d4af37;padding:20px 24px;margin:0 0 24px;">
-            <p style="margin:0 0 12px;font-size:13px;color:#d4af37;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Submission Details</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Property:</strong> ' . htmlspecialchars($address) . '</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Type:</strong> ' . htmlspecialchars($type) . '</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#999;"><strong style="color:#ccc;">Sale Price:</strong> ' . $price . '</p>
-            <p style="margin:0;font-size:14px;color:#999;"><strong style="color:#ccc;">Buyer:</strong> ' . htmlspecialchars($buyer) . '</p>
-        </div>
-        <div style="background:#0d1117;border-left:2px solid #ef4444;padding:20px 24px;margin:0 0 24px;">
-            <p style="margin:0 0 8px;font-size:13px;color:#ef4444;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Rejection Reason</p>
-            <p style="margin:0;font-size:14px;color:#ccc;line-height:1.7;">' . htmlspecialchars($reason) . '</p>
-        </div>
-        <div style="background:#0d1117;border-left:2px solid #2563eb;padding:16px 20px;margin:0 0 24px;">
-            <p style="margin:0;font-size:13px;color:#999;line-height:1.6;"><strong style="color:#2563eb;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">What To Do</strong>Review the rejection reason, address the issues, gather correct documentation, and resubmit the sale verification with accurate details.</p>
-        </div>
-    </td></tr>
-    <tr><td style="background:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;text-align:center;"><p style="margin:0 0 8px;font-size:13px;color:#666;"><strong style="color:#d4af37;">HomeEstate Realty</strong></p><p style="margin:0;font-size:11px;color:#444;">© ' . date('Y') . ' All rights reserved</p></td></tr>
-    </table></td></tr></table></body></html>';
+    $bodyContent  = emailGreeting($name);
+    $bodyContent .= emailParagraph('Your sale verification has been <strong style="color:#ef4444;">rejected</strong>. Please review the details below.');
+    $bodyContent .= emailInfoCard('Submission Details', [
+        'Property'   => htmlspecialchars($address),
+        'Type'       => htmlspecialchars($type),
+        'Sale Price' => $price,
+        'Buyer'      => htmlspecialchars($buyer),
+    ]);
+    $bodyContent .= emailNotice('Rejection Reason', htmlspecialchars($reason), '#ef4444');
+    $bodyContent .= emailNotice('What To Do', 'Review the rejection reason, address the issues, gather correct documentation, and resubmit the sale verification with accurate details.', '#2563eb');
+    return buildEmailTemplate([
+        'accentColor' => '#ef4444',
+        'heading'     => 'Sale Rejected',
+        'subtitle'    => 'Your sale verification requires attention',
+        'body'        => $bodyContent,
+    ]);
 }
 
 // ===== FETCH ALL SALE VERIFICATIONS =====

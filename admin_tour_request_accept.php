@@ -124,97 +124,41 @@ try {
 
     $propAddress = $req['StreetAddress'] . ', ' . $req['City'];
     $subject = 'Your Property Tour Has Been Confirmed';
-    $publicNote = '';
-    if (!empty($req['tour_type']) && $req['tour_type'] === 'public') {
-        $publicNote = '<div style="background-color:#0d1117;border-left:2px solid #2563eb;padding:16px 20px;margin:0 0 24px 0;">
-                        <p style="margin:0;font-size:13px;color:#999999;line-height:1.6;">
-                            <strong style="color:#2563eb;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Public Tour Notice</strong>
-                            You selected a <strong>Public (Group) Tour</strong>. Other interested clients may join this same timeslot.
-                        </p>
-                    </div>';
-    }
     $formattedDate = date('F j, Y', strtotime($req['tour_date']));
     $formattedTime = date('g:i A', strtotime($req['tour_time']));
-    
-    $body = '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tour Confirmed</title>
-</head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Helvetica Neue\',Arial,sans-serif;background-color:#0a0a0a;line-height:1.6;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:60px 20px;">
-        <tr>
-            <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
-                    <tr>
-                        <td style="background:linear-gradient(90deg,#22c55e 0%,#16a34a 50%,#22c55e 100%);height:3px;"></td>
-                    </tr>
-                    <tr>
-                        <td style="padding:48px 48px 32px 48px;text-align:center;border-bottom:1px solid #1f1f1f;">
-                            <h1 style="margin:0 0 12px 0;color:#22c55e;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Tour Confirmed</h1>
-                            <p style="margin:0;color:#666666;font-size:15px;font-weight:400;">Your property tour has been approved</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding:48px 48px 40px 48px;">
-                            <p style="margin:0 0 24px 0;font-size:14px;color:#999999;line-height:1.7;">
-                                Hello <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($req['user_name']) . '</span>,
-                            </p>
-                            <p style="margin:0 0 32px 0;font-size:15px;color:#cccccc;line-height:1.8;">
-                                Great news! Your tour request has been confirmed. We look forward to showing you the property.
-                            </p>
-                            <div style="height:1px;background-color:#1f1f1f;margin:0 0 32px 0;"></div>
-                            <div style="background-color:#0d1117;border-left:2px solid #d4af37;padding:20px 24px;margin:0 0 24px 0;">
-                                <p style="margin:0 0 12px 0;font-size:13px;color:#d4af37;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Tour Details</p>
-                                <p style="margin:0 0 8px 0;font-size:14px;color:#999999;"><strong style="color:#cccccc;">Property:</strong> ' . htmlspecialchars($propAddress) . '</p>
-                                <p style="margin:0 0 8px 0;font-size:14px;color:#999999;"><strong style="color:#cccccc;">Date:</strong> ' . $formattedDate . '</p>
-                                <p style="margin:0;font-size:14px;color:#999999;"><strong style="color:#cccccc;">Time:</strong> ' . $formattedTime . '</p>
-                            </div>
-                            ' . $publicNote . '
-                            <div style="background-color:#0d1117;border-left:2px solid #22c55e;padding:16px 20px;margin:0 0 24px 0;">
-                                <p style="margin:0;font-size:13px;color:#999999;line-height:1.6;">
-                                    <strong style="color:#22c55e;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Important Reminders</strong>
-                                    Please arrive on time. If you need to reschedule or cancel, please notify us as soon as possible. Bring a valid ID and any questions you may have about the property.
-                                </p>
-                            </div>
-                            <p style="margin:0;font-size:13px;color:#666666;line-height:1.6;text-align:center;">
-                                We look forward to meeting you and helping you find your perfect property.
-                            </p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="background-color:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;">
-                            <table width="100%" cellpadding="0" cellspacing="0">
-                                <tr>
-                                    <td style="text-align:center;">
-                                        <p style="margin:0 0 8px 0;font-size:13px;color:#666666;">
-                                            <strong style="color:#d4af37;">HomeEstate Realty</strong>
-                                        </p>
-                                        <p style="margin:0;font-size:11px;color:#444444;">
-                                            © ' . date('Y') . ' All rights reserved
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-                <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;margin-top:32px;">
-                    <tr>
-                        <td style="text-align:center;">
-                            <p style="margin:0;font-size:12px;color:#444444;">
-                                Need assistance? <a href="#" style="color:#2563eb;text-decoration:none;font-weight:500;">Contact Support</a>
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>';
+
+    require_once __DIR__ . '/email_template.php';
+
+    $bodyContent  = emailGreeting($req['user_name']);
+    $bodyContent .= emailParagraph('Great news! Your tour request has been confirmed. We look forward to showing you the property.');
+    $bodyContent .= emailDivider();
+    $bodyContent .= emailInfoCard('Tour Details', [
+        'Property' => htmlspecialchars($propAddress),
+        'Date'     => $formattedDate,
+        'Time'     => $formattedTime,
+    ]);
+
+    if (!empty($req['tour_type']) && $req['tour_type'] === 'public') {
+        $bodyContent .= emailNotice(
+            'Public Tour Notice',
+            'You selected a <strong>Public (Group) Tour</strong>. Other interested clients may join this same timeslot.',
+            '#2563eb'
+        );
+    }
+
+    $bodyContent .= emailNotice(
+        'Important Reminders',
+        'Please arrive on time. If you need to reschedule or cancel, please notify us as soon as possible. Bring a valid ID and any questions you may have about the property.',
+        '#22c55e'
+    );
+    $bodyContent .= emailClosing('We look forward to meeting you and helping you find your perfect property.');
+
+    $body = buildEmailTemplate([
+        'accentColor' => '#22c55e',
+        'heading'     => 'Tour Confirmed',
+        'subtitle'    => 'Your property tour has been approved',
+        'body'        => $bodyContent,
+    ]);
     $res = sendSystemMail($req['user_email'], $req['user_name'], $subject, $body, 'Your tour request has been confirmed.');
 
     $conn->commit();

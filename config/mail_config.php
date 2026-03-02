@@ -14,7 +14,7 @@ define('MAIL_FROM_EMAIL',     'real.estate.system.noreply@gmail.com');
 define('MAIL_FROM_NAME',      'HomeEstate Realty');
 
 // Production defaults
-// Disable verbose SMTP debug to clients; optional server-side log path
-// TEMP: enable debug logging to logs/mail.log while we diagnose delivery
-define('MAIL_DEBUG_ENABLED',  true);
+// Set MAIL_DEBUG_ENABLED to true ONLY when actively diagnosing delivery issues.
+// In normal operation keep it false to avoid performance overhead and log noise.
+define('MAIL_DEBUG_ENABLED',  false);
 define('MAIL_LOG_FILE',       __DIR__ . '/../logs/mail.log');

@@ -263,32 +263,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $email_stmt->close();
 
                     if ($email_row && !empty($email_row['email'])) {
+                        require_once __DIR__ . '/email_template.php';
                         $agent_first = htmlspecialchars($email_row['first_name']);
                         $agent_email = $email_row['email'];
                         $email_subject = 'Profile Submitted — Pending Approval';
-                        $email_body = '
-                        <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 12px; overflow: hidden;">
-                            <div style="background: linear-gradient(135deg, #1a1a1a, #111); padding: 32px 28px; text-align: center; border-bottom: 1px solid rgba(212,175,55,0.15);">
-                                <h1 style="color: #d4af37; font-size: 22px; margin: 0 0 6px;">HomeEstate Realty</h1>
-                                <p style="color: #7a8a99; font-size: 13px; margin: 0;">Agent Profile Submission</p>
-                            </div>
-                            <div style="padding: 28px;">
-                                <p style="color: #e8e9eb; font-size: 15px; line-height: 1.7;">Hi ' . $agent_first . ',</p>
-                                <p style="color: #b8bec4; font-size: 14px; line-height: 1.8;">Thank you for completing your agent profile! Your information has been submitted and is now <strong style="color: #f4d03f;">pending approval</strong> by our administration team.</p>
-                                <div style="background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.2); border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
-                                    <p style="color: #93c5fd; font-size: 14px; margin: 0;"><strong>What happens next?</strong></p>
-                                    <ul style="color: #9ca4ab; font-size: 13px; line-height: 1.9; padding-left: 18px; margin: 8px 0 0;">
-                                        <li>Our team will review your profile details.</li>
-                                        <li>Once approved, you will gain full access to the system.</li>
-                                        <li>You will receive another email once your account is approved.</li>
-                                    </ul>
-                                </div>
-                                <p style="color: #7a8a99; font-size: 13px; line-height: 1.7;">Please be patient while we verify your credentials. This usually takes 1–2 business days.</p>
-                            </div>
-                            <div style="background: #111; padding: 18px 28px; text-align: center; border-top: 1px solid rgba(212,175,55,0.1);">
-                                <p style="color: #5d6d7d; font-size: 12px; margin: 0;">&copy; ' . date('Y') . ' HomeEstate Realty. All rights reserved.</p>
-                            </div>
-                        </div>';
+
+                        $bodyContent  = emailGreeting($agent_first, 'Hi');
+                        $bodyContent .= emailParagraph('Thank you for completing your agent profile! Your information has been submitted and is now <strong style="color:#f4d03f;">pending approval</strong> by our administration team.');
+                        $bodyContent .= emailInfoCard('What Happens Next', [
+                            '1' => 'Our team will review your profile details',
+                            '2' => 'Once approved, you will gain full access to the system',
+                            '3' => 'You will receive another email once your account is approved',
+                        ]);
+                        $bodyContent .= emailParagraph('<span style="color:#666666;font-size:13px;">Please be patient while we verify your credentials. This usually takes 1–2 business days.</span>');
+
+                        $email_body = buildEmailTemplate([
+                            'accentColor' => '#d4af37',
+                            'heading'     => 'Profile Submitted',
+                            'subtitle'    => 'Agent Profile Submission',
+                            'body'        => $bodyContent,
+                        ]);
 
                         sendEmail($agent_email, $email_subject, $email_body, $agent_first);
                     }
