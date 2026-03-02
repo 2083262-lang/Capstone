@@ -39,20 +39,20 @@ if ($row && $row['Status'] === 'Sold') {
 
 if (empty($_FILES['images'])) { echo json_encode(['success'=>false,'message'=>'No files uploaded']); exit(); }
 
-// Prevent uploads for sold properties
-$stmt = $conn->prepare('SELECT Status FROM property WHERE property_ID=? LIMIT 1');
-$stmt->bind_param('i', $propertyId);
-$stmt->execute();
-$res = $stmt->get_result();
-$row = $res->fetch_assoc();
-$stmt->close();
-if ($row && $row['Status'] === 'Sold') {
-    echo json_encode(['success' => false, 'message' => 'Cannot upload images for sold properties']);
+// Enforce maximum photo count (20 featured photos)
+$countStmt = $conn->prepare('SELECT COUNT(*) as cnt FROM property_images WHERE property_ID = ?');
+$countStmt->bind_param('i', $propertyId);
+$countStmt->execute();
+$currentCount = (int)$countStmt->get_result()->fetch_assoc()['cnt'];
+$countStmt->close();
+$incomingCount = count($_FILES['images']['name']);
+if ($currentCount + $incomingCount > 20) {
+    echo json_encode(['success' => false, 'message' => 'Maximum 20 featured photos allowed. You currently have ' . $currentCount . '.']);
     exit();
 }
 
 $allowed = ['jpg','jpeg','png','gif'];
-$maxSize = 5 * 1024 * 1024; // 5MB
+$maxSize = 25 * 1024 * 1024; // 25MB
 $uploadDir = '../uploads/';
 if (!is_dir($uploadDir)) { @mkdir($uploadDir, 0755, true); }
 

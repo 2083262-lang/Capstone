@@ -180,6 +180,55 @@
                     </div>
 
                     <!-- ══════════════════════════════════════════════ -->
+                    <!-- RENTAL DETAILS (only for rental properties)    -->
+                    <!-- ══════════════════════════════════════════════ -->
+                    <?php if ($property_data['Status'] === 'For Rent'): ?>
+                    <div class="edit-form-card" id="editRentalSection">
+                        <div class="edit-section-header">
+                            <i class="bi bi-key-fill"></i>
+                            <div>
+                                <h6>Rental Details</h6>
+                                <p>Information specific to rental properties</p>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Security Deposit (₱) <span class="text-optional">(Optional)</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text edit-input-icon"><i class="bi bi-shield-check"></i></span>
+                                    <input type="number" min="0" step="0.01" class="form-control" name="SecurityDeposit"
+                                           value="<?php echo htmlspecialchars($rental_details['security_deposit'] ?? ''); ?>"
+                                           placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Lease Term (Months) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text edit-input-icon"><i class="bi bi-calendar-range"></i></span>
+                                    <input type="number" min="1" max="120" class="form-control" name="LeaseTermMonths"
+                                           value="<?php echo htmlspecialchars($rental_details['lease_term_months'] ?? ''); ?>"
+                                           placeholder="e.g., 12" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Furnishing <span class="text-danger">*</span></label>
+                                <select class="form-select" name="Furnishing" required>
+                                    <option value="Unfurnished" <?php echo ($rental_details['furnishing'] ?? '') === 'Unfurnished' ? 'selected' : ''; ?>>Unfurnished</option>
+                                    <option value="Semi-Furnished" <?php echo ($rental_details['furnishing'] ?? '') === 'Semi-Furnished' ? 'selected' : ''; ?>>Semi-Furnished</option>
+                                    <option value="Fully Furnished" <?php echo ($rental_details['furnishing'] ?? '') === 'Fully Furnished' ? 'selected' : ''; ?>>Fully Furnished</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Available From <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="AvailableFrom"
+                                       value="<?php echo htmlspecialchars($rental_details['available_from'] ?? ''); ?>"
+                                       required style="color-scheme: dark;">
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- ══════════════════════════════════════════════ -->
                     <!-- ROW 4 — Amenities (full width)                -->
                     <!-- ══════════════════════════════════════════════ -->
                     <div class="edit-form-card">

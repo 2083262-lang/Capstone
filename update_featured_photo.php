@@ -18,6 +18,17 @@ if ($property_id <= 0 || $photo_id <= 0 || empty($old_url)) {
     exit;
 }
 
+// Verify property exists
+$prop_check = $conn->prepare("SELECT property_ID FROM property WHERE property_ID = ? LIMIT 1");
+$prop_check->bind_param('i', $property_id);
+$prop_check->execute();
+if ($prop_check->get_result()->num_rows === 0) {
+    echo json_encode(['success' => false, 'message' => 'Property not found']);
+    $prop_check->close();
+    exit;
+}
+$prop_check->close();
+
 if (empty($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
     echo json_encode(['success' => false, 'message' => 'No image provided']);
     exit;
@@ -29,7 +40,7 @@ if (!is_dir($upload_dir)) {
 }
 
 $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-$max_size = 5 * 1024 * 1024; // 5MB
+$max_size = 25 * 1024 * 1024; // 25MB
 
 // Validate file type
 $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -47,8 +58,9 @@ if ($_FILES['image']['size'] > $max_size) {
     exit;
 }
 
-// Generate unique filename
-$ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+// Generate unique filename using MIME-based extension
+$mime_to_ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif'];
+$ext = $mime_to_ext[$mime] ?? 'jpg';
 $filename = uniqid('prop_', true) . '.' . $ext;
 $filepath = $upload_dir . $filename;
 
@@ -64,9 +76,11 @@ $stmt = $conn->prepare($sql_update);
 $stmt->bind_param('sii', $filepath, $photo_id, $property_id);
 
 if ($stmt->execute()) {
-    // Delete old file if it exists and update was successful
-    if (file_exists($old_url)) {
-        @unlink($old_url);
+    // Delete old file safely (prevent path traversal)
+    $real_old = realpath($old_url);
+    $uploads_dir = realpath(__DIR__ . '/uploads');
+    if ($real_old && $uploads_dir && strpos($real_old, $uploads_dir) === 0 && is_file($real_old)) {
+        @unlink($real_old);
     }
     
     $stmt->close();

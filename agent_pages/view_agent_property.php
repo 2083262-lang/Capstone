@@ -982,13 +982,21 @@ $days_on_market = $interval->days;
                 <div class="content-card">
                     <h2 class="section-title" style="font-size: 1.2rem;"><i class="bi bi-lightning-charge-fill"></i> Quick Actions</h2>
                     <div class="action-list">
-                        <?php if ($property_data['approval_status'] === 'approved' && !$is_property_sold): ?>
+                        <?php if (!$is_property_sold): ?>
                             <button type="button" class="quick-action" data-bs-toggle="modal" data-bs-target="#editPropertyModal">
                                 <i class="bi bi-pencil-square"></i> Edit Property Details
                             </button>
+                            <?php if ($property_data['approval_status'] === 'approved'): ?>
                             <button type="button" class="quick-action gold-action" data-bs-toggle="modal" data-bs-target="#updatePriceModal">
                                 <i class="bi bi-currency-exchange"></i> Update Listing Price
                             </button>
+                            <?php endif; ?>
+                            <?php if ($property_data['approval_status'] === 'rejected'): ?>
+                            <div class="locked-notice" style="background: rgba(251, 191, 36, 0.08); border-color: rgba(251, 191, 36, 0.2);">
+                                <i class="bi bi-info-circle-fill" style="color: #fbbf24;"></i>
+                                <div><strong>Rejected</strong><br>This property was rejected by admin. You can edit and resubmit it for review.</div>
+                            </div>
+                            <?php endif; ?>
                         <?php endif; ?>
 
                         <?php if ($is_property_sold): ?>

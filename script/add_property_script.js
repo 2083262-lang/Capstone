@@ -13,8 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Configuration
     const config = {
-        maxFiles: 10,
-        maxSize: 5 * 1024 * 1024, // 5MB
+        maxFiles: 20,
+        maxSize: 25 * 1024 * 1024, // 25MB
         allowedTypes: ['image/jpeg', 'image/png', 'image/gif'],
         allowedExtensions: ['.jpg', '.jpeg', '.png', '.gif']
     };

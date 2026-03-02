@@ -2259,7 +2259,7 @@ document.addEventListener('DOMContentLoaded', function () {
             area.classList.add('has-files');
             grid.innerHTML = '';
             Array.from(files).slice(0, 10).forEach((file, idx) => {
-                if (file.size > 10 * 1024 * 1024) { alert(file.name + ' exceeds 10MB.'); return; }
+                if (file.size > 25 * 1024 * 1024) { alert(file.name + ' exceeds 25MB.'); return; }
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const item = document.createElement('div');

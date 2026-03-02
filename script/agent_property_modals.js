@@ -204,6 +204,33 @@ document.addEventListener('DOMContentLoaded', function () {
         uploadInput.addEventListener('change', function () {
             const files = Array.from(this.files || []);
             if (!files.length) return;
+
+            // Client-side validation
+            const maxSize = 25 * 1024 * 1024; // 25MB per featured photo
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            const maxPhotos = 20;
+            const currentCount = grid.querySelectorAll('[data-url]').length;
+
+            if (currentCount + files.length > maxPhotos) {
+                showPhotosAlert(false, 'Maximum ' + maxPhotos + ' featured photos allowed. You currently have ' + currentCount + '.');
+                this.value = '';
+                return;
+            }
+
+            const invalid = files.filter(f => !allowedTypes.includes(f.type));
+            if (invalid.length > 0) {
+                showPhotosAlert(false, 'Invalid file type: ' + invalid.map(f => f.name).join(', ') + '. Only JPEG, PNG, GIF allowed.');
+                this.value = '';
+                return;
+            }
+
+            const tooBig = files.filter(f => f.size > maxSize);
+            if (tooBig.length > 0) {
+                showPhotosAlert(false, 'File(s) too large: ' + tooBig.map(f => f.name).join(', ') + '. Max 25MB each.');
+                this.value = '';
+                return;
+            }
+
             const fd = new FormData();
             fd.append('property_id', String(propId));
             files.forEach(f => fd.append('images[]', f));
@@ -412,6 +439,24 @@ function renumberFloors() {
 function uploadFloorImages(floorNum, inputEl) {
     const files = Array.from(inputEl.files || []);
     if (!files.length) return;
+
+    // Client-side validation
+    const maxSize = 25 * 1024 * 1024; // 25MB per floor photo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+
+    const invalid = files.filter(f => !allowedTypes.includes(f.type));
+    if (invalid.length > 0) {
+        showFloorAlert(false, 'Invalid file type: ' + invalid.map(f => f.name).join(', ') + '. Only JPEG, PNG, GIF allowed.');
+        inputEl.value = '';
+        return;
+    }
+
+    const tooBig = files.filter(f => f.size > maxSize);
+    if (tooBig.length > 0) {
+        showFloorAlert(false, 'File(s) too large: ' + tooBig.map(f => f.name).join(', ') + '. Max 25MB each.');
+        inputEl.value = '';
+        return;
+    }
 
     const propId = window._propertyId;
     const fd = new FormData();

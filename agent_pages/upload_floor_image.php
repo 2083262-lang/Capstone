@@ -52,7 +52,7 @@ if (empty($_FILES['floor_images'])) {
 }
 
 $allowed   = ['jpg', 'jpeg', 'png', 'gif'];
-$maxSize   = 10 * 1024 * 1024; // 10MB
+$maxSize   = 25 * 1024 * 1024; // 25MB
 $floorDir  = '../uploads/floors/' . $propertyId . '/floor_' . $floorNum . '/';
 
 if (!is_dir($floorDir)) {

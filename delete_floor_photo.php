@@ -9,6 +9,11 @@ if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'admin') {
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+    exit;
+}
+
 $input = json_decode(file_get_contents('php://input'), true);
 
 $property_id = isset($input['property_id']) ? (int)$input['property_id'] : 0;
@@ -21,15 +26,28 @@ if ($property_id <= 0 || $floor_number <= 0 || $photo_id <= 0 || empty($photo_ur
     exit;
 }
 
+// Verify property exists
+$prop_check = $conn->prepare("SELECT property_ID FROM property WHERE property_ID = ? LIMIT 1");
+$prop_check->bind_param('i', $property_id);
+$prop_check->execute();
+if ($prop_check->get_result()->num_rows === 0) {
+    echo json_encode(['success' => false, 'message' => 'Property not found']);
+    $prop_check->close();
+    exit;
+}
+$prop_check->close();
+
 // Delete from database
 $sql_delete = "DELETE FROM property_floor_images WHERE id = ? AND property_id = ? AND floor_number = ?";
 $stmt = $conn->prepare($sql_delete);
 $stmt->bind_param('iii', $photo_id, $property_id, $floor_number);
 
 if ($stmt->execute()) {
-    // Delete file if it exists
-    if (file_exists($photo_url)) {
-        @unlink($photo_url);
+    // Delete file safely (prevent path traversal)
+    $real_path = realpath($photo_url);
+    $uploads_dir = realpath(__DIR__ . '/uploads');
+    if ($real_path && $uploads_dir && strpos($real_path, $uploads_dir) === 0 && is_file($real_path)) {
+        @unlink($real_path);
     }
     
     // Re-normalize sort order for this floor

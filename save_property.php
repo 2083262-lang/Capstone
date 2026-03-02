@@ -11,7 +11,7 @@ if (!isset($_SESSION['account_id']) || !in_array($_SESSION['user_role'], ['admin
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $errors = [];
     // File validation configuration
-    $MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB per file
+    $MAX_IMAGE_SIZE = 25 * 1024 * 1024; // 25MB per file
     $ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/gif'];
     $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : null;
 
@@ -82,9 +82,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $pt_check->close();
     
     $Status = trim($_POST['Status']);
-    $valid_statuses = ['For Sale', 'For Rent', 'Sold', 'Pending'];
+    // New listings can only be 'For Sale' or 'For Rent'
+    $valid_statuses = ['For Sale', 'For Rent'];
     if (!in_array($Status, $valid_statuses)) {
-        $errors[] = "Invalid Status selected.";
+        $errors[] = "Invalid Status selected. New properties must be 'For Sale' or 'For Rent'.";
     }
 
     $ListingPrice = filter_var($_POST['ListingPrice'], FILTER_VALIDATE_FLOAT);
@@ -119,8 +120,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     $ListingDate = !empty($_POST['ListingDate']) ? $_POST['ListingDate'] : date('Y-m-d');
-    if (strtotime($ListingDate) > time()) {
+    // Enforce strict YYYY-MM-DD format
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ListingDate)) {
+        $errors[] = "Listing Date must be in YYYY-MM-DD format.";
+    } elseif (strtotime($ListingDate) === false) {
+        $errors[] = "Listing Date is not a valid date.";
+    } elseif (strtotime($ListingDate) > time()) {
         $errors[] = "Listing Date cannot be in the future.";
+    }
+
+    // ListingDescription minimum length
+    $ListingDescription_raw = trim($_POST['ListingDescription'] ?? '');
+    if (!empty($ListingDescription_raw) && strlen($ListingDescription_raw) < 20) {
+        $errors[] = "Listing Description must be at least 20 characters.";
     }
 
     // Conditional validation for rentals
@@ -182,14 +194,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $errors[] = "Please upload at least one property photo.";
     }
 
-    // Featured images: size and MIME validation (10MB, jpg/png/gif)
+    // Enforce max 20 featured photos server-side
+    if (isset($_FILES['property_photos']) && is_array($_FILES['property_photos']['error'])) {
+        $valid_photo_count = 0;
+        foreach ($_FILES['property_photos']['error'] as $fileErr) {
+            if ($fileErr === UPLOAD_ERR_OK) { $valid_photo_count++; }
+        }
+        if ($valid_photo_count > 20) {
+            $errors[] = "Maximum of 20 featured photos allowed. You uploaded " . $valid_photo_count . ".";
+        }
+    }
+
+    // Featured images: size and MIME validation (25MB, jpg/png/gif)
     if (isset($_FILES['property_photos']) && is_array($_FILES['property_photos']['name'])) {
         $files = $_FILES['property_photos'];
         $count = count($files['name']);
         for ($i = 0; $i < $count; $i++) {
             if ($files['error'][$i] === UPLOAD_ERR_OK) {
                 if ($files['size'][$i] > $MAX_IMAGE_SIZE) {
-                    $errors[] = "Featured image '" . htmlspecialchars($files['name'][$i]) . "' exceeds 10MB limit.";
+                    $errors[] = "Featured image '" . htmlspecialchars($files['name'][$i]) . "' exceeds 25MB limit.";
                 }
                 if ($finfo) {
                     $mime = finfo_file($finfo, $files['tmp_name'][$i]);
@@ -233,7 +256,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             for ($j = 0; $j < $cnt; $j++) {
                 if ($ff['error'][$j] === UPLOAD_ERR_OK) {
                     if ($ff['size'][$j] > $MAX_IMAGE_SIZE) {
-                        $errors[] = getFloorLabel($floor) . ": '" . htmlspecialchars($ff['name'][$j]) . "' exceeds 10MB limit.";
+                        $errors[] = getFloorLabel($floor) . ": '" . htmlspecialchars($ff['name'][$j]) . "' exceeds 25MB limit.";
                     }
                     if ($finfo) {
                         $mime = finfo_file($finfo, $ff['tmp_name'][$j]);
@@ -246,10 +269,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
+    // Validate amenity IDs against database
+    if (!empty($_POST['amenities']) && is_array($_POST['amenities'])) {
+        $all_amenity_ids = array_map('intval', $_POST['amenities']);
+        $all_amenity_ids = array_filter($all_amenity_ids, function($v) { return $v > 0; });
+        if (!empty($all_amenity_ids)) {
+            $placeholders = implode(',', array_fill(0, count($all_amenity_ids), '?'));
+            $types = str_repeat('i', count($all_amenity_ids));
+            $check_sql = "SELECT amenity_id FROM amenities WHERE amenity_id IN ($placeholders)";
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param($types, ...$all_amenity_ids);
+            $check_stmt->execute();
+            $valid_result = $check_stmt->get_result();
+            $valid_ids = [];
+            while ($row = $valid_result->fetch_assoc()) { $valid_ids[] = (int)$row['amenity_id']; }
+            $check_stmt->close();
+            $invalid = array_diff($all_amenity_ids, $valid_ids);
+            if (!empty($invalid)) {
+                $errors[] = "One or more selected amenities are invalid.";
+            }
+        }
+    }
+
     if ($finfo) { finfo_close($finfo); }
 
     // --- 2. PROCESS FORM IF NO ERRORS ---
     if (empty($errors)) {
+        // MIME-to-extension map (same as hardened edit endpoints)
+        $mime_to_ext = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/gif'  => 'gif',
+        ];
+
         // All other variables are sanitized during validation
         $StreetAddress = trim($_POST['StreetAddress']);
         $City = trim($_POST['City']);
@@ -270,26 +322,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $Source = !empty($_POST['Source']) ? trim($_POST['Source']) : null;
         $MLSNumber = !empty($_POST['MLSNumber']) ? trim($_POST['MLSNumber']) : null;
         $ListingDescription = !empty($_POST['ListingDescription']) ? trim($_POST['ListingDescription']) : null;
-    $ParkingType = !empty($_POST['ParkingType']) ? trim($_POST['ParkingType']) : null;
-    // Rental fields (conditionally required)
-    $SecurityDeposit = isset($_POST['SecurityDeposit']) && $_POST['SecurityDeposit'] !== '' ? (float)$_POST['SecurityDeposit'] : null;
-    $LeaseTermMonths = isset($_POST['LeaseTermMonths']) && $_POST['LeaseTermMonths'] !== '' ? (int)$_POST['LeaseTermMonths'] : null;
-    $Furnishing = isset($_POST['Furnishing']) && $_POST['Furnishing'] !== '' ? trim($_POST['Furnishing']) : null;
-    $AvailableFrom = isset($_POST['AvailableFrom']) && $_POST['AvailableFrom'] !== '' ? $_POST['AvailableFrom'] : null;
+        $ParkingType = !empty($_POST['ParkingType']) ? trim($_POST['ParkingType']) : null;
+
+        // Rental fields (conditionally required)
+        $SecurityDeposit = isset($_POST['SecurityDeposit']) && $_POST['SecurityDeposit'] !== '' ? (float)$_POST['SecurityDeposit'] : null;
+        $LeaseTermMonths = isset($_POST['LeaseTermMonths']) && $_POST['LeaseTermMonths'] !== '' ? (int)$_POST['LeaseTermMonths'] : null;
+        $Furnishing = isset($_POST['Furnishing']) && $_POST['Furnishing'] !== '' ? trim($_POST['Furnishing']) : null;
+        $AvailableFrom = isset($_POST['AvailableFrom']) && $_POST['AvailableFrom'] !== '' ? $_POST['AvailableFrom'] : null;
 
         // The property is ALWAYS assigned to the logged-in user
         $logged_in_account_id = $_SESSION['account_id'];
-        
+
         // Determine approval status based on user role
         $approval_status_value = ($_SESSION['user_role'] === 'admin') ? 'approved' : 'pending';
 
-        $sql = "INSERT INTO property (
-            StreetAddress, City, Barangay, Province, ZIP, PropertyType, YearBuilt, SquareFootage, LotSize,
-            Bedrooms, Bathrooms, ListingPrice, Status, ListingDate,
-            Source, MLSNumber, ListingDescription, ParkingType, approval_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // ===== TRANSACTION: atomic insert of property + log + rental + amenities + images =====
+        $conn->begin_transaction();
+        $uploaded_files = []; // track uploaded files for rollback cleanup
 
-        if ($stmt = $conn->prepare($sql)) {
+        try {
+            // ---- Insert Property ----
+            $sql = "INSERT INTO property (
+                StreetAddress, City, Barangay, Province, ZIP, PropertyType, YearBuilt, SquareFootage, LotSize,
+                Bedrooms, Bathrooms, ListingPrice, Status, ListingDate,
+                Source, MLSNumber, ListingDescription, ParkingType, approval_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            $stmt = $conn->prepare($sql);
             $stmt->bind_param(
                 "ssssssiididssssssss",
                 $StreetAddress, $City, $Barangay, $Province, $ZIP, $PropertyType,
@@ -297,117 +356,134 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $ListingPrice, $Status, $ListingDate, $Source, $MLSNumber,
                 $ListingDescription, $ParkingType, $approval_status_value
             );
-
-            if ($stmt->execute()) {
-                $property_ID = $stmt->insert_id;
-
-                // --- Add to property_log ---
-                $log_sql = "INSERT INTO property_log (property_id, account_id, action) VALUES (?, ?, 'CREATED')";
-                if ($log_stmt = $conn->prepare($log_sql)) {
-                    $log_stmt->bind_param("ii", $property_ID, $logged_in_account_id);
-                    $log_stmt->execute();
-                    $log_stmt->close();
-                }
-
-                // If rental, persist rental details
-                if ($Status === 'For Rent') {
-                    $rental_sql = "INSERT INTO rental_details (property_id, monthly_rent, security_deposit, lease_term_months, furnishing, available_from) VALUES (?, ?, ?, ?, ?, ?)";
-                    if ($rental_stmt = $conn->prepare($rental_sql)) {
-                        $monthly_rent = $ListingPrice; // Using ListingPrice as monthly rent
-                        $rental_stmt->bind_param("iddiss", $property_ID, $monthly_rent, $SecurityDeposit, $LeaseTermMonths, $Furnishing, $AvailableFrom);
-                        $rental_stmt->execute();
-                        $rental_stmt->close();
-                    }
-                }
-
-                // Handle Amenities
-                if (!empty($_POST['amenities']) && is_array($_POST['amenities'])) {
-                    $amenities_sql = "INSERT INTO property_amenities (property_id, amenity_id) VALUES (?, ?)";
-                    if($amenities_stmt = $conn->prepare($amenities_sql)) {
-                        foreach ($_POST['amenities'] as $amenity_id) {
-                            $sanitized_amenity_id = (int)$amenity_id;
-                            $amenities_stmt->bind_param("ii", $property_ID, $sanitized_amenity_id);
-                            $amenities_stmt->execute();
-                        }
-                        $amenities_stmt->close();
-                    }
-                }
-
-                // Handle featured images uploads (with 10MB + MIME validation already performed)
-                $success_uploads = 0;
-                if (!empty($_FILES['property_photos']['name'][0])) {
-                     $upload_dir = "uploads/";
-                    if (!is_dir($upload_dir)) { mkdir($upload_dir, 0755, true); }
-                    
-                    $files = $_FILES['property_photos'];
-                    $file_count = count($files['name']);
-
-                    for ($i = 0; $i < $file_count; $i++) {
-                         if ($files['error'][$i] === 0) {
-                            // Enforce 10MB server-side too (defense-in-depth)
-                            if ($files['size'][$i] > (10 * 1024 * 1024)) { continue; }
-                            // Basic extension allow-list
-                            $file_ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
-                            if (!in_array($file_ext, ['jpg','jpeg','png','gif'])) { continue; }
-                            $new_file_name = uniqid('prop_', true) . "." . $file_ext;
-                            $file_destination = $upload_dir . $new_file_name;
-
-                            if (move_uploaded_file($files['tmp_name'][$i], $file_destination)) {
-                                $image_sql = "INSERT INTO property_images (property_ID, PhotoURL, SortOrder) VALUES (?, ?, ?)";
-                                if ($image_stmt = $conn->prepare($image_sql)) {
-                                    $sort_order = $i + 1;
-                                    $image_stmt->bind_param("isi", $property_ID, $file_destination, $sort_order);
-                                    if ($image_stmt->execute()) {
-                                        $success_uploads++;
-                                    }
-                                    $image_stmt->close();
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Handle floor images uploads
-                $floor_insert_sql = "INSERT INTO property_floor_images (property_id, floor_number, photo_url, sort_order) VALUES (?, ?, ?, ?)";
-                for ($floor = 1; $floor <= max(1, $NumberOfFloors); $floor++) {
-                    $key = 'floor_images_' . $floor;
-                    if (!empty($_FILES[$key]['name'][0])) {
-                        $floor_dir = "uploads/floors/" . $property_ID . "/floor_" . $floor . "/";
-                        if (!is_dir($floor_dir)) { mkdir($floor_dir, 0755, true); }
-
-                        $ff = $_FILES[$key];
-                        $cnt = count($ff['name']);
-                        for ($j = 0; $j < $cnt; $j++) {
-                            if ($ff['error'][$j] === 0) {
-                                if ($ff['size'][$j] > (10 * 1024 * 1024)) { continue; }
-                                $ext = strtolower(pathinfo($ff['name'][$j], PATHINFO_EXTENSION));
-                                if (!in_array($ext, ['jpg','jpeg','png','gif'])) { continue; }
-
-                                $new_name = uniqid('floor_' . $floor . '_', true) . '.' . $ext;
-                                $dest = $floor_dir . $new_name;
-                                if (move_uploaded_file($ff['tmp_name'][$j], $dest)) {
-                                    if ($pis = $conn->prepare($floor_insert_sql)) {
-                                        $sort_order = $j + 1;
-                                        $pis->bind_param('iisi', $property_ID, $floor, $dest, $sort_order);
-                                        $pis->execute();
-                                        $pis->close();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                $_SESSION['message'] = [
-                    'type' => 'success',
-                    'text' => "Property successfully added. The listing is now " . ucfirst($approval_status_value) . "."
-                ];
-            } else {
-                $errors[] = "Error inserting property: " . $stmt->error;
-            }
+            $stmt->execute();
+            $property_ID = $stmt->insert_id;
             $stmt->close();
-        } else {
-            $errors[] = "SQL preparation failed: " . $conn->error;
+
+            // ---- Property Log ----
+            $log_sql = "INSERT INTO property_log (property_id, account_id, action) VALUES (?, ?, 'CREATED')";
+            $log_stmt = $conn->prepare($log_sql);
+            $log_stmt->bind_param("ii", $property_ID, $logged_in_account_id);
+            $log_stmt->execute();
+            $log_stmt->close();
+
+            // ---- Rental Details ----
+            if ($Status === 'For Rent') {
+                $rental_sql = "INSERT INTO rental_details (property_id, monthly_rent, security_deposit, lease_term_months, furnishing, available_from) VALUES (?, ?, ?, ?, ?, ?)";
+                $rental_stmt = $conn->prepare($rental_sql);
+                $monthly_rent = $ListingPrice;
+                $rental_stmt->bind_param("iddiss", $property_ID, $monthly_rent, $SecurityDeposit, $LeaseTermMonths, $Furnishing, $AvailableFrom);
+                $rental_stmt->execute();
+                $rental_stmt->close();
+            }
+
+            // ---- Amenities (only validated IDs) ----
+            if (!empty($_POST['amenities']) && is_array($_POST['amenities'])) {
+                $amenities_sql = "INSERT INTO property_amenities (property_id, amenity_id) VALUES (?, ?)";
+                $amenities_stmt = $conn->prepare($amenities_sql);
+                foreach ($_POST['amenities'] as $amenity_id) {
+                    $sanitized_amenity_id = (int)$amenity_id;
+                    if ($sanitized_amenity_id > 0) {
+                        $amenities_stmt->bind_param("ii", $property_ID, $sanitized_amenity_id);
+                        $amenities_stmt->execute();
+                    }
+                }
+                $amenities_stmt->close();
+            }
+
+            // ---- Featured Images Upload (MIME-based extension) ----
+            if (!empty($_FILES['property_photos']['name'][0])) {
+                $upload_dir = "uploads/";
+                if (!is_dir($upload_dir)) { mkdir($upload_dir, 0755, true); }
+
+                $finfo_upload = finfo_open(FILEINFO_MIME_TYPE);
+                $files = $_FILES['property_photos'];
+                $file_count = min(count($files['name']), 20); // enforce max 20
+
+                $image_sql = "INSERT INTO property_images (property_ID, PhotoURL, SortOrder) VALUES (?, ?, ?)";
+                $image_stmt = $conn->prepare($image_sql);
+                $sort_order = 0;
+
+                for ($i = 0; $i < $file_count; $i++) {
+                    if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
+                    if ($files['size'][$i] > $MAX_IMAGE_SIZE) continue;
+
+                    // Determine extension from MIME type (not user filename)
+                    $mime = finfo_file($finfo_upload, $files['tmp_name'][$i]);
+                    if (!isset($mime_to_ext[$mime])) continue;
+                    $file_ext = $mime_to_ext[$mime];
+
+                    $new_file_name = uniqid('prop_', true) . "." . $file_ext;
+                    $file_destination = $upload_dir . $new_file_name;
+
+                    if (move_uploaded_file($files['tmp_name'][$i], $file_destination)) {
+                        $uploaded_files[] = $file_destination;
+                        $sort_order++;
+                        $image_stmt->bind_param("isi", $property_ID, $file_destination, $sort_order);
+                        $image_stmt->execute();
+                    }
+                }
+                $image_stmt->close();
+                finfo_close($finfo_upload);
+            }
+
+            // ---- Floor Images Upload (MIME-based extension) ----
+            $floor_insert_sql = "INSERT INTO property_floor_images (property_id, floor_number, photo_url, sort_order) VALUES (?, ?, ?, ?)";
+            $finfo_floor = finfo_open(FILEINFO_MIME_TYPE);
+
+            for ($floor = 1; $floor <= max(1, $NumberOfFloors); $floor++) {
+                $key = 'floor_images_' . $floor;
+                if (empty($_FILES[$key]['name'][0])) continue;
+
+                $floor_dir = "uploads/floors/" . $property_ID . "/floor_" . $floor . "/";
+                if (!is_dir($floor_dir)) { mkdir($floor_dir, 0755, true); }
+
+                $ff = $_FILES[$key];
+                $cnt = count($ff['name']);
+                $floor_sort = 0;
+
+                for ($j = 0; $j < $cnt; $j++) {
+                    if ($ff['error'][$j] !== UPLOAD_ERR_OK) continue;
+                    if ($ff['size'][$j] > $MAX_IMAGE_SIZE) continue;
+
+                    $mime = finfo_file($finfo_floor, $ff['tmp_name'][$j]);
+                    if (!isset($mime_to_ext[$mime])) continue;
+                    $ext = $mime_to_ext[$mime];
+
+                    $new_name = uniqid('floor_' . $floor . '_', true) . '.' . $ext;
+                    $dest = $floor_dir . $new_name;
+
+                    if (move_uploaded_file($ff['tmp_name'][$j], $dest)) {
+                        $uploaded_files[] = $dest;
+                        $floor_sort++;
+                        $pis = $conn->prepare($floor_insert_sql);
+                        $pis->bind_param('iisi', $property_ID, $floor, $dest, $floor_sort);
+                        $pis->execute();
+                        $pis->close();
+                    }
+                }
+            }
+            finfo_close($finfo_floor);
+
+            // All successful — commit
+            $conn->commit();
+
+            $_SESSION['message'] = [
+                'type' => 'success',
+                'text' => "Property successfully added. The listing is now " . ucfirst($approval_status_value) . "."
+            ];
+
+        } catch (Exception $e) {
+            $conn->rollback();
+
+            // Clean up any uploaded files on failure
+            foreach ($uploaded_files as $uploaded) {
+                if (file_exists($uploaded)) { @unlink($uploaded); }
+            }
+
+            // Log the real error server-side, show generic message to user
+            error_log("save_property.php transaction error: " . $e->getMessage());
+            $errors[] = "A database error occurred while saving the property. Please try again.";
         }
     }
 

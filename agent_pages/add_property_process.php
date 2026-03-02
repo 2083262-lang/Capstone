@@ -21,7 +21,7 @@ $agent_account_id = $_SESSION['account_id'];
 // 2. VALIDATION (mirrors save_property.php exactly)
 // ========================================================================
 $errors = [];
-$MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB per file
+$MAX_IMAGE_SIZE = 25 * 1024 * 1024; // 25MB per file
 $ALLOWED_MIME   = ['image/jpeg', 'image/png', 'image/gif'];
 $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : null;
 
@@ -119,8 +119,19 @@ if ($Bathrooms !== null && $Bathrooms < 0) {
 }
 
 $ListingDate = !empty($_POST['ListingDate']) ? $_POST['ListingDate'] : date('Y-m-d');
-if (strtotime($ListingDate) > time()) {
+// Enforce strict YYYY-MM-DD format
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ListingDate)) {
+    $errors[] = "Listing Date must be in YYYY-MM-DD format.";
+} elseif (strtotime($ListingDate) === false) {
+    $errors[] = "Listing Date is not a valid date.";
+} elseif (strtotime($ListingDate) > time()) {
     $errors[] = "Listing Date cannot be in the future.";
+}
+
+// ListingDescription minimum length
+$ListingDescription_raw = trim($_POST['ListingDescription'] ?? '');
+if (!empty($ListingDescription_raw) && strlen($ListingDescription_raw) < 20) {
+    $errors[] = "Listing Description must be at least 20 characters.";
 }
 
 // ---- Rental validation (same as admin) ----
@@ -180,6 +191,17 @@ if (!$hasPhoto) {
     $errors[] = "Please upload at least one featured property photo.";
 }
 
+// Enforce max 20 featured photos server-side
+if (isset($_FILES['property_photos']) && is_array($_FILES['property_photos']['error'])) {
+    $valid_photo_count = 0;
+    foreach ($_FILES['property_photos']['error'] as $fileErr) {
+        if ($fileErr === UPLOAD_ERR_OK) { $valid_photo_count++; }
+    }
+    if ($valid_photo_count > 20) {
+        $errors[] = "Maximum of 20 featured photos allowed. You uploaded " . $valid_photo_count . ".";
+    }
+}
+
 // Featured image size & MIME check
 if (isset($_FILES['property_photos']) && is_array($_FILES['property_photos']['name'])) {
     $files = $_FILES['property_photos'];
@@ -187,7 +209,7 @@ if (isset($_FILES['property_photos']) && is_array($_FILES['property_photos']['na
     for ($i = 0; $i < $count; $i++) {
         if ($files['error'][$i] === UPLOAD_ERR_OK) {
             if ($files['size'][$i] > $MAX_IMAGE_SIZE) {
-                $errors[] = "Featured image '" . htmlspecialchars($files['name'][$i]) . "' exceeds 10MB limit.";
+                $errors[] = "Featured image '" . htmlspecialchars($files['name'][$i]) . "' exceeds 25MB limit.";
             }
             if ($finfo) {
                 $mime = finfo_file($finfo, $files['tmp_name'][$i]);
@@ -231,7 +253,7 @@ for ($floor = 1; $floor <= max(1, $NumberOfFloors); $floor++) {
         for ($j = 0; $j < $cnt; $j++) {
             if ($ff['error'][$j] === UPLOAD_ERR_OK) {
                 if ($ff['size'][$j] > $MAX_IMAGE_SIZE) {
-                    $errors[] = getFloorLabel($floor) . ": '" . htmlspecialchars($ff['name'][$j]) . "' exceeds 10MB limit.";
+                    $errors[] = getFloorLabel($floor) . ": '" . htmlspecialchars($ff['name'][$j]) . "' exceeds 25MB limit.";
                 }
                 if ($finfo) {
                     $mime = finfo_file($finfo, $ff['tmp_name'][$j]);
@@ -240,6 +262,28 @@ for ($floor = 1; $floor <= max(1, $NumberOfFloors); $floor++) {
                     }
                 }
             }
+        }
+    }
+}
+
+// Validate amenity IDs against database
+if (!empty($_POST['amenities']) && is_array($_POST['amenities'])) {
+    $all_amenity_ids = array_map('intval', $_POST['amenities']);
+    $all_amenity_ids = array_filter($all_amenity_ids, function($v) { return $v > 0; });
+    if (!empty($all_amenity_ids)) {
+        $placeholders = implode(',', array_fill(0, count($all_amenity_ids), '?'));
+        $types = str_repeat('i', count($all_amenity_ids));
+        $check_sql = "SELECT amenity_id FROM amenities WHERE amenity_id IN ($placeholders)";
+        $check_stmt = $conn->prepare($check_sql);
+        $check_stmt->bind_param($types, ...$all_amenity_ids);
+        $check_stmt->execute();
+        $valid_result = $check_stmt->get_result();
+        $valid_ids = [];
+        while ($row = $valid_result->fetch_assoc()) { $valid_ids[] = (int)$row['amenity_id']; }
+        $check_stmt->close();
+        $invalid = array_diff($all_amenity_ids, $valid_ids);
+        if (!empty($invalid)) {
+            $errors[] = "One or more selected amenities are invalid.";
         }
     }
 }
@@ -337,79 +381,99 @@ if (empty($errors)) {
             }
         }
 
-        // ---- Amenities ----
+        // ---- Amenities (only validated IDs) ----
         if (!empty($_POST['amenities']) && is_array($_POST['amenities'])) {
             $sql_amenity = "INSERT INTO property_amenities (property_id, amenity_id) VALUES (?, ?)";
             $stmt_amenity = $conn->prepare($sql_amenity);
             foreach ($_POST['amenities'] as $amenity_id) {
                 $sanitized = (int)$amenity_id;
-                $stmt_amenity->bind_param("ii", $property_id, $sanitized);
-                $stmt_amenity->execute();
+                if ($sanitized > 0) {
+                    $stmt_amenity->bind_param("ii", $property_id, $sanitized);
+                    $stmt_amenity->execute();
+                }
             }
             $stmt_amenity->close();
         }
 
-        // ---- Featured Images Upload ----
+        // MIME-to-extension map (same as hardened admin endpoints)
+        $mime_to_ext = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/gif'  => 'gif',
+        ];
+
+        // ---- Featured Images Upload (MIME-based extension) ----
         $upload_dir = '../uploads/';
         if (!is_dir($upload_dir)) { mkdir($upload_dir, 0755, true); }
 
         if (isset($_FILES['property_photos']) && is_array($_FILES['property_photos']['name'])) {
+            $finfo_upload = finfo_open(FILEINFO_MIME_TYPE);
             $files = $_FILES['property_photos'];
-            $file_count = count($files['name']);
+            $file_count = min(count($files['name']), 20); // enforce max 20
             $sql_image = "INSERT INTO property_images (property_ID, PhotoURL, SortOrder) VALUES (?, ?, ?)";
             $stmt_image = $conn->prepare($sql_image);
+            $sort_order = 0;
 
             for ($i = 0; $i < $file_count; $i++) {
-                if ($files['error'][$i] === UPLOAD_ERR_OK) {
-                    if ($files['size'][$i] > $MAX_IMAGE_SIZE) continue;
-                    $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
-                    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) continue;
+                if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
+                if ($files['size'][$i] > $MAX_IMAGE_SIZE) continue;
 
-                    $new_name = uniqid('prop_', true) . '.' . $ext;
-                    $destination = $upload_dir . $new_name;
+                // Determine extension from MIME type (not user filename)
+                $mime = finfo_file($finfo_upload, $files['tmp_name'][$i]);
+                if (!isset($mime_to_ext[$mime])) continue;
+                $ext = $mime_to_ext[$mime];
 
-                    if (move_uploaded_file($files['tmp_name'][$i], $destination)) {
-                        $db_path = 'uploads/' . $new_name;
-                        $sort = $i + 1;
-                        $stmt_image->bind_param("isi", $property_id, $db_path, $sort);
-                        $stmt_image->execute();
-                    }
+                $new_name = uniqid('prop_', true) . '.' . $ext;
+                $destination = $upload_dir . $new_name;
+
+                if (move_uploaded_file($files['tmp_name'][$i], $destination)) {
+                    $db_path = 'uploads/' . $new_name;
+                    $sort_order++;
+                    $stmt_image->bind_param("isi", $property_id, $db_path, $sort_order);
+                    $stmt_image->execute();
                 }
             }
             $stmt_image->close();
+            finfo_close($finfo_upload);
         }
 
-        // ---- Floor Images Upload ----
+        // ---- Floor Images Upload (MIME-based extension) ----
         $floor_sql = "INSERT INTO property_floor_images (property_id, floor_number, photo_url, sort_order) VALUES (?, ?, ?, ?)";
+        $finfo_floor = finfo_open(FILEINFO_MIME_TYPE);
+
         for ($floor = 1; $floor <= max(1, $NumberOfFloors); $floor++) {
             $key = 'floor_images_' . $floor;
-            if (!empty($_FILES[$key]['name'][0])) {
-                $floor_dir = '../uploads/floors/' . $property_id . '/floor_' . $floor . '/';
-                if (!is_dir($floor_dir)) { mkdir($floor_dir, 0755, true); }
+            if (empty($_FILES[$key]['name'][0])) continue;
 
-                $ff = $_FILES[$key];
-                $cnt = count($ff['name']);
-                for ($j = 0; $j < $cnt; $j++) {
-                    if ($ff['error'][$j] === UPLOAD_ERR_OK) {
-                        if ($ff['size'][$j] > $MAX_IMAGE_SIZE) continue;
-                        $ext = strtolower(pathinfo($ff['name'][$j], PATHINFO_EXTENSION));
-                        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) continue;
+            $floor_dir = '../uploads/floors/' . $property_id . '/floor_' . $floor . '/';
+            if (!is_dir($floor_dir)) { mkdir($floor_dir, 0755, true); }
 
-                        $new_name = uniqid('floor_' . $floor . '_', true) . '.' . $ext;
-                        $dest = $floor_dir . $new_name;
-                        $db_floor_path = 'uploads/floors/' . $property_id . '/floor_' . $floor . '/' . $new_name;
-                        if (move_uploaded_file($ff['tmp_name'][$j], $dest)) {
-                            if ($pis = $conn->prepare($floor_sql)) {
-                                $sort = $j + 1;
-                                $pis->bind_param('iisi', $property_id, $floor, $db_floor_path, $sort);
-                                $pis->execute();
-                                $pis->close();
-                            }
-                        }
-                    }
+            $ff = $_FILES[$key];
+            $cnt = count($ff['name']);
+            $floor_sort = 0;
+
+            for ($j = 0; $j < $cnt; $j++) {
+                if ($ff['error'][$j] !== UPLOAD_ERR_OK) continue;
+                if ($ff['size'][$j] > $MAX_IMAGE_SIZE) continue;
+
+                $mime = finfo_file($finfo_floor, $ff['tmp_name'][$j]);
+                if (!isset($mime_to_ext[$mime])) continue;
+                $ext = $mime_to_ext[$mime];
+
+                $new_name = uniqid('floor_' . $floor . '_', true) . '.' . $ext;
+                $dest = $floor_dir . $new_name;
+                $db_floor_path = 'uploads/floors/' . $property_id . '/floor_' . $floor . '/' . $new_name;
+
+                if (move_uploaded_file($ff['tmp_name'][$j], $dest)) {
+                    $floor_sort++;
+                    $pis = $conn->prepare($floor_sql);
+                    $pis->bind_param('iisi', $property_id, $floor, $db_floor_path, $floor_sort);
+                    $pis->execute();
+                    $pis->close();
                 }
             }
         }
+        finfo_close($finfo_floor);
 
         $conn->commit();
 

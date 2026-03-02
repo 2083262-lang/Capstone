@@ -64,9 +64,29 @@ try {
         'AvailableFrom' => isset($_POST['AvailableFrom']) && $_POST['AvailableFrom'] !== '' ? trim($_POST['AvailableFrom']) : null
     ];
     
+    // Check if property is Sold (locked for editing)
+    $sold_check = $conn->prepare("SELECT Status FROM property WHERE property_ID = ? LIMIT 1");
+    $sold_check->bind_param('i', $property_id);
+    $sold_check->execute();
+    $current_status = $sold_check->get_result()->fetch_assoc()['Status'] ?? '';
+    $sold_check->close();
+    if ($current_status === 'Sold') {
+        throw new Exception('This property has been sold and is locked for editing.');
+    }
+
+    // Whitelist allowed Status values
+    $allowed_statuses = ['For Sale', 'For Rent', 'Pending', 'Approved', 'Rejected'];
+    if (!in_array($fields['Status'], $allowed_statuses, true)) {
+        throw new Exception('Invalid status value.');
+    }
+
     // Basic validation
     if (empty($fields['StreetAddress']) || empty($fields['City']) || empty($fields['PropertyType'])) {
         throw new Exception('Required fields are missing');
+    }
+
+    if (!empty($fields['ZIP']) && !preg_match('/^\d{4}$/', $fields['ZIP'])) {
+        throw new Exception('ZIP code must be exactly 4 digits.');
     }
     
     // Validate property type against database
@@ -80,6 +100,16 @@ try {
     
     if ($fields['ListingPrice'] <= 0) {
         throw new Exception('Listing price must be greater than 0');
+    }
+
+    // Validate ListingDate format and no future dates
+    if (!empty($fields['ListingDate'])) {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fields['ListingDate'])) {
+            throw new Exception('Invalid listing date format.');
+        }
+        if ($fields['ListingDate'] > date('Y-m-d')) {
+            throw new Exception('Listing date cannot be in the future.');
+        }
     }
     
     // Update property
@@ -139,11 +169,12 @@ try {
         if ($rentalFields['LeaseTermMonths'] <= 0) {
             throw new Exception('Lease term is required for rental properties');
         }
-        if (empty($rentalFields['Furnishing'])) {
-            throw new Exception('Furnishing status is required for rental properties');
+        $validFurnishing = ['Unfurnished', 'Semi-Furnished', 'Fully Furnished'];
+        if (!in_array($rentalFields['Furnishing'], $validFurnishing, true)) {
+            throw new Exception('Invalid furnishing option. Must be Unfurnished, Semi-Furnished, or Fully Furnished.');
         }
-        if (empty($rentalFields['AvailableFrom'])) {
-            throw new Exception('Available from date is required for rental properties');
+        if (empty($rentalFields['AvailableFrom']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $rentalFields['AvailableFrom'])) {
+            throw new Exception('A valid available-from date (YYYY-MM-DD) is required for rental properties.');
         }
         
         // Check if rental details exist

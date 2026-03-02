@@ -178,13 +178,14 @@
                         <h6 class="edit-section-title">
                             <i class="bi bi-images me-2"></i>Featured Photos
                         </h6>
+                        <div id="editFeaturedAlert" class="alert d-none mb-2" role="alert"></div>
                         <div class="upload-zone mb-3">
                             <label for="editFeaturedPhotosInput" class="upload-area">
                                 <i class="bi bi-cloud-upload upload-icon-small"></i>
                                 <span>Click to add new featured photos</span>
-                                <small class="text-muted d-block mt-1">JPEG, PNG, GIF up to 5MB each</small>
+                                <small class="text-muted d-block mt-1">JPEG, PNG, GIF up to 5MB each &bull; Max 20 photos</small>
                             </label>
-                            <input type="file" id="editFeaturedPhotosInput" class="d-none" accept="image/*" multiple>
+                            <input type="file" id="editFeaturedPhotosInput" class="d-none" accept="image/jpeg,image/png,image/gif" multiple>
                         </div>
                         <div id="editFeaturedPhotosGrid" class="photos-grid"></div>
                         <div id="editFeaturedPhotosPlaceholder" class="text-center text-muted py-4">
@@ -198,6 +199,7 @@
                         <h6 class="edit-section-title">
                             <i class="bi bi-layers me-2"></i>Floor Photos
                         </h6>
+                        <div id="editFloorAlert" class="alert d-none mb-2" role="alert"></div>
                         <div id="editFloorPhotosContainer">
                             <div class="text-center text-muted py-4">
                                 <i class="bi bi-building" style="font-size: 2rem;"></i>
@@ -474,64 +476,118 @@
     background: #a08636;
 }
 
+.photo-item-edit.pending-delete {
+    opacity: 0.35;
+    pointer-events: none;
+    position: relative;
+}
+.photo-item-edit.pending-delete::after {
+    content: 'Pending Delete';
+    position: absolute;
+    bottom: 4px; left: 50%;
+    transform: translateX(-50%);
+    background: #dc2626;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 15;
+}
+.photo-item-edit.pending-replace {
+    position: relative;
+}
+.photo-item-edit.pending-replace::after {
+    content: 'Pending Replace';
+    position: absolute;
+    bottom: 4px; left: 50%;
+    transform: translateX(-50%);
+    background: #2563eb;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 15;
+}
+.deferred-notice {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; margin-bottom: 10px;
+    border-radius: 6px; font-size: 0.8rem; font-weight: 500;
+    background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af;
+}
+.deferred-notice i { font-size: 1rem; }
 </style>
 
-<!-- Custom Confirmation Modal -->
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
-                <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle me-2"></i>Confirm Delete
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p id="confirmDeleteMessage" class="mb-0">Are you sure you want to delete this photo?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-1"></i>Cancel
-                </button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-                    <i class="bi bi-trash me-1"></i>Delete
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-// Custom confirmation dialog
-let confirmDeleteCallback = null;
+/* ══════════════════════════════════════════════════════════════
+   Admin Edit Property Modal – JavaScript
+   All delete/replace operations are DEFERRED until Save Changes.
+   ══════════════════════════════════════════════════════════════ */
 
-function showConfirmDelete(message, onConfirm) {
-    document.getElementById('confirmDeleteMessage').textContent = message;
-    confirmDeleteCallback = onConfirm;
-    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-    modal.show();
+// ── Deferred change queues ──
+let _adminPendingDeleteFeatured = [];   // [{id, url}]
+let _adminPendingReplaceFeatured = [];  // [{id, oldUrl, file}]
+let _adminPendingDeleteFloor = [];      // [{id, url, floor}]
+let _adminPendingReplaceFloor = [];     // [{id, oldUrl, floor, file}]
+let _adminNewFeaturedFiles = [];        // File objects for new uploads
+let _adminNewFloorFiles = {};           // { floorNum: [File, ...] }
+let _adminCurrentPropertyId = null;
+let _adminOriginalPhotoCount = 0;
+
+function _resetDeferredState() {
+    _adminPendingDeleteFeatured = [];
+    _adminPendingReplaceFeatured = [];
+    _adminPendingDeleteFloor = [];
+    _adminPendingReplaceFloor = [];
+    _adminNewFeaturedFiles = [];
+    _adminNewFloorFiles = {};
+    _adminCurrentPropertyId = null;
+    _adminOriginalPhotoCount = 0;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', function() {
-            if (confirmDeleteCallback) {
-                confirmDeleteCallback();
-                confirmDeleteCallback = null;
-            }
-            bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
-        });
-    }
-});
+// ── Alert helpers ──
+function showFeaturedAlert(ok, msg) {
+    const el = document.getElementById('editFeaturedAlert');
+    if (!el) return;
+    el.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
+    el.classList.add(ok ? 'alert-success' : 'alert-danger');
+    el.textContent = msg;
+    setTimeout(() => el.classList.add('d-none'), 5000);
+}
+function showFloorAlert(ok, msg) {
+    const el = document.getElementById('editFloorAlert');
+    if (!el) return;
+    el.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
+    el.classList.add(ok ? 'alert-success' : 'alert-danger');
+    el.textContent = msg;
+    setTimeout(() => el.classList.add('d-none'), 5000);
+}
+function showPhotoAlert(message, type) {
+    const modalBody = document.querySelector('#editPropertyModal .modal-body');
+    const existing = modalBody.querySelector('.photo-alert');
+    if (existing) existing.remove();
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show photo-alert`;
+    alert.style.marginBottom = '1rem';
+    alert.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    modalBody.insertBefore(alert, modalBody.firstChild);
+    setTimeout(() => { if (alert.parentNode) alert.remove(); }, 5000);
+}
 
-// Edit Property Modal Handler
+// ══════════════════════════════════════════════════════════════
+// Open Modal
+// ══════════════════════════════════════════════════════════════
 function openEditPropertyModal(propertyId) {
+    _resetDeferredState();
+    _adminCurrentPropertyId = propertyId;
+
     const modal = new bootstrap.Modal(document.getElementById('editPropertyModal'));
-    
-    // Fetch property data via AJAX
+
     fetch(`get_property_data.php?id=${propertyId}`)
-        .then(res => res.json())
+        .then(r => r.json())
         .then(data => {
             if (data.success) {
                 populateEditForm(data.property, data.amenities, data.selectedAmenities);
@@ -541,49 +597,53 @@ function openEditPropertyModal(propertyId) {
                 showPhotoAlert('Error loading property data: ' + (data.message || 'Unknown error'), 'danger');
             }
         })
-        .catch(err => {
-            console.error('Error:', err);
-            showPhotoAlert('Failed to load property data', 'danger');
-        });
+        .catch(() => showPhotoAlert('Failed to load property data', 'danger'));
 }
 
+// ══════════════════════════════════════════════════════════════
+// Photo Loading & Rendering
+// ══════════════════════════════════════════════════════════════
 function loadPropertyPhotos(propertyId) {
-    // Load featured photos
     fetch(`get_property_photos.php?property_id=${propertyId}`)
-        .then(res => res.json())
+        .then(r => r.json())
         .then(data => {
             if (data.success) {
                 renderFeaturedPhotos(data.featured_photos || [], propertyId);
                 renderFloorPhotos(data.floor_photos || [], propertyId);
+                _adminOriginalPhotoCount = (data.featured_photos || []).length;
             }
         })
-        .catch(err => console.error('Error loading photos:', err));
+        .catch(() => {});
 }
 
 function renderFeaturedPhotos(photos, propertyId) {
     const grid = document.getElementById('editFeaturedPhotosGrid');
     const placeholder = document.getElementById('editFeaturedPhotosPlaceholder');
-    
+
     if (photos.length === 0) {
         grid.style.display = 'none';
         placeholder.style.display = 'block';
         return;
     }
-    
+
     grid.style.display = 'grid';
     placeholder.style.display = 'none';
     grid.innerHTML = '';
-    
+
     photos.forEach((photo, index) => {
         const item = document.createElement('div');
         item.className = 'photo-item-edit';
+        item.dataset.photoId = photo.id;
+        item.dataset.photoUrl = photo.url;
+        // Safely escape url for onclick attributes
+        const safeUrl = (photo.url || '').replace(/'/g, "\\'");
         item.innerHTML = `
-            <img src="${photo.url}" alt="Featured photo ${index + 1}">
+            <img src="${photo.url}" alt="Featured ${index + 1}">
             <div class="photo-actions">
-                <button class="photo-btn replace" onclick="replaceFeaturedPhoto(${propertyId}, '${photo.url}', ${photo.id})" title="Replace">
+                <button type="button" class="photo-btn replace" onclick="deferReplaceFeatured(${photo.id}, '${safeUrl}', this)" title="Replace photo">
                     <i class="bi bi-arrow-repeat"></i>
                 </button>
-                <button class="photo-btn delete" onclick="deleteFeaturedPhoto(${propertyId}, '${photo.url}', ${photo.id})" title="Delete">
+                <button type="button" class="photo-btn delete" onclick="deferDeleteFeatured(${photo.id}, '${safeUrl}', this)" title="Delete photo">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>
@@ -594,249 +654,201 @@ function renderFeaturedPhotos(photos, propertyId) {
 
 function renderFloorPhotos(floorPhotos, propertyId) {
     const container = document.getElementById('editFloorPhotosContainer');
-    
+
     if (Object.keys(floorPhotos).length === 0) {
-        container.innerHTML = `
-            <div class="text-center text-muted py-4">
-                <i class="bi bi-building" style="font-size: 2rem;"></i>
-                <p class="mt-2 mb-0">No floor photos available</p>
-            </div>
-        `;
+        container.innerHTML = `<div class="text-center text-muted py-4"><i class="bi bi-building" style="font-size: 2rem;"></i><p class="mt-2 mb-0">No floor photos available</p></div>`;
         return;
     }
-    
+
     container.innerHTML = '';
-    
+
     Object.keys(floorPhotos).sort((a, b) => parseInt(a) - parseInt(b)).forEach(floorNum => {
         const photos = floorPhotos[floorNum];
         const section = document.createElement('div');
         section.className = 'floor-photos-section';
-        
+
         const titleDiv = document.createElement('div');
         titleDiv.className = 'floor-title';
-        titleDiv.innerHTML = `
-            <i class="bi bi-building"></i>
-            <span>Floor ${floorNum}</span>
-            <button class="floor-upload-btn ms-auto" onclick="addFloorPhoto(${propertyId}, ${floorNum})">
-                <i class="bi bi-plus-circle me-1"></i>Add Photos
-            </button>
-        `;
+        titleDiv.innerHTML = `<i class="bi bi-building"></i><span>Floor ${floorNum}</span>
+            <button type="button" class="floor-upload-btn ms-auto" onclick="addFloorPhotoAdmin(${propertyId}, ${floorNum})"><i class="bi bi-plus-circle me-1"></i>Add Photos</button>`;
         section.appendChild(titleDiv);
-        
+
         const grid = document.createElement('div');
         grid.className = 'photos-grid';
-        
+        grid.id = 'adminFloorGrid_' + floorNum;
+
         photos.forEach((photo, index) => {
+            const safeUrl = (photo.url || '').replace(/'/g, "\\'");
             const item = document.createElement('div');
             item.className = 'photo-item-edit';
+            item.dataset.photoId = photo.id;
+            item.dataset.photoUrl = photo.url;
             item.innerHTML = `
                 <img src="${photo.url}" alt="Floor ${floorNum} photo ${index + 1}">
                 <div class="photo-actions">
-                    <button class="photo-btn replace" onclick="replaceFloorPhoto(${propertyId}, ${floorNum}, '${photo.url}', ${photo.id})" title="Replace">
-                        <i class="bi bi-arrow-repeat"></i>
-                    </button>
-                    <button class="photo-btn delete" onclick="deleteFloorPhoto(${propertyId}, ${floorNum}, '${photo.url}', ${photo.id})" title="Delete">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            `;
+                    <button type="button" class="photo-btn replace" onclick="deferReplaceFloor(${photo.id}, '${safeUrl}', ${floorNum}, this)" title="Replace"><i class="bi bi-arrow-repeat"></i></button>
+                    <button type="button" class="photo-btn delete" onclick="deferDeleteFloor(${photo.id}, '${safeUrl}', ${floorNum}, this)" title="Delete"><i class="bi bi-trash"></i></button>
+                </div>`;
             grid.appendChild(item);
         });
-        
+
         section.appendChild(grid);
         container.appendChild(section);
     });
 }
 
-// Featured photo management functions
-function replaceFeaturedPhoto(propertyId, oldUrl, photoId) {
+// ══════════════════════════════════════════════════════════════
+// Deferred Featured Photo Actions
+// ══════════════════════════════════════════════════════════════
+function deferDeleteFeatured(photoId, photoUrl, btnEl) {
+    const item = btnEl.closest('.photo-item-edit');
+    if (!item) return;
+
+    // Ensure at least 1 photo remains
+    const grid = document.getElementById('editFeaturedPhotosGrid');
+    const visibleItems = grid.querySelectorAll('.photo-item-edit:not(.pending-delete)');
+    if (visibleItems.length <= 1) {
+        showFeaturedAlert(false, 'Cannot delete the only photo. Property must have at least one photo.');
+        return;
+    }
+
+    _adminPendingDeleteFeatured.push({ id: photoId, url: photoUrl });
+    item.classList.add('pending-delete');
+    showFeaturedAlert(true, 'Photo marked for deletion. Click "Save Changes" to confirm.');
+}
+
+function deferReplaceFeatured(photoId, photoUrl, btnEl) {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/jpeg,image/png,image/gif';
     input.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
-        const formData = new FormData();
-        formData.append('property_id', propertyId);
-        formData.append('photo_id', photoId);
-        formData.append('old_url', oldUrl);
-        formData.append('image', file);
-        
-        fetch('update_featured_photo.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                loadPropertyPhotos(propertyId);
-                showPhotoAlert('Featured photo updated successfully', 'success');
-            } else {
-                showPhotoAlert(data.message || 'Failed to update photo', 'danger');
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            showPhotoAlert('Failed to update photo', 'danger');
-        });
+
+        // Validate
+        const maxSize = 25 * 1024 * 1024;
+        if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+            showFeaturedAlert(false, 'Invalid file type. Only JPEG, PNG, GIF allowed.');
+            return;
+        }
+        if (file.size > maxSize) {
+            showFeaturedAlert(false, 'File exceeds 25MB limit.');
+            return;
+        }
+
+        const item = btnEl.closest('.photo-item-edit');
+        if (!item) return;
+
+        // Remove any prior pending replace for this same photo
+        _adminPendingReplaceFeatured = _adminPendingReplaceFeatured.filter(r => r.id !== photoId);
+
+        _adminPendingReplaceFeatured.push({ id: photoId, oldUrl: photoUrl, file: file });
+
+        // Show local preview
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = item.querySelector('img');
+            if (img) img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        item.classList.remove('pending-delete');
+        item.classList.add('pending-replace');
+        showFeaturedAlert(true, 'Replacement queued. Click "Save Changes" to confirm.');
     };
     input.click();
 }
 
-function deleteFeaturedPhoto(propertyId, photoUrl, photoId) {
-    showConfirmDelete('Are you sure you want to delete this photo?', function() {
-        fetch('delete_featured_photo.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                property_id: propertyId,
-                photo_id: photoId,
-                photo_url: photoUrl
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                loadPropertyPhotos(propertyId);
-                showPhotoAlert('Photo deleted successfully', 'success');
-            } else {
-                showPhotoAlert(data.message || 'Failed to delete photo', 'danger');
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            showPhotoAlert('Failed to delete photo', 'danger');
-        });
-    });
+// ══════════════════════════════════════════════════════════════
+// Deferred Floor Photo Actions
+// ══════════════════════════════════════════════════════════════
+function deferDeleteFloor(photoId, photoUrl, floorNum, btnEl) {
+    const item = btnEl.closest('.photo-item-edit');
+    if (!item) return;
+    _adminPendingDeleteFloor.push({ id: photoId, url: photoUrl, floor: floorNum });
+    item.classList.add('pending-delete');
+    showFloorAlert(true, 'Floor photo marked for deletion. Click "Save Changes" to confirm.');
 }
 
-// Floor photo management functions
-function addFloorPhoto(propertyId, floorNum) {
+function deferReplaceFloor(photoId, photoUrl, floorNum, btnEl) {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/jpeg,image/png,image/gif';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const maxSize = 25 * 1024 * 1024;
+        if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+            showFloorAlert(false, 'Invalid file type. Only JPEG, PNG, GIF allowed.');
+            return;
+        }
+        if (file.size > maxSize) {
+            showFloorAlert(false, 'File exceeds 25MB limit.');
+            return;
+        }
+
+        const item = btnEl.closest('.photo-item-edit');
+        if (!item) return;
+
+        _adminPendingReplaceFloor = _adminPendingReplaceFloor.filter(r => r.id !== photoId);
+        _adminPendingReplaceFloor.push({ id: photoId, oldUrl: photoUrl, floor: floorNum, file: file });
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = item.querySelector('img');
+            if (img) img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        item.classList.remove('pending-delete');
+        item.classList.add('pending-replace');
+        showFloorAlert(true, 'Replacement queued. Click "Save Changes" to confirm.');
+    };
+    input.click();
+}
+
+// ══════════════════════════════════════════════════════════════
+// New Photo Uploads (also deferred — staged client-side)
+// ══════════════════════════════════════════════════════════════
+function addFloorPhotoAdmin(propertyId, floorNum) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/gif';
     input.multiple = true;
     input.onchange = (e) => {
-        const files = e.target.files;
+        const files = Array.from(e.target.files || []);
         if (!files.length) return;
-        
-        const formData = new FormData();
-        formData.append('property_id', propertyId);
-        formData.append('floor_number', floorNum);
-        for (let i = 0; i < files.length; i++) {
-            formData.append('images[]', files[i]);
+        const maxSize = 25 * 1024 * 1024;
+        const ok = files.filter(f => ['image/jpeg', 'image/png', 'image/gif'].includes(f.type) && f.size <= maxSize);
+        if (ok.length !== files.length) {
+            showFloorAlert(false, 'Some files skipped (invalid type or >25MB).');
         }
-        
-        fetch('add_floor_photos.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                loadPropertyPhotos(propertyId);
-                showPhotoAlert(`${data.count || files.length} photo(s) added successfully`, 'success');
-            } else {
-                showPhotoAlert(data.message || 'Failed to add photos', 'danger');
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            showPhotoAlert('Failed to add photos', 'danger');
-        });
+        if (!ok.length) return;
+
+        if (!_adminNewFloorFiles[floorNum]) _adminNewFloorFiles[floorNum] = [];
+        _adminNewFloorFiles[floorNum].push(...ok);
+
+        // Show previews
+        const grid = document.getElementById('adminFloorGrid_' + floorNum);
+        if (grid) {
+            ok.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'photo-item-edit pending-replace';
+                const reader = new FileReader();
+                reader.onload = (ev) => { item.innerHTML = `<img src="${ev.target.result}" alt="New floor photo">`; };
+                reader.readAsDataURL(file);
+                grid.appendChild(item);
+            });
+        }
+        showFloorAlert(true, ok.length + ' floor photo(s) staged. Click "Save Changes" to upload.');
     };
     input.click();
 }
 
-function replaceFloorPhoto(propertyId, floorNum, oldUrl, photoId) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const formData = new FormData();
-        formData.append('property_id', propertyId);
-        formData.append('floor_number', floorNum);
-        formData.append('photo_id', photoId);
-        formData.append('old_url', oldUrl);
-        formData.append('image', file);
-        
-        fetch('update_floor_photo.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                loadPropertyPhotos(propertyId);
-                showPhotoAlert('Floor photo updated successfully', 'success');
-            } else {
-                showPhotoAlert(data.message || 'Failed to update photo', 'danger');
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            showPhotoAlert('Failed to update photo', 'danger');
-        });
-    };
-    input.click();
-}
-
-function deleteFloorPhoto(propertyId, floorNum, photoUrl, photoId) {
-    showConfirmDelete('Are you sure you want to delete this floor photo?', function() {
-        fetch('delete_floor_photo.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                property_id: propertyId,
-                floor_number: floorNum,
-                photo_id: photoId,
-                photo_url: photoUrl
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                loadPropertyPhotos(propertyId);
-                showPhotoAlert('Floor photo deleted successfully', 'success');
-            } else {
-                showPhotoAlert(data.message || 'Failed to delete photo', 'danger');
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            showPhotoAlert('Failed to delete photo', 'danger');
-        });
-    });
-}
-
-function showPhotoAlert(message, type) {
-    // Create alert element at top of modal body
-    const modalBody = document.querySelector('#editPropertyModal .modal-body');
-    const existingAlert = modalBody.querySelector('.photo-alert');
-    if (existingAlert) existingAlert.remove();
-    
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type} alert-dismissible fade show photo-alert`;
-    alert.style.marginBottom = '1rem';
-    alert.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    modalBody.insertBefore(alert, modalBody.firstChild);
-    
-    setTimeout(() => {
-        if (alert.parentNode) alert.remove();
-    }, 5000);
-}
-
+// ══════════════════════════════════════════════════════════════
+// Form Population
+// ══════════════════════════════════════════════════════════════
 function populateEditForm(property, allAmenities, selectedAmenities) {
-    console.log('Property data:', property); // Debug log
-    
-    // Basic fields
     document.getElementById('edit_property_id').value = property.property_ID || '';
     document.getElementById('edit_StreetAddress').value = property.StreetAddress || '';
     document.getElementById('edit_City').value = property.City || '';
@@ -845,250 +857,250 @@ function populateEditForm(property, allAmenities, selectedAmenities) {
     document.getElementById('edit_Barangay').value = property.Barangay || '';
     document.getElementById('edit_PropertyType').value = property.PropertyType || '';
     document.getElementById('edit_Status').value = property.Status || '';
-    
-    // Property details - handle numbers properly
-    document.getElementById('edit_YearBuilt').value = property.YearBuilt !== null && property.YearBuilt !== undefined ? property.YearBuilt : '';
-    document.getElementById('edit_Bedrooms').value = property.Bedrooms !== null && property.Bedrooms !== undefined ? property.Bedrooms : '';
-    document.getElementById('edit_Bathrooms').value = property.Bathrooms !== null && property.Bathrooms !== undefined ? property.Bathrooms : '';
-    
-    // Format listing date - MySQL returns as YYYY-MM-DD string
-    console.log('ListingDate from DB:', property.ListingDate, typeof property.ListingDate);
+
+    document.getElementById('edit_YearBuilt').value = (property.YearBuilt != null) ? property.YearBuilt : '';
+    document.getElementById('edit_Bedrooms').value = (property.Bedrooms != null) ? property.Bedrooms : '';
+    document.getElementById('edit_Bathrooms').value = (property.Bathrooms != null) ? property.Bathrooms : '';
+
+    // Listing date
+    const ldInput = document.getElementById('edit_ListingDate');
     if (property.ListingDate && property.ListingDate !== '0000-00-00') {
-        // If it's already in YYYY-MM-DD format, use it directly
-        let dateStr = property.ListingDate;
-        if (typeof dateStr === 'string' && dateStr.includes('-')) {
-            // Extract just the date part if it's a datetime
-            dateStr = dateStr.split(' ')[0];
-            // Validate it's not 0000-00-00
-            if (dateStr !== '0000-00-00') {
-                document.getElementById('edit_ListingDate').value = dateStr;
-                console.log('Set ListingDate to:', dateStr);
-            } else {
-                document.getElementById('edit_ListingDate').value = '';
-                console.log('ListingDate is 0000-00-00, setting to empty');
-            }
-        } else {
-            // Try to parse and format
-            const listingDate = new Date(property.ListingDate);
-            if (!isNaN(listingDate.getTime()) && listingDate.getFullYear() > 1000) {
-                const year = listingDate.getFullYear();
-                const month = String(listingDate.getMonth() + 1).padStart(2, '0');
-                const day = String(listingDate.getDate()).padStart(2, '0');
-                const formatted = `${year}-${month}-${day}`;
-                document.getElementById('edit_ListingDate').value = formatted;
-                console.log('Set ListingDate to (formatted):', formatted);
-            } else {
-                document.getElementById('edit_ListingDate').value = '';
-                console.log('Invalid ListingDate, setting to empty');
-            }
-        }
+        ldInput.value = property.ListingDate.split(' ')[0];
     } else {
-        document.getElementById('edit_ListingDate').value = '';
-        console.log('ListingDate is null, empty, or 0000-00-00');
+        ldInput.value = new Date().toISOString().slice(0, 10);
     }
 
-    // Fallback: if ListingDate is still empty, use AvailableFrom if valid, else today's date
-    (function() {
-        const listingDateInput = document.getElementById('edit_ListingDate');
-        if (!listingDateInput.value) {
-            if (property.AvailableFrom && property.AvailableFrom !== '0000-00-00') {
-                let af = property.AvailableFrom;
-                if (typeof af === 'string') {
-                    af = af.split(' ')[0];
-                } else {
-                    const afDate = new Date(property.AvailableFrom);
-                    if (!isNaN(afDate.getTime())) {
-                        const y = afDate.getFullYear();
-                        const m = String(afDate.getMonth() + 1).padStart(2, '0');
-                        const d = String(afDate.getDate()).padStart(2, '0');
-                        af = `${y}-${m}-${d}`;
-                    }
-                }
-                listingDateInput.value = af;
-                console.log('Fallback ListingDate to AvailableFrom:', af);
-            } else {
-                const today = new Date();
-                const t = today.toISOString().slice(0, 10);
-                listingDateInput.value = t;
-                console.log('Fallback ListingDate to today:', t);
-            }
-        }
-    })();
-    
-    document.getElementById('edit_ListingPrice').value = property.ListingPrice !== null && property.ListingPrice !== undefined ? property.ListingPrice : '';
-    document.getElementById('edit_SquareFootage').value = property.SquareFootage !== null && property.SquareFootage !== undefined ? property.SquareFootage : '';
-    document.getElementById('edit_LotSize').value = property.LotSize !== null && property.LotSize !== undefined ? property.LotSize : '';
+    document.getElementById('edit_ListingPrice').value = (property.ListingPrice != null) ? property.ListingPrice : '';
+    document.getElementById('edit_SquareFootage').value = (property.SquareFootage != null) ? property.SquareFootage : '';
+    document.getElementById('edit_LotSize').value = (property.LotSize != null) ? property.LotSize : '';
     document.getElementById('edit_ParkingType').value = property.ParkingType || '';
-    
+
     // Rental details
     document.getElementById('edit_SecurityDeposit').value = property.SecurityDeposit || '';
     document.getElementById('edit_LeaseTermMonths').value = property.LeaseTermMonths || '';
     document.getElementById('edit_Furnishing').value = property.Furnishing || '';
-    
-    // Format available from date
-    console.log('AvailableFrom from DB:', property.AvailableFrom, typeof property.AvailableFrom);
     if (property.AvailableFrom && property.AvailableFrom !== '0000-00-00') {
-        let dateStr = property.AvailableFrom;
-        if (typeof dateStr === 'string' && dateStr.includes('-')) {
-            dateStr = dateStr.split(' ')[0];
-            if (dateStr !== '0000-00-00') {
-                document.getElementById('edit_AvailableFrom').value = dateStr;
-                console.log('Set AvailableFrom to:', dateStr);
-            } else {
-                document.getElementById('edit_AvailableFrom').value = '';
-                console.log('AvailableFrom is 0000-00-00, setting to empty');
-            }
-        } else {
-            const availableDate = new Date(property.AvailableFrom);
-            if (!isNaN(availableDate.getTime()) && availableDate.getFullYear() > 1000) {
-                const year = availableDate.getFullYear();
-                const month = String(availableDate.getMonth() + 1).padStart(2, '0');
-                const day = String(availableDate.getDate()).padStart(2, '0');
-                const formatted = `${year}-${month}-${day}`;
-                document.getElementById('edit_AvailableFrom').value = formatted;
-                console.log('Set AvailableFrom to (formatted):', formatted);
-            } else {
-                document.getElementById('edit_AvailableFrom').value = '';
-                console.log('Invalid AvailableFrom, setting to empty');
-            }
-        }
+        document.getElementById('edit_AvailableFrom').value = property.AvailableFrom.split(' ')[0];
     } else {
         document.getElementById('edit_AvailableFrom').value = '';
-        console.log('AvailableFrom is null, empty, or 0000-00-00');
     }
-    
+
     // MLS
     document.getElementById('edit_Source').value = property.Source || '';
     document.getElementById('edit_MLSNumber').value = property.MLSNumber || '';
     document.getElementById('edit_ListingDescription').value = property.ListingDescription || '';
-    
+
     // Show/hide rental section
     toggleEditRentalSection();
-    
-    // Populate amenities
+
+    // Amenities
     const amenitiesGrid = document.getElementById('editAmenitiesGrid');
     amenitiesGrid.innerHTML = '';
-    
     if (allAmenities && allAmenities.length > 0) {
-        allAmenities.forEach(amenity => {
-            const isChecked = selectedAmenities.includes(parseInt(amenity.amenity_id));
-            const div = document.createElement('div');
-            div.className = 'amenity-checkbox';
-            div.innerHTML = `
-                <input type="checkbox" 
-                       name="amenities[]" 
-                       value="${amenity.amenity_id}" 
-                       id="edit_amenity_${amenity.amenity_id}"
-                       ${isChecked ? 'checked' : ''}>
-                <label for="edit_amenity_${amenity.amenity_id}">${amenity.amenity_name}</label>
-            `;
-            amenitiesGrid.appendChild(div);
+        allAmenities.forEach(a => {
+            const checked = selectedAmenities.includes(parseInt(a.amenity_id));
+            const d = document.createElement('div');
+            d.className = 'amenity-checkbox';
+            d.innerHTML = `<input type="checkbox" name="amenities[]" value="${a.amenity_id}" id="edit_amenity_${a.amenity_id}" ${checked ? 'checked' : ''}>
+                <label for="edit_amenity_${a.amenity_id}">${a.amenity_name}</label>`;
+            amenitiesGrid.appendChild(d);
         });
     }
 }
 
 function toggleEditRentalSection() {
     const status = document.getElementById('edit_Status').value;
-    const rentalSection = document.getElementById('editRentalSection');
-    if (status === 'For Rent') {
-        rentalSection.style.display = 'block';
-    } else {
-        rentalSection.style.display = 'none';
-    }
+    document.getElementById('editRentalSection').style.display = (status === 'For Rent') ? 'block' : 'none';
 }
 
-// Listen to status changes
+// ══════════════════════════════════════════════════════════════
+// Process All Deferred Photo Changes (called from form submit)
+// ══════════════════════════════════════════════════════════════
+async function processAllDeferredPhotoChanges(propertyId) {
+    const results = [];
+
+    // 1. Featured deletes
+    for (const del of _adminPendingDeleteFeatured) {
+        try {
+            const r = await fetch('delete_featured_photo.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ property_id: propertyId, photo_id: del.id, photo_url: del.url })
+            });
+            const d = await r.json();
+            if (!d.success) results.push('Delete featured #' + del.id + ': ' + (d.message || 'failed'));
+        } catch (e) { results.push('Delete featured #' + del.id + ': network error'); }
+    }
+
+    // 2. Featured replaces
+    for (const rep of _adminPendingReplaceFeatured) {
+        try {
+            const fd = new FormData();
+            fd.append('property_id', propertyId);
+            fd.append('photo_id', rep.id);
+            fd.append('old_url', rep.oldUrl);
+            fd.append('image', rep.file);
+            const r = await fetch('update_featured_photo.php', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (!d.success) results.push('Replace featured #' + rep.id + ': ' + (d.message || 'failed'));
+        } catch (e) { results.push('Replace featured #' + rep.id + ': network error'); }
+    }
+
+    // 3. New featured uploads
+    if (_adminNewFeaturedFiles.length > 0) {
+        try {
+            const fd = new FormData();
+            fd.append('property_id', propertyId);
+            _adminNewFeaturedFiles.forEach(f => fd.append('images[]', f));
+            const r = await fetch('add_featured_photos.php', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (!d.success) results.push('New featured: ' + (d.message || 'failed'));
+        } catch (e) { results.push('New featured: network error'); }
+    }
+
+    // 4. Floor deletes
+    for (const del of _adminPendingDeleteFloor) {
+        try {
+            const r = await fetch('delete_floor_photo.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ property_id: propertyId, floor_number: del.floor, photo_id: del.id, photo_url: del.url })
+            });
+            const d = await r.json();
+            if (!d.success) results.push('Delete floor #' + del.id + ': ' + (d.message || 'failed'));
+        } catch (e) { results.push('Delete floor #' + del.id + ': network error'); }
+    }
+
+    // 5. Floor replaces
+    for (const rep of _adminPendingReplaceFloor) {
+        try {
+            const fd = new FormData();
+            fd.append('property_id', propertyId);
+            fd.append('floor_number', rep.floor);
+            fd.append('photo_id', rep.id);
+            fd.append('old_url', rep.oldUrl);
+            fd.append('image', rep.file);
+            const r = await fetch('update_floor_photo.php', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (!d.success) results.push('Replace floor #' + rep.id + ': ' + (d.message || 'failed'));
+        } catch (e) { results.push('Replace floor #' + rep.id + ': network error'); }
+    }
+
+    // 6. New floor uploads
+    for (const [floorNum, files] of Object.entries(_adminNewFloorFiles)) {
+        if (!files.length) continue;
+        try {
+            const fd = new FormData();
+            fd.append('property_id', propertyId);
+            fd.append('floor_number', floorNum);
+            files.forEach(f => fd.append('images[]', f));
+            const r = await fetch('add_floor_photos.php', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (!d.success) results.push('New floor ' + floorNum + ': ' + (d.message || 'failed'));
+        } catch (e) { results.push('New floor ' + floorNum + ': network error'); }
+    }
+
+    return results;
+}
+
+// ══════════════════════════════════════════════════════════════
+// DOM Ready — Event Listeners
+// ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
     const editStatusSelect = document.getElementById('edit_Status');
-    if (editStatusSelect) {
-        editStatusSelect.addEventListener('change', toggleEditRentalSection);
-    }
-    
-    // Handle featured photos upload
-    const featuredPhotosInput = document.getElementById('editFeaturedPhotosInput');
-    if (featuredPhotosInput) {
-        featuredPhotosInput.addEventListener('change', function(e) {
-            const files = e.target.files;
+    if (editStatusSelect) editStatusSelect.addEventListener('change', toggleEditRentalSection);
+
+    // New featured photo file picker (staged client-side)
+    const featuredInput = document.getElementById('editFeaturedPhotosInput');
+    if (featuredInput) {
+        featuredInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files || []);
             if (!files.length) return;
-            
-            const propertyId = document.getElementById('edit_property_id').value;
-            if (!propertyId) return;
-            
-            const formData = new FormData();
-            formData.append('property_id', propertyId);
-            for (let i = 0; i < files.length; i++) {
-                formData.append('images[]', files[i]);
+            const maxSize = 25 * 1024 * 1024;
+            const allowed = ['image/jpeg', 'image/png', 'image/gif'];
+            const ok = files.filter(f => allowed.includes(f.type) && f.size <= maxSize);
+            if (ok.length !== files.length) showFeaturedAlert(false, 'Some files skipped (invalid type or >25MB).');
+            if (!ok.length) { this.value = ''; return; }
+
+            // Max 20 total check
+            const grid = document.getElementById('editFeaturedPhotosGrid');
+            const currentCount = grid.querySelectorAll('.photo-item-edit:not(.pending-delete)').length;
+            if (currentCount + ok.length > 20) {
+                showFeaturedAlert(false, 'Maximum 20 photos. Currently ' + currentCount + ' active.');
+                this.value = '';
+                return;
             }
-            
-            fetch('add_featured_photos.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    loadPropertyPhotos(propertyId);
-                    showPhotoAlert(`${data.count || files.length} photo(s) added successfully`, 'success');
-                    featuredPhotosInput.value = ''; // Reset input
-                } else {
-                    showPhotoAlert(data.message || 'Failed to add photos', 'danger');
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                showPhotoAlert('Failed to add photos', 'danger');
+
+            _adminNewFeaturedFiles.push(...ok);
+
+            // Show local previews
+            grid.style.display = 'grid';
+            document.getElementById('editFeaturedPhotosPlaceholder').style.display = 'none';
+            ok.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'photo-item-edit pending-replace';
+                const reader = new FileReader();
+                reader.onload = (ev) => { item.innerHTML = `<img src="${ev.target.result}" alt="New photo">`; };
+                reader.readAsDataURL(file);
+                grid.appendChild(item);
             });
+
+            showFeaturedAlert(true, ok.length + ' photo(s) staged. Click "Save Changes" to upload.');
+            this.value = '';
         });
     }
-    
-    // Handle form submission
+
+    // Form submission
     const editForm = document.getElementById('editPropertyForm');
     if (editForm) {
-        editForm.addEventListener('submit', function(e) {
+        editForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const submitBtn = this.querySelector('button[type="submit"]');
             const btnText = submitBtn.innerHTML;
-            
-            // Disable button and show loading state
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
-            
-            const formData = new FormData(this);
+
             const propertyId = document.getElementById('edit_property_id').value;
-            
-            console.log('Submitting form for property ID:', propertyId);
-            
-            fetch(`update_property.php`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => {
-                console.log('Response status:', res.status);
-                if (!res.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return res.json();
-            })
-            .then(data => {
-                console.log('Response data:', data);
-                if (data.success) {
-                    showPhotoAlert('Property updated successfully! Reloading...', 'success');
-                    setTimeout(() => window.location.reload(), 1500);
-                } else {
+            const formData = new FormData(this);
+
+            try {
+                // 1. Save text fields + amenities
+                const res = await fetch('update_property.php', { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('Network error');
+                const data = await res.json();
+
+                if (!data.success) {
                     showPhotoAlert('Error: ' + (data.message || 'Failed to update property'), 'danger');
-                    // Re-enable button
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = btnText;
+                    return;
                 }
-            })
-            .catch(err => {
-                console.error('Error:', err);
+
+                // 2. Process all deferred photo changes
+                const hasDeferredChanges = _adminPendingDeleteFeatured.length > 0
+                    || _adminPendingReplaceFeatured.length > 0
+                    || _adminNewFeaturedFiles.length > 0
+                    || _adminPendingDeleteFloor.length > 0
+                    || _adminPendingReplaceFloor.length > 0
+                    || Object.values(_adminNewFloorFiles).some(f => f.length > 0);
+
+                if (hasDeferredChanges) {
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing photos...';
+                    const photoErrors = await processAllDeferredPhotoChanges(propertyId);
+                    if (photoErrors.length > 0) {
+                        showPhotoAlert('Property saved, but some photo operations had issues: ' + photoErrors.join('; '), 'warning');
+                    }
+                }
+
+                showPhotoAlert('Property updated successfully! Reloading...', 'success');
+                setTimeout(() => window.location.reload(), 1200);
+
+            } catch (err) {
                 showPhotoAlert('Failed to update property. Please try again.', 'danger');
-                // Re-enable button
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = btnText;
-            });
+            }
         });
     }
 });

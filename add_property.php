@@ -1191,7 +1191,7 @@ unset($_SESSION['message']);
                             <i class="bi bi-cloud-upload upload-icon"></i>
                             <div class="upload-text">Upload Featured Images</div>
                             <div class="upload-subtext">Drag and drop images here, or click to select files</div>
-                            <div class="upload-subtext">Maximum 10 images, 10MB per file • JPG, PNG, GIF supported</div>
+                            <div class="upload-subtext">Maximum 20 images, 25MB per file • JPG, PNG, GIF supported</div>
                             
                             <div class="file-input-wrapper">
                                         <input type="file" id="property_photos" name="property_photos[]" class="file-input" 
@@ -1298,7 +1298,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 <div class="floor-upload-area" id="floorUploadArea_${i}" onclick="document.getElementById('floor_images_${i}').click()">
                     <i class="bi bi-cloud-arrow-up floor-upload-icon"></i>
                     <div class="floor-upload-text">Click to upload images for ${getFloorLabel(i)}</div>
-                    <div class="floor-upload-subtext">Max 10 images per floor • JPG, PNG, GIF (10MB each)</div>
+                    <div class="floor-upload-subtext">Max 10 images per floor • JPG, PNG, GIF (25MB each)</div>
                 </div>
                 
                 <input type="file" 
@@ -1357,9 +1357,9 @@ document.addEventListener('DOMContentLoaded', function(){
         const filesToProcess = Array.from(files).slice(0, 10);
 
         filesToProcess.forEach((file, index) => {
-            // Validate file size (10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                alert(`File ${file.name} exceeds 10MB limit.`);
+            // Validate file size (25MB)
+            if (file.size > 25 * 1024 * 1024) {
+                alert(`File ${file.name} exceeds 25MB limit.`);
                 return;
             }
 

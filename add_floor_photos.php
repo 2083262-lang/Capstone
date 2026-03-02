@@ -17,6 +17,17 @@ if ($property_id <= 0 || $floor_number <= 0) {
     exit;
 }
 
+// Verify property exists
+$prop_check = $conn->prepare("SELECT property_ID FROM property WHERE property_ID = ? LIMIT 1");
+$prop_check->bind_param('i', $property_id);
+$prop_check->execute();
+if ($prop_check->get_result()->num_rows === 0) {
+    echo json_encode(['success' => false, 'message' => 'Property not found']);
+    $prop_check->close();
+    exit;
+}
+$prop_check->close();
+
 if (empty($_FILES['images']) || !is_array($_FILES['images']['name'])) {
     echo json_encode(['success' => false, 'message' => 'No images provided']);
     exit;
@@ -28,7 +39,8 @@ if (!is_dir($upload_dir)) {
 }
 
 $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-$max_size = 5 * 1024 * 1024; // 5MB
+$mime_to_ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif'];
+$max_size = 25 * 1024 * 1024; // 25MB
 $uploaded_count = 0;
 $errors = [];
 
@@ -65,9 +77,9 @@ for ($i = 0; $i < $file_count; $i++) {
         continue;
     }
     
-    // Generate unique filename
-    $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
-    $filename = "floor_{$floor_number}_" . uniqid() . '.' . uniqid() . '.' . $ext;
+    // Generate unique filename using MIME-based extension
+    $ext = $mime_to_ext[$mime] ?? 'jpg';
+    $filename = "floor_{$floor_number}_" . uniqid('', true) . '.' . $ext;
     $filepath = $upload_dir . $filename;
     
     // Move uploaded file

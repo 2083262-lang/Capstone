@@ -16,6 +16,17 @@ if ($property_id <= 0) {
     exit;
 }
 
+// Verify property exists
+$prop_check = $conn->prepare("SELECT property_ID FROM property WHERE property_ID = ? LIMIT 1");
+$prop_check->bind_param('i', $property_id);
+$prop_check->execute();
+if ($prop_check->get_result()->num_rows === 0) {
+    echo json_encode(['success' => false, 'message' => 'Property not found']);
+    $prop_check->close();
+    exit;
+}
+$prop_check->close();
+
 if (empty($_FILES['images']) || !is_array($_FILES['images']['name'])) {
     echo json_encode(['success' => false, 'message' => 'No images provided']);
     exit;
@@ -27,9 +38,26 @@ if (!is_dir($upload_dir)) {
 }
 
 $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-$max_size = 5 * 1024 * 1024; // 5MB
+$mime_to_ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif'];
+$max_size = 25 * 1024 * 1024; // 25MB
+$max_photos = 20;
 $uploaded_count = 0;
 $errors = [];
+
+// Enforce max 20 photos total
+$count_check = $conn->prepare("SELECT COUNT(*) as cnt FROM property_images WHERE property_ID = ?");
+$count_check->bind_param('i', $property_id);
+$count_check->execute();
+$current_count = (int)$count_check->get_result()->fetch_assoc()['cnt'];
+$count_check->close();
+
+$files = $_FILES['images'];
+$file_count = count($files['name']);
+
+if ($current_count + $file_count > $max_photos) {
+    echo json_encode(['success' => false, 'message' => "Maximum $max_photos photos allowed. Currently $current_count photos."]);
+    exit;
+}
 
 // Get current max sort order
 $sql_max = "SELECT COALESCE(MAX(SortOrder), 0) as max_order FROM property_images WHERE property_ID = ?";
@@ -40,7 +68,6 @@ $max_order = $stmt->get_result()->fetch_assoc()['max_order'];
 $stmt->close();
 
 $files = $_FILES['images'];
-$file_count = count($files['name']);
 
 for ($i = 0; $i < $file_count; $i++) {
     if ($files['error'][$i] !== UPLOAD_ERR_OK) {
@@ -64,8 +91,8 @@ for ($i = 0; $i < $file_count; $i++) {
         continue;
     }
     
-    // Generate unique filename
-    $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
+    // Generate unique filename using MIME-based extension
+    $ext = $mime_to_ext[$mime] ?? 'jpg';
     $filename = uniqid('prop_', true) . '.' . $ext;
     $filepath = $upload_dir . $filename;
     

@@ -97,10 +97,14 @@ if ($property_status === 'Sold') {
     jfail('This property has been sold and is locked for editing to maintain historical accuracy.');
 }
 
+// Wrap all database modifications in a transaction
+$conn->begin_transaction();
+try {
+
 // Perform update
 $sql = 'UPDATE property SET StreetAddress=?, City=?, Province=?, ZIP=?, ListingPrice=?, ListingDate=?, Bedrooms=?, Bathrooms=?, SquareFootage=?, YearBuilt=?, LotSize=?, PropertyType=?, ParkingType=?, MLSNumber=?, Barangay=?, Source=?, ListingDescription=? WHERE property_ID=?';
 $stmt = $conn->prepare($sql);
-if (!$stmt) jfail('Database error: '.$conn->error);
+if (!$stmt) throw new Exception('Database error: '.$conn->error);
 
 $yearBuilt = ($input['YearBuilt'] === '' ? null : (int)$input['YearBuilt']);
 $lotSize = ($input['LotSize'] === '' ? null : (float)$input['LotSize']);
@@ -128,8 +132,7 @@ $stmt->bind_param(
 );
 
 if (!$stmt->execute()) {
-  $stmt->close();
-  jfail('Failed to update property: '.$conn->error);
+  throw new Exception('Failed to update property: '.$conn->error);
 }
 $stmt->close();
 
@@ -158,6 +161,56 @@ if (isset($_POST['amenities']) && is_array($_POST['amenities'])) {
     $del_am->execute();
     $del_am->close();
 }
+
+// Handle rental details if property is For Rent
+if ($property_status === 'For Rent') {
+    $rentalFields = [
+        'SecurityDeposit' => isset($_POST['SecurityDeposit']) && $_POST['SecurityDeposit'] !== '' ? (float)$_POST['SecurityDeposit'] : 0.00,
+        'LeaseTermMonths' => isset($_POST['LeaseTermMonths']) && $_POST['LeaseTermMonths'] !== '' ? (int)$_POST['LeaseTermMonths'] : 0,
+        'Furnishing'      => isset($_POST['Furnishing']) && $_POST['Furnishing'] !== '' ? trim($_POST['Furnishing']) : 'Unfurnished',
+        'AvailableFrom'   => isset($_POST['AvailableFrom']) && $_POST['AvailableFrom'] !== '' ? trim($_POST['AvailableFrom']) : null,
+    ];
+
+    $validFurnishing = ['Unfurnished', 'Semi-Furnished', 'Fully Furnished'];
+    if ($rentalFields['LeaseTermMonths'] <= 0) {
+        throw new Exception('Lease term is required for rental properties.');
+    }
+    if (!in_array($rentalFields['Furnishing'], $validFurnishing, true)) {
+        throw new Exception('Invalid furnishing option selected.');
+    }
+    if (empty($rentalFields['AvailableFrom']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $rentalFields['AvailableFrom'])) {
+        throw new Exception('A valid "Available From" date is required for rental properties.');
+    }
+
+    // Check if rental details already exist
+    $check_rental = $conn->prepare("SELECT property_id FROM rental_details WHERE property_id = ? LIMIT 1");
+    $check_rental->bind_param('i', $pid);
+    $check_rental->execute();
+    $rental_exists = $check_rental->get_result()->num_rows > 0;
+    $check_rental->close();
+
+    if ($rental_exists) {
+        $upd_rental = $conn->prepare(
+            "UPDATE rental_details SET monthly_rent = ?, security_deposit = ?, lease_term_months = ?, furnishing = ?, available_from = ? WHERE property_id = ?"
+        );
+        $upd_rental->bind_param('ddissi', $price, $rentalFields['SecurityDeposit'], $rentalFields['LeaseTermMonths'], $rentalFields['Furnishing'], $rentalFields['AvailableFrom'], $pid);
+        if (!$upd_rental->execute()) { throw new Exception('Failed to update rental details.'); }
+        $upd_rental->close();
+    } else {
+        $ins_rental = $conn->prepare(
+            "INSERT INTO rental_details (property_id, monthly_rent, security_deposit, lease_term_months, furnishing, available_from) VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        $ins_rental->bind_param('iddiss', $pid, $price, $rentalFields['SecurityDeposit'], $rentalFields['LeaseTermMonths'], $rentalFields['Furnishing'], $rentalFields['AvailableFrom']);
+        if (!$ins_rental->execute()) { throw new Exception('Failed to save rental details.'); }
+        $ins_rental->close();
+    }
+}
+
+// Log the update action
+$log_stmt = $conn->prepare("INSERT INTO property_log (property_id, account_id, action, log_timestamp) VALUES (?, ?, 'UPDATED', NOW())");
+$log_stmt->bind_param('ii', $pid, $agent_id);
+if (!$log_stmt->execute()) { throw new Exception('Failed to log property update.'); }
+$log_stmt->close();
 
 // ========================================================================
 // Process photo and floor image deletions (deferred from frontend)
@@ -285,5 +338,12 @@ if (isset($_POST['removed_floors']) && !empty($_POST['removed_floors'])) {
     }
 }
 
+$conn->commit();
 echo json_encode(['success' => true, 'message' => 'Property updated successfully.']);
+
+} catch (Exception $e) {
+    $conn->rollback();
+    error_log("Agent property update error (property $pid): " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
 ?>
