@@ -30,7 +30,7 @@ $sql = "
         ac.commission_amount, ac.commission_percentage, ac.status,
         ac.calculated_at, ac.paid_at, ac.payment_reference, ac.created_at,
         fs.property_id, fs.final_sale_price, fs.sale_date,
-        fs.buyer_name, fs.buyer_email, fs.buyer_contact,
+        fs.buyer_name, fs.buyer_email,
         fs.additional_notes, fs.finalized_at,
         p.StreetAddress, p.City, p.Province, p.PropertyType,
         p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice
@@ -1097,7 +1097,6 @@ $conn->close();
             'saleDate'   => $r['sale_date'] ? date('M j, Y', strtotime($r['sale_date'])) : '—',
             'buyer'      => $r['buyer_name'] ?? '—',
             'buyerEmail' => $r['buyer_email'] ?? '',
-            'buyerPhone' => $r['buyer_contact'] ?? '',
             'rate'       => number_format((float)$r['commission_percentage'], 2),
             'amount'     => (float)$r['commission_amount'],
             'status'     => ucfirst($r['status']),
@@ -1138,7 +1137,6 @@ $conn->close();
         html += `<div class="detail-section-title"><i class="fas fa-user me-1"></i> Buyer Information</div>`;
         html += detailRow('Name', c.buyer);
         if (c.buyerEmail) html += detailRow('Email', `<a href="mailto:${c.buyerEmail}" style="color:var(--blue-light);text-decoration:none;">${c.buyerEmail}</a>`);
-        if (c.buyerPhone) html += detailRow('Phone', c.buyerPhone);
 
         // Commission section
         html += `<div class="detail-section-title"><i class="fas fa-coins me-1"></i> Commission Details</div>`;

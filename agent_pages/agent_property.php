@@ -2130,8 +2130,8 @@ include 'agent_navbar.php';
                     </div>
                     
                     <div class="mb-3">
-                        <label for="buyerContact" class="form-label">Buyer Contact</label>
-                        <input type="text" class="form-control" id="buyerContact" name="buyer_contact" placeholder="Phone number or email">
+                        <label for="buyerEmail" class="form-label">Buyer Email</label>
+                        <input type="email" class="form-control" id="buyerEmail" name="buyer_email" placeholder="buyer@email.com">
                     </div>
                     
                     <div class="mb-3">

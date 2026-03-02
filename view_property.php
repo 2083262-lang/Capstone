@@ -519,6 +519,23 @@ if ($property_data && $property_data['Status'] === 'For Rent') {
     $stmt_rental->close();
 }
 
+// --- Check for existing sale verification status ---
+$sale_status = null;
+$is_property_sold = false;
+$is_pending_sold = false;
+if ($property_data) {
+    $sql_sale_check = "SELECT status FROM sale_verifications WHERE property_id = ? ORDER BY submitted_at DESC LIMIT 1";
+    $stmt_sale_check = $conn->prepare($sql_sale_check);
+    $stmt_sale_check->bind_param("i", $property_id_to_review);
+    $stmt_sale_check->execute();
+    $result_sale_check = $stmt_sale_check->get_result();
+    $sale_verification = $result_sale_check->fetch_assoc();
+    $stmt_sale_check->close();
+    $sale_status = $sale_verification ? $sale_verification['status'] : null;
+    $is_property_sold = ($property_data['Status'] === 'Sold');
+    $is_pending_sold = ($property_data['Status'] === 'Pending Sold');
+}
+
 if ($property_data) {
 
     $sql_history = "SELECT event_date, event_type, price FROM price_history WHERE property_id = ? ORDER BY event_date DESC";
@@ -959,6 +976,332 @@ ob_end_flush();
         .badge-approved { background: rgba(34, 197, 94, 0.85); color: #fff; border: 1px solid rgba(34, 197, 94, 0.3); }
         .badge-pending { background: rgba(245, 158, 11, 0.85); color: #fff; border: 1px solid rgba(245, 158, 11, 0.3); }
         .badge-rejected { background: rgba(239, 68, 68, 0.85); color: #fff; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        /* Sold status badge in gallery */
+        .status-sold {
+            background: rgba(220, 38, 38, 0.85);
+            color: #fff;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        .status-pending-sold {
+            background: rgba(245, 158, 11, 0.85);
+            color: #fff;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        /* Sold locked notice */
+        .sold-locked-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 1px solid #fca5a5;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            color: #991b1b;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .sold-locked-notice i {
+            font-size: 1.1rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .pending-sold-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 1px solid #fbbf24;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            color: #92400e;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .pending-sold-notice i {
+            font-size: 1.1rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        /* Mark as Sold button style */
+        .btn-sold {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+        }
+        .btn-sold:hover {
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.35);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* ===== MARK AS SOLD MODAL — Light Theme (matches property.php) ===== */
+        #markSoldModal .modal-content {
+            background: #ffffff;
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        #markSoldModal .modal-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-bottom: none;
+            padding: 1.4rem 1.75rem;
+            position: relative;
+        }
+        #markSoldModal .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--gold-dark), var(--blue));
+        }
+        #markSoldModal .modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        #markSoldModal .modal-title i {
+            color: var(--gold);
+        }
+        #markSoldModal .modal-body {
+            background: #f8fafc;
+            padding: 1.5rem 1.75rem 0.75rem;
+        }
+        #markSoldModal .modal-footer {
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            padding: 1rem 1.75rem;
+        }
+        /* Property confirm banner */
+        #markSoldModal .property-confirm-card {
+            background: #ffffff;
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            border-left: 3px solid var(--gold-dark);
+            border-radius: 4px;
+            padding: 0.9rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        #markSoldModal .property-confirm-icon {
+            font-size: 1.75rem;
+            color: var(--gold-dark);
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        #markSoldModal .property-confirm-card .property-confirm-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #0f172a;
+        }
+        #markSoldModal .property-confirm-card .property-confirm-address {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 0.2rem;
+        }
+        /* Section divider label */
+        #markSoldModal .form-section-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            padding-bottom: 0.6rem;
+            margin-bottom: 0.85rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        #markSoldModal .form-section-label i {
+            color: var(--gold-dark);
+        }
+        /* Labels and inputs */
+        #markSoldModal .form-label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.4rem;
+        }
+        #markSoldModal .form-label .req {
+            color: #dc2626;
+        }
+        #markSoldModal .form-text {
+            font-size: 0.73rem;
+            color: #6c757d;
+            margin-top: 0.35rem;
+        }
+        #markSoldModal .form-control,
+        #markSoldModal .input-group-text {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 0.88rem;
+            color: #212529;
+        }
+        #markSoldModal .input-group-text {
+            background: #f8fafc;
+            color: var(--gold-dark);
+            font-weight: 700;
+            border-right: none;
+        }
+        #markSoldModal .input-group .form-control {
+            border-left: none;
+        }
+        #markSoldModal .form-control::placeholder {
+            color: #94a3b8;
+        }
+        #markSoldModal .form-control:focus {
+            background: #ffffff;
+            border-color: var(--gold-dark);
+            color: #212529;
+            box-shadow: 0 0 0 0.2rem rgba(184, 148, 31, 0.15);
+        }
+        #markSoldModal .form-control[type="file"] {
+            background: #ffffff;
+        }
+        #markSoldModal .form-control[type="file"]::-webkit-file-upload-button {
+            background: #f1f5f9;
+            border: none;
+            border-right: 1px solid #e2e8f0;
+            color: #374151;
+            padding: 0.35rem 0.75rem;
+            border-radius: 3px 0 0 3px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        /* Submit button */
+        #markSoldModal .btn-submit-sold {
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+            color: #ffffff;
+            font-weight: 700;
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(184, 148, 31, 0.25);
+        }
+        #markSoldModal .btn-submit-sold:hover {
+            box-shadow: 0 6px 20px rgba(184, 148, 31, 0.4);
+            transform: translateY(-1px);
+            color: #ffffff;
+        }
+        #markSoldModal .btn-submit-sold:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        /* Cancel button */
+        #markSoldModal .btn-cancel-sold {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #6c757d;
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        #markSoldModal .btn-cancel-sold:hover {
+            border-color: #dc2626;
+            color: #dc2626;
+            background: rgba(220, 38, 38, 0.03);
+        }
+        /* File preview grid */
+        .doc-preview-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+        .doc-preview-item {
+            position: relative;
+            width: 90px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            transition: box-shadow 0.2s;
+        }
+        .doc-preview-item:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.12); }
+        .doc-preview-thumb {
+            width: 100%;
+            height: 70px;
+            object-fit: cover;
+            display: block;
+        }
+        .doc-preview-icon {
+            width: 100%;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            font-size: 2rem;
+        }
+        .doc-preview-icon.pdf  { color: #dc2626; }
+        .doc-preview-icon.word { color: #2563eb; }
+        .doc-preview-icon.other{ color: #64748b; }
+        .doc-preview-name {
+            font-size: 0.65rem;
+            color: #374151;
+            font-weight: 500;
+            padding: 0.25rem 0.4rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-top: 1px solid #f1f5f9;
+        }
+        .doc-preview-remove {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(220,38,38,0.85);
+            color: #fff;
+            border: none;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            transition: background 0.2s;
+        }
+        .doc-preview-remove:hover { background: #dc2626; }
+        /* Alert inside modal */
+        #msvSaleAlert {
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            padding: 0.85rem 1.15rem;
+        }
+        #msvSaleAlert.alert-success {
+            background: #dcfce7;
+            border: 1px solid #86efac;
+            color: #15803d;
+        }
+        #msvSaleAlert.alert-danger {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+        }
 
         /* Days on Market Badge (inside gallery image) */
         .gallery-days-badge {
@@ -1848,8 +2191,19 @@ include 'admin_navbar.php';
         <!-- Hero Section - Grid Gallery -->
         <?php
             $status_value = $property_data['Status'] ?? 'For Sale';
-            $status_badge_class = ($status_value === 'For Rent') ? 'status-for-rent' : 'status-for-sale';
-            $status_icon = ($status_value === 'For Rent') ? 'bi-key-fill' : 'bi-tag-fill';
+            if ($status_value === 'For Rent') {
+                $status_badge_class = 'status-for-rent';
+                $status_icon = 'bi-key-fill';
+            } elseif ($status_value === 'Sold') {
+                $status_badge_class = 'status-sold';
+                $status_icon = 'bi-check-circle-fill';
+            } elseif ($status_value === 'Pending Sold') {
+                $status_badge_class = 'status-pending-sold';
+                $status_icon = 'bi-hourglass-split';
+            } else {
+                $status_badge_class = 'status-for-sale';
+                $status_icon = 'bi-tag-fill';
+            }
         ?>
         <section class="property-hero-gallery">
             <div class="container-fluid px-0">
@@ -2266,7 +2620,19 @@ include 'admin_navbar.php';
                                     Admin Actions
                                 </h3>
                                 
-                                <?php if (!$is_approved): ?>
+                                <?php if ($is_property_sold): ?>
+                                    <div class="sold-locked-notice">
+                                        <i class="bi bi-lock-fill"></i>
+                                        <div><strong>Property Sold</strong><br>This property has been marked as sold and is locked for editing to maintain historical accuracy.</div>
+                                    </div>
+                                <?php elseif ($is_pending_sold): ?>
+                                    <div class="pending-sold-notice">
+                                        <i class="bi bi-hourglass-split"></i>
+                                        <div><strong>Pending Sale Verification</strong><br>A sale verification has been submitted and is awaiting review. <a href="admin_property_sale_approvals.php">Review here</a>.</div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!$is_approved && !$is_property_sold && !$is_pending_sold): ?>
                                     <form id="adminActionForm" action="view_property.php?id=<?php echo $property_id_to_review; ?>" method="POST">
                                         <input type="hidden" name="property_id" value="<?php echo $property_id_to_review; ?>">
                                         <input type="hidden" name="client_timestamp" id="clientTimestamp">
@@ -2280,7 +2646,8 @@ include 'admin_navbar.php';
                                             </button>
                                         </div>
                                     </form>
-                                <?php elseif ($is_admin_poster): ?>
+                                <?php elseif ($is_approved && !$is_property_sold && !$is_pending_sold): ?>
+                                    <?php if ($is_admin_poster): ?>
                                     <div class="d-grid gap-3">
                                         <button type="button" class="btn btn-modern btn-update" data-bs-toggle="modal" data-bs-target="#updatePriceModal">
                                             <i class="bi bi-tag me-2"></i>Update Price
@@ -2289,11 +2656,22 @@ include 'admin_navbar.php';
                                             <i class="bi bi-pencil me-2"></i>Edit Details
                                         </button>
                                     </div>
-                                <?php else: ?>
-                                    <div class="alert alert-info mb-0">
-                                        <i class="bi bi-info-circle me-2"></i>
-                                        This listing is approved. Only the posting administrator can make direct updates.
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!$sale_status): ?>
+                                    <div class="d-grid gap-3 mt-3">
+                                        <button type="button" class="btn btn-modern btn-sold" data-bs-toggle="modal" data-bs-target="#markSoldModal">
+                                            <i class="bi bi-check-circle me-2"></i>Mark as Sold
+                                        </button>
                                     </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!$is_admin_poster): ?>
+                                    <div class="alert alert-info mb-0 mt-3">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        This listing is approved. Only the posting administrator can edit property details.
+                                    </div>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                                 
                                 <div class="d-grid mt-4">
@@ -2429,6 +2807,110 @@ include 'admin_navbar.php';
         </div>
     </div>
     </div>
+
+<!-- Mark as Sold Confirmation Modal -->
+<div class="modal fade" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="markSoldModalLabel">
+                    <i class="bi bi-patch-check-fill me-2"></i>Mark Property as Sold
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body">
+                <div id="msvSaleAlert" class="msv-sale-alert d-none" role="alert"></div>
+
+                <form id="msvSaleForm" enctype="multipart/form-data">
+                    <input type="hidden" name="property_id" value="<?php echo $property_id_to_review; ?>">
+
+                    <!-- Property Confirmation Banner -->
+                    <div class="property-confirm-card">
+                        <div class="property-confirm-icon"><i class="bi bi-house-check-fill"></i></div>
+                        <div>
+                            <div class="property-confirm-title">
+                                <?php echo htmlspecialchars($property_data['PropertyType'] ?? 'Property'); ?>
+                            </div>
+                            <div class="property-confirm-address">
+                                <i class="bi bi-geo-alt me-1"></i><?php echo htmlspecialchars(($property_data['StreetAddress'] ?? '') . ', ' . ($property_data['City'] ?? '')); ?>
+                            </div>
+                        </div>
+                        <div class="ms-auto text-end" style="flex-shrink:0;">
+                            <div style="font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">Listing Price</div>
+                            <div style="font-size:1.1rem;font-weight:800;color:var(--gold-dark);">&#8369;<?php echo number_format($property_data['ListingPrice'] ?? 0); ?></div>
+                        </div>
+                    </div>
+
+                    <!-- Row 1: Sale Details -->
+                    <div class="form-section-label"><i class="bi bi-currency-exchange me-1"></i>Sale Details</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="admin_sale_price" class="form-label">Sale Price (&#8369;) <span class="req">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">&#8369;</span>
+                                <input type="number" step="0.01" min="1" class="form-control" id="admin_sale_price" name="sale_price"
+                                       placeholder="0.00" value="<?php echo htmlspecialchars($property_data['ListingPrice'] ?? ''); ?>" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="admin_sale_date" class="form-label">Sale Date <span class="req">*</span></label>
+                            <input type="date" class="form-control" id="admin_sale_date" name="sale_date" max="<?php echo date('Y-m-d'); ?>" required>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Buyer Info -->
+                    <div class="form-section-label"><i class="bi bi-person-fill me-1"></i>Buyer Information</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="admin_buyer_name" class="form-label">Buyer's Name <span class="req">*</span></label>
+                            <input type="text" class="form-control" id="admin_buyer_name" name="buyer_name" placeholder="Buyer's full name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="admin_buyer_email" class="form-label">Buyer's Email</label>
+                            <input type="email" class="form-control" id="admin_buyer_email" name="buyer_email" placeholder="buyer@email.com">
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Documents -->
+                    <div class="form-section-label"><i class="bi bi-file-earmark-text-fill me-1"></i>Documentation</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label for="msvSaleDocuments" class="form-label">Sale Documents <span class="req">*</span></label>
+                            <input type="file" class="form-control" id="msvSaleDocuments" name="sale_documents[]" multiple required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>PDF, JPG, PNG, DOC accepted &mdash; max 120MB per file.</div>
+                            <div id="msvDocPreview" class="msv-doc-preview doc-preview-grid mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Row 4: Notes -->
+                    <div class="row g-3 mb-2">
+                        <div class="col-12">
+                            <label for="admin_additional_notes" class="form-label">Additional Notes</label>
+                            <textarea class="form-control" id="admin_additional_notes" name="additional_notes" rows="3" placeholder="Optional sale notes..."></textarea>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer d-flex justify-content-between align-items-center">
+                <span style="font-size:0.75rem;color:#6c757d;"><i class="bi bi-shield-lock me-1" style="color:var(--gold-dark);"></i>Submission will be logged and reviewed.</span>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-cancel-sold" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-submit-sold" id="msvConfirmSaleBtn">
+                        <i class="bi bi-patch-check-fill me-1"></i> Submit Verification
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
 
 <!-- Lightbox Overlay -->
 <div class="lightbox-overlay" id="lightboxOverlay" style="display:none;">
@@ -2868,8 +3350,9 @@ include 'admin_navbar.php';
         });
     });
 
-    // Auto-hide alerts after 5 seconds
+    // Auto-hide alerts after 5 seconds (skip alerts inside modals — they are managed separately)
     document.querySelectorAll('.alert').forEach(alert => {
+        if (alert.closest('.modal')) return;
         setTimeout(() => {
             alert.style.opacity = '0';
             alert.style.transform = 'translateY(-20px)';
@@ -3002,6 +3485,209 @@ include 'admin_navbar.php';
         });
     }
     
+    // === Mark as Sold — File Preview Logic ===
+    (function() {
+        const fileInput = document.getElementById('msvSaleDocuments');
+        const previewGrid = document.getElementById('msvDocPreview');
+        if (!fileInput || !previewGrid) return;
+
+        let selectedFiles = [];
+
+        fileInput.addEventListener('change', function() {
+            // Merge newly picked files into selectedFiles (avoid exact duplicates by name+size)
+            Array.from(fileInput.files).forEach(f => {
+                const dup = selectedFiles.some(s => s.name === f.name && s.size === f.size);
+                if (!dup) selectedFiles.push(f);
+            });
+            syncInputAndRender();
+        });
+
+        function syncInputAndRender() {
+            // Write selectedFiles back to the input via DataTransfer
+            const dt = new DataTransfer();
+            selectedFiles.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+            renderPreviews();
+        }
+
+        function renderPreviews() {
+            previewGrid.innerHTML = '';
+            if (!selectedFiles.length) return;
+            selectedFiles.forEach((file, idx) => {
+                const item = document.createElement('div');
+                item.className = 'doc-preview-item';
+
+                const ext = file.name.split('.').pop().toLowerCase();
+                const isImage = ['jpg','jpeg','png','gif','webp'].includes(ext);
+
+                if (isImage) {
+                    const img = document.createElement('img');
+                    img.className = 'doc-preview-thumb';
+                    img.alt = file.name;
+                    const reader = new FileReader();
+                    reader.onload = e => { img.src = e.target.result; };
+                    reader.readAsDataURL(file);
+                    item.appendChild(img);
+                } else {
+                    const iconDiv = document.createElement('div');
+                    let iconClass = 'other', iconName = 'bi-file-earmark';
+                    if (ext === 'pdf') { iconClass = 'pdf'; iconName = 'bi-file-earmark-pdf-fill'; }
+                    else if (['doc','docx'].includes(ext)) { iconClass = 'word'; iconName = 'bi-file-earmark-word-fill'; }
+                    iconDiv.className = `doc-preview-icon ${iconClass}`;
+                    iconDiv.innerHTML = `<i class="bi ${iconName}"></i>`;
+                    item.appendChild(iconDiv);
+                }
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'doc-preview-name';
+                nameDiv.title = file.name;
+                nameDiv.textContent = file.name;
+                item.appendChild(nameDiv);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'doc-preview-remove';
+                removeBtn.title = 'Remove';
+                removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                removeBtn.addEventListener('click', function() {
+                    selectedFiles.splice(idx, 1);
+                    syncInputAndRender();
+                });
+                item.appendChild(removeBtn);
+
+                previewGrid.appendChild(item);
+            });
+        }
+
+        // Reset previews when modal is closed
+        const markSoldModal = document.getElementById('markSoldModal');
+        if (markSoldModal) {
+            markSoldModal.addEventListener('hidden.bs.modal', function() {
+                selectedFiles = [];
+                previewGrid.innerHTML = '';
+                fileInput.value = '';
+            });
+        }
+    })();
+
+    // === Mark as Sold Modal Logic ===
+    const msvConfirmSaleBtn = document.getElementById('msvConfirmSaleBtn');
+    if (msvConfirmSaleBtn) {
+        msvConfirmSaleBtn.addEventListener('click', function() {
+            const form = document.getElementById('msvSaleForm');
+            const alertEl = document.getElementById('msvSaleAlert');
+            
+            // Reset alert
+            if (alertEl) {
+                alertEl.className = 'msv-sale-alert d-none';
+                alertEl.textContent = '';
+            }
+            
+            // Client-side validation
+            const salePrice = parseFloat(form.querySelector('[name="sale_price"]').value);
+            const saleDate = form.querySelector('[name="sale_date"]').value;
+            const buyerName = form.querySelector('[name="buyer_name"]').value.trim();
+            const saleDocuments = form.querySelector('[name="sale_documents[]"]').files;
+            
+            if (!salePrice || salePrice <= 0) {
+                showMsvSaleAlert('danger', 'Please enter a valid sale price.');
+                return;
+            }
+            if (!saleDate) {
+                showMsvSaleAlert('danger', 'Please select a sale date.');
+                return;
+            }
+            // Validate date not in future
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+            if (new Date(saleDate) > today) {
+                showMsvSaleAlert('danger', 'Sale date cannot be in the future.');
+                return;
+            }
+            if (!buyerName) {
+                showMsvSaleAlert('danger', 'Please enter the buyer\'s name.');
+                return;
+            }
+            if (!saleDocuments || saleDocuments.length === 0) {
+                showMsvSaleAlert('danger', 'Please upload at least one sale document.');
+                return;
+            }
+            
+            // Validate file types and sizes
+            const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+            const maxFileSize = 120 * 1024 * 1024; // 120MB
+            for (let i = 0; i < saleDocuments.length; i++) {
+                if (!allowedTypes.includes(saleDocuments[i].type)) {
+                    showMsvSaleAlert('danger', 'Invalid file type: ' + saleDocuments[i].name + '. Allowed: PDF, JPG, PNG, DOC.');
+                    return;
+                }
+                if (saleDocuments[i].size > maxFileSize) {
+                    showMsvSaleAlert('danger', 'File too large: ' + saleDocuments[i].name + ' (max 120MB).');
+                    return;
+                }
+            }
+            
+            // Disable button and show loading
+            msvConfirmSaleBtn.disabled = true;
+            msvConfirmSaleBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Submitting...';
+            
+            // Submit via fetch
+            const formData = new FormData(form);
+            
+            fetch('admin_mark_as_sold_process.php', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    return response.json();
+                }
+                // Non-JSON response — likely a PHP error page
+                return response.text().then(text => {
+                    console.error('Non-JSON response from server:', text);
+                    return { success: false, message: 'Server error. Check console for details.' };
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    showMsvSaleAlert('success', data.message);
+                    // Redirect after a short delay
+                    setTimeout(() => {
+                        window.location.href = 'view_property.php?id=<?php echo $property_id_to_review; ?>&status=success&msg=' + encodeURIComponent(data.message);
+                    }, 1500);
+                } else {
+                    showMsvSaleAlert('danger', data.message || 'An error occurred.');
+                    msvConfirmSaleBtn.disabled = false;
+                    msvConfirmSaleBtn.innerHTML = '<i class="bi bi-patch-check-fill me-1"></i> Submit Verification';
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                showMsvSaleAlert('danger', 'Network error: ' + (error.message || 'Please try again.'));
+                msvConfirmSaleBtn.disabled = false;
+                msvConfirmSaleBtn.innerHTML = '<i class="bi bi-patch-check-fill me-1"></i> Submit Verification';
+            });
+        });
+    }
+    
+    function showMsvSaleAlert(type, message) {
+        const alertEl = document.getElementById('msvSaleAlert');
+        if (alertEl) {
+            alertEl.className = 'msv-sale-alert alert alert-' + type;
+            alertEl.textContent = message;
+            // Scroll the modal body to the top so the alert is visible
+            const modalBody = alertEl.closest('.modal-body');
+            if (modalBody) {
+                modalBody.scrollTop = 0;
+            } else {
+                const modalEl = document.getElementById('markSoldModal');
+                if (modalEl) modalEl.scrollTop = 0;
+            }
+        }
+    }
+
     // Mobile FAB Toggle
     const fabButton = document.getElementById('fabButton');
     const fabMenu = document.getElementById('fabMenu');
@@ -3031,7 +3717,17 @@ include 'admin_navbar.php';
             Quick Actions
         </div>
         <div class="fab-menu-actions">
-            <?php if (!$is_approved): ?>
+            <?php if ($is_property_sold): ?>
+                <div class="sold-locked-notice" style="margin: 0;">
+                    <i class="bi bi-lock-fill"></i>
+                    <div><strong>Sold</strong> — Property is locked.</div>
+                </div>
+            <?php elseif ($is_pending_sold): ?>
+                <div class="pending-sold-notice" style="margin: 0;">
+                    <i class="bi bi-hourglass-split"></i>
+                    <div><strong>Pending</strong> — Sale verification in review.</div>
+                </div>
+            <?php elseif (!$is_approved): ?>
                 <form action="view_property.php?id=<?php echo $property_id_to_review; ?>" method="POST" style="display: contents;">
                     <input type="hidden" name="property_id" value="<?php echo $property_id_to_review; ?>">
                     <input type="hidden" name="client_timestamp" class="client-timestamp-mobile">
@@ -3042,13 +3738,20 @@ include 'admin_navbar.php';
                         <i class="bi bi-x-circle me-2"></i>Reject
                     </button>
                 </form>
-            <?php elseif ($is_admin_poster): ?>
+            <?php elseif ($is_approved): ?>
+                <?php if ($is_admin_poster): ?>
                 <button type="button" class="btn btn-modern btn-update w-100" data-bs-toggle="modal" data-bs-target="#updatePriceModal">
                     <i class="bi bi-tag me-2"></i>Update Price
                 </button>
                 <button type="button" class="btn btn-modern btn-secondary-modern w-100" onclick="openEditPropertyModal(<?php echo $property_id_to_review; ?>)">
                     <i class="bi bi-pencil me-2"></i>Edit
                 </button>
+                <?php endif; ?>
+                <?php if (!$sale_status): ?>
+                <button type="button" class="btn btn-modern btn-sold w-100" data-bs-toggle="modal" data-bs-target="#markSoldModal">
+                    <i class="bi bi-check-circle me-2"></i>Mark as Sold
+                </button>
+                <?php endif; ?>
             <?php endif; ?>
             <a href="property.php" class="btn btn-modern btn-secondary-modern w-100">
                 <i class="bi bi-arrow-left me-2"></i>Back

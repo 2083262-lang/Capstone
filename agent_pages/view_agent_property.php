@@ -1066,8 +1066,8 @@ $days_on_market = $interval->days;
                             <input type="text" class="form-control" id="buyer_name" name="buyer_name" placeholder="Buyer's full name" required>
                         </div>
                         <div class="mb-3">
-                            <label for="buyer_contact" class="form-label">Buyer's Contact</label>
-                            <input type="text" class="form-control" id="buyer_contact" name="buyer_contact" placeholder="Phone or email">
+                            <label for="buyer_email" class="form-label">Buyer's Email</label>
+                            <input type="email" class="form-control" id="buyer_email" name="buyer_email" placeholder="buyer@email.com">
                         </div>
                         <div class="mb-3">
                             <label for="sale_documents" class="form-label">Sale Documents</label>

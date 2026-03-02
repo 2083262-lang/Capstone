@@ -39,7 +39,7 @@ try {
     $sale_price = floatval($_POST['sale_price']);
     $sale_date = $_POST['sale_date'];
     $buyer_name = trim($_POST['buyer_name']);
-    $buyer_contact = trim($_POST['buyer_contact'] ?? '');
+    $buyer_email = trim($_POST['buyer_email'] ?? '');
     $additional_notes = trim($_POST['additional_notes'] ?? '');
     
     // Validate property belongs to agent and is approved
@@ -152,12 +152,12 @@ try {
         // Insert sale verification record
         $insert_verification = $conn->prepare("
             INSERT INTO sale_verifications 
-            (property_id, agent_id, sale_price, sale_date, buyer_name, buyer_contact, additional_notes, status, submitted_at) 
+            (property_id, agent_id, sale_price, sale_date, buyer_name, buyer_email, additional_notes, status, submitted_at) 
             VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
         ");
         
         // Match the updated database structure
-        $insert_verification->bind_param("iidssss", $property_id, $agent_id, $sale_price, $sale_date, $buyer_name, $buyer_contact, $additional_notes);
+        $insert_verification->bind_param("iidssss", $property_id, $agent_id, $sale_price, $sale_date, $buyer_name, $buyer_email, $additional_notes);
         
         if (!$insert_verification->execute()) {
             throw new Exception('Failed to insert sale verification record.');

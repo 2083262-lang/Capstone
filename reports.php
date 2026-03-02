@@ -42,7 +42,7 @@ if ($prop_result) { while ($row = $prop_result->fetch_assoc()) { $property_repor
 $sales_report = [];
 $sales_sql = "SELECT 
     fs.sale_id, fs.property_id, p.StreetAddress, p.City, p.PropertyType,
-    fs.buyer_name, fs.buyer_email, fs.buyer_contact, fs.final_sale_price,
+    fs.buyer_name, fs.buyer_email, fs.final_sale_price,
     fs.sale_date, fs.additional_notes, fs.finalized_at,
     CONCAT(agent.first_name, ' ', agent.last_name) AS agent_name,
     CONCAT(admin_acc.first_name, ' ', admin_acc.last_name) AS finalized_by_name,

@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'appro
 
         // 3) Determine buyer email
         $buyerEmail = null;
-        if (!empty($v['buyer_contact']) && filter_var($v['buyer_contact'], FILTER_VALIDATE_EMAIL)) {
-            $buyerEmail = $v['buyer_contact'];
+        if (!empty($v['buyer_email'])) {
+            $buyerEmail = $v['buyer_email'];
         } else {
             $tr = $conn->prepare("SELECT user_email FROM tour_requests WHERE property_id=? ORDER BY requested_at DESC LIMIT 1");
             $tr->bind_param('i', $property_id); $tr->execute();
@@ -58,11 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'appro
 
         // 4) Create finalized_sales record (commission handled separately in finalize step)
         $ins = $conn->prepare("INSERT INTO finalized_sales
-            (verification_id, property_id, agent_id, buyer_name, buyer_email, buyer_contact, final_sale_price, sale_date, additional_notes, finalized_by)
-            VALUES (?,?,?,?,?,?,?,?,?,?)");
-        $ins->bind_param('iiisssdss' . 'i',
+            (verification_id, property_id, agent_id, buyer_name, buyer_email, final_sale_price, sale_date, additional_notes, finalized_by)
+            VALUES (?,?,?,?,?,?,?,?,?)");
+        $ins->bind_param('iiissdss' . 'i',
             $verification_id, $property_id, $v['agent_id'],
-            $v['buyer_name'], $buyerEmail, $v['buyer_contact'],
+            $v['buyer_name'], $buyerEmail,
             $v['sale_price'], $v['sale_date'], $v['additional_notes'],
             $_SESSION['account_id']);
         $ins->execute(); $ins->close();
@@ -274,6 +274,7 @@ $sql = "
             SEPARATOR '|||')
          FROM sale_verification_documents svd WHERE svd.verification_id = sv.verification_id) as documents_json,
         fs.sale_id AS finalized_sale_id,
+        fs.buyer_email AS finalized_buyer_email,
         ac.commission_amount, ac.commission_percentage, ac.status AS commission_status
     FROM sale_verifications sv
     LEFT JOIN property p ON p.property_ID = sv.property_id
@@ -344,18 +345,16 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             --accent-color: #a08636;
             --bg-light: #f8f9fa;
             --border-color: #e0e0e0;
+            /* Theme tokens — defined at :root so Bootstrap modals (rendered under <body>) can access them */
+            --gold: #d4af37; --gold-light: #f4d03f; --gold-dark: #b8941f;
+            --blue: #2563eb; --blue-light: #3b82f6; --blue-dark: #1e40af;
+            --card-bg: #ffffff; --text-primary: #212529; --text-secondary: #6c757d;
         }
         body { font-family: 'Inter', sans-serif; background: var(--bg-light); color: #212529; }
         .admin-sidebar { background: linear-gradient(180deg, #161209 0%, #1f1a0f 100%); color: #fff; height: 100vh; position: fixed; top: 0; left: 0; width: 290px; overflow-y: auto; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
         .admin-content { margin-left: 290px; padding: 2rem; min-height: 100vh; max-width: 1800px; }
         @media (max-width: 1200px) { .admin-content { margin-left: 0 !important; padding: 1.5rem; } }
         @media (max-width: 768px)  { .admin-content { margin-left: 0 !important; padding: 1rem; } }
-
-        .admin-content {
-            --gold: #d4af37; --gold-light: #f4d03f; --gold-dark: #b8941f;
-            --blue: #2563eb; --blue-light: #3b82f6; --blue-dark: #1e40af;
-            --card-bg: #ffffff; --text-primary: #212529; --text-secondary: #6c757d;
-        }
 
         /* ===== PAGE HEADER (matches property.php) ===== */
         .page-header { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 2rem 2.5rem; margin-bottom: 1.5rem; position: relative; overflow: hidden; }
@@ -464,46 +463,182 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         /* ===== ALERTS ===== */
         .alert { border-radius: 4px; border-left: 3px solid; margin-bottom: 1rem; padding: 0.85rem 1.25rem; font-size: 0.9rem; }
 
-        /* ===== MODAL (consistent admin light theme) ===== */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 1050; opacity: 0; transition: opacity 0.2s ease; }
+        /* ===== MODAL OVERLAY & CONTAINER ===== */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; z-index: 1050; opacity: 0; transition: opacity 0.25s ease; backdrop-filter: blur(2px); }
         .modal-overlay.show { display: flex; opacity: 1; align-items: center; justify-content: center; }
-        .modal-container { background: var(--card-bg); border-radius: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); max-width: 800px; width: 92%; max-height: 92vh; overflow-y: auto; transform: scale(0.95); opacity: 0; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); border: 1px solid rgba(37,99,235,0.1); }
-        .modal-large { max-width: 1100px; width: 95%; }
-        .modal-overlay.show .modal-container { opacity: 1; transform: scale(1); }
+        .modal-container { background: var(--card-bg); border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); max-width: 820px; width: 92%; max-height: 92vh; overflow-y: auto; transform: scale(0.96) translateY(8px); opacity: 0; transition: all 0.25s cubic-bezier(0.16,1,0.3,1); border: 1px solid rgba(37,99,235,0.12); }
+        .modal-large { max-width: 1100px; width: 96%; }
+        .modal-overlay.show .modal-container { opacity: 1; transform: scale(1) translateY(0); }
 
-        .modal-admin-header { background: var(--card-bg); padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(37,99,235,0.1); display: flex; align-items: center; justify-content: space-between; position: relative; }
-        .modal-admin-header::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
-        .modal-admin-header h2 { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+        /* Scrollbar styling for modal */
+        .modal-container::-webkit-scrollbar { width: 5px; }
+        .modal-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        .modal-container::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.4); border-radius: 4px; }
+
+        .modal-admin-header { background: var(--card-bg); padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(37,99,235,0.1); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+        .modal-admin-header::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, var(--blue) 70%, transparent 100%); }
+        .modal-admin-header h2 { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
         .modal-admin-header h2 i { color: var(--gold-dark); }
-        .modal-close-btn { background: none; border: 1px solid rgba(37,99,235,0.1); width: 32px; height: 32px; border-radius: 4px; font-size: 1rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
-        .modal-close-btn:hover { background: rgba(239,68,68,0.08); color: #ef4444; border-color: rgba(239,68,68,0.2); }
-        .modal-body { padding: 1.75rem; }
-        .modal-footer { padding: 1rem 1.75rem; background: rgba(37,99,235,0.02); border-top: 1px solid rgba(37,99,235,0.1); display: flex; gap: 0.6rem; justify-content: flex-end; }
+        .modal-header-meta { display: flex; align-items: center; gap: 0.75rem; }
+        .modal-vid-badge { font-size: 0.7rem; font-weight: 700; background: rgba(212,175,55,0.1); color: var(--gold-dark); border: 1px solid rgba(212,175,55,0.2); padding: 0.2rem 0.6rem; border-radius: 2px; letter-spacing: 0.5px; }
+        .modal-close-btn { background: none; border: 1px solid rgba(37,99,235,0.12); width: 32px; height: 32px; border-radius: 4px; font-size: 1.1rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+        .modal-close-btn:hover { background: rgba(239,68,68,0.08); color: #ef4444; border-color: rgba(239,68,68,0.25); }
+        .modal-body { padding: 0; }
+        .modal-footer { padding: 1rem 1.75rem; background: rgba(37,99,235,0.02); border-top: 1px solid rgba(37,99,235,0.08); display: flex; gap: 0.6rem; justify-content: flex-end; align-items: center; }
 
-        /* Modal detail sections */
-        .detail-section { margin-bottom: 1.5rem; }
-        .detail-section:last-child { margin-bottom: 0; }
-        .detail-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gold-dark); margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(37,99,235,0.08); display: flex; align-items: center; gap: 0.5rem; }
-        .detail-title i { font-size: 0.9rem; }
-        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
-        .detail-item .detail-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 0.15rem; }
-        .detail-item .detail-value { font-size: 0.9rem; color: var(--text-primary); font-weight: 500; }
-        .detail-item .detail-value.price-val { font-size: 1rem; color: var(--gold-dark); font-weight: 800; }
+        /* ===== SVD: HERO BANNER ===== */
+        .svd-hero { position: relative; height: 260px; overflow: hidden; background: linear-gradient(135deg, #1a1a2e, #16213e); }
+        .svd-hero-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+        .svd-hero:hover .svd-hero-img { transform: scale(1.02); }
+        .svd-hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.65) 100%); }
+        .svd-hero-no-img { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: rgba(255,255,255,0.2); gap: 0.5rem; }
+        .svd-hero-no-img i { font-size: 3.5rem; }
+        .svd-hero-no-img span { font-size: 0.8rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+        .svd-hero-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem 1.5rem; z-index: 2; }
+        .svd-hero-address { font-size: 1.15rem; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.4); margin-bottom: 0.2rem; line-height: 1.3; }
+        .svd-hero-city { font-size: 0.8rem; color: rgba(255,255,255,0.75); display: flex; align-items: center; gap: 0.3rem; }
+        .svd-hero-top { position: absolute; top: 0.85rem; left: 1rem; right: 1rem; display: flex; justify-content: space-between; align-items: flex-start; z-index: 2; }
+        .svd-type-badge { background: rgba(255,255,255,0.92); color: var(--text-primary); padding: 0.28rem 0.65rem; border-radius: 3px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.5); }
+        .svd-status-hero { padding: 0.28rem 0.75rem; border-radius: 3px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .svd-status-hero.pending  { background: rgba(245,158,11,0.9); color: #fff; }
+        .svd-status-hero.approved { background: rgba(34,197,94,0.9);  color: #fff; }
+        .svd-status-hero.rejected { background: rgba(239,68,68,0.9);  color: #fff; }
+        /* gallery dots on hero */
+        .svd-hero-dots { position: absolute; bottom: 3.5rem; right: 1.25rem; display: flex; gap: 0.35rem; z-index: 3; }
+        .svd-hero-dot { width: 7px; height: 7px; border-radius: 50%; border: none; background: rgba(255,255,255,0.4); cursor: pointer; transition: all 0.15s; padding: 0; }
+        .svd-hero-dot.active { background: var(--gold); transform: scale(1.3); }
+        .svd-gallery-prev, .svd-gallery-next { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: all 0.15s; backdrop-filter: blur(4px); }
+        .svd-gallery-prev { left: 0.75rem; }
+        .svd-gallery-next { right: 0.75rem; }
+        .svd-gallery-prev:hover, .svd-gallery-next:hover { background: rgba(212,175,55,0.8); border-color: var(--gold); }
+        .svd-gallery-prev:disabled, .svd-gallery-next:disabled { opacity: 0.3; cursor: not-allowed; }
+        .svd-gallery-counter { position: absolute; top: 0.85rem; left: 50%; transform: translateX(-50%); z-index: 3; background: rgba(0,0,0,0.45); color: rgba(255,255,255,0.9); font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 10px; letter-spacing: 0.3px; backdrop-filter: blur(4px); display: none; }
 
+        /* ===== SVD: STAT STRIP ===== */
+        .svd-stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid rgba(37,99,235,0.08); }
+        .svd-stat { padding: 1rem 1.25rem; text-align: center; position: relative; border-right: 1px solid rgba(37,99,235,0.06); transition: background 0.15s; }
+        .svd-stat:last-child { border-right: none; }
+        .svd-stat:hover { background: rgba(212,175,55,0.03); }
+        .svd-stat-label { font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 0.3rem; }
+        .svd-stat-value { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+        .svd-stat-value.gold  { color: var(--gold-dark); font-size: 1.05rem; }
+        .svd-stat-value.green { color: #16a34a; }
+        .svd-stat-value.red   { color: #dc2626; }
+        .svd-stat-sub { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.1rem; }
+        .svd-variance { font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 2px; margin-top: 0.2rem; display: inline-block; }
+        .svd-variance.up   { background: rgba(34,197,94,0.1); color: #16a34a; }
+        .svd-variance.down { background: rgba(239,68,68,0.1); color: #dc2626; }
+        .svd-variance.flat { background: rgba(107,114,128,0.1); color: #6b7280; }
+
+        /* ===== SVD: BODY SECTIONS ===== */
+        .svd-body { padding: 1.5rem; }
+        .svd-section { margin-bottom: 1.5rem; }
+        .svd-section:last-child { margin-bottom: 0; }
+        .svd-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--gold-dark); margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(212,175,55,0.15); position: relative; }
+        .svd-section-title::before { content: ''; position: absolute; bottom: -1px; left: 0; width: 32px; height: 2px; background: var(--gold); border-radius: 1px; }
+        .svd-section-title i { font-size: 0.85rem; }
+
+        /* Two-column panel */
+        .svd-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .svd-panel { background: #fafbfe; border: 1px solid rgba(37,99,235,0.07); border-radius: 5px; padding: 1rem 1.25rem; }
+        .svd-panel-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+        .svd-panel-title.buyer { color: var(--gold-dark); }
+        .svd-panel-title.blue  { color: var(--blue); }
+        .svd-panel-title.green { color: #16a34a; }
+        .svd-row { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.55rem; }
+        .svd-row:last-child { margin-bottom: 0; }
+        .svd-row-icon { width: 18px; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.1rem; flex-shrink: 0; text-align: center; }
+        .svd-row-label { font-size: 0.68rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; min-width: 68px; flex-shrink: 0; margin-top: 0.1rem; }
+        .svd-row-value { font-size: 0.82rem; color: var(--text-primary); font-weight: 500; word-break: break-word; }
+        .svd-row-value.strong { font-weight: 700; }
+        .svd-email-link { color: var(--blue); text-decoration: none; }
+        .svd-email-link:hover { text-decoration: underline; }
+
+        /* Detail grid for property info */
+        .svd-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+        .svd-detail-cell { background: #fafbfe; border: 1px solid rgba(37,99,235,0.07); border-radius: 5px; padding: 0.75rem 1rem; }
+        .svd-detail-cell .cell-label { font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .svd-detail-cell .cell-value { font-size: 0.88rem; color: var(--text-primary); font-weight: 600; }
+        .svd-detail-cell .cell-value.gold  { color: var(--gold-dark); font-size: 1rem; }
+        .svd-detail-cell .cell-value.muted { font-weight: 400; color: var(--text-secondary); }
+
+        /* Status display inline */
+        .svd-status-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .svd-status-pill.pending  { background: rgba(245,158,11,0.1); color: #d97706; border: 1px solid rgba(245,158,11,0.2); }
+        .svd-status-pill.approved { background: rgba(34,197,94,0.1);  color: #16a34a; border: 1px solid rgba(34,197,94,0.2); }
+        .svd-status-pill.rejected { background: rgba(239,68,68,0.1);  color: #dc2626; border: 1px solid rgba(239,68,68,0.2); }
+        .svd-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+        .svd-dot.pending  { background: #d97706; }
+        .svd-dot.approved { background: #16a34a; }
+        .svd-dot.rejected { background: #dc2626; }
+
+        /* Notes / rejection box */
+        .svd-rejection-box { background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.12); border-left: 3px solid #ef4444; padding: 0.85rem 1.1rem; border-radius: 4px; }
+        .svd-rejection-box .rej-title { font-size: 0.65rem; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem; }
+        .svd-rejection-box .rej-text { font-size: 0.85rem; color: #7f1d1d; line-height: 1.55; }
+        .svd-notes-box { background: rgba(37,99,235,0.03); border: 1px solid rgba(37,99,235,0.1); border-left: 3px solid var(--blue); padding: 0.85rem 1.1rem; border-radius: 4px; }
+        .svd-notes-box .notes-title { font-size: 0.65rem; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem; }
+        .svd-notes-box .notes-text { font-size: 0.85rem; color: var(--text-primary); line-height: 1.55; white-space: pre-wrap; }
+
+        /* Commission panel */
+        .svd-commission-panel { background: linear-gradient(135deg, rgba(34,197,94,0.05) 0%, rgba(16,163,74,0.03) 100%); border: 1px solid rgba(34,197,94,0.15); border-radius: 5px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .svd-commission-panel .cp-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #16a34a; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.35rem; }
+        .svd-commission-panel .cp-value { font-size: 1.4rem; font-weight: 900; color: #16a34a; }
+        .svd-commission-panel .cp-pct { font-size: 0.75rem; color: #16a34a; font-weight: 600; margin-top: 0.1rem; }
+        .svd-commission-badge { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #16a34a; padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
+
+        /* Timeline */
+        .svd-timeline { display: flex; flex-direction: column; gap: 0; }
+        .svd-tl-item { display: flex; align-items: flex-start; gap: 0.85rem; padding: 0.65rem 0; position: relative; }
+        .svd-tl-item:not(:last-child)::after { content: ''; position: absolute; left: 10px; top: 2rem; bottom: -0.65rem; width: 1px; background: rgba(37,99,235,0.12); }
+        .svd-tl-dot { width: 21px; height: 21px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; flex-shrink: 0; z-index: 1; }
+        .svd-tl-dot.gold  { background: rgba(212,175,55,0.15); color: var(--gold-dark); border: 1.5px solid rgba(212,175,55,0.35); }
+        .svd-tl-dot.green { background: rgba(34,197,94,0.12); color: #16a34a; border: 1.5px solid rgba(34,197,94,0.3); }
+        .svd-tl-dot.red   { background: rgba(239,68,68,0.1); color: #dc2626; border: 1.5px solid rgba(239,68,68,0.3); }
+        .svd-tl-dot.gray  { background: rgba(107,114,128,0.1); color: #6b7280; border: 1.5px solid rgba(107,114,128,0.2); }
+        .svd-tl-content .tl-event { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); }
+        .svd-tl-content .tl-time  { font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.1rem; }
+
+        /* Documents */
+        .svd-doc-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .svd-doc-item { display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 1rem; background: #fafbfe; border-radius: 5px; border: 1px solid rgba(37,99,235,0.07); transition: border-color 0.15s, background 0.15s; }
+        .svd-doc-item:hover { border-color: rgba(212,175,55,0.25); background: rgba(212,175,55,0.02); }
+        .svd-doc-icon-wrap { width: 40px; height: 40px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+        .svd-doc-icon-wrap.pdf  { background: rgba(239,68,68,0.08);  color: #dc2626; border: 1px solid rgba(239,68,68,0.12); }
+        .svd-doc-icon-wrap.img  { background: rgba(37,99,235,0.07);  color: var(--blue); border: 1px solid rgba(37,99,235,0.12); }
+        .svd-doc-icon-wrap.word { background: rgba(37,99,235,0.08);  color: #1d4ed8; border: 1px solid rgba(37,99,235,0.15); }
+        .svd-doc-icon-wrap.file { background: rgba(107,114,128,0.08); color: #6b7280; border: 1px solid rgba(107,114,128,0.12); }
+        .svd-doc-info { flex: 1; min-width: 0; }
+        .svd-doc-name { font-size: 0.83rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .svd-doc-meta { font-size: 0.68rem; color: var(--text-secondary); margin-top: 0.1rem; }
+        .svd-doc-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
+        .svd-btn-doc { padding: 0.3rem 0.6rem; font-size: 0.7rem; font-weight: 600; border: none; border-radius: 3px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 0.25rem; }
+        .svd-btn-doc.preview { background: rgba(212,175,55,0.1); color: var(--gold-dark); border: 1px solid rgba(212,175,55,0.2); }
+        .svd-btn-doc.preview:hover { background: var(--gold); color: var(--text-primary); }
+        .svd-btn-doc.download { background: rgba(37,99,235,0.08); color: var(--blue); border: 1px solid rgba(37,99,235,0.15); }
+        .svd-btn-doc.download:hover { background: var(--blue); color: #fff; }
+
+        /* Modal action buttons */
+        .btn-modal { padding: 0.55rem 1.35rem; font-size: 0.83rem; font-weight: 600; border: none; border-radius: 3px; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 0.4rem; }
+        .btn-modal:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+        .btn-modal-primary   { background: var(--gold); color: #ffffff; }
+        .btn-modal-primary:hover   { background: var(--gold-dark); color: #ffffff; }
+        .btn-modal-success   { background: #22c55e; color: #fff; }
+        .btn-modal-success:hover   { background: #16a34a; }
+        .btn-modal-danger    { background: #ef4444; color: #fff; }
+        .btn-modal-danger:hover    { background: #dc2626; }
+        .btn-modal-secondary { background: rgba(37,99,235,0.07); color: var(--text-secondary); border: 1px solid rgba(37,99,235,0.1); }
+        .btn-modal-secondary:hover { background: rgba(37,99,235,0.14); color: var(--text-primary); }
+        .btn-modal-blue { background: var(--blue); color: #fff; }
+        .btn-modal-blue:hover { background: var(--blue-dark); }
+
+        /* Status display (old classes kept for compat) */
         .status-display { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 3px; font-size: 0.8rem; font-weight: 600; }
         .status-display.pending  { background: rgba(245,158,11,0.1); color: #d97706; }
         .status-display.approved { background: rgba(34,197,94,0.1);  color: #16a34a; }
         .status-display.rejected { background: rgba(239,68,68,0.1);  color: #dc2626; }
 
-        .admin-notes-box { background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.1); border-left: 3px solid #ef4444; padding: 0.75rem 1rem; border-radius: 3px; margin-top: 0.5rem; }
-        .admin-notes-box .notes-label { font-size: 0.65rem; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
-        .admin-notes-box .notes-text { font-size: 0.85rem; color: var(--text-primary); line-height: 1.5; }
-
-        .commission-box { background: rgba(34,197,94,0.04); border: 1px solid rgba(34,197,94,0.1); border-left: 3px solid #22c55e; padding: 0.75rem 1rem; border-radius: 3px; margin-top: 0.5rem; }
-        .commission-box .comm-label { font-size: 0.65rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
-        .commission-box .comm-value { font-size: 1rem; color: #16a34a; font-weight: 800; }
-
-        /* Property gallery in modal */
+        /* Property gallery (old classes kept for non-details modals) */
         .property-gallery { position: relative; width: 100%; height: 280px; overflow: hidden; border-radius: 4px; margin-bottom: 0.75rem; }
         .gallery-item { position: absolute; inset: 0; opacity: 0; display: none; transition: opacity 0.3s; }
         .gallery-item.active { opacity: 1; display: block; }
@@ -516,38 +651,285 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .gallery-indicator { width: 10px; height: 10px; border-radius: 50%; border: none; background: #dee2e6; cursor: pointer; transition: all 0.15s; }
         .gallery-indicator.active { background: var(--gold); transform: scale(1.2); }
 
-        /* Documents list in modal */
-        .documents-list { display: flex; flex-direction: column; gap: 0.5rem; }
-        .document-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; background: rgba(37,99,235,0.03); border-radius: 3px; border: 1px solid rgba(37,99,235,0.06); }
-        .document-icon { font-size: 1.25rem; color: var(--gold-dark); }
-        .document-info { flex: 1; }
-        .document-name { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
-        .document-meta { font-size: 0.7rem; color: var(--text-secondary); }
-        .document-actions { display: flex; gap: 0.35rem; }
-        .btn-doc { padding: 0.3rem 0.5rem; font-size: 0.7rem; font-weight: 600; border: none; border-radius: 3px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 0.2rem; }
-        .btn-preview-doc { background: var(--gold); color: var(--text-primary); }
-        .btn-preview-doc:hover { background: var(--gold-dark); }
-        .btn-download-doc { background: var(--blue); color: #fff; }
-        .btn-download-doc:hover { background: var(--blue-dark); }
+        /* Admin / commission boxes (old compat) */
+        .admin-notes-box { background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.1); border-left: 3px solid #ef4444; padding: 0.75rem 1rem; border-radius: 3px; margin-top: 0.5rem; }
+        .admin-notes-box .notes-label { font-size: 0.65rem; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+        .admin-notes-box .notes-text { font-size: 0.85rem; color: var(--text-primary); line-height: 1.5; }
+        .commission-box { background: rgba(34,197,94,0.04); border: 1px solid rgba(34,197,94,0.1); border-left: 3px solid #22c55e; padding: 0.75rem 1rem; border-radius: 3px; margin-top: 0.5rem; }
+        .commission-box .comm-label { font-size: 0.65rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+        .commission-box .comm-value { font-size: 1rem; color: #16a34a; font-weight: 800; }
 
-        /* Modal buttons */
-        .btn-modal { padding: 0.55rem 1.25rem; font-size: 0.85rem; font-weight: 600; border: none; border-radius: 3px; cursor: pointer; transition: all 0.15s; }
-        .btn-modal:hover { transform: translateY(-1px); }
-        .btn-modal-primary { background: var(--gold); color: var(--text-primary); }
-        .btn-modal-primary:hover { background: var(--gold-dark); }
-        .btn-modal-success { background: #22c55e; color: #fff; }
-        .btn-modal-success:hover { background: #16a34a; }
-        .btn-modal-danger { background: #ef4444; color: #fff; }
-        .btn-modal-danger:hover { background: #dc2626; }
-        .btn-modal-secondary { background: rgba(37,99,235,0.08); color: var(--text-secondary); }
-        .btn-modal-secondary:hover { background: rgba(37,99,235,0.15); color: var(--text-primary); }
-        .btn-modal-blue { background: var(--blue); color: #fff; }
-        .btn-modal-blue:hover { background: var(--blue-dark); }
+        @media (max-width: 768px) {
+            .svd-stat-strip { grid-template-columns: repeat(2,1fr); }
+            .svd-two-col { grid-template-columns: 1fr; }
+            .svd-hero { height: 200px; }
+            .svd-detail-grid { grid-template-columns: repeat(2,1fr); }
+        }
+        @media (max-width: 480px) {
+            .svd-stat-strip { grid-template-columns: repeat(2,1fr); }
+            .svd-detail-grid { grid-template-columns: 1fr; }
+        }
 
-        /* Processing overlay */
-        .processing-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); z-index: 2000; }
+        /* ===== PROCESSING OVERLAY ===== */
+        .processing-overlay {
+            position: fixed; inset: 0;
+            display: none; align-items: center; justify-content: center;
+            background: rgba(15,23,42,0.45);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
+        }
         .processing-overlay.show { display: flex; }
-        .processing-box { display: flex; align-items: center; gap: 0.75rem; background: var(--card-bg); color: var(--text-primary); padding: 1rem 1.5rem; border-radius: 4px; border: 1px solid rgba(37,99,235,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+
+        .processing-card {
+            background: var(--card-bg, #ffffff);
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 0;
+            width: 380px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(37,99,235,0.08), 0 24px 64px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+            animation: pc-pop .3s cubic-bezier(.34,1.56,.64,1) forwards;
+        }
+        @keyframes pc-pop { from { opacity:0; transform: scale(.92) translateY(14px); } to { opacity:1; transform: scale(1) translateY(0); } }
+
+        /* Top gradient bar — matches property.php page-header / action-bar */
+        .processing-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold, #d4af37), var(--blue, #2563eb), transparent);
+        }
+
+        /* Shimmer sweep across card */
+        .processing-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.04), transparent);
+            animation: pc-sweep 2.2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes pc-sweep { 0% { left: -100%; } 100% { left: 100%; } }
+
+        .pc-header {
+            position: relative;
+            z-index: 1;
+            padding: 2rem 2rem 0;
+        }
+
+        .pc-ring-wrap {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 1.25rem;
+        }
+        .pc-ring {
+            position: absolute; inset: 0;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: var(--gold, #d4af37);
+            border-right-color: rgba(212,175,55,0.2);
+            animation: pc-spin 1s linear infinite;
+        }
+        .pc-ring-inner {
+            position: absolute; inset: 9px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-bottom-color: var(--blue, #2563eb);
+            border-left-color: rgba(37,99,235,0.15);
+            animation: pc-spin-rev .75s linear infinite;
+        }
+        @keyframes pc-spin { to { transform: rotate(360deg); } }
+        @keyframes pc-spin-rev { to { transform: rotate(-360deg); } }
+
+        .pc-icon-center {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.35rem;
+            color: var(--gold-dark, #b8941f);
+        }
+
+        .pc-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text-primary, #0f172a);
+            margin-bottom: 0.2rem;
+        }
+        .pc-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-secondary, #64748b);
+            margin-bottom: 0;
+        }
+
+        /* Steps section */
+        .pc-steps-wrap {
+            position: relative;
+            z-index: 1;
+            padding: 1.25rem 1.75rem 1.75rem;
+        }
+        .pc-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            text-align: left;
+        }
+        .pc-step {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: #9ca3af;
+            padding: 0.5rem 0.7rem;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            transition: all .3s ease;
+        }
+        .pc-step.active {
+            color: var(--text-primary, #0f172a);
+            background: rgba(212,175,55,0.06);
+            border-color: rgba(212,175,55,0.15);
+        }
+        .pc-step.done {
+            color: #16a34a;
+            background: rgba(22,163,74,0.04);
+            border-color: rgba(22,163,74,0.1);
+        }
+        .pc-step-dot {
+            width: 24px; height: 24px;
+            border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem;
+            flex-shrink: 0;
+            background: #f3f4f6;
+            color: #9ca3af;
+            border: 1px solid #e2e8f0;
+            transition: all .3s;
+        }
+        .pc-step.active .pc-step-dot {
+            background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.15));
+            color: var(--gold-dark, #b8941f);
+            border-color: rgba(212,175,55,0.3);
+            animation: pc-pulse .8s ease-in-out infinite alternate;
+        }
+        @keyframes pc-pulse { from { box-shadow: 0 0 0 0 rgba(212,175,55,0.25); } to { box-shadow: 0 0 0 4px rgba(212,175,55,0); } }
+        .pc-step.done .pc-step-dot {
+            background: rgba(22,163,74,0.1);
+            color: #16a34a;
+            border-color: rgba(22,163,74,0.25);
+        }
+
+        /* Email step envelope animation */
+        .pc-step.active .pc-step-dot .bi-envelope-paper {
+            animation: pc-envelope 1.2s ease-in-out infinite;
+        }
+        @keyframes pc-envelope {
+            0%   { transform: translateY(0) scale(1); }
+            30%  { transform: translateY(-3px) scale(1.15); }
+            50%  { transform: translateY(-1px) scale(1.05); }
+            100% { transform: translateY(0) scale(1); }
+        }
+
+        /* Progress bar at bottom of processing card */
+        .pc-progress {
+            height: 3px;
+            background: #f1f5f9;
+            position: relative;
+            overflow: hidden;
+        }
+        .pc-progress-bar {
+            position: absolute;
+            top: 0; left: 0;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--gold, #d4af37), var(--blue, #2563eb));
+            border-radius: 0 2px 2px 0;
+            transition: width 0.5s ease;
+        }
+
+        /* ===== TOAST NOTIFICATIONS ===== */
+        #toastContainer {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            pointer-events: none;
+        }
+        .app-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 0.9rem 1.1rem;
+            min-width: 300px;
+            max-width: 380px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06);
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+            animation: toast-in .35s cubic-bezier(.34,1.56,.64,1) forwards;
+        }
+        @keyframes toast-in { from { opacity:0; transform: translateX(60px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+        .app-toast.toast-out { animation: toast-out .3s ease forwards; }
+        @keyframes toast-out { to { opacity:0; transform: translateX(60px) scale(.9); max-height:0; padding:0; margin:0; } }
+        .app-toast::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+        }
+        .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+        .app-toast-icon {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .toast-success .app-toast-icon { background: rgba(212,175,55,0.12); color: #d4af37; }
+        .toast-error   .app-toast-icon { background: rgba(239,68,68,0.1);   color: #ef4444; }
+        .toast-info    .app-toast-icon { background: rgba(37,99,235,0.1);   color: #2563eb; }
+        .app-toast-body { flex: 1; min-width: 0; }
+        .app-toast-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 0.2rem;
+        }
+        .app-toast-msg {
+            font-size: 0.78rem;
+            color: #6b7280;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .app-toast-close {
+            background: none; border: none; cursor: pointer;
+            color: #9ca3af; font-size: 0.8rem;
+            padding: 0; line-height: 1;
+            flex-shrink: 0;
+            transition: color .2s;
+        }
+        .app-toast-close:hover { color: #374151; }
+        .app-toast-progress {
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 2px;
+            border-radius: 0 0 0 12px;
+        }
+        .toast-success .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 1200px) {
@@ -573,11 +955,409 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             .sale-tabs .nav-link { padding: 0.6rem 0.7rem; font-size: 0.75rem; }
         }
 
-        /* ===== FINALIZE MODAL OVERRIDES ===== */
-        #finalizeSaleModal .modal-header { background: var(--card-bg); border-bottom: 1px solid rgba(37,99,235,0.1); position: relative; }
-        #finalizeSaleModal .modal-header::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
-        #finalizeSaleModal .modal-title { color: var(--text-primary); font-weight: 700; }
-        #finalizeSaleModal .modal-title i { color: var(--gold-dark); }
+        /* ===== FINALIZE SALE MODAL (fsm-) ===== */
+        .fsm-overlay .modal-dialog { max-width: 740px; }
+        .fsm-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .fsm-shell.modal-content {
+            background: #ffffff !important;
+            border: 1px solid rgba(37,99,235,0.1) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 28px 70px rgba(0,0,0,0.2) !important;
+            overflow: hidden;
+            padding: 0 !important;
+            font-family: 'Inter', sans-serif;
+        }
+        .fsm-header {
+            position: relative;
+            padding: 1.5rem 1.75rem 1.25rem;
+            border-bottom: 1px solid rgba(37,99,235,0.08);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .fsm-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+        }
+        .fsm-header-icon {
+            width: 46px; height: 46px;
+            background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.2));
+            border: 1px solid rgba(212,175,55,0.25);
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.35rem;
+            color: var(--gold-dark);
+            flex-shrink: 0;
+        }
+        .fsm-header-text { flex: 1; min-width: 0; }
+        .fsm-header-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin: 0;
+            line-height: 1.2;
+        }
+        .fsm-header-sub {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+        }
+        .fsm-header-sub strong { color: var(--gold-dark); }
+        .fsm-close {
+            width: 30px; height: 30px;
+            background: rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.09);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s, color 0.15s;
+        }
+        .fsm-close:hover { background: rgba(220,38,38,0.08); color: #dc2626; border-color: rgba(220,38,38,0.2); }
+        .fsm-body {
+            padding: 1.5rem 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .fsm-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .fsm-field { display: flex; flex-direction: column; gap: 0.35rem; }
+        .fsm-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+        .fsm-label i { color: var(--gold-dark); margin-right: 0.2rem; }
+        .fsm-label .fsm-req { color: #ef4444; margin-left: 1px; }
+        .fsm-input {
+            width: 100%;
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: rgba(37,99,235,0.015);
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+            font-family: inherit;
+            outline: none;
+        }
+        .fsm-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+            background: #fff;
+        }
+        .fsm-input::placeholder { color: rgba(0,0,0,0.28); }
+        .fsm-input.fsm-textarea { resize: vertical; min-height: 72px; }
+        .fsm-prefix-wrap {
+            position: relative;
+        }
+        .fsm-prefix-wrap .fsm-prefix {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--gold-dark);
+            pointer-events: none;
+        }
+        .fsm-prefix-wrap .fsm-input { padding-left: 2rem; }
+        .fsm-suffix-wrap { position: relative; }
+        .fsm-suffix-wrap .fsm-suffix {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+        .fsm-suffix-wrap .fsm-input { padding-right: 2.2rem; }
+        /* Commission preview pill */
+        .fsm-comm-preview {
+            background: linear-gradient(135deg, rgba(212,175,55,0.06), rgba(37,99,235,0.05));
+            border: 1px solid rgba(212,175,55,0.2);
+            border-radius: 6px;
+            padding: 0.9rem 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .fsm-comm-preview-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+        .fsm-comm-preview-label i { color: var(--gold-dark); margin-right: 0.3rem; }
+        .fsm-comm-preview-val {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--gold-dark);
+            letter-spacing: -0.02em;
+        }
+        .fsm-comm-preview-val.fsm-dim { color: var(--text-secondary); font-size: 1rem; font-weight: 500; }
+        .fsm-divider {
+            height: 1px;
+            background: rgba(37,99,235,0.07);
+            margin: 0 -1.75rem;
+        }
+        .fsm-footer {
+            padding: 1.1rem 1.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.65rem;
+        }
+        .fsm-btn {
+            padding: 0.62rem 1.35rem;
+            border-radius: 4px;
+            font-size: 0.855rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border: none;
+            transition: all 0.15s;
+        }
+        .fsm-btn-cancel {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid rgba(0,0,0,0.12) !important;
+        }
+        .fsm-btn-cancel:hover { background: rgba(0,0,0,0.05); color: var(--text-primary); }
+        .fsm-btn-save {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(212,175,55,0.35);
+            position: relative;
+            overflow: hidden;
+        }
+        .fsm-btn-save::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; right: auto;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+            transition: left 0.45s;
+        }
+        .fsm-btn-save:hover { filter: brightness(1.08); box-shadow: 0 6px 20px rgba(212,175,55,0.45); }
+        .fsm-btn-save:hover::before { left: 100%; }
+        @media (max-width: 576px) {
+            .fsm-row-2 { grid-template-columns: 1fr; }
+            .fsm-row-3 { grid-template-columns: 1fr; }
+            .fsm-body { padding: 1.1rem 1.1rem; }
+            .fsm-header { padding: 1.1rem 1.1rem 1rem; }
+            .fsm-footer { padding: 1rem 1.1rem 1.25rem; }
+        }
+
+        .cfd-container {
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid rgba(37,99,235,0.08);
+            box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+            width: 100%;
+            max-width: 420px;
+            overflow: hidden;
+            position: relative;
+            padding: 2rem 2rem 1.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .cfd-top-bar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+        .cfd-top-bar.approve { background: linear-gradient(90deg, transparent, #16a34a, #22c55e, transparent); }
+        .cfd-top-bar.danger  { background: linear-gradient(90deg, transparent, #dc2626, #f87171, transparent); }
+        .cfd-close-btn {
+            position: absolute;
+            top: 0.85rem; right: 0.85rem;
+            width: 28px; height: 28px;
+            background: rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.09);
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.05rem;
+            line-height: 1;
+            color: var(--text-secondary);
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .cfd-close-btn:hover { background: rgba(220,38,38,0.08); color: #dc2626; border-color: rgba(220,38,38,0.22); }
+        .cfd-icon-wrap {
+            width: 76px; height: 76px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.1rem;
+            margin-bottom: 1.1rem;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+        .cfd-icon-wrap.approve { background: rgba(22,163,74,0.09); color: #16a34a; border: 2px solid rgba(22,163,74,0.2); }
+        .cfd-icon-wrap.danger  { background: rgba(220,38,38,0.07); color: #dc2626; border: 2px solid rgba(220,38,38,0.18); }
+        .cfd-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.01em;
+        }
+        .cfd-desc {
+            font-size: 0.855rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            max-width: 330px;
+            margin-bottom: 1.85rem;
+        }
+        .cfd-desc strong { color: var(--text-primary); }
+        .cfd-footer {
+            display: flex;
+            gap: 0.75rem;
+            width: 100%;
+            justify-content: center;
+        }
+        .cfd-btn {
+            flex: 1;
+            max-width: 165px;
+            padding: 0.62rem 1rem;
+            border-radius: 4px;
+            font-size: 0.855rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: all 0.15s;
+            border: none;
+        }
+        .cfd-cancel {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid rgba(0,0,0,0.12) !important;
+        }
+        .cfd-cancel:hover { background: rgba(0,0,0,0.05); color: var(--text-primary); }
+        .cfd-approve {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(22,163,74,0.28);
+        }
+        .cfd-approve:hover { filter: brightness(1.06); box-shadow: 0 6px 18px rgba(22,163,74,0.38); }
+        .cfd-danger {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(220,38,38,0.28);
+        }
+        .cfd-danger:hover { filter: brightness(1.06); box-shadow: 0 6px 18px rgba(220,38,38,0.38); }
+
+        /* ===== REJECTION MODAL (rjm-) ===== */
+        .rjm-container {
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid rgba(220,38,38,0.1);
+            box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+            width: 100%;
+            max-width: 460px;
+            overflow: hidden;
+            position: relative;
+            padding: 2rem 2rem 1.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .rjm-top-bar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #dc2626, #f87171, transparent);
+        }
+        .rjm-icon-wrap {
+            width: 76px; height: 76px;
+            border-radius: 50%;
+            background: rgba(220,38,38,0.07);
+            border: 2px solid rgba(220,38,38,0.18);
+            color: #dc2626;
+            font-size: 2.1rem;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1.1rem;
+            flex-shrink: 0;
+        }
+        .rjm-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #dc2626;
+            margin-bottom: 0.3rem;
+            letter-spacing: -0.01em;
+        }
+        .rjm-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.4rem;
+        }
+        .rjm-body {
+            width: 100%;
+            text-align: left;
+            margin-bottom: 1.5rem;
+        }
+        .rjm-label {
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .rjm-label i { color: var(--gold-dark); margin-right: 0.25rem; }
+        .rjm-textarea {
+            width: 100%;
+            border: 1px solid rgba(220,38,38,0.22);
+            border-radius: 4px;
+            padding: 0.72rem 0.9rem;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: rgba(220,38,38,0.02);
+            resize: vertical;
+            min-height: 105px;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+            font-family: inherit;
+            outline: none;
+            display: block;
+        }
+        .rjm-textarea:focus {
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220,38,38,0.08);
+            background: #fff;
+        }
+        .rjm-textarea::placeholder { color: rgba(0,0,0,0.3); }
+        .rjm-error {
+            margin-top: 0.45rem;
+            font-size: 0.79rem;
+            color: #dc2626;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
     </style>
 </head>
 <body>
@@ -698,8 +1478,8 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                                     <div class="people-section buyer">
                                         <div class="section-title"><i class="bi bi-person-fill me-1"></i>Buyer</div>
                                         <div class="detail-line"><i class="bi bi-person"></i><?= htmlspecialchars($sale['buyer_name']) ?></div>
-                                        <?php if ($sale['buyer_contact']): ?>
-                                            <div class="detail-line"><i class="bi bi-telephone"></i><?= htmlspecialchars($sale['buyer_contact']) ?></div>
+                                        <?php if (!empty($sale['buyer_email'])): ?>
+                                            <div class="detail-line"><i class="bi bi-envelope"></i><?= htmlspecialchars($sale['buyer_email']) ?></div>
                                         <?php endif; ?>
                                     </div>
 
@@ -738,7 +1518,10 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         <div class="modal-container modal-large">
             <div class="modal-admin-header">
                 <h2><i class="bi bi-file-earmark-check"></i> Sale Verification Details</h2>
-                <button class="modal-close-btn" onclick="closeModal('detailsModal')">&times;</button>
+                <div class="modal-header-meta">
+                    <span class="modal-vid-badge" id="modalVidBadge"></span>
+                    <button class="modal-close-btn" onclick="closeModal('detailsModal')">&times;</button>
+                </div>
             </div>
             <div class="modal-body" id="modalContent"></div>
             <div class="modal-footer" id="modalFooter"></div>
@@ -762,81 +1545,108 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
 
     <!-- Confirmation Modal -->
     <div class="modal-overlay" id="confirmModal">
-        <div class="modal-container" style="max-width:500px;">
-            <div class="modal-admin-header">
-                <h2 id="confirmTitle"><i class="bi bi-question-circle"></i> Confirm Action</h2>
-                <button class="modal-close-btn" onclick="closeModal('confirmModal')">&times;</button>
-            </div>
-            <div class="modal-body" id="confirmBody"></div>
-            <div class="modal-footer">
-                <button class="btn-modal btn-modal-secondary" onclick="closeModal('confirmModal')">Cancel</button>
-                <button class="btn-modal btn-modal-success" id="confirmActionBtn">Confirm</button>
+        <div class="cfd-container">
+            <div class="cfd-top-bar" id="cfdTopBar"></div>
+            <button class="cfd-close-btn" onclick="closeModal('confirmModal')">&times;</button>
+            <div class="cfd-icon-wrap" id="cfdIconWrap"></div>
+            <div class="cfd-title" id="cfdTitle">Confirm Action</div>
+            <div class="cfd-desc" id="cfdDesc"></div>
+            <div class="cfd-footer">
+                <button class="cfd-btn cfd-cancel" onclick="closeModal('confirmModal')"><i class="bi bi-x-lg"></i> Cancel</button>
+                <button class="cfd-btn cfd-approve" id="confirmActionBtn"><i class="bi bi-check-lg"></i> Confirm</button>
             </div>
         </div>
     </div>
 
     <!-- Rejection Reason Modal -->
     <div class="modal-overlay" id="reasonModal">
-        <div class="modal-container" style="max-width:500px;">
-            <div class="modal-admin-header">
-                <h2><i class="bi bi-chat-left-text"></i> Reject – Provide Reason</h2>
-                <button class="modal-close-btn" onclick="closeModal('reasonModal')">&times;</button>
+        <div class="rjm-container">
+            <div class="rjm-top-bar"></div>
+            <button class="cfd-close-btn" onclick="closeModal('reasonModal')">&times;</button>
+            <div class="rjm-icon-wrap"><i class="bi bi-x-octagon-fill"></i></div>
+            <div class="rjm-title">Reject Verification</div>
+            <div class="rjm-subtitle">Provide a clear reason so the agent can understand and resubmit</div>
+            <div class="rjm-body">
+                <label class="rjm-label" for="reasonInput"><i class="bi bi-chat-left-text"></i> Rejection Reason</label>
+                <textarea class="rjm-textarea" id="reasonInput" placeholder="Explain why this verification is being rejected..."></textarea>
+                <div id="reasonError" class="rjm-error" style="display:none;"><i class="bi bi-exclamation-circle"></i> A reason is required.</div>
             </div>
-            <div class="modal-body">
-                <label class="form-label fw-bold" for="reasonInput" style="font-size:0.85rem;">Reason for rejection:</label>
-                <textarea class="form-control" id="reasonInput" rows="4" placeholder="Explain why this verification is being rejected..." style="border:1px solid rgba(37,99,235,0.15);border-radius:3px;font-size:0.9rem;"></textarea>
-                <div id="reasonError" style="color:#ef4444;font-size:0.8rem;margin-top:0.35rem;display:none;">A reason is required.</div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-modal btn-modal-secondary" onclick="closeModal('reasonModal')">Cancel</button>
-                <button class="btn-modal btn-modal-danger" id="submitRejectBtn"><i class="bi bi-x-lg me-1"></i>Reject</button>
+            <div class="cfd-footer">
+                <button class="cfd-btn cfd-cancel" onclick="closeModal('reasonModal')"><i class="bi bi-x-lg"></i> Cancel</button>
+                <button class="cfd-btn cfd-danger" id="submitRejectBtn"><i class="bi bi-x-octagon"></i> Reject</button>
             </div>
         </div>
     </div>
 
     <!-- Finalize Sale & Commission Modal -->
-    <div class="modal fade" id="finalizeSaleModal" tabindex="-1" aria-labelledby="finalizeSaleLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="border:1px solid rgba(37,99,235,0.1);border-radius:4px;">
-                <div class="modal-header" style="position:relative;">
-                    <h5 class="modal-title" id="finalizeSaleLabel"><i class="bi bi-cash-coin me-2"></i>Finalize Sale & Commission</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal fade fsm-overlay" id="finalizeSaleModal" tabindex="-1" aria-labelledby="finalizeSaleLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="fsm-shell modal-content">
+                <div class="fsm-header">
+                    <div class="fsm-header-icon"><i class="bi bi-cash-coin"></i></div>
+                    <div class="fsm-header-text">
+                        <h5 class="fsm-header-title" id="finalizeSaleLabel">Finalize Sale &amp; Commission</h5>
+                        <div class="fsm-header-sub" id="finalizeHelp">Loading&hellip;</div>
+                    </div>
+                    <button type="button" class="fsm-close" data-bs-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
                 <form id="finalizeSaleForm">
-                    <div class="modal-body">
+                    <div class="fsm-body">
                         <input type="hidden" name="property_id" id="finalize_property_id">
-                        <input type="hidden" name="agent_id" id="finalize_agent_id">
-                        <div class="mb-3">
-                            <label for="final_sale_price" class="form-label fw-semibold" style="font-size:0.85rem;">Final Sale Price (₱)</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="final_sale_price" name="final_sale_price" required>
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="buyer_name" class="form-label fw-semibold" style="font-size:0.85rem;">Buyer Name</label>
-                                <input type="text" class="form-control" id="buyer_name" name="buyer_name">
+                        <input type="hidden" name="agent_id"    id="finalize_agent_id">
+
+                        <!-- Row 1: Sale Price + Commission Rate + Live Preview -->
+                        <div class="fsm-row-3">
+                            <div class="fsm-field" style="grid-column:1/2;">
+                                <label class="fsm-label" for="final_sale_price"><i class="bi bi-tag-fill"></i> Final Sale Price <span class="fsm-req">*</span></label>
+                                <div class="fsm-prefix-wrap">
+                                    <span class="fsm-prefix">&#8369;</span>
+                                    <input type="number" step="0.01" min="0" class="fsm-input" id="final_sale_price" name="final_sale_price"
+                                           placeholder="0.00" required oninput="fsmCalc()">
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label for="buyer_email" class="form-label fw-semibold" style="font-size:0.85rem;">Buyer Email</label>
-                                <input type="email" class="form-control" id="buyer_email" name="buyer_email">
+                            <div class="fsm-field" style="grid-column:2/3;">
+                                <label class="fsm-label" for="commission_percentage"><i class="bi bi-percent"></i> Commission Rate <span class="fsm-req">*</span></label>
+                                <div class="fsm-suffix-wrap">
+                                    <input type="number" step="0.01" min="0" max="100" class="fsm-input" id="commission_percentage" name="commission_percentage"
+                                           placeholder="e.g. 3" required oninput="fsmCalc()">
+                                    <span class="fsm-suffix">%</span>
+                                </div>
+                            </div>
+                            <div class="fsm-field" style="grid-column:3/4;">
+                                <div class="fsm-comm-preview" id="fsmCommPreview" style="height:100%;">
+                                    <div>
+                                        <div class="fsm-comm-preview-label"><i class="bi bi-coin"></i> Commission</div>
+                                        <div class="fsm-comm-preview-val fsm-dim" id="fsmCommVal">&mdash;</div>
+                                    </div>
+                                    <i class="bi bi-calculator" style="font-size:1.5rem;color:rgba(212,175,55,0.3);"></i>
+                                </div>
                             </div>
                         </div>
-                        <div class="mt-3">
-                            <label for="buyer_contact" class="form-label fw-semibold" style="font-size:0.85rem;">Buyer Contact</label>
-                            <input type="text" class="form-control" id="buyer_contact" name="buyer_contact">
+
+                        <div class="fsm-divider"></div>
+
+                        <!-- Row 2: Buyer Name + Email (2 col) -->
+                        <div class="fsm-row-2">
+                            <div class="fsm-field">
+                                <label class="fsm-label" for="buyer_name"><i class="bi bi-person-fill"></i> Buyer Name</label>
+                                <input type="text" class="fsm-input" id="buyer_name" name="buyer_name" placeholder="Full name">
+                            </div>
+                            <div class="fsm-field">
+                                <label class="fsm-label" for="buyer_email"><i class="bi bi-envelope-fill"></i> Buyer Email</label>
+                                <input type="email" class="fsm-input" id="buyer_email" name="buyer_email" placeholder="email@example.com">
+                            </div>
                         </div>
-                        <div class="mt-3">
-                            <label for="commission_percentage" class="form-label fw-semibold" style="font-size:0.85rem;">Commission Percentage (%)</label>
-                            <input type="number" step="0.01" min="0" max="100" class="form-control" id="commission_percentage" name="commission_percentage" required>
+
+                        <!-- Notes -->
+                        <div class="fsm-field">
+                            <label class="fsm-label" for="notes"><i class="bi bi-chat-left-text"></i> Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+                            <textarea class="fsm-input fsm-textarea" id="notes" name="notes" placeholder="Any additional notes about this commission..."></textarea>
                         </div>
-                        <div class="mt-3">
-                            <label for="notes" class="form-label fw-semibold" style="font-size:0.85rem;">Notes (optional)</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
-                        </div>
-                        <div class="mt-2 small text-muted" id="finalizeHelp"></div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-sm" style="background:var(--gold);color:var(--text-primary);font-weight:600;"><i class="bi bi-check2-circle me-1"></i>Save & Calculate</button>
+                    <div class="fsm-footer">
+                        <button type="button" class="fsm-btn fsm-btn-cancel" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Cancel</button>
+                        <button type="submit" class="fsm-btn fsm-btn-save"><i class="bi bi-check2-circle"></i> Save &amp; Calculate</button>
                     </div>
                 </form>
             </div>
@@ -845,11 +1655,44 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
 
     <!-- Processing Overlay -->
     <div id="processingOverlay" class="processing-overlay">
-        <div class="processing-box">
-            <div class="spinner-border spinner-border-sm" role="status"></div>
-            <div style="font-weight:600;">Processing, please wait...</div>
+        <div class="processing-card">
+            <div class="pc-header">
+                <div class="pc-ring-wrap">
+                    <div class="pc-ring"></div>
+                    <div class="pc-ring-inner"></div>
+                    <div class="pc-icon-center"><i class="bi bi-cash-coin" id="pcIcon"></i></div>
+                </div>
+                <div class="pc-title" id="pcTitle">Finalizing Sale</div>
+                <div class="pc-subtitle" id="pcSubtitle">Please wait&hellip;</div>
+            </div>
+            <div class="pc-steps-wrap">
+                <div class="pc-steps">
+                    <div class="pc-step" id="pcStep1">
+                        <div class="pc-step-dot"><i class="bi bi-check-lg"></i></div>
+                        <span>Validating sale data</span>
+                    </div>
+                    <div class="pc-step" id="pcStep2">
+                        <div class="pc-step-dot"><i class="bi bi-check-lg"></i></div>
+                        <span>Saving finalized record</span>
+                    </div>
+                    <div class="pc-step" id="pcStep3">
+                        <div class="pc-step-dot"><i class="bi bi-check-lg"></i></div>
+                        <span>Calculating commission</span>
+                    </div>
+                    <div class="pc-step" id="pcStep4">
+                        <div class="pc-step-dot"><i class="bi bi-envelope-paper"></i></div>
+                        <span>Sending email notification</span>
+                    </div>
+                </div>
+            </div>
+            <div class="pc-progress">
+                <div class="pc-progress-bar" id="pcProgressBar"></div>
+            </div>
         </div>
     </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -868,103 +1711,299 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.show').forEach(m => closeModal(m.id));
     });
 
-    function showProcessing(msg) {
-        const o = document.getElementById('processingOverlay');
-        if (msg) o.querySelector('div:last-child').textContent = msg;
-        o.classList.add('show'); document.body.style.overflow = 'hidden';
-    }
-    function hideProcessing() { document.getElementById('processingOverlay').classList.remove('show'); document.body.style.overflow = ''; }
+    // Track step timer IDs so we can cancel them on early hide
+    let _pcTimers = [];
 
-    // ===== VIEW DETAILS =====
+    function showProcessing(msg, mode) {
+        const o = document.getElementById('processingOverlay');
+        const allSteps = ['pcStep1','pcStep2','pcStep3','pcStep4'];
+        const bar = document.getElementById('pcProgressBar');
+        const icon = document.getElementById('pcIcon');
+
+        // Clear any pending timers
+        _pcTimers.forEach(t => clearTimeout(t));
+        _pcTimers = [];
+
+        // Reset steps & progress
+        allSteps.forEach(id => {
+            const el = document.getElementById(id);
+            el.classList.remove('active','done');
+            el.style.display = '';
+        });
+        if (bar) bar.style.width = '0%';
+
+        const title = document.getElementById('pcTitle');
+        const sub   = document.getElementById('pcSubtitle');
+
+        if (mode === 'approve') {
+            title.textContent = 'Approving Sale';
+            sub.textContent   = 'Updating records\u2026';
+            icon.className = 'bi bi-check-circle';
+            document.getElementById('pcStep1').querySelector('span').textContent = 'Verifying submission';
+            document.getElementById('pcStep2').querySelector('span').textContent = 'Marking property as sold';
+            document.getElementById('pcStep3').querySelector('span').textContent = 'Sending agent notification';
+            document.getElementById('pcStep4').style.display = 'none';
+        } else if (mode === 'reject') {
+            title.textContent = 'Rejecting Verification';
+            sub.textContent   = 'Processing\u2026';
+            icon.className = 'bi bi-x-circle';
+            document.getElementById('pcStep1').querySelector('span').textContent = 'Validating request';
+            document.getElementById('pcStep2').querySelector('span').textContent = 'Updating property status';
+            document.getElementById('pcStep3').querySelector('span').textContent = 'Sending agent notification';
+            document.getElementById('pcStep4').style.display = 'none';
+        } else {
+            title.textContent = 'Finalizing Sale';
+            sub.textContent   = 'Processing your request\u2026';
+            icon.className = 'bi bi-cash-coin';
+            document.getElementById('pcStep1').querySelector('span').textContent = 'Validating sale data';
+            document.getElementById('pcStep2').querySelector('span').textContent = 'Saving finalized record';
+            document.getElementById('pcStep3').querySelector('span').textContent = 'Calculating commission';
+            document.getElementById('pcStep4').querySelector('span').textContent = 'Sending email notification';
+            document.getElementById('pcStep4').style.display = '';
+        }
+
+        // Determine visible steps and timings
+        const isFinalize = (mode !== 'approve' && mode !== 'reject');
+        const visibleSteps = isFinalize ? allSteps : allSteps.slice(0, 3);
+        const stepCount = visibleSteps.length;
+        // Longer delays for finalize (email adds time)
+        const baseDelay = isFinalize ? 800 : 550;
+
+        // Animate steps sequentially
+        const stepEl = (i) => document.getElementById(visibleSteps[i]);
+        stepEl(0).classList.add('active');
+        if (bar) bar.style.width = (100 / (stepCount + 1)) + '%';
+
+        for (let i = 1; i < stepCount; i++) {
+            const delay = baseDelay * i;
+            const t = setTimeout(() => {
+                stepEl(i - 1).classList.remove('active');
+                stepEl(i - 1).classList.add('done');
+                stepEl(i).classList.add('active');
+                if (bar) bar.style.width = (((i + 1) / (stepCount + 1)) * 100) + '%';
+            }, delay);
+            _pcTimers.push(t);
+        }
+
+        o.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function hideProcessing() {
+        const o = document.getElementById('processingOverlay');
+        const allSteps = ['pcStep1','pcStep2','pcStep3','pcStep4'];
+        const bar = document.getElementById('pcProgressBar');
+
+        // Cancel pending animations
+        _pcTimers.forEach(t => clearTimeout(t));
+        _pcTimers = [];
+
+        // Mark all visible steps as done
+        allSteps.forEach(id => {
+            const el = document.getElementById(id);
+            if (el.style.display !== 'none') {
+                el.classList.remove('active');
+                el.classList.add('done');
+            }
+        });
+        if (bar) bar.style.width = '100%';
+
+        setTimeout(() => {
+            o.classList.remove('show');
+            document.body.style.overflow = '';
+        }, 400);
+    }
+
+    // ===== TOAST =====
+    function showToast(type, title, message, duration) {
+        duration = duration || 4500;
+        const container = document.getElementById('toastContainer');
+        const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+        const toast = document.createElement('div');
+        toast.className = `app-toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="app-toast-icon"><i class="bi ${icons[type] || icons.info}"></i></div>
+            <div class="app-toast-body">
+                <div class="app-toast-title">${title}</div>
+                <div class="app-toast-msg">${message}</div>
+            </div>
+            <button class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))">&times;</button>
+            <div class="app-toast-progress" style="animation: toast-progress ${duration}ms linear forwards;"></div>
+        `;
+        container.appendChild(toast);
+        const timer = setTimeout(() => dismissToast(toast), duration);
+        toast._timer = timer;
+    }
+    function dismissToast(toast) {
+        if (!toast || toast._dismissed) return;
+        toast._dismissed = true;
+        clearTimeout(toast._timer);
+        toast.classList.add('toast-out');
+        setTimeout(() => toast.remove(), 320);
+    }
+
+    // ===== VIEW DETAILS (enhanced) =====
     function viewDetails(vid) {
         const sale = saleVerifications.find(s => s.verification_id == vid);
         if (!sale) return;
         currentViewedSale = sale;
 
         const stClass = sale.status.toLowerCase();
-        const stLabel = sale.status === 'Approved' ? 'Sold' : sale.status;
+        const stLabel = sale.status === 'Approved' ? 'SOLD' : sale.status.toUpperCase();
+        const imgs = (sale.property_images && sale.property_images.length > 0) ? sale.property_images : [];
+        const totalImgs = imgs.length;
+
+        // Update header badge
+        const vidBadge = document.getElementById('modalVidBadge');
+        if (vidBadge) vidBadge.textContent = 'VID #' + sale.verification_id;
+
+        // ── Price variance ──
+        const saleP = Number(sale.sale_price);
+        const listP = Number(sale.ListingPrice);
+        let varianceHtml = '';
+        if (listP > 0) {
+            const diff = ((saleP - listP) / listP * 100).toFixed(1);
+            const cls  = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+            const icon = diff > 0 ? '▲' : diff < 0 ? '▼' : '—';
+            varianceHtml = `<div class="svd-variance ${cls}">${icon} ${Math.abs(diff)}% vs listing</div>`;
+        }
 
         let html = '';
 
-        // Gallery
-        if (sale.property_images && sale.property_images.length > 0) {
-            html += `<div class="detail-section">
-                <div class="detail-title"><i class="bi bi-images"></i> Property Images (${sale.property_image_count || 0})</div>
-                <div class="property-gallery">
-                    ${sale.property_images.map((img, i) => `<div class="gallery-item ${i === 0 ? 'active' : ''}" data-index="${i}"><img src="${img.url}" alt="Image ${i+1}" class="gallery-image"></div>`).join('')}
+        // ── HERO ──
+        html += `<div class="svd-hero">`;
+        if (totalImgs > 0) {
+            html += imgs.map((img, i) => `<img src="${img.url}" alt="" class="svd-hero-img" id="svd-img-${i}" style="position:absolute;inset:0;opacity:${i===0?1:0};transition:opacity 0.4s;">`).join('');
+            if (totalImgs > 1) {
+                html += `<button class="svd-gallery-prev" id="svdPrev" onclick="svdGoPrev()"><i class="bi bi-chevron-left"></i></button>`;
+                html += `<button class="svd-gallery-next" id="svdNext" onclick="svdGoNext()"><i class="bi bi-chevron-right"></i></button>`;
+                html += `<div class="svd-hero-dots">${imgs.map((_,i) => `<button class="svd-hero-dot ${i===0?'active':''}" id="svd-dot-${i}" onclick="svdGoTo(${i})"></button>`).join('')}</div>`;
+                html += `<div class="svd-gallery-counter" id="svdCounter" style="display:block;">${1} / ${totalImgs}</div>`;
+            }
+        } else {
+            html += `<div class="svd-hero-no-img"><i class="bi bi-image"></i><span>No Images</span></div>`;
+        }
+        html += `<div class="svd-hero-overlay"></div>`;
+        html += `<div class="svd-hero-top">
+            <span class="svd-type-badge"><i class="bi bi-house-door me-1"></i>${esc(sale.PropertyType)}</span>
+            <span class="svd-status-hero ${stClass}">${stLabel}</span>
+        </div>`;
+        html += `<div class="svd-hero-content">
+            <div class="svd-hero-address">${esc(sale.StreetAddress)}</div>
+            <div class="svd-hero-city"><i class="bi bi-geo-alt-fill" style="color:var(--gold-light);"></i>${esc(sale.City)}</div>
+        </div>`;
+        html += `</div>`;
+
+        // ── STAT STRIP ──
+        html += `<div class="svd-stat-strip">
+            <div class="svd-stat">
+                <div class="svd-stat-label">Sale Price</div>
+                <div class="svd-stat-value gold">₱${saleP.toLocaleString()}</div>
+                ${varianceHtml}
+            </div>
+            <div class="svd-stat">
+                <div class="svd-stat-label">Listing Price</div>
+                <div class="svd-stat-value">₱${listP.toLocaleString()}</div>
+                <div class="svd-stat-sub">Original ask</div>
+            </div>
+            <div class="svd-stat">
+                <div class="svd-stat-label">Sale Date</div>
+                <div class="svd-stat-value">${sale.sale_date_fmt || '—'}</div>
+                <div class="svd-stat-sub">Closing date</div>
+            </div>
+            <div class="svd-stat">
+                <div class="svd-stat-label">Status</div>
+                <div class="svd-stat-value" style="margin-top:0.15rem;"><span class="svd-status-pill ${stClass}"><span class="svd-dot ${stClass}"></span>${stLabel}</span></div>
+            </div>
+        </div>`;
+
+        // ── BODY ──
+        html += `<div class="svd-body">`;
+
+        // Buyer + Agent two-col
+        html += `<div class="svd-section">
+            <div class="svd-section-title"><i class="bi bi-people-fill"></i> Parties Involved</div>
+            <div class="svd-two-col">
+                <div class="svd-panel">
+                    <div class="svd-panel-title buyer"><i class="bi bi-person-fill"></i> Buyer</div>
+                    <div class="svd-row"><span class="svd-row-icon"><i class="bi bi-person"></i></span><span class="svd-row-label">Name</span><span class="svd-row-value strong">${esc(sale.buyer_name)}</span></div>
+                    ${sale.buyer_email
+                        ? `<div class="svd-row"><span class="svd-row-icon"><i class="bi bi-envelope"></i></span><span class="svd-row-label">Email</span><span class="svd-row-value"><a href="mailto:${esc(sale.buyer_email)}" class="svd-email-link">${esc(sale.buyer_email)}</a></span></div>`
+                        : `<div class="svd-row"><span class="svd-row-icon"><i class="bi bi-envelope"></i></span><span class="svd-row-label">Email</span><span class="svd-row-value" style="color:var(--text-secondary);font-style:italic;">Not provided</span></div>`
+                    }
                 </div>
-                ${sale.property_images.length > 1 ? `
-                <div class="gallery-navigation">
-                    <button class="gallery-nav-btn" onclick="prevImg()" id="prevBtn" disabled><i class="bi bi-chevron-left"></i></button>
-                    <div class="gallery-indicators">${sale.property_images.map((_, i) => `<button class="gallery-indicator ${i === 0 ? 'active' : ''}" onclick="goToImg(${i})"></button>`).join('')}</div>
-                    <button class="gallery-nav-btn" onclick="nextImg()" id="nextBtn"><i class="bi bi-chevron-right"></i></button>
-                </div>` : ''}
+                <div class="svd-panel">
+                    <div class="svd-panel-title blue"><i class="bi bi-person-badge-fill"></i> Agent</div>
+                    <div class="svd-row"><span class="svd-row-icon"><i class="bi bi-person-check"></i></span><span class="svd-row-label">Name</span><span class="svd-row-value strong">${esc(sale.agent_first_name)} ${esc(sale.agent_last_name)}</span></div>
+                    <div class="svd-row"><span class="svd-row-icon"><i class="bi bi-envelope"></i></span><span class="svd-row-label">Email</span><span class="svd-row-value"><a href="mailto:${esc(sale.agent_email)}" class="svd-email-link">${esc(sale.agent_email)}</a></span></div>
+                </div>
+            </div>
+        </div>`;
+
+        // Property info grid
+        html += `<div class="svd-section">
+            <div class="svd-section-title"><i class="bi bi-building"></i> Property Details</div>
+            <div class="svd-detail-grid">
+                <div class="svd-detail-cell"><div class="cell-label">Type</div><div class="cell-value">${esc(sale.PropertyType)}</div></div>
+                <div class="svd-detail-cell"><div class="cell-label">City</div><div class="cell-value">${esc(sale.City)}</div></div>
+                <div class="svd-detail-cell"><div class="cell-label">Listing Price</div><div class="cell-value gold">₱${listP.toLocaleString()}</div></div>
+                <div class="svd-detail-cell"><div class="cell-label">Property ID</div><div class="cell-value muted">#${sale.property_id}</div></div>
+            </div>
+        </div>`;
+
+        // Additional notes
+        if (sale.additional_notes) {
+            html += `<div class="svd-section">
+                <div class="svd-section-title"><i class="bi bi-chat-square-text"></i> Additional Notes</div>
+                <div class="svd-notes-box"><div class="notes-title"><i class="bi bi-info-circle"></i> Notes</div><div class="notes-text">${esc(sale.additional_notes)}</div></div>
             </div>`;
         }
 
-        // Property info
-        html += `<div class="detail-section">
-            <div class="detail-title"><i class="bi bi-building"></i> Property Information</div>
-            <div class="detail-grid">
-                <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value">${esc(sale.StreetAddress)}</div></div>
-                <div class="detail-item"><div class="detail-label">City</div><div class="detail-value">${esc(sale.City)}</div></div>
-                <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value">${esc(sale.PropertyType)}</div></div>
-                <div class="detail-item"><div class="detail-label">Listing Price</div><div class="detail-value">₱${Number(sale.ListingPrice).toLocaleString()}</div></div>
-            </div>
-        </div>`;
+        // Rejection reason
+        if (sale.admin_notes) {
+            html += `<div class="svd-section">
+                <div class="svd-section-title"><i class="bi bi-x-circle"></i> Rejection Details</div>
+                <div class="svd-rejection-box"><div class="rej-title"><i class="bi bi-exclamation-triangle-fill"></i> Reason for Rejection</div><div class="rej-text">${esc(sale.admin_notes)}</div></div>
+            </div>`;
+        }
 
-        // Sale info
-        html += `<div class="detail-section">
-            <div class="detail-title"><i class="bi bi-handshake"></i> Sale Information</div>
-            <div class="detail-grid">
-                <div class="detail-item"><div class="detail-label">Sale Price</div><div class="detail-value price-val">₱${Number(sale.sale_price).toLocaleString()}</div></div>
-                <div class="detail-item"><div class="detail-label">Sale Date</div><div class="detail-value">${sale.sale_date_fmt}</div></div>
-                <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="status-display ${stClass}"><i class="bi bi-circle-fill" style="font-size:0.5rem;"></i> ${stLabel}</span></div></div>
-                <div class="detail-item"><div class="detail-label">Submitted</div><div class="detail-value">${sale.submitted_at_fmt}</div></div>
-                ${sale.reviewed_at ? `<div class="detail-item"><div class="detail-label">Reviewed</div><div class="detail-value">${sale.reviewed_at_fmt}</div></div>` : ''}
-            </div>
-            ${sale.admin_notes ? `<div class="admin-notes-box"><div class="notes-label">Rejection Reason</div><div class="notes-text">${esc(sale.admin_notes)}</div></div>` : ''}
-            ${sale.commission_amount ? `<div class="commission-box"><div class="comm-label">Commission (${Number(sale.commission_percentage)}%)</div><div class="comm-value">₱${Number(sale.commission_amount).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
-        </div>`;
-
-        // Buyer info
-        html += `<div class="detail-section">
-            <div class="detail-title"><i class="bi bi-person-fill"></i> Buyer Information</div>
-            <div class="detail-grid">
-                <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">${esc(sale.buyer_name)}</div></div>
-                ${sale.buyer_contact ? `<div class="detail-item"><div class="detail-label">Contact</div><div class="detail-value">${esc(sale.buyer_contact)}</div></div>` : ''}
-                ${sale.additional_notes ? `<div class="detail-item" style="grid-column:1/-1;"><div class="detail-label">Notes</div><div class="detail-value">${esc(sale.additional_notes)}</div></div>` : ''}
-            </div>
-        </div>`;
-
-        // Agent info
-        html += `<div class="detail-section">
-            <div class="detail-title"><i class="bi bi-person-badge"></i> Agent Information</div>
-            <div class="detail-grid">
-                <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">${esc(sale.agent_first_name)} ${esc(sale.agent_last_name)}</div></div>
-                <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value">${esc(sale.agent_email)}</div></div>
-            </div>
-        </div>`;
+        // Commission
+        if (sale.commission_amount && Number(sale.commission_amount) > 0) {
+            html += `<div class="svd-section">
+                <div class="svd-section-title"><i class="bi bi-cash-coin"></i> Commission</div>
+                <div class="svd-commission-panel">
+                    <div>
+                        <div class="cp-label"><i class="bi bi-check-circle-fill"></i> Commission Earned</div>
+                        <div class="cp-value">₱${Number(sale.commission_amount).toLocaleString(undefined,{minimumFractionDigits:2})}</div>
+                        <div class="cp-pct">${Number(sale.commission_percentage)}% of ₱${saleP.toLocaleString()}</div>
+                    </div>
+                    <span class="svd-commission-badge" style="text-transform:uppercase;">${esc(sale.commission_status || 'Pending')}</span>
+                </div>
+            </div>`;
+        }
 
         // Documents
         if (sale.documents && sale.documents.length > 0) {
-            html += `<div class="detail-section">
-                <div class="detail-title"><i class="bi bi-file-earmark-text"></i> Supporting Documents (${sale.document_count})</div>
-                <div class="documents-list">
+            html += `<div class="svd-section">
+                <div class="svd-section-title"><i class="bi bi-file-earmark-text"></i> Supporting Documents <span style="font-weight:500;color:var(--text-secondary);font-size:0.75rem;text-transform:none;letter-spacing:0;margin-left:0.35rem;">(${sale.document_count})</span></div>
+                <div class="svd-doc-list">
                     ${sale.documents.map(doc => {
                         const ext = (doc.original_filename || '').split('.').pop().toLowerCase();
                         const isImg = ['jpg','jpeg','png','gif','webp'].includes(ext);
                         const isPdf = ext === 'pdf';
-                        const icon = isImg ? 'bi-file-image' : isPdf ? 'bi-file-pdf' : 'bi-file-earmark';
-                        return `<div class="document-item">
-                            <div class="document-icon"><i class="bi ${icon}"></i></div>
-                            <div class="document-info">
-                                <div class="document-name">${esc(doc.original_filename)}</div>
-                                <div class="document-meta">${formatSize(doc.file_size)} • ${new Date(doc.uploaded_at).toLocaleDateString()}</div>
+                        const isWord = ['doc','docx'].includes(ext);
+                        const iconClass = isPdf ? 'bi-file-pdf' : isImg ? 'bi-file-image' : isWord ? 'bi-file-word' : 'bi-file-earmark';
+                        const wrapClass = isPdf ? 'pdf' : isImg ? 'img' : isWord ? 'word' : 'file';
+                        const canPreview = isImg || isPdf;
+                        return `<div class="svd-doc-item">
+                            <div class="svd-doc-icon-wrap ${wrapClass}"><i class="bi ${iconClass}"></i></div>
+                            <div class="svd-doc-info">
+                                <div class="svd-doc-name" title="${esc(doc.original_filename)}">${esc(doc.original_filename)}</div>
+                                <div class="svd-doc-meta">${formatSize(doc.file_size)} &bull; Uploaded ${new Date(doc.uploaded_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
                             </div>
-                            <div class="document-actions">
-                                ${isImg || isPdf ? `<button class="btn-doc btn-preview-doc" onclick="previewDoc('${doc.file_path}','${doc.mime_type}','${esc(doc.original_filename)}',${doc.id})"><i class="bi bi-eye"></i></button>` : ''}
-                                <button class="btn-doc btn-download-doc" onclick="downloadDoc(${doc.id})"><i class="bi bi-download"></i></button>
+                            <div class="svd-doc-actions">
+                                ${canPreview ? `<button class="svd-btn-doc preview" onclick="previewDoc('${doc.file_path}','${doc.mime_type}','${esc(doc.original_filename)}',${doc.id})" title="Preview"><i class="bi bi-eye"></i></button>` : ''}
+                                <button class="svd-btn-doc download" onclick="downloadDoc(${doc.id})" title="Download"><i class="bi bi-download"></i></button>
                             </div>
                         </div>`;
                     }).join('')}
@@ -972,52 +2011,85 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             </div>`;
         }
 
+        // Timeline
+        let tlHtml = `<div class="svd-section">
+            <div class="svd-section-title"><i class="bi bi-clock-history"></i> Timeline</div>
+            <div class="svd-timeline">
+                <div class="svd-tl-item"><div class="svd-tl-dot gold"><i class="bi bi-upload"></i></div><div class="svd-tl-content"><div class="tl-event">Verification Submitted</div><div class="tl-time">${sale.submitted_at_fmt || '—'}</div></div></div>`;
+        if (sale.reviewed_at) {
+            const tlDotCls = stClass === 'approved' ? 'green' : 'red';
+            const tlIcon   = stClass === 'approved' ? 'bi-check-lg' : 'bi-x-lg';
+            tlHtml += `<div class="svd-tl-item"><div class="svd-tl-dot ${tlDotCls}"><i class="bi ${tlIcon}"></i></div><div class="svd-tl-content"><div class="tl-event">Verification ${sale.status}</div><div class="tl-time">${sale.reviewed_at_fmt}</div></div></div>`;
+        } else {
+            tlHtml += `<div class="svd-tl-item"><div class="svd-tl-dot gray"><i class="bi bi-hourglass-split"></i></div><div class="svd-tl-content"><div class="tl-event">Awaiting Review</div><div class="tl-time">Pending admin decision</div></div></div>`;
+        }
+        tlHtml += `</div></div>`;
+        html += tlHtml;
+
+        html += `</div>`; // close svd-body
+
         document.getElementById('modalContent').innerHTML = html;
 
-        // Footer buttons
+        // Init hero gallery state
+        svdGalleryInit(totalImgs);
+
+        // Footer
         let footer = '';
         if (sale.status === 'Pending') {
-            footer = `<button class="btn-modal btn-modal-success" onclick="approveFromModal(${vid})"><i class="bi bi-check-lg me-1"></i>Approve</button>
-                      <button class="btn-modal btn-modal-danger" onclick="rejectFromModal(${vid})"><i class="bi bi-x-lg me-1"></i>Reject</button>`;
-        }
-        if (sale.status === 'Approved') {
+            footer = `<button class="btn-modal btn-modal-success" onclick="approveFromModal(${vid})"><i class="bi bi-check-lg"></i>Approve</button>
+                      <button class="btn-modal btn-modal-danger" onclick="rejectFromModal(${vid})"><i class="bi bi-x-lg"></i>Reject</button>
+                      <button class="btn-modal btn-modal-secondary" onclick="closeModal('detailsModal')"><i class="bi bi-x-lg"></i>Close</button>`;
+        } else if (sale.status === 'Approved') {
             const hasCommission = sale.commission_amount && Number(sale.commission_amount) > 0;
-            footer = `<button class="btn-modal btn-modal-primary" onclick="openFinalizeModal()"><i class="bi bi-cash-coin me-1"></i>${hasCommission ? 'Edit' : 'Finalize'} Commission</button>`;
+            footer = `<button class="btn-modal btn-modal-secondary" onclick="closeModal('detailsModal')"><i class="bi bi-x-lg"></i>Close</button>
+                      <button class="btn-modal btn-modal-primary" onclick="openFinalizeModal()"><i class="bi bi-cash-coin"></i>${hasCommission ? 'Edit' : 'Finalize'} Commission</button>`;
+        } else {
+            footer = `<button class="btn-modal btn-modal-secondary" onclick="closeModal('detailsModal')"><i class="bi bi-x-lg"></i>Close</button>`;
         }
-        footer += `<button class="btn-modal btn-modal-secondary" onclick="closeModal('detailsModal')">Close</button>`;
         document.getElementById('modalFooter').innerHTML = footer;
 
         openModal('detailsModal');
-        setTimeout(initGallery, 100);
     }
 
-    // ===== GALLERY =====
-    let galleryIdx = 0, galleryTotal = 0;
-    function initGallery() {
-        galleryTotal = document.querySelectorAll('.gallery-item').length;
-        galleryIdx = 0;
-        updateGallery();
+    // ===== SVD HERO GALLERY =====
+    let svdGalIdx = 0, svdGalTotal = 0;
+    function svdGalleryInit(total) {
+        svdGalIdx = 0;
+        svdGalTotal = total;
+        svdUpdateGallery();
     }
-    function updateGallery() {
-        document.querySelectorAll('.gallery-item').forEach((el, i) => el.classList.toggle('active', i === galleryIdx));
-        document.querySelectorAll('.gallery-indicator').forEach((el, i) => el.classList.toggle('active', i === galleryIdx));
-        const p = document.getElementById('prevBtn'), n = document.getElementById('nextBtn');
-        if (p) p.disabled = galleryIdx === 0;
-        if (n) n.disabled = galleryIdx >= galleryTotal - 1;
+    function svdUpdateGallery() {
+        for (let i = 0; i < svdGalTotal; i++) {
+            const img = document.getElementById('svd-img-' + i);
+            const dot = document.getElementById('svd-dot-' + i);
+            if (img) img.style.opacity = (i === svdGalIdx) ? '1' : '0';
+            if (dot) dot.classList.toggle('active', i === svdGalIdx);
+        }
+        const counter = document.getElementById('svdCounter');
+        if (counter) counter.textContent = (svdGalIdx + 1) + ' / ' + svdGalTotal;
+        const prev = document.getElementById('svdPrev');
+        const next = document.getElementById('svdNext');
+        if (prev) prev.style.opacity = svdGalIdx === 0 ? '0.4' : '1';
+        if (next) next.style.opacity = svdGalIdx >= svdGalTotal - 1 ? '0.4' : '1';
     }
-    function nextImg() { if (galleryIdx < galleryTotal - 1) { galleryIdx++; updateGallery(); } }
-    function prevImg() { if (galleryIdx > 0) { galleryIdx--; updateGallery(); } }
-    function goToImg(i) { galleryIdx = i; updateGallery(); }
+    function svdGoNext() { if (svdGalIdx < svdGalTotal - 1) { svdGalIdx++; svdUpdateGallery(); } }
+    function svdGoPrev() { if (svdGalIdx > 0) { svdGalIdx--; svdUpdateGallery(); } }
+    function svdGoTo(i) { svdGalIdx = i; svdUpdateGallery(); }
 
     // ===== APPROVE / REJECT =====
     function approveVerification(vid) { approveFromModal(vid); }
     function rejectVerification(vid) { rejectFromModal(vid); }
 
     function approveFromModal(vid) {
-        document.getElementById('confirmTitle').innerHTML = '<i class="bi bi-check-circle"></i> Approve Sale';
-        document.getElementById('confirmBody').innerHTML = '<p style="margin:0;font-size:0.9rem;color:var(--text-secondary);">Are you sure you want to approve this sale? The property will be marked as <strong>SOLD</strong> and both the agent and buyer will be notified by email.</p>';
+        document.getElementById('cfdTopBar').className  = 'cfd-top-bar approve';
+        document.getElementById('cfdIconWrap').className = 'cfd-icon-wrap approve';
+        document.getElementById('cfdIconWrap').innerHTML = '<i class="bi bi-patch-check-fill"></i>';
+        document.getElementById('cfdTitle').textContent  = 'Approve Sale';
+        document.getElementById('cfdDesc').innerHTML     = 'Are you sure you want to approve this sale? The property will be marked as <strong>SOLD</strong> and both the agent and buyer will be notified by email.';
         const btn = document.getElementById('confirmActionBtn');
         const newBtn = btn.cloneNode(true);
+        newBtn.className = 'cfd-btn cfd-approve';
+        newBtn.innerHTML = '<i class="bi bi-check-lg"></i> Approve';
         btn.parentNode.replaceChild(newBtn, btn);
         newBtn.addEventListener('click', () => {
             closeModal('confirmModal');
@@ -1047,7 +2119,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         form.innerHTML = `<input type="hidden" name="action" value="${action}"><input type="hidden" name="verification_id" value="${vid}">`;
         if (reason) form.innerHTML += `<input type="hidden" name="reason" value="${esc(reason)}">`;
         document.body.appendChild(form);
-        showProcessing(action === 'approve' ? 'Approving sale...' : 'Rejecting sale...');
+        showProcessing(action === 'approve' ? 'Approving sale...' : 'Rejecting sale...', action);
         form.submit();
     }
 
@@ -1083,12 +2155,28 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         document.getElementById('finalize_agent_id').value = sale.agent_id || '';
         document.getElementById('final_sale_price').value = sale.sale_price || '';
         document.getElementById('buyer_name').value = sale.buyer_name || '';
-        document.getElementById('buyer_email').value = sale.buyer_email || '';
-        document.getElementById('buyer_contact').value = sale.buyer_contact || '';
+        document.getElementById('buyer_email').value = sale.finalized_buyer_email || sale.buyer_email || '';
         document.getElementById('commission_percentage').value = sale.commission_percentage || '';
         document.getElementById('notes').value = '';
-        document.getElementById('finalizeHelp').textContent = `Property #${sale.property_id} • Agent: ${sale.agent_first_name} ${sale.agent_last_name}`;
+        document.getElementById('finalizeHelp').innerHTML =
+            `Property <strong>#${sale.property_id}</strong> &bull; Agent: <strong>${esc(sale.agent_first_name)} ${esc(sale.agent_last_name)}</strong>`;
+        fsmCalc();
         if (finalizeModalInstance) finalizeModalInstance.show();
+    }
+
+    function fsmCalc() {
+        const price = parseFloat(document.getElementById('final_sale_price')?.value) || 0;
+        const pct   = parseFloat(document.getElementById('commission_percentage')?.value);
+        const valEl = document.getElementById('fsmCommVal');
+        if (!valEl) return;
+        if (price > 0 && !isNaN(pct) && pct >= 0 && pct <= 100) {
+            const comm = price * pct / 100;
+            valEl.textContent = '\u20b1' + comm.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            valEl.classList.remove('fsm-dim');
+        } else {
+            valEl.innerHTML = '&mdash;';
+            valEl.classList.add('fsm-dim');
+        }
     }
 
     const ff = document.getElementById('finalizeSaleForm');
@@ -1097,21 +2185,33 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         const fd = new FormData(ff);
         const price = parseFloat(fd.get('final_sale_price'));
         const pct = parseFloat(fd.get('commission_percentage'));
-        if (!price || price <= 0) { alert('Enter a valid sale price.'); return; }
-        if (isNaN(pct) || pct < 0 || pct > 100) { alert('Commission must be 0-100%.'); return; }
-        showProcessing('Finalizing sale...');
+        if (!price || price <= 0) {
+            showToast('error', 'Invalid Sale Price', 'Please enter a valid sale price greater than zero.');
+            return;
+        }
+        if (isNaN(pct) || pct < 0 || pct > 100) {
+            showToast('error', 'Invalid Commission Rate', 'Commission rate must be between 0 and 100.');
+            return;
+        }
+        showProcessing('Finalizing sale...', 'finalize');
         try {
             const res = await fetch('admin_finalize_sale.php', { method: 'POST', body: fd });
             const data = await res.json();
             hideProcessing();
             if (data.ok) {
                 if (finalizeModalInstance) finalizeModalInstance.hide();
-                alert('Commission saved: ₱' + Number(data.commission_amount).toLocaleString(undefined, {minimumFractionDigits:2}));
-                location.href = location.pathname + '?success=finalized';
+                const formatted = '&#x20b1;' + Number(data.commission_amount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                const emailNote = data.email_sent ? '<br><small style="opacity:.75;"><i class="bi bi-envelope-check"></i> Agent notified via email</small>' : '';
+                showToast('success', 'Commission Saved', 'Sale finalized successfully. Commission calculated: <strong>' + formatted + '</strong>' + emailNote, 5500);
+                setTimeout(() => { location.href = location.pathname + '?success=finalized'; }, 1800);
             } else {
-                alert(data.message || 'Failed to finalize.');
+                showToast('error', 'Finalization Failed', data.message || 'Failed to finalize the sale. Please try again.');
             }
-        } catch (err) { hideProcessing(); alert('Error finalizing sale.'); console.error(err); }
+        } catch (err) {
+            hideProcessing();
+            showToast('error', 'Network Error', 'An unexpected error occurred. Please check your connection and try again.');
+            console.error(err);
+        }
     });
 
     // ===== UTILITY =====
