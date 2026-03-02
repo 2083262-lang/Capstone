@@ -14,7 +14,7 @@ require_once __DIR__ . '/PHPMailer/src/SMTP.php';
  * - No verbose SMTP details returned to the client
  * - Optional server-side logging only
  */
-function sendSystemMail(string $toEmail, string $toName, string $subject, string $htmlBody, string $altBody = ''): array {
+function sendSystemMail(string $toEmail, string $toName, string $subject, string $htmlBody, string $altBody = '', array $options = []): array {
     $mail = new PHPMailer(true);
     try {
         $mail->CharSet = 'UTF-8';
@@ -42,7 +42,13 @@ function sendSystemMail(string $toEmail, string $toName, string $subject, string
 
         $mail->setFrom(MAIL_FROM_EMAIL, MAIL_FROM_NAME);
         $mail->addAddress($toEmail, $toName);
-        $mail->addReplyTo(MAIL_FROM_EMAIL, MAIL_FROM_NAME);
+
+        // Allow custom Reply-To (e.g. so agents can reply directly to clients)
+        if (!empty($options['replyToEmail'])) {
+            $mail->addReplyTo($options['replyToEmail'], $options['replyToName'] ?? '');
+        } else {
+            $mail->addReplyTo(MAIL_FROM_EMAIL, MAIL_FROM_NAME);
+        }
 
         // Suppress PHPMailer version in X-Mailer header (information disclosure)
         $mail->XMailer = ' ';

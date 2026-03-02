@@ -3,6 +3,7 @@ session_start();
 header('Content-Type: application/json');
 include '../connection.php';
 require_once __DIR__ . '/../mail_helper.php';
+require_once __DIR__ . '/../email_template.php';
 
 // Robust JSON error handling for easier debugging in UI
 ini_set('display_errors', '0');
@@ -84,89 +85,24 @@ $formattedTime = date('g:i A', strtotime($tour['tour_time']));
 
 try {
     $subject = 'Tour Request Update: Rejected by Agent';
-    $body = '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tour Request Rejected</title>
-</head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Helvetica Neue\',Arial,sans-serif;background-color:#0a0a0a;line-height:1.6;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:60px 20px;">
-        <tr>
-            <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
-                    <tr>
-                        <td style="background:linear-gradient(90deg,#ef4444 0%,#dc2626 50%,#ef4444 100%);height:3px;"></td>
-                    </tr>
-                    <tr>
-                        <td style="padding:48px 48px 32px 48px;text-align:center;border-bottom:1px solid #1f1f1f;">
-                            <h1 style="margin:0 0 12px 0;color:#ef4444;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Request Rejected</h1>
-                            <p style="margin:0;color:#666666;font-size:15px;font-weight:400;">Your tour request could not be approved</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding:48px 48px 40px 48px;">
-                            <p style="margin:0 0 24px 0;font-size:14px;color:#999999;line-height:1.7;">
-                                Hello <span style="color:#d4af37;font-weight:500;">' . htmlspecialchars($tour['user_name']) . '</span>,
-                            </p>
-                            <p style="margin:0 0 32px 0;font-size:15px;color:#cccccc;line-height:1.8;">
-                                Thank you for your interest. Unfortunately, the property agent is unable to accommodate your tour request at this time.
-                            </p>
-                            <div style="height:1px;background-color:#1f1f1f;margin:0 0 32px 0;"></div>
-                            <div style="background-color:#0d1117;border-left:2px solid #d4af37;padding:20px 24px;margin:0 0 24px 0;">
-                                <p style="margin:0 0 12px 0;font-size:13px;color:#d4af37;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Request Details</p>
-                                <p style="margin:0 0 8px 0;font-size:14px;color:#999999;"><strong style="color:#cccccc;">Property:</strong> ' . htmlspecialchars($property_address) . '</p>
-                                <p style="margin:0;font-size:14px;color:#999999;"><strong style="color:#cccccc;">Requested Schedule:</strong> ' . $formattedDate . ' at ' . $formattedTime . '</p>
-                            </div>
-                            <div style="background-color:#0d1117;border-left:2px solid #ef4444;padding:16px 20px;margin:0 0 24px 0;">
-                                <p style="margin:0;font-size:13px;color:#999999;line-height:1.6;">
-                                    <strong style="color:#ef4444;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Reason for Rejection</strong>
-                                    ' . nl2br(htmlspecialchars($reason)) . '
-                                </p>
-                            </div>
-                            <div style="background-color:#0d1117;border-left:2px solid #2563eb;padding:16px 20px;margin:0 0 24px 0;">
-                                <p style="margin:0;font-size:13px;color:#999999;line-height:1.6;">
-                                    <strong style="color:#2563eb;display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Alternative Options</strong>
-                                    You may submit a new request with different dates/times or explore other available properties that match your criteria.
-                                </p>
-                            </div>
-                            <p style="margin:0;font-size:13px;color:#666666;line-height:1.6;text-align:center;">
-                                We appreciate your interest and hope to assist you with other property viewings.
-                            </p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="background-color:#0a0a0a;padding:32px 48px;border-top:1px solid #1f1f1f;">
-                            <table width="100%" cellpadding="0" cellspacing="0">
-                                <tr>
-                                    <td style="text-align:center;">
-                                        <p style="margin:0 0 8px 0;font-size:13px;color:#666666;">
-                                            <strong style="color:#d4af37;">HomeEstate Realty</strong>
-                                        </p>
-                                        <p style="margin:0;font-size:11px;color:#444444;">
-                                            © ' . date('Y') . ' All rights reserved
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-                <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;margin-top:32px;">
-                    <tr>
-                        <td style="text-align:center;">
-                            <p style="margin:0;font-size:12px;color:#444444;">
-                                Need assistance? <a href="#" style="color:#2563eb;text-decoration:none;font-weight:500;">Contact Support</a>
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>';
+
+    $bodyContent  = emailGreeting($tour['user_name']);
+    $bodyContent .= emailParagraph('Thank you for your interest. Unfortunately, the property agent is unable to accommodate your tour request at this time.');
+    $bodyContent .= emailDivider();
+    $bodyContent .= emailInfoCard('Request Details', [
+        'Property'           => htmlspecialchars($property_address),
+        'Requested Schedule' => $formattedDate . ' at ' . $formattedTime,
+    ]);
+    $bodyContent .= emailNotice('Reason for Rejection', nl2br(htmlspecialchars($reason)), '#ef4444');
+    $bodyContent .= emailNotice('Alternative Options', 'You may submit a new request with different dates/times or explore other available properties that match your criteria.', '#2563eb');
+    $bodyContent .= emailClosing('We appreciate your interest and hope to assist you with other property viewings.');
+
+    $body = buildEmailTemplate([
+        'accentColor' => '#ef4444',
+        'heading'     => 'Request Rejected',
+        'subtitle'    => 'Your tour request could not be approved',
+        'body'        => $bodyContent,
+    ]);
     $res = sendSystemMail($tour['user_email'], $tour['user_name'], $subject, $body, 'Your tour request was rejected.');
     if (!empty($res['success'])) {
       echo json_encode(['success' => true, 'message' => 'Tour request rejected and email sent.']);

@@ -32,6 +32,7 @@ $stmt->close();
 
 if (!empty($expired_tours)) {
     require_once __DIR__ . '/../mail_helper.php';
+    require_once __DIR__ . '/../email_template.php';
     
     // Batch update all expired tour requests
     $expire_ids = array_column($expired_tours, 'tour_id');
@@ -58,93 +59,23 @@ if (!empty($expired_tours)) {
         
         try {
             $subject = 'Tour Request Expired - ' . $property_address;
-            $body = '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tour Request Expired</title>
-</head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,\'Helvetica Neue\',Arial,sans-serif;background-color:#0a0a0a;line-height:1.6;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:60px 20px;">
-        <tr>
-            <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border:1px solid #1f1f1f;border-radius:4px;max-width:600px;">
-                    <tr>
-                        <td style="background:linear-gradient(90deg,#f59e0b 0%,#d97706 50%,#f59e0b 100%);height:3px;"></td>
-                    </tr>
-                    <tr>
-                        <td style="padding:48px 48px 32px 48px;text-align:center;border-bottom:1px solid #1f1f1f;">
-                            <div style="width:56px;height:56px;border-radius:50%;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
-                                <span style="font-size:24px;">⏰</span>
-                            </div>
-                            <h1 style="margin:0 0 12px 0;color:#f59e0b;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:3px;">Tour Request Expired</h1>
-                            <p style="margin:0;color:#666666;font-size:15px;font-weight:400;">Your scheduled tour date has passed</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding:48px 48px 40px 48px;">
-                            <p style="margin:0 0 24px 0;color:#999999;font-size:15px;">
-                                Hi <strong style="color:#ffffff;">' . htmlspecialchars($exp['user_name']) . '</strong>,
-                            </p>
-                            <p style="margin:0 0 32px 0;color:#999999;font-size:14px;line-height:1.8;">
-                                We\'re sorry to inform you that your tour request was not confirmed before the scheduled date. The request has been automatically marked as <strong style="color:#f59e0b;">expired</strong>.
-                            </p>
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.15);border-radius:4px;margin-bottom:32px;">
-                                <tr>
-                                    <td style="padding:28px 24px;">
-                                        <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr>
-                                                <td style="padding:0 0 16px 0;border-bottom:1px solid #1f1f1f;">
-                                                    <span style="color:#666666;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Property</span><br>
-                                                    <span style="color:#ffffff;font-size:14px;font-weight:500;line-height:1.8;">' . htmlspecialchars($property_address) . '</span>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding:16px 0 0 0;">
-                                                    <table width="100%" cellpadding="0" cellspacing="0">
-                                                        <tr>
-                                                            <td width="50%">
-                                                                <span style="color:#666666;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Date</span><br>
-                                                                <span style="color:#ffffff;font-size:14px;font-weight:500;line-height:1.8;">' . $formattedDate . '</span>
-                                                            </td>
-                                                            <td width="50%">
-                                                                <span style="color:#666666;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Time</span><br>
-                                                                <span style="color:#ffffff;font-size:14px;font-weight:500;line-height:1.8;">' . $formattedTime . '</span>
-                                                            </td>
-                                                        </tr>
-                                                    </table>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.15);border-radius:4px;">
-                                <tr>
-                                    <td style="padding:24px;">
-                                        <p style="margin:0 0 8px 0;color:#3b82f6;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">💡 What You Can Do</p>
-                                        <ul style="margin:0;padding:0 0 0 20px;color:#999999;font-size:13px;line-height:2;">
-                                            <li>Submit a <strong style="color:#ffffff;">new tour request</strong> with a future date</li>
-                                            <li>Try selecting a <strong style="color:#ffffff;">different time slot</strong> that may be more convenient</li>
-                                            <li>Contact the agent directly for availability</li>
-                                        </ul>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding:24px 48px;background:#0d0d0d;border-top:1px solid #1f1f1f;text-align:center;">
-                            <p style="margin:0;color:#444444;font-size:12px;">HomeEstate Realty &bull; Automated Notification</p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>';
+
+            $bodyContent  = emailGreeting($exp['user_name'], 'Hi');
+            $bodyContent .= emailParagraph('We\'re sorry to inform you that your tour request was not confirmed before the scheduled date. The request has been automatically marked as <strong style="color:#f59e0b;">expired</strong>.');
+            $bodyContent .= emailInfoCard('Expired Tour Details', [
+                'Property' => htmlspecialchars($property_address),
+                'Date'     => $formattedDate,
+                'Time'     => $formattedTime,
+            ], '#f59e0b');
+            $bodyContent .= emailNotice('What You Can Do', 'Submit a new tour request with a future date, try selecting a different time slot that may be more convenient, or contact the agent directly for availability.', '#2563eb');
+            $bodyContent .= emailClosing('We apologize for the inconvenience and hope to assist you soon.');
+
+            $body = buildEmailTemplate([
+                'accentColor' => '#f59e0b',
+                'heading'     => 'Tour Request Expired',
+                'subtitle'    => 'Your scheduled tour date has passed',
+                'body'        => $bodyContent,
+            ]);
             sendSystemMail($exp['user_email'], $exp['user_name'], $subject, $body);
         } catch (Exception $e) {
             // Silently log email failure - don't block page load
