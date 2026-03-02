@@ -14,104 +14,12 @@ $partial = isset($_GET['partial']) ? $_GET['partial'] : '';
 $category = isset($_GET['category']) ? $_GET['category'] : 'all';
 $search_query = isset($_GET['q']) ? trim($_GET['q']) : '';
 
-// Build SQL query with filters
-$sql = "
-    SELECT 
-        p.property_ID, p.StreetAddress, p.City, p.Province, p.PropertyType, 
-        p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice, p.Status, p.Likes, p.ViewsCount,
-        p.ParkingType, p.YearBuilt, p.ListingDate,
-        pi.PhotoURL,
-        a.first_name, a.last_name
-    FROM 
-        property p
-    LEFT JOIN 
-        (SELECT property_ID, PhotoURL FROM property_images WHERE SortOrder = 1) pi ON p.property_ID = pi.property_ID
-    JOIN 
-        property_log pl ON p.property_ID = pl.property_id AND pl.action = 'CREATED'
-    JOIN 
-        accounts a ON pl.account_id = a.account_id
-    WHERE 
-        p.approval_status = 'approved' AND p.Status NOT IN ('Sold', 'Pending Sold')
-";
+// Pagination parameters
+$sr_per_page = 24;
+$sr_page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$sr_offset = ($sr_page - 1) * $sr_per_page;
 
-// Apply filters
-if ($city) {
-    $sql .= " AND p.City = '" . $conn->real_escape_string($city) . "'";
-}
-if ($property_type) {
-    $sql .= " AND p.PropertyType = '" . $conn->real_escape_string($property_type) . "'";
-}
-if ($status) {
-    $sql .= " AND p.Status = '" . $conn->real_escape_string($status) . "'";
-}
-if ($min_price > 0) {
-    $sql .= " AND p.ListingPrice >= " . $min_price;
-}
-if ($max_price < 999999999) {
-    $sql .= " AND p.ListingPrice <= " . $max_price;
-}
-if ($bedrooms > 0) {
-    $sql .= " AND p.Bedrooms >= " . $bedrooms;
-}
-if ($bathrooms > 0) {
-    $sql .= " AND p.Bathrooms >= " . $bathrooms;
-}
-if ($search_query) {
-    $escaped_q = $conn->real_escape_string($search_query);
-    $sql .= " AND (p.StreetAddress LIKE '%$escaped_q%' OR p.City LIKE '%$escaped_q%' OR p.Province LIKE '%$escaped_q%' OR p.PropertyType LIKE '%$escaped_q%')";
-}
-
-// Add sorting based on category or sort param
-if ($category === 'most_viewed') {
-    $sql .= " ORDER BY p.ViewsCount DESC";
-} elseif ($category === 'most_liked') {
-    $sql .= " ORDER BY p.Likes DESC";
-} elseif ($category === 'most_beds') {
-    $sql .= " ORDER BY p.Bedrooms DESC, p.Bathrooms DESC";
-} elseif ($category === 'for_sale') {
-    if (!$status) $sql .= " AND p.Status = 'For Sale'";
-    $sql .= " ORDER BY p.ListingDate DESC";
-} elseif ($category === 'for_rent') {
-    if (!$status) $sql .= " AND p.Status = 'For Rent'";
-    $sql .= " ORDER BY p.ListingDate DESC";
-} else {
-    switch ($sort) {
-        case 'price_low':
-            $sql .= " ORDER BY p.ListingPrice ASC";
-            break;
-        case 'price_high':
-            $sql .= " ORDER BY p.ListingPrice DESC";
-            break;
-        case 'most_viewed':
-            $sql .= " ORDER BY p.ViewsCount DESC";
-            break;
-        case 'most_liked':
-            $sql .= " ORDER BY p.Likes DESC";
-            break;
-        case 'newest':
-        default:
-            $sql .= " ORDER BY p.ListingDate DESC";
-            break;
-    }
-}
-
-$properties_result = $conn->query($sql);
-$properties = $properties_result->fetch_all(MYSQLI_ASSOC);
-
-// Get filter options
-$cities_result = $conn->query("SELECT DISTINCT City FROM property WHERE approval_status = 'approved' ORDER BY City ASC");
-$cities = $cities_result->fetch_all(MYSQLI_ASSOC);
-
-$types_result = $conn->query("SELECT type_name AS PropertyType FROM property_types ORDER BY type_name ASC");
-$types = $types_result->fetch_all(MYSQLI_ASSOC);
-
-// Get dynamic price range bounds
-$price_range_result = $conn->query("SELECT MIN(ListingPrice) AS minp, MAX(ListingPrice) AS maxp FROM property WHERE approval_status = 'approved' AND Status NOT IN ('Sold','Pending Sold')");
-$price_range = $price_range_result ? $price_range_result->fetch_assoc() : ['minp' => 0, 'maxp' => 100000000];
-$min_bound = isset($price_range['minp']) ? (int)$price_range['minp'] : 0;
-$max_bound = isset($price_range['maxp']) ? (int)$price_range['maxp'] : 100000000;
-
-// Count active filters
+// Count active filters (from GET params, no DB needed)
 $active_filter_count = 0;
 if ($category && $category !== 'all') $active_filter_count++;
 if ($city) $active_filter_count++;
@@ -122,12 +30,70 @@ if ($max_price < 999999999) $active_filter_count++;
 if ($bedrooms > 0) $active_filter_count++;
 if ($bathrooms > 0) $active_filter_count++;
 
-$conn->close();
+// ─── PARTIAL AJAX RENDER (deferred grid fetch) ───
+if ($partial === 'grid') {
+    $sql = "
+        SELECT 
+            p.property_ID, p.StreetAddress, p.City, p.Province, p.PropertyType, 
+            p.Bedrooms, p.Bathrooms, p.SquareFootage, p.ListingPrice, p.Status, p.Likes, p.ViewsCount,
+            p.ParkingType, p.YearBuilt, p.ListingDate,
+            (SELECT pi.PhotoURL FROM property_images pi WHERE pi.property_ID = p.property_ID AND pi.SortOrder = 1 LIMIT 1) AS PhotoURL,
+            a.first_name, a.last_name
+        FROM 
+            property p
+        JOIN 
+            property_log pl ON p.property_ID = pl.property_id AND pl.action = 'CREATED'
+        JOIN 
+            accounts a ON pl.account_id = a.account_id
+        WHERE 
+            p.approval_status = 'approved' AND p.Status NOT IN ('Sold', 'Pending Sold')
+    ";
+
+    if ($city) $sql .= " AND p.City = '" . $conn->real_escape_string($city) . "'";
+    if ($property_type) $sql .= " AND p.PropertyType = '" . $conn->real_escape_string($property_type) . "'";
+    if ($status) $sql .= " AND p.Status = '" . $conn->real_escape_string($status) . "'";
+    if ($min_price > 0) $sql .= " AND p.ListingPrice >= " . $min_price;
+    if ($max_price < 999999999) $sql .= " AND p.ListingPrice <= " . $max_price;
+    if ($bedrooms > 0) $sql .= " AND p.Bedrooms >= " . $bedrooms;
+    if ($bathrooms > 0) $sql .= " AND p.Bathrooms >= " . $bathrooms;
+    if ($search_query) {
+        $escaped_q = $conn->real_escape_string($search_query);
+        $sql .= " AND (p.StreetAddress LIKE '%$escaped_q%' OR p.City LIKE '%$escaped_q%' OR p.Province LIKE '%$escaped_q%' OR p.PropertyType LIKE '%$escaped_q%')";
+    }
+
+    if ($category === 'most_viewed') { $sql .= " ORDER BY p.ViewsCount DESC"; }
+    elseif ($category === 'most_liked') { $sql .= " ORDER BY p.Likes DESC"; }
+    elseif ($category === 'most_beds') { $sql .= " ORDER BY p.Bedrooms DESC, p.Bathrooms DESC"; }
+    elseif ($category === 'for_sale') { if (!$status) $sql .= " AND p.Status = 'For Sale'"; $sql .= " ORDER BY p.ListingDate DESC"; }
+    elseif ($category === 'for_rent') { if (!$status) $sql .= " AND p.Status = 'For Rent'"; $sql .= " ORDER BY p.ListingDate DESC"; }
+    else {
+        switch ($sort) {
+            case 'price_low': $sql .= " ORDER BY p.ListingPrice ASC"; break;
+            case 'price_high': $sql .= " ORDER BY p.ListingPrice DESC"; break;
+            case 'most_viewed': $sql .= " ORDER BY p.ViewsCount DESC"; break;
+            case 'most_liked': $sql .= " ORDER BY p.Likes DESC"; break;
+            case 'newest': default: $sql .= " ORDER BY p.ListingDate DESC"; break;
+        }
+    }
+
+    $base_no_order = preg_replace('/ORDER BY[\s\S]*$/', '', $sql);
+    $count_sql = "SELECT COUNT(*) as total FROM ($base_no_order) AS _cnt";
+    $count_result = $conn->query($count_sql);
+    $sr_total = $count_result ? (int)$count_result->fetch_assoc()['total'] : 0;
+    $sr_total_pages = max(1, ceil($sr_total / $sr_per_page));
+    if ($sr_page > $sr_total_pages) $sr_page = $sr_total_pages;
+
+    $sql .= " LIMIT $sr_per_page OFFSET $sr_offset";
+    $properties_result = $conn->query($sql);
+    $properties = $properties_result->fetch_all(MYSQLI_ASSOC);
+    $conn->close();
 ?>
-<?php if ($partial === 'grid') : ?>
     <div class="results-header">
         <div class="results-count">
-            <span><?php echo count($properties); ?></span> Properties Found
+            <span><?php echo $sr_total; ?></span> Properties Found
+            <?php if ($sr_total > $sr_per_page): ?>
+                <span class="active-category-label">Showing <?php echo count($properties); ?> of <?php echo $sr_total; ?> &bull; Page <?php echo $sr_page; ?> of <?php echo $sr_total_pages; ?></span>
+            <?php endif; ?>
             <?php if ($category && $category !== 'all'): ?>
                 <span class="active-category-label"><?php echo ucwords(str_replace('_', ' ', $category)); ?></span>
             <?php endif; ?>
@@ -149,6 +115,9 @@ $conn->close();
             </button>
         </div>
     </div>
+    <input type="hidden" id="srTotalPages" value="<?php echo $sr_total_pages; ?>">
+    <input type="hidden" id="srCurrentPage" value="<?php echo $sr_page; ?>">
+    <input type="hidden" id="srTotal" value="<?php echo $sr_total; ?>">
     <?php if (empty($properties)): ?>
         <div class="no-results">
             <i class="bi bi-house-x-fill"></i>
@@ -207,16 +176,57 @@ $conn->close();
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php if ($sr_total_pages > 1): ?>
+        <div class="sr-pagination">
+            <button class="sr-page-btn" onclick="srGoToPage(<?php echo $sr_page - 1; ?>)" <?php echo $sr_page <= 1 ? 'disabled' : ''; ?>>
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <?php
+            $sr_start_pg = max(1, $sr_page - 2);
+            $sr_end_pg = min($sr_total_pages, $sr_page + 2);
+            if ($sr_start_pg > 1) { echo '<button class="sr-page-btn" onclick="srGoToPage(1)">1</button>'; if ($sr_start_pg > 2) echo '<span class="sr-page-dots">...</span>'; }
+            for ($i = $sr_start_pg; $i <= $sr_end_pg; $i++): ?>
+                <button class="sr-page-btn <?php echo $i === $sr_page ? 'sr-page-active' : ''; ?>" onclick="srGoToPage(<?php echo $i; ?>)"><?php echo $i; ?></button>
+            <?php endfor;
+            if ($sr_end_pg < $sr_total_pages) { if ($sr_end_pg < $sr_total_pages - 1) echo '<span class="sr-page-dots">...</span>'; echo '<button class="sr-page-btn" onclick="srGoToPage('.$sr_total_pages.')">'.$sr_total_pages.'</button>'; }
+            ?>
+            <button class="sr-page-btn" onclick="srGoToPage(<?php echo $sr_page + 1; ?>)" <?php echo $sr_page >= $sr_total_pages ? 'disabled' : ''; ?>>
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+        <?php endif; ?>
     <?php endif; ?>
-    <?php exit; endif; ?>
+<?php
+    exit;
+}
+
+// ─── FULL PAGE RENDER ───
+// Only lightweight queries needed for filter drawer (no property search)
+$cities_result = $conn->query("SELECT DISTINCT City FROM property WHERE approval_status = 'approved' ORDER BY City ASC");
+$cities = $cities_result->fetch_all(MYSQLI_ASSOC);
+
+$types_result = $conn->query("SELECT type_name AS PropertyType FROM property_types ORDER BY type_name ASC");
+$types = $types_result->fetch_all(MYSQLI_ASSOC);
+
+$price_range_result = $conn->query("SELECT MIN(ListingPrice) AS minp, MAX(ListingPrice) AS maxp FROM property WHERE approval_status = 'approved' AND Status NOT IN ('Sold','Pending Sold')");
+$price_range = $price_range_result ? $price_range_result->fetch_assoc() : ['minp' => 0, 'maxp' => 100000000];
+$min_bound = isset($price_range['minp']) ? (int)$price_range['minp'] : 0;
+$max_bound = isset($price_range['maxp']) ? (int)$price_range['maxp'] : 100000000;
+
+$conn->close();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Properties - HomeEstate Realty</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
@@ -540,6 +550,50 @@ $conn->close();
         .no-results h3 { font-size: 1.4rem; color: var(--white); margin-bottom: 10px; }
         .no-results p { color: var(--gray-400); }
 
+        /* Skeleton loading animation */
+        @keyframes sk-shimmer {
+            0%   { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+            background-size: 800px 100%;
+            animation: sk-shimmer 1.4s ease-in-out infinite;
+        }
+        .sk-card { pointer-events: none; }
+        .sk-image { height: 220px; border-radius: 0; }
+        .sk-text { display: block; border-radius: 4px; }
+
+        /* Pagination - custom sr- prefix to avoid conflicts */
+        .sr-pagination {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            margin-top: 32px; padding-top: 24px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .sr-page-btn {
+            min-width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; color: var(--gray-400); font-size: 0.875rem; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; padding: 0 12px;
+        }
+        .sr-page-btn:hover:not(:disabled) {
+            background: rgba(37,99,235,0.12); border-color: rgba(37,99,235,0.3); color: var(--white);
+        }
+        .sr-page-btn:disabled {
+            opacity: 0.3; cursor: not-allowed;
+        }
+        .sr-page-btn.sr-page-active {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            border-color: var(--gold); color: var(--black); font-weight: 700;
+        }
+        .sr-page-dots {
+            color: var(--gray-500); font-size: 0.875rem; padding: 0 4px;
+        }
+        @media (max-width: 480px) {
+            .sr-page-btn { min-width: 36px; height: 36px; font-size: 0.8rem; padding: 0 8px; }
+            .sr-pagination { gap: 4px; }
+        }
+
         /* Responsive */
         @media (max-width: 968px) {
             .results-header {
@@ -696,12 +750,10 @@ $conn->close();
     <div class="active-filters-bar" id="activeFiltersBar"></div>
 
     <div id="resultsArea">
+        <!-- Skeleton placeholder — replaced by AJAX on load -->
         <div class="results-header">
             <div class="results-count">
-                <span><?php echo count($properties); ?></span> Properties Found
-                <?php if ($category && $category !== 'all'): ?>
-                    <span class="active-category-label"><?php echo ucwords(str_replace('_', ' ', $category)); ?></span>
-                <?php endif; ?>
+                <span class="sk-text sk-shimmer" style="width:140px;height:18px;display:inline-block;border-radius:4px"></span>
             </div>
             <div class="results-actions">
                 <div class="sort-dropdown">
@@ -720,53 +772,30 @@ $conn->close();
                 </button>
             </div>
         </div>
-        <?php if (empty($properties)): ?>
-            <div class="no-results">
-                <i class="bi bi-house-x-fill"></i>
-                <h3>No Properties Found</h3>
-                <p>Try adjusting your filters or search to see more results</p>
-            </div>
-        <?php else: ?>
-            <div class="properties-grid">
-                <?php foreach ($properties as $property): ?>
-                    <div class="property-card">
-                        <a href="property_details.php?id=<?php echo $property['property_ID']; ?>" class="property-card-link">
-                            <div class="property-image-container">
-                                <img src="../<?php echo htmlspecialchars($property['PhotoURL'] ?? 'images/placeholder.jpg'); ?>" class="property-image" alt="Property Image" loading="lazy">
-                                <div class="property-badge <?php echo $property['Status'] === 'For Rent' ? 'for-rent' : ''; ?>">
-                                    <?php echo htmlspecialchars($property['Status']); ?>
-                                </div>
-                                <div class="property-stats">
-                                    <div class="stat-badge views"><i class="bi bi-eye-fill"></i><span><?php echo number_format($property['ViewsCount'] ?? 0); ?></span></div>
-                                    <div class="stat-badge likes"><i class="bi bi-heart-fill"></i><span><?php echo number_format($property['Likes'] ?? 0); ?></span></div>
-                                </div>
-                                <div class="property-image-overlay"></div>
-                            </div>
-                            <div class="property-body">
-                                <div class="property-price"><?php echo chr(0xE2).chr(0x82).chr(0xB1); ?><?php echo number_format($property['ListingPrice']); ?></div>
-                                <div class="property-address">
-                                    <i class="bi bi-geo-alt-fill"></i>
-                                    <?php echo htmlspecialchars($property['StreetAddress']); ?>, <?php echo htmlspecialchars($property['City']); ?>
-                                </div>
-                                <div class="property-features">
-                                    <div class="feature-item"><i class="bi bi-door-open-fill"></i> <?php echo $property['Bedrooms']; ?> Beds</div>
-                                    <div class="feature-item"><i class="bi bi-droplet-fill"></i> <?php echo $property['Bathrooms']; ?> Baths</div>
-                                    <div class="feature-item"><i class="bi bi-arrows-fullscreen"></i> <?php echo number_format($property['SquareFootage']); ?> ft</div>
-                                </div>
-                                <div class="property-card-footer">
-                                    <div class="property-type"><?php echo htmlspecialchars($property['PropertyType']); ?></div>
-                                    <span class="view-details-link">View Details <i class="bi bi-arrow-right"></i></span>
-                                </div>
-                            </div>
-                        </a>
+        <div class="properties-grid">
+            <?php for ($sk = 0; $sk < 6; $sk++): ?>
+            <div class="property-card sk-card">
+                <div class="sk-image sk-shimmer"></div>
+                <div style="padding:18px 20px 20px">
+                    <div class="sk-text sk-shimmer" style="width:55%;height:22px;margin-bottom:10px"></div>
+                    <div class="sk-text sk-shimmer" style="width:80%;height:14px;margin-bottom:16px"></div>
+                    <div style="display:flex;gap:14px;margin-bottom:16px">
+                        <div class="sk-text sk-shimmer" style="width:60px;height:14px"></div>
+                        <div class="sk-text sk-shimmer" style="width:60px;height:14px"></div>
+                        <div class="sk-text sk-shimmer" style="width:70px;height:14px"></div>
                     </div>
-                <?php endforeach; ?>
+                    <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:14px;display:flex;justify-content:space-between">
+                        <div class="sk-text sk-shimmer" style="width:90px;height:12px"></div>
+                        <div class="sk-text sk-shimmer" style="width:80px;height:12px"></div>
+                    </div>
+                </div>
             </div>
-        <?php endif; ?>
+            <?php endfor; ?>
+        </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <script>
     function debounce(fn, delay) {
         let t; return function(...a){ clearTimeout(t); t = setTimeout(()=>fn.apply(this,a), delay); };
@@ -797,7 +826,7 @@ $conn->close();
         toggleDrawer();
     }
 
-    function buildQuery() {
+    function buildQuery(page) {
         const params = new URLSearchParams();
         const city = document.getElementById('citySelect').value;
         const type = document.getElementById('typeSelect').value;
@@ -820,12 +849,36 @@ $conn->close();
         if (sort) params.set('sort', sort);
         if (category && category !== 'all') params.set('category', category);
         if (searchQ) params.set('q', searchQ);
+        // Pagination
+        const pg = page || 1;
+        if (pg > 1) params.set('page', pg);
         params.set('partial', 'grid');
         return params.toString();
     }
 
-    async function updateResults(){
-        const qs = buildQuery();
+    // Track current page in JS
+    let _srCurrentPage = <?php echo $sr_page; ?>;
+
+    function srGoToPage(page) {
+        const totalPages = parseInt(document.getElementById('srTotalPages')?.value || '1');
+        if (page < 1 || page > totalPages) return;
+        _srCurrentPage = page;
+        updateResults(page);
+        // Scroll to top of results
+        const resultsArea = document.getElementById('resultsArea');
+        if (resultsArea) resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function updateResults(page){
+        // Reset to page 1 when filters change (not explicit page navigation)
+        const pg = (typeof page === 'number') ? page : 1;
+        _srCurrentPage = pg;
+        const qs = buildQuery(pg);
+        // Update browser URL without reload (strip 'partial' for display)
+        const displayQs = new URLSearchParams(qs);
+        displayQs.delete('partial');
+        const cleanUrl = location.pathname + (displayQs.toString() ? '?' + displayQs.toString() : '');
+        history.replaceState(null, '', cleanUrl);
         try {
             const res = await fetch('search_results.php?' + qs, { headers: { 'X-Requested-With': 'fetch' } });
             const html = await res.text();
@@ -833,6 +886,10 @@ $conn->close();
             const sortNew = document.getElementById('sortSelect');
             if (sortNew) sortNew.addEventListener('change', function(){ setSort(this.value); });
             
+            // Update hidden page inputs from response
+            const newTotalPages = document.getElementById('srTotalPages');
+            if (newTotalPages) _srCurrentPage = parseInt(document.getElementById('srCurrentPage')?.value || pg);
+
             // Update category buttons in drawer after AJAX
             const currentCategory = document.getElementById('categoryInput').value;
             document.querySelectorAll('.category-btn').forEach(btn => {
@@ -989,7 +1046,7 @@ $conn->close();
         const maxInput = document.getElementById('maxPriceInput');
         const minDisplay = document.getElementById('priceMinDisplay');
         const maxDisplay = document.getElementById('priceMaxDisplay');
-        const debouncedUpdate = debounce(updateResults, 250);
+        const debouncedUpdate = debounce(() => updateResults(), 250);
 
         if (priceMinSlider) {
             priceMinSlider.addEventListener('input', (e) => {
@@ -1018,11 +1075,11 @@ $conn->close();
 
         updatePriceSliderRange();
 
-        document.getElementById('citySelect').addEventListener('change', updateResults);
-        document.getElementById('typeSelect').addEventListener('change', updateResults);
+        document.getElementById('citySelect').addEventListener('change', () => updateResults());
+        document.getElementById('typeSelect').addEventListener('change', () => updateResults());
 
         const searchInput = document.getElementById('searchInput');
-        const debouncedSearch = debounce(updateResults, 400);
+        const debouncedSearch = debounce(() => updateResults(), 400);
 
         // Real-time search - trigger after 3+ characters or when cleared
         searchInput.addEventListener('input', function() {
@@ -1033,6 +1090,9 @@ $conn->close();
 
         renderActiveFilters();
         updateFilterBadge();
+
+        // Deferred fetch: load real property data to replace skeleton
+        updateResults(<?php echo $sr_page; ?>);
         
         // Sync category buttons on load
         const currentCategory = document.getElementById('categoryInput').value;
