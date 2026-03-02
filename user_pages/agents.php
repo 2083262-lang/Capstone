@@ -4,6 +4,11 @@ include '../connection.php';
 // Get filter parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $location_filter = isset($_GET['location']) ? trim($_GET['location']) : '';
+$specialization_filter = isset($_GET['specializations']) && is_array($_GET['specializations'])
+    ? array_map('trim', $_GET['specializations'])
+    : [];
+// Remove empty values
+$specialization_filter = array_filter($specialization_filter);
 
 // Pagination settings
 $agents_per_page = 12;
@@ -21,6 +26,16 @@ $locations = [];
 if ($loc_result) {
     while ($row = $loc_result->fetch_assoc()) {
         $locations[] = $row['City'];
+    }
+}
+
+// Fetch all specializations for the filter dropdown
+$specs_sql = "SELECT specialization_id, specialization_name FROM specializations ORDER BY specialization_name ASC";
+$specs_result = $conn->query($specs_sql);
+$all_specializations = [];
+if ($specs_result) {
+    while ($row = $specs_result->fetch_assoc()) {
+        $all_specializations[] = $row;
     }
 }
 
@@ -59,6 +74,19 @@ if (!empty($location_filter)) {
         WHERE pl.account_id = a.account_id 
         AND pl.action = 'CREATED' 
         AND p.City = '$loc_safe'
+    )";
+}
+
+// Add specialization filter to count
+if (!empty($specialization_filter)) {
+    $spec_placeholders = implode(',', array_fill(0, count($specialization_filter), '?'));
+    $spec_escaped = array_map([$conn, 'real_escape_string'], $specialization_filter);
+    $spec_list = "'" . implode("','", $spec_escaped) . "'";
+    $count_sql .= " AND EXISTS (
+        SELECT 1 FROM agent_specializations asp2
+        JOIN specializations s2 ON asp2.specialization_id = s2.specialization_id
+        WHERE asp2.agent_info_id = ai.agent_info_id
+        AND s2.specialization_name IN ($spec_list)
     )";
 }
 
@@ -114,6 +142,18 @@ if (!empty($location_filter)) {
         WHERE pl.account_id = a.account_id 
         AND pl.action = 'CREATED' 
         AND p.City = '$loc_safe'
+    )";
+}
+
+// Add specialization filter
+if (!empty($specialization_filter)) {
+    $spec_escaped = array_map([$conn, 'real_escape_string'], $specialization_filter);
+    $spec_list = "'" . implode("','", $spec_escaped) . "'";
+    $agents_sql .= " AND EXISTS (
+        SELECT 1 FROM agent_specializations asp2
+        JOIN specializations s2 ON asp2.specialization_id = s2.specialization_id
+        WHERE asp2.agent_info_id = ai.agent_info_id
+        AND s2.specialization_name IN ($spec_list)
     )";
 }
 
@@ -262,7 +302,7 @@ $conn->close();
             padding: 32px;
             margin-bottom: 48px;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .filter-section::before {
@@ -274,6 +314,8 @@ $conn->close();
             height: 3px;
             background: linear-gradient(90deg, var(--blue) 0%, var(--gold) 50%, var(--blue) 100%);
             opacity: 0.6;
+            border-radius: 4px 4px 0 0;
+            pointer-events: none;
         }
 
         .filter-title {
@@ -298,6 +340,10 @@ $conn->close();
             align-items: end;
         }
 
+        .filter-grid-row2 {
+            margin-top: 16px;
+        }
+
         .filter-group {
             display: flex;
             flex-direction: column;
@@ -316,7 +362,7 @@ $conn->close();
         .filter-select {
             width: 100%;
             padding: 14px 16px;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 3px;
             color: var(--white);
@@ -334,7 +380,7 @@ $conn->close();
             outline: none;
             border-color: var(--gold);
             box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.7);
         }
 
         .filter-select {
@@ -368,6 +414,298 @@ $conn->close();
             background: rgba(37, 99, 235, 0.2);
             border-color: var(--blue);
             transform: translateY(-1px);
+        }
+
+        /* ═══════ Specialization Multi-Select ═══════ */
+        .specwrap {
+            position: relative;
+            z-index: 100;
+        }
+
+        .specwrap__btn {
+            width: 100%;
+            padding: 14px 16px;
+            background: #0d0d0d;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+            color: var(--white);
+            font-size: 0.9375rem;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            transition: border-color 0.2s ease, background 0.2s ease;
+            min-height: 52px;
+            text-align: left;
+            user-select: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        .specwrap__btn:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .specwrap__btn.is-active {
+            border-color: var(--gold);
+            background: #101010;
+        }
+
+        .specwrap__btn-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--white);
+        }
+
+        .specwrap__btn-text.is-empty {
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .specwrap__btn-icon {
+            color: var(--gray-400);
+            font-size: 0.75rem;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .specwrap__btn.is-active .specwrap__btn-icon {
+            transform: rotate(180deg);
+        }
+
+        .specwrap__badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gold);
+            color: var(--black);
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 1px 7px;
+            margin-left: 4px;
+            line-height: 1.4;
+        }
+
+        /* ── Tags row ── */
+        .specwrap__tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .specwrap__tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--gold);
+            cursor: pointer;
+            transition: background 0.15s ease;
+            line-height: 1.3;
+        }
+
+        .specwrap__tag:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+
+        .specwrap__tag i {
+            font-size: 0.65rem;
+        }
+
+        /* ── Dropdown panel ── */
+        .specwrap__panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: #0f0f0f;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 4px;
+            z-index: 9999;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85);
+            display: none;
+        }
+
+        .specwrap__panel.is-visible {
+            display: block;
+            animation: specPanelIn 0.12s ease-out;
+        }
+
+        @keyframes specPanelIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Search inside dropdown ── */
+        .specwrap__search {
+            position: relative;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .specwrap__search-icon {
+            position: absolute;
+            left: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-500);
+            font-size: 0.8rem;
+            pointer-events: none;
+        }
+
+        .specwrap__search-field {
+            width: 100%;
+            padding: 10px 12px 10px 34px;
+            background: #080808;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            color: var(--white);
+            font-size: 0.85rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .specwrap__search-field::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .specwrap__search-field:focus {
+            border-color: rgba(212, 175, 55, 0.35);
+        }
+
+        /* ── Option list ── */
+        .specwrap__list {
+            max-height: 240px;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+
+        .specwrap__list::-webkit-scrollbar { width: 4px; }
+        .specwrap__list::-webkit-scrollbar-track { background: transparent; }
+        .specwrap__list::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.25); border-radius: 2px; }
+
+        .specwrap__item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--gray-300);
+            transition: background 0.12s ease;
+        }
+
+        .specwrap__item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--white);
+        }
+
+        .specwrap__item.is-checked {
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.04);
+        }
+
+        .specwrap__check {
+            width: 16px;
+            height: 16px;
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.12s ease;
+        }
+
+        .specwrap__item.is-checked .specwrap__check {
+            background: var(--gold);
+            border-color: var(--gold);
+        }
+
+        .specwrap__item.is-checked .specwrap__check::after {
+            content: '';
+            width: 5px;
+            height: 8px;
+            border: solid var(--black);
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg) translate(-0.5px, -1px);
+        }
+
+        .specwrap__item-label {
+            flex: 1;
+        }
+
+        .specwrap__empty {
+            padding: 24px 14px;
+            text-align: center;
+            color: var(--gray-500);
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        /* ── Footer ── */
+        .specwrap__foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            gap: 10px;
+        }
+
+        .specwrap__foot-toggle {
+            color: var(--blue-light);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            background: none;
+            border: none;
+            padding: 2px 0;
+            font-family: 'Inter', sans-serif;
+            transition: color 0.15s ease;
+        }
+
+        .specwrap__foot-toggle:hover {
+            color: var(--white);
+        }
+
+        .specwrap__foot-count {
+            flex: 1;
+            text-align: center;
+        }
+
+        .specwrap__foot-apply {
+            padding: 7px 20px;
+            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+            border: none;
+            border-radius: 3px;
+            color: var(--black);
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .specwrap__foot-apply:hover {
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
         }
 
         .results-count {
@@ -804,6 +1142,14 @@ $conn->close();
                 grid-template-columns: 1fr;
             }
 
+            .specwrap__panel {
+                position: fixed;
+                left: 16px;
+                right: 16px;
+                top: auto;
+                width: auto;
+            }
+
             .filter-section {
                 padding: 24px;
             }
@@ -902,7 +1248,64 @@ $conn->close();
                     </select>
                 </div>
             </div>
-            <?php if (!empty($search) || !empty($location_filter)): ?>
+
+            <!-- Specialization Multi-Select Filter -->
+            <div class="filter-grid-row2">
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="bi bi-stars"></i> Specialization
+                        <?php if (!empty($specialization_filter)): ?>
+                            <span class="specwrap__badge"><?php echo count($specialization_filter); ?></span>
+                        <?php endif; ?>
+                    </label>
+
+                    <div class="specwrap" id="jsSpecWrap">
+                        <div class="specwrap__btn" id="jsSpecBtn">
+                            <span class="specwrap__btn-text <?php echo empty($specialization_filter) ? 'is-empty' : ''; ?>" id="jsSpecBtnText"><?php
+                                if (empty($specialization_filter)) {
+                                    echo 'Select specializations...';
+                                } else {
+                                    echo count($specialization_filter) . ' specialization' . (count($specialization_filter) > 1 ? 's' : '') . ' selected';
+                                }
+                            ?></span>
+                            <i class="bi bi-chevron-down specwrap__btn-icon"></i>
+                        </div>
+
+                        <div class="specwrap__tags" id="jsSpecTags">
+                            <?php foreach ($specialization_filter as $sel_spec): ?>
+                                <span class="specwrap__tag" data-val="<?php echo htmlspecialchars($sel_spec); ?>">
+                                    <?php echo htmlspecialchars($sel_spec); ?>
+                                    <i class="bi bi-x"></i>
+                                </span>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div class="specwrap__panel" id="jsSpecPanel">
+                            <div class="specwrap__search">
+                                <i class="bi bi-search specwrap__search-icon"></i>
+                                <input type="text" class="specwrap__search-field" id="jsSpecSearch" placeholder="Search specializations..." autocomplete="off">
+                            </div>
+                            <div class="specwrap__list" id="jsSpecList">
+                                <?php foreach ($all_specializations as $spec): ?>
+                                    <?php $chk = in_array($spec['specialization_name'], $specialization_filter); ?>
+                                    <div class="specwrap__item<?php echo $chk ? ' is-checked' : ''; ?>" data-val="<?php echo htmlspecialchars($spec['specialization_name']); ?>">
+                                        <div class="specwrap__check"></div>
+                                        <span class="specwrap__item-label"><?php echo htmlspecialchars($spec['specialization_name']); ?></span>
+                                    </div>
+                                <?php endforeach; ?>
+                                <div class="specwrap__empty" id="jsSpecEmpty">No specializations found</div>
+                            </div>
+                            <div class="specwrap__foot">
+                                <button type="button" class="specwrap__foot-toggle" id="jsSpecToggleAll">Select All</button>
+                                <span class="specwrap__foot-count" id="jsSpecCount"><?php echo count($specialization_filter); ?> selected</span>
+                                <button type="button" class="specwrap__foot-apply" id="jsSpecApply">Apply</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <?php if (!empty($search) || !empty($location_filter) || !empty($specialization_filter)): ?>
                 <button class="clear-filters-btn" onclick="clearFilters()" style="margin-top: 16px;">
                     <i class="bi bi-x-circle"></i>
                     Clear Filters
@@ -1054,53 +1457,228 @@ $conn->close();
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// Real-time search and filter functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchInput');
-    const locationFilter = document.getElementById('locationFilter');
-    
-    // Debounce function for search input
-    function debounce(func, delay) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), delay);
+(function() {
+    'use strict';
+
+    // ══════ State ══════
+    var picked = <?php echo json_encode(array_values($specialization_filter)); ?>;
+    var snapshot = picked.slice();
+
+    // ══════ DOM refs ══════
+    var wrap      = document.getElementById('jsSpecWrap');
+    var btn       = document.getElementById('jsSpecBtn');
+    var btnText   = document.getElementById('jsSpecBtnText');
+    var tagsEl    = document.getElementById('jsSpecTags');
+    var panel     = document.getElementById('jsSpecPanel');
+    var searchEl  = document.getElementById('jsSpecSearch');
+    var listEl    = document.getElementById('jsSpecList');
+    var emptyEl   = document.getElementById('jsSpecEmpty');
+    var countEl   = document.getElementById('jsSpecCount');
+    var toggleBtn = document.getElementById('jsSpecToggleAll');
+    var applyBtn  = document.getElementById('jsSpecApply');
+    var searchInp = document.getElementById('searchInput');
+    var locSelect = document.getElementById('locationFilter');
+
+    // ══════ Helpers ══════
+    function esc(s) {
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(s));
+        return d.innerHTML;
+    }
+
+    function debounce(fn, ms) {
+        var t;
+        return function() {
+            clearTimeout(t);
+            t = setTimeout(fn, ms);
         };
     }
-    
-    // Apply filters function
-    function applyFilters() {
-        const search = searchInput.value.trim();
-        const location = locationFilter.value;
-        
-        // Build URL with query parameters (excluding page to reset to page 1)
-        const params = new URLSearchParams();
-        if (search) params.set('search', search);
-        if (location) params.set('location', location);
-        params.set('page', '1'); // Reset to page 1 on filter change
-        
-        // Reload page with filters
-        const url = params.toString() ? `?${params.toString()}` : window.location.pathname;
-        window.location.href = url;
-    }
-    
-    // Debounced search (triggers after 500ms of no typing)
-    const debouncedSearch = debounce(applyFilters, 500);
-    
-    // Event listeners
-    if (searchInput) {
-        searchInput.addEventListener('input', debouncedSearch);
-    }
-    
-    if (locationFilter) {
-        locationFilter.addEventListener('change', applyFilters);
-    }
-});
 
-// Clear all filters
-function clearFilters() {
-    window.location.href = window.location.pathname;
-}
+    function buildUrl() {
+        var p = new URLSearchParams();
+        var s = searchInp ? searchInp.value.trim() : '';
+        var l = locSelect ? locSelect.value : '';
+        if (s) p.set('search', s);
+        if (l) p.set('location', l);
+        picked.forEach(function(v) { p.append('specializations[]', v); });
+        p.set('page', '1');
+        return '?' + p.toString();
+    }
+
+    function navigate() {
+        window.location.href = buildUrl();
+    }
+
+    // ══════ Name/location filters ══════
+    if (searchInp) searchInp.addEventListener('input', debounce(navigate, 500));
+    if (locSelect) locSelect.addEventListener('change', navigate);
+
+    // ══════ Open / Close panel ══════
+    function openPanel() {
+        panel.classList.add('is-visible');
+        btn.classList.add('is-active');
+        snapshot = picked.slice();
+        searchEl.value = '';
+        filterList('');
+        // Focus the search field after a tiny frame so it doesn't bleed events
+        requestAnimationFrame(function() { searchEl.focus(); });
+    }
+
+    function closePanel() {
+        panel.classList.remove('is-visible');
+        btn.classList.remove('is-active');
+    }
+
+    function isOpen() {
+        return panel.classList.contains('is-visible');
+    }
+
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        isOpen() ? closePanel() : openPanel();
+    });
+
+    // Close on outside click; auto-apply if changed
+    document.addEventListener('click', function(e) {
+        if (!wrap.contains(e.target) && isOpen()) {
+            closePanel();
+            if (!arraysEqual(snapshot, picked)) navigate();
+        }
+    });
+
+    // Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isOpen()) {
+            closePanel();
+        }
+    });
+
+    // ══════ Search inside panel ══════
+    searchEl.addEventListener('click', function(e) { e.stopPropagation(); });
+    searchEl.addEventListener('input', function() {
+        filterList(this.value.trim().toLowerCase());
+    });
+
+    function filterList(q) {
+        var items = listEl.querySelectorAll('.specwrap__item');
+        var vis = 0;
+        items.forEach(function(el) {
+            var match = !q || el.dataset.val.toLowerCase().indexOf(q) !== -1;
+            el.style.display = match ? '' : 'none';
+            if (match) vis++;
+        });
+        emptyEl.style.display = vis === 0 ? 'block' : 'none';
+        refreshToggleBtn();
+    }
+
+    // ══════ Toggle item ══════
+    listEl.addEventListener('click', function(e) {
+        var item = e.target.closest('.specwrap__item');
+        if (!item) return;
+        e.stopPropagation();
+        var val = item.dataset.val;
+        var idx = picked.indexOf(val);
+
+        if (idx === -1) {
+            picked.push(val);
+            item.classList.add('is-checked');
+        } else {
+            picked.splice(idx, 1);
+            item.classList.remove('is-checked');
+        }
+        refreshUI();
+    });
+
+    // ══════ Tags (remove) ══════
+    tagsEl.addEventListener('click', function(e) {
+        var tag = e.target.closest('.specwrap__tag');
+        if (!tag) return;
+        e.stopPropagation();
+        var val = tag.dataset.val;
+        picked = picked.filter(function(s) { return s !== val; });
+
+        // Sync the checkbox list
+        listEl.querySelectorAll('.specwrap__item').forEach(function(el) {
+            if (el.dataset.val === val) el.classList.remove('is-checked');
+        });
+
+        refreshUI();
+        // Tags are visible when panel is closed, so apply immediately
+        if (!isOpen()) navigate();
+    });
+
+    // ══════ Select All / Deselect All ══════
+    toggleBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var visible = getVisibleItems();
+        var allChecked = visible.every(function(el) { return el.classList.contains('is-checked'); });
+
+        visible.forEach(function(el) {
+            var val = el.dataset.val;
+            if (allChecked) {
+                el.classList.remove('is-checked');
+                picked = picked.filter(function(s) { return s !== val; });
+            } else {
+                if (picked.indexOf(val) === -1) picked.push(val);
+                el.classList.add('is-checked');
+            }
+        });
+        refreshUI();
+    });
+
+    // ══════ Apply button ══════
+    applyBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        closePanel();
+        navigate();
+    });
+
+    // ══════ Refresh helpers ══════
+    function getVisibleItems() {
+        return Array.from(listEl.querySelectorAll('.specwrap__item')).filter(function(el) {
+            return el.style.display !== 'none';
+        });
+    }
+
+    function refreshToggleBtn() {
+        var visible = getVisibleItems();
+        var allChecked = visible.length > 0 && visible.every(function(el) { return el.classList.contains('is-checked'); });
+        toggleBtn.textContent = allChecked ? 'Deselect All' : 'Select All';
+    }
+
+    function refreshUI() {
+        // Button text
+        if (picked.length === 0) {
+            btnText.textContent = 'Select specializations...';
+            btnText.classList.add('is-empty');
+        } else {
+            btnText.textContent = picked.length + ' specialization' + (picked.length > 1 ? 's' : '') + ' selected';
+            btnText.classList.remove('is-empty');
+        }
+
+        // Count
+        countEl.textContent = picked.length + ' selected';
+
+        // Tags
+        tagsEl.innerHTML = picked.map(function(s) {
+            return '<span class="specwrap__tag" data-val="' + esc(s) + '">' + esc(s) + ' <i class="bi bi-x"></i></span>';
+        }).join('');
+
+        refreshToggleBtn();
+    }
+
+    function arraysEqual(a, b) {
+        if (a.length !== b.length) return false;
+        var sorted1 = a.slice().sort();
+        var sorted2 = b.slice().sort();
+        return sorted1.every(function(v, i) { return v === sorted2[i]; });
+    }
+
+    // ══════ Clear all filters ══════
+    window.clearFilters = function() {
+        window.location.href = window.location.pathname;
+    };
+})();
 </script>
 
 </body>
