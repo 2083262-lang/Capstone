@@ -148,9 +148,46 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
             margin-bottom: 1.5rem;
         }
         .profile-hero-cover {
-            height: 140px;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #1e40af 100%);
+            height: 160px;
+            background: linear-gradient(135deg, #0b1120 0%, #0f172a 30%, #1a2a6e 70%, #1e40af 100%);
             position: relative;
+            overflow: hidden;
+        }
+        .profile-hero-cover .cover-dot-grid {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+            background-size: 22px 22px;
+            pointer-events: none;
+        }
+        .profile-hero-cover .cover-glow-1 {
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(212,175,55,0.18) 0%, transparent 70%);
+            top: -60px;
+            right: 60px;
+            pointer-events: none;
+        }
+        .profile-hero-cover .cover-glow-2 {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(37,99,235,0.25) 0%, transparent 70%);
+            bottom: -50px;
+            left: 120px;
+            pointer-events: none;
+        }
+        .profile-hero-cover .cover-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.2), rgba(37,99,235,0.3), transparent);
+            pointer-events: none;
         }
         .profile-hero-cover::after {
             content: '';
@@ -328,6 +365,104 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
 
         .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary); }
         .empty-state i { font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem; }
+
+        /* ===== SPECIALIZATION VIEW CHIPS ===== */
+        .spec-view-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-top: 0.2rem;
+        }
+        .spec-view-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.76rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.18));
+            color: var(--gold-dark);
+            border: 1px solid rgba(212,175,55,0.3);
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .spec-view-chip::before { content: '\2022'; font-size: 0.6rem; opacity: 0.7; }
+
+        /* ===== BIO BLOCK ===== */
+        .bio-block {
+            background: linear-gradient(135deg, rgba(37,99,235,0.03), rgba(212,175,55,0.03));
+            border-left: 3px solid var(--gold-dark);
+            border-radius: 0 4px 4px 0;
+            padding: 1rem 1.25rem;
+            margin-top: 0.5rem;
+            position: relative;
+        }
+        .bio-block::before {
+            content: '\201C';
+            position: absolute;
+            top: -0.25rem;
+            left: 0.9rem;
+            font-size: 3rem;
+            line-height: 1;
+            color: rgba(212,175,55,0.2);
+            font-family: Georgia, serif;
+        }
+        .bio-text {
+            font-size: 0.92rem;
+            line-height: 1.75;
+            color: #475569;
+            padding-left: 0.5rem;
+        }
+
+        /* ===== ACTIVITY TIMELINE ===== */
+        .activity-item {
+            position: relative;
+            padding-left: 0.5rem;
+        }
+        .activity-item::before {
+            content: '';
+            position: absolute;
+            left: -1.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, rgba(37,99,235,0.08), transparent);
+        }
+        .activity-badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-top: 0.2rem;
+        }
+        .activity-badge.approved { background: rgba(34,197,94,0.1); color: #16a34a; border: 1px solid rgba(34,197,94,0.2); }
+        .activity-badge.rejected { background: rgba(239,68,68,0.1); color: #dc2626; border: 1px solid rgba(239,68,68,0.2); }
+        .activity-badge.completed { background: rgba(37,99,235,0.1); color: #2563eb; border: 1px solid rgba(37,99,235,0.2); }
+        .activity-badge.cancelled { background: rgba(245,158,11,0.1); color: #d97706; border: 1px solid rgba(245,158,11,0.2); }
+        .activity-badge.agent { background: rgba(139,92,246,0.1); color: #7c3aed; border: 1px solid rgba(139,92,246,0.2); }
+        .activity-badge.property { background: rgba(6,182,212,0.1); color: #0891b2; border: 1px solid rgba(6,182,212,0.2); }
+        .activity-item-type-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 0.55rem;
+        }
+
+        /* ===== SPEC COUNTER IN EDIT ===== */
+        .spec-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.73rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-top: 0.4rem;
+        }
+        .spec-counter .count { color: var(--blue); font-weight: 700; }
 
         /* ===== SEE MORE ===== */
         .activity-item.activity-hidden { display: none; }
@@ -636,7 +771,12 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
 
         <!-- Profile Hero Card -->
         <div class="profile-hero">
-            <div class="profile-hero-cover"></div>
+            <div class="profile-hero-cover">
+                <div class="cover-dot-grid"></div>
+                <div class="cover-glow-1"></div>
+                <div class="cover-glow-2"></div>
+                <div class="cover-line"></div>
+            </div>
             <div class="profile-hero-body">
                 <div class="profile-hero-info">
                     <img src="<?php echo $avatar_src; ?>" alt="Profile Photo" class="profile-hero-avatar">
@@ -748,9 +888,17 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                                 <div class="info-item-label"><i class="bi bi-graph-up-arrow"></i> Years of Experience</div>
                                 <div class="info-item-value"><?php echo isset($admin['years_experience']) ? $admin['years_experience'] . ' year(s)' : 'Not set'; ?></div>
                             </div>
-                            <div class="info-item">
+                            <div class="info-item" style="grid-column: 1 / -1;">
                                 <div class="info-item-label"><i class="bi bi-star"></i> Specialization</div>
-                                <div class="info-item-value"><?php echo htmlspecialchars($admin['specialization'] ?? 'Not set'); ?></div>
+                                <div class="spec-view-chips">
+                                    <?php if (!empty($current_specs)): ?>
+                                        <?php foreach ($current_specs as $spec): ?>
+                                            <span class="spec-view-chip"><?php echo htmlspecialchars($spec); ?></span>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <span style="font-size:0.9rem; color:var(--text-secondary);">Not set</span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                             <div class="info-item">
                                 <div class="info-item-label"><i class="bi bi-check-circle"></i> Profile Status</div>
@@ -766,7 +914,9 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                         <?php if (!empty($admin['bio'])): ?>
                             <hr style="border-color: rgba(37,99,235,0.08); margin: 1.5rem 0;">
                             <div class="info-item-label mb-2"><i class="bi bi-chat-quote"></i> Professional Bio</div>
-                            <p class="bio-text"><?php echo nl2br(htmlspecialchars($admin['bio'])); ?></p>
+                            <div class="bio-block">
+                                <p class="bio-text mb-0"><?php echo nl2br(htmlspecialchars($admin['bio'])); ?></p>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -816,13 +966,13 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                                         <div class="activity-icon login"><i class="bi bi-box-arrow-in-right"></i></div>
                                         <div class="activity-content">
                                             <div class="activity-title">Admin Login</div>
-                                            <div class="activity-time"><?php echo date('M d, Y \a\t h:i A', strtotime($log['log_timestamp'])); ?></div>
+                                            <div class="activity-time"><i class="bi bi-clock me-1" style="font-size:0.7rem;"></i><?php echo date('M d, Y \a\t h:i A', strtotime($log['log_timestamp'])); ?></div>
                                         </div>
                                     </li>
                                 <?php endforeach; ?>
                             </ul>
                             <?php if (count($recent_logs) > 4): ?>
-                                <button class="see-more-btn" id="loginSeeMoreBtn" onclick="toggleActivityList('loginActivityList', 'loginSeeMoreBtn', <?php echo count($recent_logs); ?>)">
+                                <button class="see-more-btn" id="loginSeeMoreBtn" onclick="toggleActivityList('loginActivityList', 'loginSeeMoreBtn')">
                                     <i class="bi bi-chevron-down"></i>
                                     <span>See <?php echo count($recent_logs) - 4; ?> more</span>
                                 </button>
@@ -843,25 +993,37 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                         <?php else: ?>
                             <ul class="activity-list" id="reviewActionsList">
                                 <?php foreach ($action_logs as $i => $al): ?>
+                                    <?php
+                                        $action_val = strtolower($al['action']);
+                                        $icon_map = [
+                                            'approved'  => 'check-lg',
+                                            'rejected'  => 'x-lg',
+                                            'completed' => 'check-circle',
+                                            'cancelled' => 'dash-circle',
+                                        ];
+                                        $action_icon = $icon_map[$action_val] ?? 'activity';
+                                        $item_type_val = strtolower($al['item_type']);
+                                    ?>
                                     <li class="activity-item<?php echo $i >= 4 ? ' activity-hidden' : ''; ?>">
-                                        <div class="activity-icon <?php echo htmlspecialchars($al['action']); ?>">
-                                            <i class="bi bi-<?php echo $al['action'] === 'approved' ? 'check-lg' : 'x-lg'; ?>"></i>
+                                        <div class="activity-icon <?php echo htmlspecialchars($action_val); ?>">
+                                            <i class="bi bi-<?php echo $action_icon; ?>"></i>
                                         </div>
                                         <div class="activity-content">
-                                            <div class="activity-title">
-                                                <?php echo ucfirst(htmlspecialchars($al['action'])); ?>
-                                                <?php echo htmlspecialchars($al['item_type']); ?>:
-                                                <?php echo htmlspecialchars($al['item_label'] ?? ''); ?>
+                                            <div class="activity-title"><?php echo htmlspecialchars($al['item_label'] ?? ''); ?></div>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
+                                                <span class="activity-badge <?php echo htmlspecialchars($action_val); ?>"><?php echo ucfirst(htmlspecialchars($action_val)); ?></span>
+                                                <span class="activity-badge <?php echo htmlspecialchars($item_type_val); ?>"><?php echo ucfirst(htmlspecialchars($item_type_val)); ?></span>
                                             </div>
-                                            <div class="activity-time"><?php echo date('M d, Y \a\t h:i A', strtotime($al['log_timestamp'])); ?></div>
+                                            <div class="activity-time mt-1"><i class="bi bi-clock me-1" style="font-size:0.7rem;"></i><?php echo date('M d, Y \a\t h:i A', strtotime($al['log_timestamp'])); ?></div>
                                         </div>
                                     </li>
                                 <?php endforeach; ?>
                             </ul>
-                            <?php if (count($action_logs) > 4): ?>
-                                <button class="see-more-btn" id="reviewSeeMoreBtn" onclick="toggleActivityList('reviewActionsList', 'reviewSeeMoreBtn', <?php echo count($action_logs); ?>)">
+                            <?php $review_hidden_count = max(0, count($action_logs) - 4); ?>
+                            <?php if ($review_hidden_count > 0): ?>
+                                <button class="see-more-btn" id="reviewSeeMoreBtn" onclick="toggleActivityList('reviewActionsList', 'reviewSeeMoreBtn')">
                                     <i class="bi bi-chevron-down"></i>
-                                    <span>See <?php echo count($action_logs) - 4; ?> more</span>
+                                    <span>See <?php echo $review_hidden_count; ?> more</span>
                                 </button>
                             <?php endif; ?>
                         <?php endif; ?>
@@ -945,7 +1107,10 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
                                     </div>
                                 <?php endforeach; ?>
                             </div>
-                            <span class="spec-none-msg" id="specNoneMsg">Select at least one specialization.</span>
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                <span class="spec-none-msg" id="specNoneMsg">Select at least one specialization.</span>
+                                <span class="spec-counter"><i class="bi bi-check2-circle"></i> <span class="count" id="specCount"><?php echo count($current_specs); ?></span> selected</span>
+                            </div>
                         </div>
                         <div class="edit-form-group full-width">
                             <label for="editBio">Professional Bio <span class="required">*</span></label>
@@ -968,18 +1133,20 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleActivityList(listId, btnId, total) {
+        function toggleActivityList(listId, btnId) {
             const list = document.getElementById(listId);
             const btn  = document.getElementById(btnId);
-            const hidden = list.querySelectorAll('.activity-hidden');
             const expanded = btn.classList.contains('expanded');
+            const items   = list.querySelectorAll('.activity-hidden');
 
             if (expanded) {
-                hidden.forEach(item => item.style.display = 'none');
+                // Collapse: hide items that were originally hidden
+                items.forEach(item => { item.style.display = 'none'; });
                 btn.classList.remove('expanded');
-                btn.querySelector('span').textContent = 'See ' + hidden.length + ' more';
+                btn.querySelector('span').textContent = 'See ' + items.length + ' more';
             } else {
-                hidden.forEach(item => item.style.display = 'flex');
+                // Expand: show hidden items
+                items.forEach(item => { item.style.display = 'flex'; });
                 btn.classList.add('expanded');
                 btn.querySelector('span').textContent = 'See less';
             }
@@ -1042,6 +1209,8 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
             const values = Array.from(checked).map(cb => cb.value);
             document.getElementById('editSpecializationHidden').value = values.join(', ');
             document.getElementById('specNoneMsg').classList.toggle('visible', values.length === 0);
+            const countEl = document.getElementById('specCount');
+            if (countEl) countEl.textContent = values.length;
         }
 
         // Form submission via AJAX
@@ -1087,5 +1256,8 @@ $full_name = htmlspecialchars(trim(($admin['first_name'] ?? '') . ' ' . ($admin[
             });
         });
     </script>
-    <style>\n        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n        .spin { animation: spin 1s linear infinite; }\n    </style>
+    <style>
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
+    </style>
 </html>
