@@ -1190,6 +1190,111 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
         .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
         .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
         @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
+
+        /* ================================================================
+           SKELETON SCREEN — Admin Dashboard (CSR / Progressive Hydration)
+           ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        .sk-page-header {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-page-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        /* 6-column KPI grid for dashboard */
+        .sk-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .sk-kpi-card {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 1.25rem;
+        }
+        .sk-kpi-icon { width: 40px; height: 40px; border-radius: 4px; margin-bottom: 0.75rem; }
+
+        /* Quick actions 4-column */
+        .sk-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .sk-quick-item {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Generic dashboard card skeleton */
+        .sk-dash-card {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            height: 100%;
+        }
+        .sk-dash-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+        .sk-dash-header {
+            padding: 1.15rem 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #fafbfc;
+        }
+        .sk-dash-body { padding: 1.25rem 1.5rem; }
+        .sk-line { display: block; border-radius: 4px; }
+
+        @media (max-width: 1400px) {
+            .sk-kpi-grid  { grid-template-columns: repeat(3, 1fr); }
+            .sk-quick-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 992px)  {
+            .sk-kpi-grid  { grid-template-columns: repeat(2, 1fr); }
+            .sk-quick-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px)  {
+            .sk-kpi-grid  { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+            .sk-quick-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 576px)  {
+            .sk-kpi-grid  { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+            .sk-quick-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        }
     </style>
 </head>
 <body>
@@ -1198,6 +1303,188 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
     <?php include 'admin_navbar.php'; ?>
 
     <div class="admin-content">
+
+        <!-- NO-JS FALLBACK: show real content if JS is disabled -->
+        <noscript><style>
+            #sk-screen    { display: none !important; }
+            #page-content { display: block !important; opacity: 1 !important; }
+        </style></noscript>
+
+        <!-- ═══════════════════════════════════════════════════════
+             SKELETON SCREEN — renders on first paint, removed by JS
+             ═══════════════════════════════════════════════════════ -->
+        <div id="sk-screen" role="presentation" aria-hidden="true">
+
+            <!-- Page Header -->
+            <div class="sk-page-header">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+                    <div>
+                        <div class="sk-line sk-shimmer" style="width:140px;height:22px;margin-bottom:10px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:310px;height:13px;"></div>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;">
+                        <div class="sk-shimmer" style="width:105px;height:30px;border-radius:2px;"></div>
+                        <div class="sk-shimmer" style="width:120px;height:30px;border-radius:2px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards (6-column) -->
+            <div class="sk-kpi-grid">
+                <?php for ($sk_i = 0; $sk_i < 6; $sk_i++): ?>
+                <div class="sk-kpi-card">
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                    <div class="sk-line sk-shimmer" style="width:70%;height:10px;margin-bottom:8px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:50%;height:22px;margin-bottom:6px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:80%;height:10px;"></div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
+            <!-- Quick Actions (4-column) -->
+            <div class="sk-quick-grid">
+                <?php for ($sk_i = 0; $sk_i < 4; $sk_i++): ?>
+                <div class="sk-quick-item">
+                    <div class="sk-shimmer" style="width:48px;height:48px;border-radius:4px;flex-shrink:0;"></div>
+                    <div style="flex:1;">
+                        <div class="sk-line sk-shimmer" style="width:75%;height:13px;margin-bottom:8px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:90%;height:10px;"></div>
+                    </div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
+            <!-- Row 1: Charts -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-8">
+                    <div class="sk-dash-card">
+                        <div class="sk-dash-header">
+                            <div class="sk-shimmer" style="width:130px;height:14px;border-radius:3px;"></div>
+                        </div>
+                        <div class="sk-dash-body">
+                            <div class="sk-shimmer" style="width:100%;height:260px;border-radius:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="sk-dash-card">
+                        <div class="sk-dash-header">
+                            <div class="sk-shimmer" style="width:110px;height:14px;border-radius:3px;"></div>
+                        </div>
+                        <div class="sk-dash-body">
+                            <div class="sk-shimmer" style="width:160px;height:160px;border-radius:50%;margin:0.5rem auto 1.25rem;display:block;"></div>
+                            <?php for ($sk_i = 0; $sk_i < 3; $sk_i++): ?>
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                                <div class="sk-shimmer" style="width:55%;height:11px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:25%;height:11px;border-radius:3px;"></div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Pending Approvals + Activity Feed -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-7">
+                    <div class="sk-dash-card">
+                        <div class="sk-dash-header">
+                            <div class="sk-shimmer" style="width:160px;height:14px;border-radius:3px;"></div>
+                        </div>
+                        <div class="sk-dash-body" style="padding:0;">
+                            <!-- table header row -->
+                            <div style="display:flex;gap:1rem;padding:0.7rem 1.5rem;border-bottom:1px solid #e2e8f0;background:#fafbfc;">
+                                <div class="sk-shimmer" style="flex:2;height:11px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="flex:1;height:11px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:60px;height:11px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:55px;height:11px;border-radius:3px;"></div>
+                            </div>
+                            <?php for ($sk_i = 0; $sk_i < 5; $sk_i++): ?>
+                            <div style="display:flex;gap:1rem;align-items:center;padding:0.65rem 1.5rem;border-bottom:1px solid #f1f5f9;">
+                                <div style="flex:2;">
+                                    <div class="sk-shimmer" style="width:80%;height:12px;border-radius:3px;margin-bottom:5px;"></div>
+                                    <div class="sk-shimmer" style="width:55%;height:10px;border-radius:3px;"></div>
+                                </div>
+                                <div class="sk-shimmer" style="flex:1;height:12px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:60px;height:12px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:55px;height:26px;border-radius:3px;"></div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="sk-dash-card">
+                        <div class="sk-dash-header">
+                            <div class="sk-shimmer" style="width:130px;height:14px;border-radius:3px;"></div>
+                        </div>
+                        <div class="sk-dash-body">
+                            <?php for ($sk_i = 0; $sk_i < 6; $sk_i++): ?>
+                            <div style="display:flex;gap:0.85rem;align-items:flex-start;padding:0.75rem 0;border-bottom:1px solid #f1f5f9;">
+                                <div class="sk-shimmer" style="width:34px;height:34px;border-radius:4px;flex-shrink:0;"></div>
+                                <div style="flex:1;">
+                                    <div class="sk-shimmer" style="width:85%;height:12px;border-radius:3px;margin-bottom:6px;"></div>
+                                    <div class="sk-shimmer" style="width:38%;height:10px;border-radius:3px;"></div>
+                                </div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rows 3–4: Card pair placeholders -->
+            <?php for ($sk_row = 0; $sk_row < 2; $sk_row++): ?>
+            <div class="row g-4 mb-4">
+                <div class="col-lg-6">
+                    <div class="sk-dash-card">
+                        <div class="sk-dash-header">
+                            <div class="sk-shimmer" style="width:140px;height:14px;border-radius:3px;"></div>
+                        </div>
+                        <div class="sk-dash-body">
+                            <?php for ($sk_i = 0; $sk_i < 5; $sk_i++): ?>
+                            <div style="display:flex;gap:0.85rem;align-items:center;padding:0.75rem 0;border-bottom:1px solid #f1f5f9;">
+                                <div class="sk-shimmer" style="width:48px;height:52px;border-radius:4px;flex-shrink:0;"></div>
+                                <div style="flex:1;">
+                                    <div class="sk-shimmer" style="width:70%;height:12px;border-radius:3px;margin-bottom:6px;"></div>
+                                    <div class="sk-shimmer" style="width:90%;height:10px;border-radius:3px;"></div>
+                                </div>
+                                <div class="sk-shimmer" style="width:60px;height:22px;border-radius:3px;"></div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="sk-dash-card">
+                        <div class="sk-dash-header">
+                            <div class="sk-shimmer" style="width:120px;height:14px;border-radius:3px;"></div>
+                        </div>
+                        <div class="sk-dash-body">
+                            <?php for ($sk_i = 0; $sk_i < 4; $sk_i++): ?>
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;">
+                                <div>
+                                    <div class="sk-shimmer" style="width:120px;height:12px;border-radius:3px;margin-bottom:5px;"></div>
+                                    <div class="sk-shimmer" style="width:80px;height:10px;border-radius:3px;"></div>
+                                </div>
+                                <div>
+                                    <div class="sk-shimmer" style="width:100px;height:6px;border-radius:3px;margin-bottom:4px;"></div>
+                                    <div class="sk-shimmer" style="width:35px;height:11px;border-radius:3px;margin-left:auto;"></div>
+                                </div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endfor; ?>
+
+        </div><!-- /#sk-screen -->
+
+        <!-- ═══════════════════════════════════════════════════════
+             REAL PAGE CONTENT — hidden until hydrated by JS
+             ═══════════════════════════════════════════════════════ -->
+        <div id="page-content">
 
         <!-- ===== PAGE HEADER ===== -->
         <div class="page-header">
@@ -1747,7 +2034,9 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
             </div>
         </div>
 
-    </div>
+        </div><!-- /#page-content -->
+
+    </div><!-- /.admin-content -->
 
     <?php if (!$profile_completed) include 'admin_profile_modal.php'; ?>
 
@@ -1874,6 +2163,13 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
             });
         }
 
+    });
+
+    // ===== DEFERRED UI — fires after skeleton hydrates (real content is visible) =====
+    /* Profile modal and toast notifications use 'skeleton:hydrated' instead of
+       'DOMContentLoaded' so they only appear once the real page content is visible. */
+    document.addEventListener('skeleton:hydrated', function() {
+
         // ===== PROFILE MODAL =====
         <?php if (!$profile_completed): ?>
         var adminProfileModal = new bootstrap.Modal(document.getElementById('adminProfileModal'), {
@@ -1886,10 +2182,9 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
         // ===== PENDING NOTIFICATION =====
         const pendingCount = <?php echo $pending_approvals_total; ?>;
         if (pendingCount > 0) {
-            setTimeout(() => {
-                showToast('warning', 'Pending Approvals', 'You have ' + pendingCount + ' item' + (pendingCount !== 1 ? 's' : '') + ' pending approval.');
-            }, 800);
+            showToast('warning', 'Pending Approvals', 'You have ' + pendingCount + (pendingCount !== 1 ? ' items' : ' item') + ' pending approval.');
         }
+
     });
 
     // ===== TOAST NOTIFICATION SYSTEM =====
@@ -1924,6 +2219,82 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
         toast.classList.add('toast-out');
         setTimeout(() => toast.remove(), 320);
     }
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SKELETON HYDRATION — Progressive Content Reveal
+         Trigger: window 'load' (fires after ALL external resources finish)
+         See: docs/SKELETON_SCREEN_GUIDE.md — Parts C & D
+         ═══════════════════════════════════════════════════════════════ -->
+    <script>
+    (function () {
+        'use strict';
+
+        /* ── Configuration ────────────────────────────────────────────── */
+        var MIN_SKELETON_MS = 400;   /* Minimum ms skeleton stays visible.
+                                        Prevents flash on fast local loads. */
+        var skeletonStart = Date.now();
+
+        function hydrate() {
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+
+            if (!pc) return;
+            if (!sk) {
+                pc.style.cssText = 'display:block;opacity:1;';
+                document.dispatchEvent(new Event('skeleton:hydrated'));
+                return;
+            }
+
+            /* Step 1: make real content visible but transparent */
+            pc.style.display = 'block';
+            pc.style.opacity = '0';
+
+            /* Step 2: cross-fade on the next frame */
+            requestAnimationFrame(function () {
+                sk.style.transition = 'opacity 0.35s ease';
+                sk.style.opacity    = '0';
+
+                pc.style.transition = 'opacity 0.42s ease 0.1s';
+                requestAnimationFrame(function () {
+                    pc.style.opacity = '1';
+                });
+            });
+
+            /* Step 3: remove skeleton from DOM, dispatch hydrated event */
+            window.setTimeout(function () {
+                if (sk && sk.parentNode) sk.parentNode.removeChild(sk);
+                pc.style.transition = '';
+                pc.style.opacity    = '';
+
+                /* Deferred UI (profile modal, toasts) can now fire */
+                document.dispatchEvent(new Event('skeleton:hydrated'));
+            }, 520);
+        }
+
+        /* Enforce MIN_SKELETON_MS before hydrating */
+        function scheduleHydration() {
+            var elapsed   = Date.now() - skeletonStart;
+            var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+            if (remaining > 0) {
+                window.setTimeout(hydrate, remaining);
+            } else {
+                hydrate();
+            }
+        }
+
+        /*
+         * Trigger on window 'load' — waits for Bootstrap CSS, Google Fonts,
+         * Font Awesome, Chart.js, and all images to finish loading.
+         * DOMContentLoaded fires too early (PHP page DOM is already complete).
+         */
+        if (document.readyState === 'complete') {
+            scheduleHydration();
+        } else {
+            window.addEventListener('load', scheduleHydration);
+        }
+
+    }());
     </script>
 </body>
 </html>

@@ -940,6 +940,41 @@ $member_since = !empty($admin['date_registered']) ? date('F Y', strtotime($admin
 
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; display: inline-block; }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Client-Side Rendering (CSR) Pattern
+           Matches: admin_profile.php
+           ================================================================ */
+        @keyframes sk-shimmer { 0% { background-position: -800px 0; } 100% { background-position: 800px 0; } }
+        @keyframes sk-shimmer-dark { 0% { background-position: -800px 0; } 100% { background-position: 800px 0; } }
+        .sk-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 800px 100%;
+            animation: sk-shimmer 1.4s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        .sk-shimmer-dark {
+            background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
+            background-size: 800px 100%;
+            animation: sk-shimmer-dark 1.4s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        .sk-profile-hero { background:#fff; border-radius:6px; overflow:hidden; margin-bottom:1.75rem; border:1px solid rgba(37,99,235,0.08); }
+        .sk-hero-cover { height:180px; width:100%; display:block; }
+        .sk-hero-body { padding:0 2.5rem 1.75rem; }
+        .sk-hero-layout { display:flex; align-items:flex-start; gap:2rem; flex-wrap:wrap; }
+        .sk-stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.75rem; }
+        .sk-stat-card { background:#fff; border-radius:6px; border:1px solid rgba(37,99,235,0.08); padding:1.25rem 1.35rem; display:flex; flex-direction:column; gap:0.6rem; }
+        .sk-stat-icon { width:42px; height:42px; border-radius:6px; flex-shrink:0; }
+        .sk-content-card { background:#fff; border-radius:6px; border:1px solid rgba(37,99,235,0.08); overflow:hidden; margin-bottom:1.5rem; }
+        .sk-card-header-bar { padding:1.15rem 1.5rem; border-bottom:1px solid rgba(37,99,235,0.06); display:flex; align-items:center; gap:0.5rem; }
+        .sk-card-body-inner { padding:1.5rem; }
+        .sk-info-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+        .sk-line { display:block; border-radius:4px; }
+        @media (max-width:992px) { .sk-stats-row { grid-template-columns:repeat(2,1fr); } .sk-info-grid { grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:480px) { .sk-stats-row { grid-template-columns:1fr 1fr; gap:0.65rem; } }
     </style>
 </head>
 <body>
@@ -947,6 +982,110 @@ $member_since = !empty($admin['date_registered']) ? date('F Y', strtotime($admin
     <?php include 'admin_navbar.php'; ?>
 
     <div class="admin-content">
+
+        <noscript><style>
+            #sk-screen    { display: none !important; }
+            #page-content { display: block !important; opacity: 1 !important; }
+        </style></noscript>
+
+        <!-- ══════════════════════════════════════════════════════════
+             SKELETON SCREEN — visible on first paint
+        ══════════════════════════════════════════════════════════ -->
+        <div id="sk-screen" role="presentation" aria-hidden="true">
+
+            <!-- Profile Hero Skeleton -->
+            <div class="sk-profile-hero">
+                <div class="sk-hero-cover sk-shimmer-dark"></div>
+                <div class="sk-hero-body">
+                    <div class="sk-hero-layout">
+                        <!-- Avatar circle overlaps cover -->
+                        <div class="sk-shimmer" style="width:130px;height:130px;border-radius:50%;border:5px solid #fff;margin-top:-65px;flex-shrink:0;"></div>
+                        <!-- Name + role + email + badges -->
+                        <div style="flex:1;min-width:250px;padding-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem;">
+                            <div class="sk-line sk-shimmer" style="width:230px;height:26px;"></div>
+                            <div class="sk-shimmer" style="width:175px;height:22px;border-radius:3px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:190px;height:14px;"></div>
+                            <div style="display:flex;gap:0.5rem;margin-top:0.1rem;">
+                                <div class="sk-shimmer" style="width:80px;height:22px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:105px;height:22px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:120px;height:22px;border-radius:3px;"></div>
+                            </div>
+                        </div>
+                        <!-- Action buttons -->
+                        <div style="display:flex;gap:0.75rem;padding-top:1rem;flex-shrink:0;">
+                            <div class="sk-shimmer" style="width:125px;height:38px;border-radius:4px;"></div>
+                            <div class="sk-shimmer" style="width:105px;height:38px;border-radius:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4 Quick Stats -->
+            <div class="sk-stats-row">
+                <?php for ($i = 0; $i < 4; $i++): ?>
+                <div class="sk-stat-card">
+                    <div class="sk-stat-icon sk-shimmer"></div>
+                    <div class="sk-line sk-shimmer" style="width:80px;height:11px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:50px;height:26px;"></div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
+            <!-- Content Card 1: Quick Info (9-item info grid) -->
+            <div class="sk-content-card">
+                <div class="sk-card-header-bar">
+                    <div class="sk-shimmer" style="width:18px;height:18px;border-radius:3px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:90px;height:15px;"></div>
+                </div>
+                <div class="sk-card-body-inner">
+                    <div class="sk-info-grid">
+                        <?php for ($i = 0; $i < 9; $i++): ?>
+                        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+                            <div class="sk-line sk-shimmer" style="width:70px;height:11px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:<?php echo [80,100,60,90,45,70,90,100,110][$i]; ?>px;height:16px;"></div>
+                        </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Card 2: Platform Activity -->
+            <div class="sk-content-card">
+                <div class="sk-card-header-bar">
+                    <div class="sk-shimmer" style="width:18px;height:18px;border-radius:3px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:140px;height:15px;"></div>
+                </div>
+                <div class="sk-card-body-inner">
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;">
+                        <?php for ($i = 0; $i < 6; $i++): ?>
+                        <div class="sk-shimmer" style="height:72px;border-radius:4px;"></div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Card 3: Commission Summary -->
+            <div class="sk-content-card">
+                <div class="sk-card-header-bar">
+                    <div class="sk-shimmer" style="width:18px;height:18px;border-radius:3px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:180px;height:15px;"></div>
+                </div>
+                <div class="sk-card-body-inner">
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;">
+                        <?php for ($i = 0; $i < 4; $i++): ?>
+                        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+                            <div class="sk-line sk-shimmer" style="width:60px;height:11px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:80px;height:22px;"></div>
+                        </div>
+                        <?php endfor; ?>
+                    </div>
+                    <div class="sk-shimmer" style="height:200px;width:100%;border-radius:4px;"></div>
+                </div>
+            </div>
+
+        </div><!-- /#sk-screen -->
+
+        <div id="page-content">
 
         <!-- Profile Hero Card -->
         <div class="profile-hero">
@@ -1543,6 +1682,7 @@ $member_since = !empty($admin['date_registered']) ? date('F Y', strtotime($admin
             <?php endif; ?>
         </div>
 
+        </div><!-- /#page-content -->
     </div><!-- /.admin-content -->
 
     <!-- Edit Profile Overlay -->
@@ -1850,6 +1990,37 @@ $member_since = !empty($admin['date_registered']) ? date('F Y', strtotime($admin
             // Initial render
             renderPage();
         })();
+    </script>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SKELETON HYDRATION SCRIPT
+         Waits for window 'load' (fonts + CSS ready) then
+         cross-fades skeleton out and real content in.
+    ══════════════════════════════════════════════════════════ -->
+    <script>
+    (function () {
+        'use strict';
+        var MIN_SKELETON_MS = 400;
+        var skeletonStart   = Date.now();
+        var hydrated        = false;
+        function hydrate() {
+            if (hydrated) return; hydrated = true;
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+            if (!sk || !pc) return;
+            sk.style.transition = 'opacity 0.35s ease'; sk.style.opacity = '0';
+            setTimeout(function () { sk.style.display = 'none'; }, 360);
+            pc.style.opacity = '0'; pc.style.display = 'block';
+            requestAnimationFrame(function () { pc.style.transition = 'opacity 0.4s ease'; pc.style.opacity = '1'; });
+            setTimeout(function () { document.dispatchEvent(new CustomEvent('skeleton:hydrated')); }, 520);
+        }
+        function scheduleHydration() {
+            var elapsed   = Date.now() - skeletonStart;
+            var remaining = MIN_SKELETON_MS - elapsed;
+            if (remaining <= 0) { hydrate(); } else { setTimeout(hydrate, remaining); }
+        }
+        window.addEventListener('load', scheduleHydration);
+    }());
     </script>
 </body>
 </html>

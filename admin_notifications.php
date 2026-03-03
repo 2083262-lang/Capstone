@@ -1033,6 +1033,39 @@ function notif_time_ago($datetime) {
             transform: none;
             box-shadow: none;
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Client-Side Rendering (CSR) Pattern
+           Matches: admin_notifications.php
+           ================================================================ */
+        @keyframes sk-shimmer { 0% { background-position: -800px 0; } 100% { background-position: 800px 0; } }
+        .sk-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 800px 100%;
+            animation: sk-shimmer 1.4s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        .sk-page-header { background:#fff; border-radius:4px; padding:1.25rem 1.75rem; margin-bottom:1.5rem; border:1px solid rgba(37,99,235,0.08); position:relative; overflow:hidden; }
+        .sk-kpi-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:1rem; margin-bottom:1.5rem; }
+        .sk-kpi-card { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:1.25rem; display:flex; flex-direction:column; gap:0.6rem; }
+        .sk-kpi-icon { width:40px; height:40px; border-radius:4px; flex-shrink:0; }
+        .sk-insights-panel { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:1.25rem 1.5rem; margin-bottom:1.5rem; }
+        .sk-insights-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.75rem; margin-top:0.75rem; }
+        .sk-insight-item { display:flex; align-items:center; gap:0.75rem; padding:0.75rem; background:#f8fafc; border-radius:4px; }
+        .sk-action-bar { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:1rem 1.75rem; margin-bottom:1.25rem; display:flex; align-items:center; justify-content:space-between; overflow:hidden; min-height:64px; position:relative; }
+        .sk-tabs { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:0.875rem 1.5rem; margin-bottom:1rem; display:flex; align-items:center; gap:0.75rem; min-height:56px; position:relative; overflow:hidden; }
+        .sk-notif-container { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); overflow:hidden; }
+        .sk-notif-row { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid #f1f5f9; }
+        .sk-notif-icon { width:40px; height:40px; border-radius:8px; flex-shrink:0; }
+        .sk-notif-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:0.4rem; }
+        .sk-notif-actions { display:flex; gap:0.5rem; flex-shrink:0; }
+        .sk-line { display:block; border-radius:4px; }
+        @media (max-width:1400px) { .sk-kpi-grid { grid-template-columns:repeat(3,1fr); } .sk-insights-grid { grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:992px)  { .sk-kpi-grid { grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:768px)  { .sk-kpi-grid { grid-template-columns:1fr 1fr; gap:0.75rem; } .sk-insights-grid { grid-template-columns:1fr; } }
+        @media (max-width:576px)  { .sk-kpi-grid { grid-template-columns:1fr 1fr; gap:0.5rem; } }
     </style>
 </head>
 <body>
@@ -1041,12 +1074,97 @@ function notif_time_ago($datetime) {
 
     <div class="admin-content">
 
+        <noscript><style>
+            #sk-screen    { display: none !important; }
+            #page-content { display: block !important; opacity: 1 !important; }
+        </style></noscript>
+
+        <!-- ══════════════════════════════════════════════════════
+             SKELETON SCREEN — visible on first paint
+        ════════════════════════════════════════════════════════ -->
+        <div id="sk-screen" role="presentation" aria-hidden="true">
+
+            <!-- Page Header -->
+            <div class="sk-page-header">
+                <div class="sk-line sk-shimmer" style="width:180px;height:22px;margin-bottom:10px;"></div>
+                <div class="sk-line sk-shimmer" style="width:360px;height:13px;"></div>
+            </div>
+
+            <!-- 6 KPI Cards -->
+            <div class="sk-kpi-grid">
+                <?php for ($i = 0; $i < 6; $i++): ?>
+                <div class="sk-kpi-card">
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                    <div class="sk-line sk-shimmer" style="width:60px;height:11px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:45px;height:26px;"></div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
+            <!-- Daily Insights Panel -->
+            <div class="sk-insights-panel">
+                <div class="sk-line sk-shimmer" style="width:220px;height:14px;margin-bottom:4px;"></div>
+                <div class="sk-insights-grid">
+                    <?php for ($i = 0; $i < 6; $i++): ?>
+                    <div class="sk-insight-item">
+                        <div class="sk-shimmer" style="width:38px;height:38px;border-radius:8px;flex-shrink:0;"></div>
+                        <div style="flex:1;display:flex;flex-direction:column;gap:0.35rem;">
+                            <div class="sk-line sk-shimmer" style="width:30px;height:18px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:100%;height:11px;"></div>
+                        </div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="sk-action-bar">
+                <div class="sk-line sk-shimmer" style="width:180px;height:20px;"></div>
+                <div style="display:flex;gap:0.75rem;">
+                    <div class="sk-shimmer" style="width:130px;height:36px;border-radius:4px;"></div>
+                    <div class="sk-shimmer" style="width:90px;height:36px;border-radius:4px;"></div>
+                    <div class="sk-shimmer" style="width:110px;height:36px;border-radius:4px;"></div>
+                </div>
+            </div>
+
+            <!-- 5 Status Tabs -->
+            <div class="sk-tabs">
+                <div class="sk-shimmer" style="width:50px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:70px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:70px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:90px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:65px;height:20px;border-radius:3px;"></div>
+            </div>
+
+            <!-- Notification List Rows -->
+            <div class="sk-notif-container">
+                <?php for ($i = 0; $i < 5; $i++): ?>
+                <div class="sk-notif-row">
+                    <div class="sk-notif-icon sk-shimmer"></div>
+                    <div class="sk-notif-body">
+                        <div class="sk-line sk-shimmer" style="width:<?php echo [220,280,190,250,210][$i]; ?>px;height:14px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:<?php echo [380,320,420,360,400][$i]; ?>px;height:12px;"></div>
+                        <div style="display:flex;gap:0.5rem;margin-top:2px;">
+                            <div class="sk-shimmer" style="width:70px;height:11px;border-radius:3px;"></div>
+                            <div class="sk-shimmer" style="width:55px;height:11px;border-radius:3px;"></div>
+                        </div>
+                    </div>
+                    <div class="sk-notif-actions">
+                        <div class="sk-shimmer" style="width:32px;height:32px;border-radius:6px;"></div>
+                        <div class="sk-shimmer" style="width:32px;height:32px;border-radius:6px;"></div>
+                    </div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
+        </div><!-- /#sk-screen -->
+
+        <div id="page-content">
+
         <?php if ($unread_count > 0): ?>
         <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                showToast('warning', 'Unread Notifications', '<?php echo $unread_count; ?> unread notification<?php echo $unread_count > 1 ? 's' : ''; ?> waiting for your review.', 5000);
-            }, 600);
+        document.addEventListener('skeleton:hydrated', function() {
+            showToast('warning', 'Unread Notifications', '<?php echo $unread_count; ?> unread notification<?php echo $unread_count > 1 ? 's' : ''; ?> waiting for your review.', 5000);
         });
         </script>
         <?php endif; ?>
@@ -1352,6 +1470,7 @@ function notif_time_ago($datetime) {
             </div>
         </div>
 
+        </div><!-- /#page-content -->
     </div><!-- /.admin-content -->
 
     <!-- ═══ Filter Sidebar ═══ -->
@@ -1515,6 +1634,37 @@ function notif_time_ago($datetime) {
             if (!confirm('Delete all read notifications? This cannot be undone.')) return;
             ajaxPost('delete_all_read=1').then(d => { if (d.success) location.reload(); });
         }
+    </script>
+
+    <!-- ══════════════════════════════════════════════════════
+         SKELETON HYDRATION SCRIPT
+         Waits for window 'load' (fonts + CSS ready) then
+         cross-fades skeleton out and real content in.
+    ════════════════════════════════════════════════════════ -->
+    <script>
+    (function () {
+        'use strict';
+        var MIN_SKELETON_MS = 400;
+        var skeletonStart   = Date.now();
+        var hydrated        = false;
+        function hydrate() {
+            if (hydrated) return; hydrated = true;
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+            if (!sk || !pc) return;
+            sk.style.transition = 'opacity 0.35s ease'; sk.style.opacity = '0';
+            setTimeout(function () { sk.style.display = 'none'; }, 360);
+            pc.style.opacity = '0'; pc.style.display = 'block';
+            requestAnimationFrame(function () { pc.style.transition = 'opacity 0.4s ease'; pc.style.opacity = '1'; });
+            setTimeout(function () { document.dispatchEvent(new CustomEvent('skeleton:hydrated')); }, 520);
+        }
+        function scheduleHydration() {
+            var elapsed   = Date.now() - skeletonStart;
+            var remaining = MIN_SKELETON_MS - elapsed;
+            if (remaining <= 0) { hydrate(); } else { setTimeout(hydrate, remaining); }
+        }
+        window.addEventListener('load', scheduleHydration);
+    }());
     </script>
 </body>
 </html>

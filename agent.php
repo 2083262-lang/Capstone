@@ -1228,6 +1228,125 @@ $agents_rejected = array_filter($all_agents, fn($agent) => !$agent['is_active'] 
         .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
         .toast-warning .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
         @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
+
+        /* ================================================================
+           SKELETON SCREEN — CSR / Progressive Hydration
+           agent.php
+        ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        .sk-page-header {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-page-header::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        .sk-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .sk-kpi-card {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .sk-kpi-icon { width: 48px; height: 48px; border-radius: 4px; flex-shrink: 0; }
+
+        .sk-action-bar {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 0.85rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-action-bar::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        .sk-tabs {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 0 1rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            height: 52px;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-tabs::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        .sk-agent-content-wrap {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sk-agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1.25rem;
+            padding: 1.5rem;
+        }
+        .sk-agent-card {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sk-agent-card-header { height: 88px; }
+        .sk-agent-card-body {
+            padding: 1.25rem 1.25rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+        .sk-agent-card-footer { padding: 0.75rem 1.25rem 1.25rem; }
+        .sk-line { display: block; border-radius: 4px; }
+
+        /* Responsive */
+        @media (max-width: 1400px) { .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 992px)  { .sk-agent-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px)  {
+            .sk-kpi-grid   { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+            .sk-agent-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 576px)  { .sk-kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; } }
+
     </style>
 </head>
 <body>
@@ -1240,20 +1359,96 @@ $agents_rejected = array_filter($all_agents, fn($agent) => !$agent['is_active'] 
     <!-- Main Content Area -->
     <div class="admin-content">
 
+    <!-- NO-JS FALLBACK -->
+    <noscript><style>
+        #sk-screen    { display: none !important; }
+        #page-content { display: block !important; opacity: 1 !important; }
+    </style></noscript>
+
+    <!-- SKELETON SCREEN ─────────────────────────────────────────── -->
+    <div id="sk-screen" role="presentation" aria-hidden="true">
+
+        <!-- Page Header -->
+        <div class="sk-page-header">
+            <div class="sk-line sk-shimmer" style="width:200px;height:22px;margin-bottom:10px;"></div>
+            <div class="sk-line sk-shimmer" style="width:360px;height:13px;"></div>
+        </div>
+
+        <!-- 4 KPI cards -->
+        <div class="sk-kpi-grid">
+            <?php for ($ski = 0; $ski < 4; $ski++): ?>
+            <div class="sk-kpi-card">
+                <div class="sk-kpi-icon sk-shimmer"></div>
+                <div style="flex:1;">
+                    <div class="sk-shimmer sk-line" style="width:70%;height:11px;margin-bottom:8px;"></div>
+                    <div class="sk-shimmer sk-line" style="width:45%;height:20px;"></div>
+                </div>
+            </div>
+            <?php endfor; ?>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="sk-action-bar">
+            <div class="sk-shimmer" style="width:160px;height:18px;border-radius:3px;"></div>
+            <div style="margin-left:auto;display:flex;gap:0.75rem;align-items:center;">
+                <div class="sk-shimmer" style="width:220px;height:36px;border-radius:4px;"></div>
+                <div class="sk-shimmer" style="width:130px;height:36px;border-radius:4px;flex-shrink:0;"></div>
+            </div>
+        </div>
+
+        <!-- 4 Status Tabs -->
+        <div class="sk-tabs">
+            <div class="sk-shimmer" style="width:80px;height:20px;border-radius:3px;"></div>
+            <div class="sk-shimmer" style="width:90px;height:20px;border-radius:3px;"></div>
+            <div class="sk-shimmer" style="width:78px;height:20px;border-radius:3px;"></div>
+            <div class="sk-shimmer" style="width:98px;height:20px;border-radius:3px;"></div>
+        </div>
+
+        <!-- Agent Card Grid -->
+        <div class="sk-agent-content-wrap">
+            <div class="sk-agent-grid">
+                <?php for ($ski = 0; $ski < 3; $ski++): ?>
+                <div class="sk-agent-card">
+                    <div class="sk-agent-card-header sk-shimmer"></div>
+                    <div class="sk-agent-card-body">
+                        <div class="sk-shimmer sk-line" style="width:65%;height:13px;"></div>
+                        <div class="sk-shimmer sk-line" style="width:82%;height:12px;"></div>
+                        <div class="sk-shimmer sk-line" style="width:74%;height:12px;"></div>
+                    </div>
+                    <div class="sk-agent-card-footer">
+                        <div class="sk-shimmer" style="width:100%;height:34px;border-radius:4px;"></div>
+                    </div>
+                </div>
+                <?php endfor; ?>
+            </div>
+            <!-- Pagination placeholder -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-top:1px solid #f1f5f9;">
+                <div class="sk-shimmer" style="width:150px;height:13px;border-radius:3px;"></div>
+                <div style="display:flex;gap:0.4rem;">
+                    <?php for ($ski = 0; $ski < 4; $ski++): ?>
+                    <div class="sk-shimmer" style="width:34px;height:34px;border-radius:4px;"></div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /#sk-screen -->
+
+    <!-- REAL CONTENT (hidden until hydrated) ──────────────────────── -->
+    <div id="page-content">
+
         <?php
         $pending_agents_count = count($agents_pending_approval);
         if ($pending_agents_count > 0):
         ?>
         <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                showToast(
-                    'warning',
-                    'Pending Agent Review',
-                    '<?php echo $pending_agents_count; ?> <?php echo $pending_agents_count === 1 ? 'agent requires' : 'agents require'; ?> review and approval.',
-                    6000
-                );
-            }, 600);
+        document.addEventListener('skeleton:hydrated', function() {
+            showToast(
+                'warning',
+                'Pending Agent Review',
+                '<?php echo $pending_agents_count; ?> <?php echo $pending_agents_count === 1 ? 'agent requires' : 'agents require'; ?> review and approval.',
+                6000
+            );
         });
         </script>
         <?php endif; ?>
@@ -1445,7 +1640,9 @@ $agents_rejected = array_filter($all_agents, fn($agent) => !$agent['is_active'] 
                 </div>
             </div>
         </div>
-    </div>
+
+    </div><!-- /#page-content -->
+</div><!-- /.admin-content -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -1914,5 +2111,45 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- SKELETON HYDRATION — Progressive Content Reveal -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart   = Date.now();
+    var hydrated        = false;
+
+    function hydrate() {
+        if (hydrated) return;
+        hydrated = true;
+        var sk = document.getElementById('sk-screen');
+        var pc = document.getElementById('page-content');
+        if (!sk || !pc) return;
+        sk.style.transition = 'opacity 0.35s ease';
+        sk.style.opacity    = '0';
+        setTimeout(function () { sk.style.display = 'none'; }, 360);
+        pc.style.opacity    = '0';
+        pc.style.display    = 'block';
+        requestAnimationFrame(function () {
+            pc.style.transition = 'opacity 0.4s ease';
+            pc.style.opacity    = '1';
+        });
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent('skeleton:hydrated'));
+        }, 520);
+    }
+
+    function scheduleHydration() {
+        var elapsed   = Date.now() - skeletonStart;
+        var remaining = MIN_SKELETON_MS - elapsed;
+        if (remaining <= 0) { hydrate(); } else { setTimeout(hydrate, remaining); }
+    }
+
+    window.addEventListener('load', scheduleHydration);
+
+}());
+</script>
+
 </body>
 </html>

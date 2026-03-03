@@ -1444,6 +1444,146 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             align-items: center;
             gap: 0.3rem;
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Client-Side Rendering (CSR) Pattern
+           + Progressive Hydration
+           ---------------------------------------------------------------
+           1. #sk-screen   : Shimmer placeholders shown on first paint.
+           2. #page-content: Real server-rendered HTML, starts display:none.
+           3. Hydration JS : On DOMContentLoaded, fades skeleton out and
+                             fades real content in — zero layout shift.
+           4. <noscript>   : If JS is disabled, skeleton is hidden and
+                             real content is shown immediately.
+           ================================================================ */
+
+        /* ── Core shimmer animation ──────────────────────────────────── */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+
+        /* ── Real content wrapper (hidden until hydration) ────────────── */
+        #page-content {
+            display: none; /* Revealed by JS on DOMContentLoaded */
+        }
+
+        /* ── Skeleton: Page header ────────────────────────────────────── */
+        .sk-page-header {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-page-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        /* ── Skeleton: KPI grid ───────────────────────────────────────── */
+        .sk-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .sk-kpi-card {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .sk-kpi-icon { width: 48px; height: 48px; border-radius: 4px; flex-shrink: 0; }
+
+        /* ── Skeleton: Action bar ─────────────────────────────────────── */
+        .sk-action-bar {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 0.85rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-action-bar::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        /* ── Skeleton: Status tabs ────────────────────────────────────── */
+        .sk-tabs {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            padding: 0 1rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            height: 54px;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-tabs::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        /* ── Skeleton: Sale card grid ─────────────────────────────────── */
+        .sk-content-wrap {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sk-sales-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.25rem;
+            padding: 1.5rem;
+        }
+        .sk-sale-card {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sk-card-img  { height: 180px; width: 100%; }
+        .sk-card-body { padding: 1rem 1.25rem; }
+        .sk-card-footer { padding: 0 1.25rem 1.25rem; }
+        .sk-line { display: block; border-radius: 4px; }
+
+        /* ── Responsive adjustments ───────────────────────────────────── */
+        @media (max-width: 1200px) { .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px)  {
+            .sk-kpi-grid   { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+            .sk-sales-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 576px)  { .sk-kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; } }
     </style>
 </head>
 <body>
@@ -1454,13 +1594,141 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     ?>
 
     <div class="admin-content">
+
+        <!-- ══════════════════════════════════════════════════════════════
+             NO-JS FALLBACK: If JavaScript is disabled, hide skeleton
+             and show real content immediately without hydration.
+             ══════════════════════════════════════════════════════════════ -->
+        <noscript><style>
+            #sk-screen   { display: none !important; }
+            #page-content { display: block !important; opacity: 1 !important; }
+        </style></noscript>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             SKELETON SCREEN — Visible on first paint, before JS fires.
+             Mirrors the real page layout: header → KPI cards → action
+             bar → status tabs → sale card grid.
+             Removed from DOM by the hydration script below.
+             ══════════════════════════════════════════════════════════════ -->
+        <div id="sk-screen" role="presentation" aria-hidden="true" aria-label="Loading page content">
+
+            <!-- Skeleton: Page Header -->
+            <div class="sk-page-header">
+                <div class="sk-line sk-shimmer" style="width:200px;height:22px;margin-bottom:10px;"></div>
+                <div class="sk-line sk-shimmer" style="width:340px;height:13px;"></div>
+            </div>
+
+            <!-- Skeleton: KPI Cards -->
+            <div class="sk-kpi-grid">
+                <div class="sk-kpi-card">
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                    <div style="flex:1;"><div class="sk-line sk-shimmer" style="width:65%;height:10px;margin-bottom:8px;"></div><div class="sk-line sk-shimmer" style="width:40%;height:20px;"></div></div>
+                </div>
+                <div class="sk-kpi-card">
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                    <div style="flex:1;"><div class="sk-line sk-shimmer" style="width:70%;height:10px;margin-bottom:8px;"></div><div class="sk-line sk-shimmer" style="width:35%;height:20px;"></div></div>
+                </div>
+                <div class="sk-kpi-card">
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                    <div style="flex:1;"><div class="sk-line sk-shimmer" style="width:60%;height:10px;margin-bottom:8px;"></div><div class="sk-line sk-shimmer" style="width:30%;height:20px;"></div></div>
+                </div>
+                <div class="sk-kpi-card">
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                    <div style="flex:1;"><div class="sk-line sk-shimmer" style="width:55%;height:10px;margin-bottom:8px;"></div><div class="sk-line sk-shimmer" style="width:35%;height:20px;"></div></div>
+                </div>
+            </div>
+
+            <!-- Skeleton: Action Bar -->
+            <div class="sk-action-bar">
+                <div class="sk-shimmer" style="flex:1;height:36px;border-radius:4px;"></div>
+                <div class="sk-shimmer" style="width:90px;height:36px;border-radius:4px;flex-shrink:0;"></div>
+                <div class="sk-shimmer" style="width:90px;height:36px;border-radius:4px;flex-shrink:0;"></div>
+            </div>
+
+            <!-- Skeleton: Status Tabs -->
+            <div class="sk-tabs">
+                <div class="sk-shimmer" style="width:75px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:85px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:80px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:80px;height:20px;border-radius:3px;"></div>
+            </div>
+
+            <!-- Skeleton: Sale Cards Grid -->
+            <div class="sk-content-wrap">
+                <div class="sk-sales-grid">
+                    <!-- Card 1 -->
+                    <div class="sk-sale-card">
+                        <div class="sk-card-img sk-shimmer"></div>
+                        <div class="sk-card-body">
+                            <div class="sk-line sk-shimmer" style="width:82%;height:16px;margin-bottom:8px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:52%;height:12px;margin-bottom:12px;"></div>
+                            <div style="display:flex;gap:6px;margin-bottom:12px;">
+                                <div class="sk-shimmer" style="width:82px;height:10px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:95px;height:10px;border-radius:3px;"></div>
+                            </div>
+                            <div class="sk-line sk-shimmer" style="width:60%;height:10px;margin-bottom:16px;"></div>
+                        </div>
+                        <div class="sk-card-footer">
+                            <div class="sk-line sk-shimmer" style="width:100%;height:34px;border-radius:4px;"></div>
+                        </div>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="sk-sale-card">
+                        <div class="sk-card-img sk-shimmer"></div>
+                        <div class="sk-card-body">
+                            <div class="sk-line sk-shimmer" style="width:75%;height:16px;margin-bottom:8px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:45%;height:12px;margin-bottom:12px;"></div>
+                            <div style="display:flex;gap:6px;margin-bottom:12px;">
+                                <div class="sk-shimmer" style="width:78px;height:10px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:88px;height:10px;border-radius:3px;"></div>
+                            </div>
+                            <div class="sk-line sk-shimmer" style="width:55%;height:10px;margin-bottom:16px;"></div>
+                        </div>
+                        <div class="sk-card-footer">
+                            <div class="sk-line sk-shimmer" style="width:100%;height:34px;border-radius:4px;"></div>
+                        </div>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="sk-sale-card">
+                        <div class="sk-card-img sk-shimmer"></div>
+                        <div class="sk-card-body">
+                            <div class="sk-line sk-shimmer" style="width:88%;height:16px;margin-bottom:8px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:58%;height:12px;margin-bottom:12px;"></div>
+                            <div style="display:flex;gap:6px;margin-bottom:12px;">
+                                <div class="sk-shimmer" style="width:85px;height:10px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="width:92px;height:10px;border-radius:3px;"></div>
+                            </div>
+                            <div class="sk-line sk-shimmer" style="width:65%;height:10px;margin-bottom:16px;"></div>
+                        </div>
+                        <div class="sk-card-footer">
+                            <div class="sk-line sk-shimmer" style="width:100%;height:34px;border-radius:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /#sk-screen -->
+
+        <!-- ══════════════════════════════════════════════════════════════
+             REAL PAGE CONTENT — Server-rendered by PHP.
+             Starts as display:none and is progressively revealed
+             (with a fade-in) by the hydration script on DOMContentLoaded.
+             ══════════════════════════════════════════════════════════════ -->
+        <div id="page-content">
+
         <?php
             $needs_finalization_count = count(array_filter($sale_verifications, fn($s) =>
                 $s['status'] === 'Approved' && empty($s['commission_amount'])
             ));
         ?>
+        <!--
+            Toast notifications: deferred until AFTER skeleton hydration
+            completes (the 'skeleton:hydrated' custom event).
+            This ensures toasts only appear when the real page content
+            is fully visible — no flicker, no overlap with the skeleton.
+        -->
         <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('skeleton:hydrated', function() {
             <?php if ($success_message): ?>
                 <?php
                     $toast_title = 'Success';
@@ -1654,7 +1922,8 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                 <?php endif; ?>
             </div>
         </div>
-    </div>
+        </div><!-- /#page-content -->
+    </div><!-- /.admin-content -->
 
     <!-- View Details Modal -->
     <div class="modal-overlay" id="detailsModal">
@@ -2746,6 +3015,118 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         const i = Math.floor(Math.log(b) / Math.log(k));
         return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + s[i];
     }
+    </script>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         SKELETON HYDRATION SCRIPT — Progressive Content Reveal
+         ----------------------------------------------------------------
+         Trigger   : window 'load' (waits for ALL CSS, fonts, images,
+                     JS to finish) + a configurable MIN_SKELETON_MS
+                     minimum display so it never just flashes.
+         What      : 1. Waits for window load + minimum display time.
+                     2. Makes #page-content visible (display:block).
+                     3. Fades #sk-screen out via opacity transition.
+                     4. Simultaneously fades #page-content in.
+                     5. Removes #sk-screen from DOM to free memory.
+                     6. Dispatches 'skeleton:hydrated' custom event
+                        so toasts and other deferred UI can fire.
+         No-JS     : Handled by <noscript> CSS above — skeleton is
+                     hidden and real content shown automatically.
+         ════════════════════════════════════════════════════════════════ -->
+    <script>
+    (function () {
+        'use strict';
+
+        /* ── Configuration ────────────────────────────────────────── */
+        var MIN_SKELETON_MS = 400;   /* Minimum time skeleton stays visible (ms).
+                                        Prevents a jarring flash on fast local loads.
+                                        Increase to 600–800 for extra-smooth feel. */
+
+        /* Record when the skeleton first rendered (approx. page navigation start) */
+        var skeletonStart = Date.now();
+
+        /**
+         * hydrate()
+         * Cross-fades skeleton out → real content in, then removes
+         * the skeleton from the DOM and dispatches 'skeleton:hydrated'
+         * so other code (toasts, etc.) can safely fire.
+         */
+        function hydrate() {
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+
+            /* Safety: if elements are missing, just reveal content */
+            if (!pc) return;
+            if (!sk) {
+                pc.style.cssText = 'display:block;opacity:1;';
+                document.dispatchEvent(new Event('skeleton:hydrated'));
+                return;
+            }
+
+            /* ── Step 1: Make real content visible but transparent ── */
+            pc.style.display  = 'block';
+            pc.style.opacity  = '0';
+
+            /* ── Step 2: Animate on next frame ── */
+            requestAnimationFrame(function () {
+
+                /* Fade skeleton OUT */
+                sk.style.transition = 'opacity 0.35s ease';
+                sk.style.opacity    = '0';
+
+                /* Fade real content IN (slight stagger) */
+                pc.style.transition = 'opacity 0.42s ease 0.1s';
+                requestAnimationFrame(function () {
+                    pc.style.opacity = '1';
+                });
+            });
+
+            /* ── Step 3: Remove skeleton & dispatch event after transition ── */
+            window.setTimeout(function () {
+                if (sk && sk.parentNode) {
+                    sk.parentNode.removeChild(sk);
+                }
+                pc.style.transition = '';
+                pc.style.opacity    = '';
+
+                /* Signal that hydration is complete — toasts etc. can now fire */
+                document.dispatchEvent(new Event('skeleton:hydrated'));
+            }, 520);
+        }
+
+        /**
+         * scheduleHydration()
+         * Called when all resources are loaded (window 'load').
+         * Enforces the minimum display time so the skeleton doesn't
+         * just flash for 50 ms on fast connections.
+         */
+        function scheduleHydration() {
+            var elapsed   = Date.now() - skeletonStart;
+            var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+
+            if (remaining > 0) {
+                window.setTimeout(hydrate, remaining);
+            } else {
+                hydrate();
+            }
+        }
+
+        /*
+         * Trigger: window 'load' — fires only after ALL sub-resources
+         * (CSS, fonts, images, JS) have finished loading.  This keeps
+         * the skeleton visible the entire time external assets load,
+         * which is the main source of perceived delay.
+         *
+         * Fallback: if 'load' already fired (shouldn't happen for an
+         * inline script, but just in case), hydrate immediately.
+         */
+        if (document.readyState === 'complete') {
+            scheduleHydration();
+        } else {
+            window.addEventListener('load', scheduleHydration);
+        }
+
+    }());
     </script>
 </body>
 </html>

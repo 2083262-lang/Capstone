@@ -909,6 +909,36 @@ unset($_SESSION['message']);
             color: var(--text-secondary, #64748b);
             margin-top: 0.375rem;
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Client-Side Rendering (CSR) Pattern
+           Matches: add_property.php
+           ================================================================ */
+        @keyframes sk-shimmer { 0% { background-position: -800px 0; } 100% { background-position: 800px 0; } }
+        .sk-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 800px 100%;
+            animation: sk-shimmer 1.4s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        .sk-page-header { background:#fff; border-radius:4px; padding:1.25rem 1.75rem; margin-bottom:1.5rem; border:1px solid rgba(37,99,235,0.08); }
+        .sk-form-progress { background:#fff; border-radius:4px; padding:1rem 1.75rem; margin-bottom:1.5rem; border:1px solid rgba(37,99,235,0.08); }
+        .sk-form-section { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:1.5rem 1.75rem; margin-bottom:1.25rem; }
+        .sk-form-section-title { margin-bottom:1rem; }
+        .sk-form-row { display:grid; gap:1rem; margin-bottom:0.75rem; }
+        .sk-form-row-5 { grid-template-columns: repeat(5, 1fr); }
+        .sk-form-row-4 { grid-template-columns: repeat(4, 1fr); }
+        .sk-form-row-2 { grid-template-columns: repeat(2, 1fr); }
+        .sk-form-field { display:flex; flex-direction:column; gap:0.4rem; }
+        .sk-form-input { height: 40px; border-radius:4px; }
+        .sk-form-textarea { height: 100px; border-radius:4px; }
+        .sk-form-chips { display:grid; grid-template-columns:repeat(6, 1fr); gap:0.5rem; margin-top:0.5rem; }
+        .sk-upload-area { height:130px; border-radius:6px; border:2px dashed #e2e8f0; display:flex; align-items:center; justify-content:center; }
+        .sk-line { display:block; border-radius:4px; }
+        @media (max-width:992px) { .sk-form-row-5 { grid-template-columns:repeat(3,1fr); } .sk-form-row-4 { grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:768px) { .sk-form-row-5, .sk-form-row-4, .sk-form-row-2 { grid-template-columns:1fr; } .sk-form-chips { grid-template-columns:repeat(3,1fr); } }
     </style>
 </head>
 <body>
@@ -925,6 +955,123 @@ unset($_SESSION['message']);
 
     <!-- Main Content Area -->
     <div class="admin-content">
+
+        <noscript><style>
+            #sk-screen    { display: none !important; }
+            #page-content { display: block !important; opacity: 1 !important; }
+        </style></noscript>
+
+        <!-- ══════════════════════════════════════════════════════════
+             SKELETON SCREEN — visible on first paint
+        ══════════════════════════════════════════════════════════ -->
+        <div id="sk-screen" role="presentation" aria-hidden="true">
+
+            <!-- Page Header -->
+            <div class="sk-page-header">
+                <div class="sk-line sk-shimmer" style="width:190px;height:22px;margin-bottom:10px;"></div>
+                <div class="sk-line sk-shimmer" style="width:320px;height:13px;"></div>
+            </div>
+
+            <!-- Form Progress Bar -->
+            <div class="sk-form-progress">
+                <div class="sk-shimmer" style="width:100%;height:8px;border-radius:4px;margin-bottom:0.5rem;"></div>
+                <div class="sk-line sk-shimmer" style="width:260px;height:12px;"></div>
+            </div>
+
+            <!-- Form Section 1: Basic Information -->
+            <div class="sk-form-section">
+                <div class="sk-form-section-title">
+                    <div class="sk-line sk-shimmer" style="width:160px;height:18px;"></div>
+                </div>
+                <div class="sk-form-row sk-form-row-5">
+                    <?php for ($i = 0; $i < 5; $i++): ?>
+                    <div class="sk-form-field">
+                        <div class="sk-line sk-shimmer" style="width:80px;height:12px;"></div>
+                        <div class="sk-form-input sk-shimmer"></div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+                <div class="sk-form-row sk-form-row-4" style="margin-top:0.75rem;">
+                    <?php for ($i = 0; $i < 4; $i++): ?>
+                    <div class="sk-form-field">
+                        <div class="sk-line sk-shimmer" style="width:70px;height:12px;"></div>
+                        <div class="sk-form-input sk-shimmer"></div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+            <!-- Form Section 2: Property Details -->
+            <div class="sk-form-section">
+                <div class="sk-form-section-title">
+                    <div class="sk-line sk-shimmer" style="width:150px;height:18px;"></div>
+                </div>
+                <div class="sk-form-row sk-form-row-4">
+                    <?php for ($i = 0; $i < 4; $i++): ?>
+                    <div class="sk-form-field">
+                        <div class="sk-line sk-shimmer" style="width:75px;height:12px;"></div>
+                        <div class="sk-form-input sk-shimmer"></div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+            <!-- Form Section 3: Description + MLS -->
+            <div class="sk-form-section">
+                <div class="sk-form-section-title">
+                    <div class="sk-line sk-shimmer" style="width:180px;height:18px;"></div>
+                </div>
+                <div class="sk-form-row sk-form-row-2" style="margin-bottom:0.75rem;">
+                    <div class="sk-form-field">
+                        <div class="sk-line sk-shimmer" style="width:90px;height:12px;"></div>
+                        <div class="sk-form-input sk-shimmer"></div>
+                    </div>
+                    <div class="sk-form-field">
+                        <div class="sk-line sk-shimmer" style="width:90px;height:12px;"></div>
+                        <div class="sk-form-input sk-shimmer"></div>
+                    </div>
+                </div>
+                <div class="sk-form-field">
+                    <div class="sk-line sk-shimmer" style="width:110px;height:12px;margin-bottom:0.4rem;"></div>
+                    <div class="sk-form-textarea sk-shimmer"></div>
+                </div>
+            </div>
+
+            <!-- Form Section 4: Amenities -->
+            <div class="sk-form-section">
+                <div class="sk-form-section-title" style="margin-bottom:0.75rem;">
+                    <div class="sk-line sk-shimmer" style="width:170px;height:18px;"></div>
+                </div>
+                <div class="sk-shimmer" style="height:38px;border-radius:4px;margin-bottom:0.75rem;"></div>
+                <div class="sk-form-chips">
+                    <?php for ($i = 0; $i < 12; $i++): ?>
+                    <div class="sk-shimmer" style="height:32px;border-radius:4px;"></div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+            <!-- Form Section 5: Property Images -->
+            <div class="sk-form-section">
+                <div class="sk-form-section-title" style="margin-bottom:0.75rem;">
+                    <div class="sk-line sk-shimmer" style="width:160px;height:18px;"></div>
+                </div>
+                <div class="sk-upload-area">
+                    <div style="text-align:center;">
+                        <div class="sk-shimmer" style="width:40px;height:40px;border-radius:50%;margin:0 auto 0.5rem;"></div>
+                        <div class="sk-line sk-shimmer" style="width:150px;height:13px;margin:0 auto;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Section -->
+            <div class="sk-form-section" style="display:flex;gap:1rem;padding:1.25rem 1.75rem;">
+                <div class="sk-shimmer" style="width:160px;height:42px;border-radius:4px;"></div>
+                <div class="sk-shimmer" style="width:100px;height:42px;border-radius:4px;"></div>
+            </div>
+
+        </div><!-- /#sk-screen -->
+
+        <div id="page-content">
 
         <!-- Page Header -->
         <div class="page-header">
@@ -946,7 +1093,7 @@ unset($_SESSION['message']);
 
         <?php if ($message_text): ?>
         <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('skeleton:hydrated', function() {
             <?php
                 $toast_type = ($message_type === 'success') ? 'success' : 'error';
                 $toast_title = ($message_type === 'success') ? 'Success' : 'Error';
@@ -1298,6 +1445,7 @@ unset($_SESSION['message']);
                         </div>
                     </div>
                 </form>
+        </div><!-- /#page-content -->
     </div>
 
 <!-- Toast Container -->
@@ -1755,5 +1903,35 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 
+    <!-- ══════════════════════════════════════════════════════════
+         SKELETON HYDRATION SCRIPT
+         Waits for window 'load' (fonts + CSS ready) then
+         cross-fades skeleton out and real content in.
+    ══════════════════════════════════════════════════════════ -->
+    <script>
+    (function () {
+        'use strict';
+        var MIN_SKELETON_MS = 400;
+        var skeletonStart   = Date.now();
+        var hydrated        = false;
+        function hydrate() {
+            if (hydrated) return; hydrated = true;
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+            if (!sk || !pc) return;
+            sk.style.transition = 'opacity 0.35s ease'; sk.style.opacity = '0';
+            setTimeout(function () { sk.style.display = 'none'; }, 360);
+            pc.style.opacity = '0'; pc.style.display = 'block';
+            requestAnimationFrame(function () { pc.style.transition = 'opacity 0.4s ease'; pc.style.opacity = '1'; });
+            setTimeout(function () { document.dispatchEvent(new CustomEvent('skeleton:hydrated')); }, 520);
+        }
+        function scheduleHydration() {
+            var elapsed   = Date.now() - skeletonStart;
+            var remaining = MIN_SKELETON_MS - elapsed;
+            if (remaining <= 0) { hydrate(); } else { setTimeout(hydrate, remaining); }
+        }
+        window.addEventListener('load', scheduleHydration);
+    }());
+    </script>
 </body>
 </html>

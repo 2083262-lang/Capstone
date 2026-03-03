@@ -740,6 +740,96 @@ $stmt_fetch_agent->close();
             .info-grid { grid-template-columns: 1fr; }
             .hero-status-badge { position: relative; top: auto; right: auto; }
         }
+
+        /* ================================================================
+           SKELETON SCREEN — CSR / Progressive Hydration
+           review_agent_details.php
+        ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        .sk-shimmer-dark {
+            background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        /* Hero banner skeleton */
+        .sk-hero-banner {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 2rem 2.5rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        .sk-hero-avatar {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .sk-hero-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+        .sk-hero-stats-row { display: flex; gap: 1.25rem; margin-top: 0.25rem; }
+
+        /* Two-column detail layout */
+        .sk-rad-content {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+        }
+        .sk-rad-left, .sk-rad-right { display: flex; flex-direction: column; }
+        .sk-dash-card {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1.25rem;
+        }
+        .sk-dash-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .sk-dash-body { padding: 1.25rem; }
+        .sk-line { display: block; border-radius: 4px; }
+
+        /* Info grid placeholder (3-col) */
+        .sk-info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        .sk-info-item { padding: 0.4rem 0; }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .sk-rad-content { grid-template-columns: 1fr; }
+            .sk-rad-right { display: none; }
+        }
+        @media (max-width: 768px) {
+            .sk-hero-banner { padding: 1.5rem; flex-direction: column; text-align: center; align-items: center; }
+            .sk-hero-avatar { width: 80px; height: 80px; }
+            .sk-hero-stats-row { justify-content: center; }
+            .sk-info-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
     </style>
 </head>
 <body>
@@ -753,9 +843,134 @@ include 'admin_navbar.php';
 
 <div class="admin-content">
 
+    <!-- NO-JS FALLBACK -->
+    <noscript><style>
+        #sk-screen    { display: none !important; }
+        #page-content { display: block !important; opacity: 1 !important; }
+    </style></noscript>
+
+    <!-- SKELETON SCREEN ────────────────────────────────────────── -->
+    <div id="sk-screen" role="presentation" aria-hidden="true">
+
+        <!-- Agent Hero Banner -->
+        <div class="sk-hero-banner">
+            <div class="sk-hero-avatar sk-shimmer-dark"></div>
+            <div class="sk-hero-info">
+                <div class="sk-shimmer-dark sk-line" style="width:260px;height:28px;"></div>
+                <div class="sk-shimmer-dark sk-line" style="width:180px;height:14px;"></div>
+                <div class="sk-hero-stats-row">
+                    <div class="sk-shimmer-dark" style="width:70px;height:44px;border-radius:4px;"></div>
+                    <div class="sk-shimmer-dark" style="width:80px;height:44px;border-radius:4px;"></div>
+                    <div class="sk-shimmer-dark" style="width:90px;height:44px;border-radius:4px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail two-column area -->
+        <div class="sk-rad-content">
+
+            <!-- Left column: detail sections -->
+            <div class="sk-rad-left">
+
+                <!-- About section -->
+                <div class="sk-dash-card">
+                    <div class="sk-dash-header">
+                        <div class="sk-shimmer sk-line" style="width:150px;height:16px;"></div>
+                    </div>
+                    <div class="sk-dash-body">
+                        <div class="sk-shimmer sk-line" style="width:95%;height:12px;margin-bottom:9px;"></div>
+                        <div class="sk-shimmer sk-line" style="width:90%;height:12px;margin-bottom:9px;"></div>
+                        <div class="sk-shimmer sk-line" style="width:93%;height:12px;margin-bottom:9px;"></div>
+                        <div class="sk-shimmer sk-line" style="width:80%;height:12px;"></div>
+                    </div>
+                </div>
+
+                <!-- Professional Info section -->
+                <div class="sk-dash-card">
+                    <div class="sk-dash-header">
+                        <div class="sk-shimmer sk-line" style="width:200px;height:16px;"></div>
+                    </div>
+                    <div class="sk-dash-body">
+                        <div class="sk-info-grid">
+                            <?php for ($ski = 0; $ski < 3; $ski++): ?>
+                            <div class="sk-info-item">
+                                <div class="sk-shimmer sk-line" style="width:60%;height:10px;margin-bottom:8px;"></div>
+                                <div class="sk-shimmer sk-line" style="width:80%;height:15px;"></div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Info section -->
+                <div class="sk-dash-card">
+                    <div class="sk-dash-header">
+                        <div class="sk-shimmer sk-line" style="width:140px;height:16px;"></div>
+                    </div>
+                    <div class="sk-dash-body">
+                        <div class="sk-info-grid">
+                            <?php for ($ski = 0; $ski < 3; $ski++): ?>
+                            <div class="sk-info-item">
+                                <div class="sk-shimmer sk-line" style="width:55%;height:10px;margin-bottom:8px;"></div>
+                                <div class="sk-shimmer sk-line" style="width:85%;height:15px;"></div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /.sk-rad-left -->
+
+            <!-- Right column: admin actions + status -->
+            <div class="sk-rad-right">
+
+                <!-- Admin Actions card -->
+                <div class="sk-dash-card">
+                    <div class="sk-dash-header">
+                        <div class="sk-shimmer sk-line" style="width:130px;height:16px;"></div>
+                    </div>
+                    <div class="sk-dash-body">
+                        <div class="sk-shimmer sk-line" style="height:44px;border-radius:4px;margin-bottom:0.75rem;"></div>
+                        <div class="sk-shimmer sk-line" style="height:44px;border-radius:4px;margin-bottom:0.75rem;"></div>
+                        <div class="sk-shimmer sk-line" style="height:44px;border-radius:4px;"></div>
+                    </div>
+                </div>
+
+                <!-- Profile Status card -->
+                <div class="sk-dash-card">
+                    <div class="sk-dash-header">
+                        <div class="sk-shimmer sk-line" style="width:120px;height:16px;"></div>
+                    </div>
+                    <div class="sk-dash-body" style="display:flex;flex-direction:column;gap:0.85rem;">
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <div class="sk-shimmer" style="width:36px;height:36px;border-radius:50%;"></div>
+                            <div style="flex:1;">
+                                <div class="sk-shimmer sk-line" style="width:50%;height:11px;margin-bottom:6px;"></div>
+                                <div class="sk-shimmer sk-line" style="width:70%;height:14px;"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <div class="sk-shimmer" style="width:36px;height:36px;border-radius:50%;"></div>
+                            <div style="flex:1;">
+                                <div class="sk-shimmer sk-line" style="width:50%;height:11px;margin-bottom:6px;"></div>
+                                <div class="sk-shimmer sk-line" style="width:65%;height:14px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /.sk-rad-right -->
+
+        </div><!-- /.sk-rad-content -->
+
+    </div><!-- /#sk-screen -->
+
+    <!-- REAL CONTENT (hidden until hydrated) ───────────────────── -->
+    <div id="page-content">
+
     <?php if ($success_message || $error_message): ?>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('skeleton:hydrated', function() {
         <?php if ($success_message):
             if (stripos($success_message, 'approved') !== false) {
                 $toast_title = 'Agent Approved';
@@ -1049,7 +1264,8 @@ include 'admin_navbar.php';
             </a>
         </div>
     <?php endif; ?>
-</div>
+    </div><!-- /#page-content -->
+</div><!-- /.admin-content -->
 
 <!-- Rejection Modal -->
 <div class="modal fade" id="rejectionModal" tabindex="-1" aria-labelledby="rejectionModalLabel" aria-hidden="true">
@@ -1338,6 +1554,45 @@ function dismissToast(toast) {
         rejectionTextarea.setAttribute('maxlength', maxLength);
         updateCounter();
     }
+</script>
+
+<!-- SKELETON HYDRATION — Progressive Content Reveal -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart   = Date.now();
+    var hydrated        = false;
+
+    function hydrate() {
+        if (hydrated) return;
+        hydrated = true;
+        var sk = document.getElementById('sk-screen');
+        var pc = document.getElementById('page-content');
+        if (!sk || !pc) return;
+        sk.style.transition = 'opacity 0.35s ease';
+        sk.style.opacity    = '0';
+        setTimeout(function () { sk.style.display = 'none'; }, 360);
+        pc.style.opacity    = '0';
+        pc.style.display    = 'block';
+        requestAnimationFrame(function () {
+            pc.style.transition = 'opacity 0.4s ease';
+            pc.style.opacity    = '1';
+        });
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent('skeleton:hydrated'));
+        }, 520);
+    }
+
+    function scheduleHydration() {
+        var elapsed   = Date.now() - skeletonStart;
+        var remaining = MIN_SKELETON_MS - elapsed;
+        if (remaining <= 0) { hydrate(); } else { setTimeout(hydrate, remaining); }
+    }
+
+    window.addEventListener('load', scheduleHydration);
+
+}());
 </script>
 
 </body>

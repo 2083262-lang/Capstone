@@ -1506,6 +1506,127 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
         .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
         @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
 
+        /* ================================================================
+           SKELETON SCREEN — Property Management (CSR / Progressive Hydration)
+           ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        .sk-page-header {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-page-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        /* 6-column KPI grid — matches .kpi-grid on this page */
+        .sk-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .sk-kpi-card {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 1.25rem;
+        }
+        .sk-kpi-icon { width: 40px; height: 40px; border-radius: 4px; margin-bottom: 0.75rem; }
+
+        .sk-action-bar {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-action-bar::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        .sk-tabs {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            padding: 0 0.5rem;
+            display: flex;
+            gap: 0.25rem;
+            align-items: center;
+            height: 54px;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-tabs::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+        }
+
+        .sk-content-wrap {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        /* matches .properties-grid minmax(380px, 1fr) */
+        .sk-prop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 1.25rem;
+            padding: 1.5rem;
+        }
+        .sk-prop-card {
+            background: #fff;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sk-card-img    { height: 200px; width: 100%; }
+        .sk-card-body   { padding: 1.25rem; }
+        .sk-card-footer { padding: 0 1.25rem 1.25rem; }
+        .sk-line        { display: block; border-radius: 4px; }
+
+        @media (max-width: 1400px) { .sk-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 992px)  {
+            .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .sk-prop-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px)  { .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; } }
+        @media (max-width: 576px)  { .sk-kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; } }
+
     </style>
 </head>
 <body>
@@ -1518,6 +1639,98 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
 
     <!-- Main Content Area -->
     <div class="admin-content">
+
+        <!-- NO-JS FALLBACK: show real content if JS is disabled -->
+        <noscript><style>
+            #sk-screen    { display: none !important; }
+            #page-content { display: block !important; opacity: 1 !important; }
+        </style></noscript>
+
+        <!-- ═════════════════════════════════════════════════════════
+             SKELETON SCREEN — renders on first paint, removed by JS
+             ═════════════════════════════════════════════════════════ -->
+        <div id="sk-screen" role="presentation" aria-hidden="true">
+
+            <!-- Page Header -->
+            <div class="sk-page-header">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+                    <div>
+                        <div class="sk-line sk-shimmer" style="width:220px;height:22px;margin-bottom:10px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:380px;height:13px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards (6-column) -->
+            <div class="sk-kpi-grid">
+                <?php for ($sk_i = 0; $sk_i < 6; $sk_i++): ?>
+                <div class="sk-kpi-card">
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                    <div class="sk-line sk-shimmer" style="width:65%;height:10px;margin-bottom:8px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:45%;height:22px;"></div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="sk-action-bar">
+                <div class="sk-shimmer" style="width:160px;height:18px;border-radius:3px;"></div>
+                <div style="display:flex;gap:0.75rem;">
+                    <div class="sk-shimmer" style="width:135px;height:36px;border-radius:4px;"></div>
+                    <div class="sk-shimmer" style="width:150px;height:36px;border-radius:4px;"></div>
+                </div>
+            </div>
+
+            <!-- Status Tabs (6 tabs: All, Pending, Pending Sold, Approved, Rejected, Sold) -->
+            <div class="sk-tabs">
+                <div class="sk-shimmer" style="width:55px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:80px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:110px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:85px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:80px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:60px;height:20px;border-radius:3px;"></div>
+            </div>
+
+            <!-- Property Card Grid (3 cards matching minmax 380px) -->
+            <div class="sk-content-wrap">
+                <div class="sk-prop-grid">
+                    <?php for ($sk_i = 0; $sk_i < 3; $sk_i++): ?>
+                    <div class="sk-prop-card">
+                        <!-- Card image -->
+                        <div class="sk-card-img sk-shimmer"></div>
+                        <!-- Card body -->
+                        <div class="sk-card-body">
+                            <div class="sk-line sk-shimmer" style="width:80%;height:14px;margin-bottom:8px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:55%;height:11px;margin-bottom:14px;"></div>
+                            <!-- Stats row -->
+                            <div style="display:flex;gap:1rem;padding:0.75rem 0;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;margin-bottom:10px;">
+                                <div class="sk-shimmer" style="flex:1;height:12px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="flex:1;height:12px;border-radius:3px;"></div>
+                                <div class="sk-shimmer" style="flex:1;height:12px;border-radius:3px;"></div>
+                            </div>
+                            <!-- Meta pills -->
+                            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:10px;">
+                                <div class="sk-shimmer" style="width:70px;height:22px;border-radius:2px;"></div>
+                                <div class="sk-shimmer" style="width:85px;height:22px;border-radius:2px;"></div>
+                                <div class="sk-shimmer" style="width:60px;height:22px;border-radius:2px;"></div>
+                            </div>
+                        </div>
+                        <!-- Card footer -->
+                        <div class="sk-card-footer">
+                            <div class="sk-line sk-shimmer" style="width:55%;height:11px;margin:0 auto 10px;border-radius:3px;"></div>
+                            <div class="sk-shimmer" style="width:100%;height:36px;border-radius:4px;"></div>
+                        </div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+        </div><!-- /#sk-screen -->
+
+        <!-- ═════════════════════════════════════════════════════════
+             REAL PAGE CONTENT — hidden until hydrated by JS
+             ═════════════════════════════════════════════════════════ -->
+        <div id="page-content">
 
         <!-- Page Header -->
         <div class="page-header">
@@ -1675,7 +1888,8 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
                 <?php endforeach; ?>
             </div>
         </div>
-    </div>
+        </div><!-- /#page-content -->
+    </div><!-- /.admin-content -->
 
 
         <!-- Filter Sidebar -->
@@ -1983,19 +2197,18 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
         }
 
         // ===== PENDING PROPERTY NOTIFICATIONS =====
-        document.addEventListener('DOMContentLoaded', function() {
+        /* Fires on skeleton:hydrated so toasts only appear once real content is visible */
+        document.addEventListener('skeleton:hydrated', function() {
             const pendingReview  = <?php echo count($pending_properties); ?>;
             const pendingSold    = <?php echo count($pending_sold_properties); ?>;
 
             if (pendingReview > 0) {
-                setTimeout(() => {
-                    showToast(
-                        'warning',
-                        'Pending Review',
-                        pendingReview + ' propert' + (pendingReview !== 1 ? 'ies require' : 'y requires') + ' approval before going live.',
-                        6000
-                    );
-                }, 600);
+                showToast(
+                    'warning',
+                    'Pending Review',
+                    pendingReview + ' propert' + (pendingReview !== 1 ? 'ies require' : 'y requires') + ' approval before going live.',
+                    6000
+                );
             }
             if (pendingSold > 0) {
                 setTimeout(() => {
@@ -2005,7 +2218,7 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
                         pendingSold + ' propert' + (pendingSold !== 1 ? 'ies are' : 'y is') + ' awaiting sale finalization.',
                         6000
                     );
-                }, 1400);
+                }, 700);
             }
         });
 
@@ -2706,6 +2919,62 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
             updateChipStates();
             document.getElementById('filteredCount').textContent = allProperties.length;
         }, 100);
+    </script>
+
+    <!-- SKELETON HYDRATION — Progressive Content Reveal -->
+    <script>
+    (function () {
+        'use strict';
+
+        var MIN_SKELETON_MS = 400;
+        var skeletonStart   = Date.now();
+
+        function hydrate() {
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+
+            if (!pc) return;
+            if (!sk) {
+                pc.style.cssText = 'display:block;opacity:1;';
+                document.dispatchEvent(new Event('skeleton:hydrated'));
+                return;
+            }
+
+            pc.style.display = 'block';
+            pc.style.opacity = '0';
+
+            requestAnimationFrame(function () {
+                sk.style.transition = 'opacity 0.35s ease';
+                sk.style.opacity    = '0';
+
+                pc.style.transition = 'opacity 0.42s ease 0.1s';
+                requestAnimationFrame(function () {
+                    pc.style.opacity = '1';
+                });
+            });
+
+            window.setTimeout(function () {
+                if (sk && sk.parentNode) sk.parentNode.removeChild(sk);
+                pc.style.transition = '';
+                pc.style.opacity    = '';
+                document.dispatchEvent(new Event('skeleton:hydrated'));
+            }, 520);
+        }
+
+        function scheduleHydration() {
+            var elapsed   = Date.now() - skeletonStart;
+            var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+            if (remaining > 0) { window.setTimeout(hydrate, remaining); }
+            else                { hydrate(); }
+        }
+
+        if (document.readyState === 'complete') {
+            scheduleHydration();
+        } else {
+            window.addEventListener('load', scheduleHydration);
+        }
+
+    }());
     </script>
 
 </body>

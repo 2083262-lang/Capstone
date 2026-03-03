@@ -1500,6 +1500,105 @@ switch ($active_status) {
     .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
     .toast-warning .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
     @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
+
+    /* ================================================================
+       SKELETON SCREEN — CSR / Progressive Hydration
+       tour_requests.php
+    ================================================================ */
+    @keyframes sk-shimmer {
+        0%   { background-position: -800px 0; }
+        100% { background-position:  800px 0; }
+    }
+    .sk-shimmer {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+        background-size: 1600px 100%;
+        animation: sk-shimmer 1.6s ease-in-out infinite;
+        border-radius: 4px;
+    }
+    #page-content { display: none; }
+
+    .sk-page-header {
+        background: #fff;
+        border: 1px solid rgba(37,99,235,0.1);
+        border-radius: 4px;
+        padding: 2rem 2.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+    .sk-page-header::after {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+    }
+
+    .sk-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .sk-kpi-card {
+        background: #fff;
+        border: 1px solid rgba(37,99,235,0.1);
+        border-radius: 4px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+    .sk-kpi-icon { width: 40px; height: 40px; border-radius: 4px; flex-shrink: 0; }
+
+    .sk-status-tabs {
+        background: #fff;
+        border: 1px solid rgba(37,99,235,0.1);
+        border-radius: 4px;
+        margin-bottom: 1.25rem;
+        padding: 0 0.5rem;
+        display: flex;
+        gap: 0.25rem;
+        align-items: flex-end;
+        height: 54px;
+        position: relative;
+        overflow: hidden;
+    }
+    .sk-status-tabs::after {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
+    }
+
+    .sk-request-list {
+        background: #fff;
+        border: 1px solid rgba(37,99,235,0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+    .sk-request-list::after {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, transparent, #d4af37, #2563eb, transparent);
+    }
+    .sk-request-row {
+        padding: 1.25rem 1.75rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .sk-request-row:last-child { border-bottom: none; }
+    .sk-line { display: block; border-radius: 4px; }
+
+    /* Responsive */
+    @media (max-width: 1400px) { .sk-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 992px)  {
+        .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+        .sk-status-tabs { height: auto; flex-wrap: wrap; padding: 0.5rem; }
+    }
+    @media (max-width: 768px)  { .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; } }
+    @media (max-width: 576px)  { .sk-kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; } }
+
   </style>
 </head>
 <body>
@@ -1514,26 +1613,89 @@ include 'admin_navbar.php';
 
 <div class="admin-content">
 
+  <!-- NO-JS FALLBACK -->
+  <noscript><style>
+    #sk-screen    { display: none !important; }
+    #page-content { display: block !important; opacity: 1 !important; }
+  </style></noscript>
+
+  <!-- SKELETON SCREEN ────────────────────────────────────────── -->
+  <div id="sk-screen" role="presentation" aria-hidden="true">
+
+    <!-- Page Header -->
+    <div class="sk-page-header">
+      <div>
+        <div class="sk-shimmer sk-line" style="width:160px;height:22px;margin-bottom:10px;"></div>
+        <div class="sk-shimmer sk-line" style="width:360px;height:13px;"></div>
+      </div>
+      <div style="display:flex;gap:0.75rem;">
+        <div class="sk-shimmer" style="width:150px;height:36px;border-radius:4px;"></div>
+        <div class="sk-shimmer" style="width:140px;height:36px;border-radius:4px;"></div>
+      </div>
+    </div>
+
+    <!-- 6 KPI Cards -->
+    <div class="sk-kpi-grid">
+      <?php for ($ski = 0; $ski < 6; $ski++): ?>
+      <div class="sk-kpi-card">
+        <div class="sk-kpi-icon sk-shimmer"></div>
+        <div style="flex:1;">
+          <div class="sk-shimmer sk-line" style="width:75%;height:11px;margin-bottom:8px;"></div>
+          <div class="sk-shimmer sk-line" style="width:45%;height:20px;"></div>
+        </div>
+      </div>
+      <?php endfor; ?>
+    </div>
+
+    <!-- 7 Status Tabs -->
+    <div class="sk-status-tabs">
+      <?php foreach (['All','Pending','Confirmed','Completed','Cancelled','Rejected','Expired'] as $_tab): ?>
+      <div class="sk-shimmer" style="width:75px;height:20px;border-radius:3px;margin-bottom:8px;"></div>
+      <?php endforeach; ?>
+    </div>
+
+    <!-- Request List (5 row placeholders) -->
+    <div class="sk-request-list">
+      <?php for ($ski = 0; $ski < 5; $ski++): ?>
+      <div class="sk-request-row">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem;">
+            <div class="sk-shimmer sk-line" style="width:180px;height:15px;"></div>
+            <div class="sk-shimmer" style="width:72px;height:20px;border-radius:20px;"></div>
+          </div>
+          <div class="sk-shimmer sk-line" style="width:70%;height:12px;margin-bottom:0.4rem;"></div>
+          <div style="display:flex;gap:1.5rem;">
+            <div class="sk-shimmer sk-line" style="width:120px;height:11px;"></div>
+            <div class="sk-shimmer sk-line" style="width:100px;height:11px;"></div>
+            <div class="sk-shimmer sk-line" style="width:80px;height:11px;"></div>
+          </div>
+        </div>
+        <div class="sk-shimmer" style="width:90px;height:32px;border-radius:4px;flex-shrink:0;"></div>
+      </div>
+      <?php endfor; ?>
+    </div>
+
+  </div><!-- /#sk-screen -->
+
+  <!-- REAL CONTENT (hidden until hydrated) ───────────────────── -->
+  <div id="page-content">
+
   <?php if ($counts['Pending'] > 0): ?>
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(function() {
-          showToast('warning', 'Pending Tour Requests',
-              '<?php echo $counts['Pending']; ?> tour request<?php echo $counts['Pending'] === 1 ? '' : 's'; ?> awaiting your review and confirmation.',
-              6000);
-      }, 600);
+  document.addEventListener('skeleton:hydrated', function() {
+      showToast('warning', 'Pending Tour Requests',
+          '<?php echo $counts['Pending']; ?> tour request<?php echo $counts['Pending'] === 1 ? '' : 's'; ?> awaiting your review and confirmation.',
+          6000);
   });
   </script>
   <?php endif; ?>
 
   <?php if (!empty($expired_tours)): ?>
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(function() {
-          showToast('info', 'Tours Auto-Expired',
-              '<?php echo count($expired_tours); ?> tour request<?php echo count($expired_tours) === 1 ? '' : 's'; ?> passed their scheduled time and were automatically expired.',
-              7000);
-      }, 1400);
+  document.addEventListener('skeleton:hydrated', function() {
+      showToast('info', 'Tours Auto-Expired',
+          '<?php echo count($expired_tours); ?> tour request<?php echo count($expired_tours) === 1 ? '' : 's'; ?> passed their scheduled time and were automatically expired.',
+          7000);
   });
   </script>
   <?php endif; ?>
@@ -1717,7 +1879,9 @@ include 'admin_navbar.php';
       <?php endforeach; ?>
     <?php endif; ?>
   </div>
-</div>
+
+  </div><!-- /#page-content -->
+</div><!-- /.admin-content -->
 
 <!-- ===== TOUR DETAILS MODAL ===== -->
 <div class="modal fade modal-admin" id="tourDetailsModal" tabindex="-1" aria-hidden="true">
@@ -2808,5 +2972,45 @@ function dismissToast(toast) {
     });
   });
 </script>
+
+<!-- SKELETON HYDRATION — Progressive Content Reveal -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart   = Date.now();
+    var hydrated        = false;
+
+    function hydrate() {
+        if (hydrated) return;
+        hydrated = true;
+        var sk = document.getElementById('sk-screen');
+        var pc = document.getElementById('page-content');
+        if (!sk || !pc) return;
+        sk.style.transition = 'opacity 0.35s ease';
+        sk.style.opacity    = '0';
+        setTimeout(function () { sk.style.display = 'none'; }, 360);
+        pc.style.opacity    = '0';
+        pc.style.display    = 'block';
+        requestAnimationFrame(function () {
+            pc.style.transition = 'opacity 0.4s ease';
+            pc.style.opacity    = '1';
+        });
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent('skeleton:hydrated'));
+        }, 520);
+    }
+
+    function scheduleHydration() {
+        var elapsed   = Date.now() - skeletonStart;
+        var remaining = MIN_SKELETON_MS - elapsed;
+        if (remaining <= 0) { hydrate(); } else { setTimeout(hydrate, remaining); }
+    }
+
+    window.addEventListener('load', scheduleHydration);
+
+}());
+</script>
+
 </body>
 </html>

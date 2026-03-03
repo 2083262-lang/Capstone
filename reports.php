@@ -583,6 +583,41 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
             .admin-sidebar, .section-bar, .filter-sidebar, .export-modal-overlay { display: none !important; }
             .admin-content { margin-left: 0 !important; padding: 0.5rem !important; }
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Client-Side Rendering (CSR) Pattern
+           Matches: reports.php
+           ================================================================ */
+        @keyframes sk-shimmer { 0% { background-position: -800px 0; } 100% { background-position: 800px 0; } }
+        .sk-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 800px 100%;
+            animation: sk-shimmer 1.4s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        .sk-page-header { background:#fff; border-radius:4px; padding:1.25rem 1.75rem; margin-bottom:1.5rem; border:1px solid rgba(37,99,235,0.08); position:relative; overflow:hidden; }
+        .sk-kpi-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:1rem; margin-bottom:1.5rem; }
+        .sk-kpi-card { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:1.25rem; display:flex; flex-direction:column; gap:0.6rem; }
+        .sk-kpi-icon { width:40px; height:40px; border-radius:4px; flex-shrink:0; }
+        .sk-chart-row { display:grid; gap:1.5rem; margin-bottom:1.5rem; }
+        .sk-chart-row-3   { grid-template-columns:1fr 1fr 1fr; }
+        .sk-chart-row-2   { grid-template-columns:1fr 1fr; }
+        .sk-chart-row-ov  { grid-template-columns:2fr 1fr 1fr; }
+        .sk-chart-card { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:1.5rem; display:flex; flex-direction:column; gap:1rem; }
+        .sk-chart-header { display:flex; justify-content:space-between; align-items:center; padding-bottom:0.75rem; border-bottom:1px solid #f1f5f9; }
+        .sk-chart-area { border-radius:4px; }
+        .sk-action-bar { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:1rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; overflow:hidden; min-height:64px; position:relative; }
+        .sk-tabs { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:0.875rem 1.5rem; margin-bottom:0; display:flex; align-items:center; gap:0.75rem; min-height:56px; position:relative; overflow:hidden; }
+        .sk-table-wrap { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); overflow:hidden; }
+        .sk-table-head { background: linear-gradient(180deg,#0f172a,#1e293b); padding:0.9rem 1rem; display:flex; gap:0.75rem; align-items:center; }
+        .sk-table-row { display:flex; align-items:center; gap:0.75rem; padding:0.78rem 1rem; border-bottom:1px solid #f1f5f9; }
+        .sk-line { display:block; border-radius:4px; }
+        @media (max-width:1400px) { .sk-kpi-grid { grid-template-columns:repeat(3,1fr); } .sk-chart-row-ov,.sk-chart-row-3 { grid-template-columns:1fr 1fr; } }
+        @media (max-width:992px)  { .sk-kpi-grid { grid-template-columns:repeat(2,1fr); } .sk-chart-row-2,.sk-chart-row-ov,.sk-chart-row-3 { grid-template-columns:1fr; } }
+        @media (max-width:768px)  { .sk-kpi-grid { grid-template-columns:1fr 1fr; gap:0.75rem; } }
+        @media (max-width:576px)  { .sk-kpi-grid { grid-template-columns:1fr 1fr; gap:0.5rem; } }
     </style>
 </head>
 <body>
@@ -592,6 +627,169 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
     <?php if (isset($conn) && $conn instanceof mysqli) { $conn->close(); } ?>
 
     <div class="admin-content">
+
+        <noscript><style>
+            #sk-screen    { display: none !important; }
+            #page-content { display: block !important; opacity: 1 !important; }
+        </style></noscript>
+
+        <!-- ══════════════════════════════════════════════════════
+             SKELETON SCREEN — visible on first paint
+        ════════════════════════════════════════════════════════ -->
+        <div id="sk-screen" role="presentation" aria-hidden="true">
+
+            <!-- Page Header -->
+            <div class="sk-page-header">
+                <div class="sk-line sk-shimmer" style="width:200px;height:22px;margin-bottom:10px;"></div>
+                <div class="sk-line sk-shimmer" style="width:420px;height:13px;"></div>
+            </div>
+
+            <!-- 6 KPI Cards -->
+            <div class="sk-kpi-grid">
+                <?php for ($i = 0; $i < 6; $i++): ?>
+                <div class="sk-kpi-card">
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                    <div class="sk-line sk-shimmer" style="width:70px;height:11px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:50px;height:26px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:90px;height:11px;"></div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
+            <!-- Chart Row 1: Content Overview (2fr) + By Type (1fr) + Status (1fr) -->
+            <div class="sk-chart-row sk-chart-row-ov">
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:160px;height:14px;"></div>
+                        <div class="sk-shimmer" style="width:60px;height:20px;border-radius:3px;"></div>
+                    </div>
+                    <div style="display:flex;gap:1rem;margin-bottom:0.5rem;">
+                        <div class="sk-shimmer" style="flex:1;height:50px;border-radius:4px;"></div>
+                        <div class="sk-shimmer" style="flex:1;height:50px;border-radius:4px;"></div>
+                        <div class="sk-shimmer" style="flex:1;height:50px;border-radius:4px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:280px;width:100%;"></div>
+                </div>
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:140px;height:14px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:300px;width:100%;"></div>
+                </div>
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:120px;height:14px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:300px;width:100%;"></div>
+                </div>
+            </div>
+
+            <!-- Chart Row 2: Top Viewed (1fr) + Price Distribution (1fr) -->
+            <div class="sk-chart-row sk-chart-row-2">
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:180px;height:14px;"></div>
+                        <div class="sk-shimmer" style="width:55px;height:20px;border-radius:3px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:300px;width:100%;"></div>
+                </div>
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:160px;height:14px;"></div>
+                        <div class="sk-shimmer" style="width:65px;height:20px;border-radius:3px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:300px;width:100%;"></div>
+                </div>
+            </div>
+
+            <!-- Chart Row 3: Tour Status (1fr) + Tours Over Time (1fr) + By City (1fr) -->
+            <div class="sk-chart-row sk-chart-row-3">
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:110px;height:14px;"></div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;margin-bottom:0.5rem;">
+                        <div class="sk-shimmer" style="flex:1;height:44px;border-radius:4px;"></div>
+                        <div class="sk-shimmer" style="flex:1;height:44px;border-radius:4px;"></div>
+                        <div class="sk-shimmer" style="flex:1;height:44px;border-radius:4px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:250px;width:100%;"></div>
+                </div>
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:150px;height:14px;"></div>
+                        <div class="sk-shimmer" style="width:65px;height:20px;border-radius:3px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:300px;width:100%;"></div>
+                </div>
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:160px;height:14px;"></div>
+                        <div class="sk-shimmer" style="width:55px;height:20px;border-radius:3px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:300px;width:100%;"></div>
+                </div>
+            </div>
+
+            <!-- Chart Row 4: Agent Performance (1fr) + Admin Activity (1fr) -->
+            <div class="sk-chart-row sk-chart-row-2">
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:170px;height:14px;"></div>
+                        <div class="sk-shimmer" style="width:60px;height:20px;border-radius:3px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:320px;width:100%;"></div>
+                </div>
+                <div class="sk-chart-card">
+                    <div class="sk-chart-header">
+                        <div class="sk-line sk-shimmer" style="width:150px;height:14px;"></div>
+                        <div class="sk-shimmer" style="width:65px;height:20px;border-radius:3px;"></div>
+                    </div>
+                    <div class="sk-chart-area sk-shimmer" style="height:320px;width:100%;"></div>
+                </div>
+            </div>
+
+            <!-- Section Bar (action bar) -->
+            <div class="sk-action-bar">
+                <div class="sk-line sk-shimmer" style="width:200px;height:20px;"></div>
+                <div style="display:flex;gap:0.75rem;">
+                    <div class="sk-shimmer" style="width:110px;height:36px;border-radius:4px;"></div>
+                    <div class="sk-shimmer" style="width:115px;height:36px;border-radius:4px;"></div>
+                    <div class="sk-shimmer" style="width:125px;height:36px;border-radius:4px;"></div>
+                </div>
+            </div>
+
+            <!-- 5 Report Tabs -->
+            <div class="sk-tabs">
+                <div class="sk-shimmer" style="width:90px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:60px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:140px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:115px;height:20px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:130px;height:20px;border-radius:3px;"></div>
+            </div>
+
+            <!-- Data Table Skeleton -->
+            <div class="sk-table-wrap">
+                <div class="sk-table-head">
+                    <?php for ($i = 0; $i < 8; $i++): ?>
+                    <div class="sk-shimmer" style="flex:1;height:12px;opacity:0.35;"></div>
+                    <?php endfor; ?>
+                </div>
+                <?php for ($i = 0; $i < 8; $i++): ?>
+                <div class="sk-table-row">
+                    <div class="sk-shimmer" style="width:28px;height:12px;flex-shrink:0;"></div>
+                    <div class="sk-shimmer" style="flex:2;height:13px;"></div>
+                    <div class="sk-shimmer" style="flex:1;height:13px;"></div>
+                    <div class="sk-shimmer" style="flex:1;height:13px;"></div>
+                    <div class="sk-shimmer" style="width:70px;height:20px;border-radius:20px;"></div>
+                    <div class="sk-shimmer" style="flex:1;height:13px;"></div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
+        </div><!-- /#sk-screen -->
+
+        <div id="page-content">
 
         <!-- Page Header -->
         <div class="page-header">
@@ -873,6 +1071,9 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
                 </div>
             </div>
         </div>
+    </div>
+
+        </div><!-- /#page-content -->
     </div>
 
     <!-- ===================== FILTER SIDEBAR ===================== -->
@@ -1478,5 +1679,36 @@ document.getElementById('confirmExportExcel').addEventListener('click', function
 // =============================================
 document.addEventListener('DOMContentLoaded', function() { applyFilters(); });
 </script>
+
+    <!-- ══════════════════════════════════════════════════════
+         SKELETON HYDRATION SCRIPT
+         Waits for window 'load' (fonts + CSS ready) then
+         cross-fades skeleton out and real content in.
+    ════════════════════════════════════════════════════════ -->
+    <script>
+    (function () {
+        'use strict';
+        var MIN_SKELETON_MS = 400;
+        var skeletonStart   = Date.now();
+        var hydrated        = false;
+        function hydrate() {
+            if (hydrated) return; hydrated = true;
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+            if (!sk || !pc) return;
+            sk.style.transition = 'opacity 0.35s ease'; sk.style.opacity = '0';
+            setTimeout(function () { sk.style.display = 'none'; }, 360);
+            pc.style.opacity = '0'; pc.style.display = 'block';
+            requestAnimationFrame(function () { pc.style.transition = 'opacity 0.4s ease'; pc.style.opacity = '1'; });
+            setTimeout(function () { document.dispatchEvent(new CustomEvent('skeleton:hydrated')); }, 520);
+        }
+        function scheduleHydration() {
+            var elapsed   = Date.now() - skeletonStart;
+            var remaining = MIN_SKELETON_MS - elapsed;
+            if (remaining <= 0) { hydrate(); } else { setTimeout(hydrate, remaining); }
+        }
+        window.addEventListener('load', scheduleHydration);
+    }());
+    </script>
 </body>
 </html>
