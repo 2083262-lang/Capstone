@@ -1284,24 +1284,6 @@ ob_end_flush();
             transition: background 0.2s;
         }
         .doc-preview-remove:hover { background: #dc2626; }
-        /* Alert inside modal */
-        #msvSaleAlert {
-            font-size: 0.85rem;
-            font-weight: 600;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-            padding: 0.85rem 1.15rem;
-        }
-        #msvSaleAlert.alert-success {
-            background: #dcfce7;
-            border: 1px solid #86efac;
-            color: #15803d;
-        }
-        #msvSaleAlert.alert-danger {
-            background: #fee2e2;
-            border: 1px solid #fca5a5;
-            color: #991b1b;
-        }
 
         /* Days on Market Badge (inside gallery image) */
         .gallery-days-badge {
@@ -1908,7 +1890,6 @@ ob_end_flush();
             .content-section { padding: 1.25rem 1rem; }
             .facts-grid { grid-template-columns: 1fr; gap: 0.75rem; }
             .rental-details-card { padding: 1.25rem 1rem; }
-            .alert { margin: 0 1rem 1.25rem; padding: 0.75rem 1rem; }
             .action-card { padding: 1.25rem; }
             .agent-card { padding: 1.25rem 1rem; }
             .lightbox-prev { left: 0.75rem; }
@@ -1928,28 +1909,78 @@ ob_end_flush();
             .agent-card { padding: 1rem 0.85rem; }
         }
 
-        /* Alerts */
-        .alert {
-            border: none;
-            border-radius: 4px;
-            padding: 0.85rem 1.5rem;
-            margin: 0 1.5rem 1.5rem;
-            border-left: 3px solid;
-            font-size: 0.85rem;
-            font-weight: 500;
+        /* ===== TOAST NOTIFICATIONS ===== */
+        #toastContainer {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            pointer-events: none;
         }
-
-        .alert-success {
-            background: rgba(34, 197, 94, 0.06);
-            color: #065f46;
-            border-left-color: #16a34a;
+        .app-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 0.9rem 1.1rem;
+            min-width: 300px;
+            max-width: 380px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06);
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+            animation: toast-in .35s cubic-bezier(.34,1.56,.64,1) forwards;
         }
-
-        .alert-danger {
-            background: rgba(239, 68, 68, 0.06);
-            color: #991b1b;
-            border-left-color: #dc2626;
+        @keyframes toast-in  { from { opacity:0; transform: translateX(60px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+        .app-toast.toast-out { animation: toast-out .3s ease forwards; }
+        @keyframes toast-out { to { opacity:0; transform: translateX(60px) scale(.9); max-height:0; padding:0; margin:0; } }
+        .app-toast::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
         }
+        .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+        .app-toast.toast-warning::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast-icon {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .toast-success .app-toast-icon,
+        .toast-warning .app-toast-icon { background: rgba(212,175,55,0.12); color: #d4af37; }
+        .toast-error   .app-toast-icon { background: rgba(239,68,68,0.1);   color: #ef4444; }
+        .toast-info    .app-toast-icon { background: rgba(37,99,235,0.1);   color: #2563eb; }
+        .app-toast-body      { flex: 1; min-width: 0; }
+        .app-toast-title     { font-size: 0.82rem; font-weight: 700; color: #111827; margin-bottom: 0.2rem; }
+        .app-toast-msg       { font-size: 0.78rem; color: #6b7280; line-height: 1.4; word-break: break-word; }
+        .app-toast-close {
+            background: none; border: none; cursor: pointer;
+            color: #9ca3af; font-size: 0.8rem;
+            padding: 0; line-height: 1;
+            flex-shrink: 0;
+            transition: color .2s;
+        }
+        .app-toast-close:hover { color: #374151; }
+        .app-toast-progress {
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 2px;
+            border-radius: 0 0 0 12px;
+        }
+        .toast-success .app-toast-progress,
+        .toast-warning .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
 
         /* Modal Styles */
         .modal-content {
@@ -2164,20 +2195,17 @@ include 'admin_navbar.php';
 ?>
 
 <div class="admin-content">
-    <?php if ($error_message): ?>
-        <div class="container-fluid px-0 pt-4">
-            <div class="alert alert-danger" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo htmlspecialchars($error_message); ?>
-            </div>
-        </div>
-    <?php endif; ?>
-    
-    <?php if ($success_message): ?>
-        <div class="container-fluid px-0 pt-4">
-            <div class="alert alert-success" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i><?php echo htmlspecialchars($success_message); ?>
-            </div>
-        </div>
+    <?php if ($error_message || $success_message): ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php if ($success_message): ?>
+        showToast('success', 'Success', '<?= addslashes(htmlspecialchars($success_message)) ?>', 6000);
+        <?php endif; ?>
+        <?php if ($error_message): ?>
+        showToast('error', 'Error', '<?= addslashes(htmlspecialchars($error_message)) ?>', 7000);
+        <?php endif; ?>
+    });
+    </script>
     <?php endif; ?>
 
     <?php if ($property_data): ?>
@@ -2667,9 +2695,9 @@ include 'admin_navbar.php';
                                     <?php endif; ?>
                                     
                                     <?php if (!$is_admin_poster): ?>
-                                    <div class="alert alert-info mb-0 mt-3">
-                                        <i class="bi bi-info-circle me-2"></i>
-                                        This listing is approved. Only the posting administrator can edit property details.
+                                    <div style="margin-top:0.75rem; padding:0.7rem 0.9rem; border-radius:4px; background:rgba(37,99,235,0.05); border:1px solid rgba(37,99,235,0.15); border-left:3px solid #2563eb; font-size:0.78rem; color:#1e40af; font-weight:500; display:flex; align-items:flex-start; gap:0.5rem;">
+                                        <i class="bi bi-info-circle" style="flex-shrink:0; margin-top:0.05rem;"></i>
+                                        <span>This listing is approved. Only the posting administrator can edit property details.</span>
                                     </div>
                                     <?php endif; ?>
                                 <?php endif; ?>
@@ -2823,8 +2851,6 @@ include 'admin_navbar.php';
 
             <!-- Body -->
             <div class="modal-body">
-                <div id="msvSaleAlert" class="msv-sale-alert d-none" role="alert"></div>
-
                 <form id="msvSaleForm" enctype="multipart/form-data">
                     <input type="hidden" name="property_id" value="<?php echo $property_id_to_review; ?>">
 
@@ -2922,9 +2948,45 @@ include 'admin_navbar.php';
     <div class="lightbox-label" id="lightboxLabel"></div>
 </div>
 
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // ===== TOAST NOTIFICATION SYSTEM =====
+    function showToast(type, title, message, duration) {
+        duration = duration || 4500;
+        const container = document.getElementById('toastContainer');
+        const icons = {
+            success: 'bi-check-circle-fill',
+            error:   'bi-x-circle-fill',
+            info:    'bi-info-circle-fill',
+            warning: 'bi-exclamation-triangle-fill'
+        };
+        const toast = document.createElement('div');
+        toast.className = `app-toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="app-toast-icon"><i class="bi ${icons[type] || icons.info}"></i></div>
+            <div class="app-toast-body">
+                <div class="app-toast-title">${title}</div>
+                <div class="app-toast-msg">${message}</div>
+            </div>
+            <button class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))">&times;</button>
+            <div class="app-toast-progress" style="animation: toast-progress ${duration}ms linear forwards;"></div>
+        `;
+        container.appendChild(toast);
+        const timer = setTimeout(() => dismissToast(toast), duration);
+        toast._timer = timer;
+    }
+    function dismissToast(toast) {
+        if (!toast || toast._dismissed) return;
+        toast._dismissed = true;
+        clearTimeout(toast._timer);
+        toast.classList.add('toast-out');
+        setTimeout(() => toast.remove(), 320);
+    }
+
     // Property image data from PHP
     const featuredImages = <?php echo json_encode($property_images); ?>;
     const floorImagesRaw = <?php echo json_encode($floor_images); ?>;
@@ -3350,18 +3412,6 @@ include 'admin_navbar.php';
         });
     });
 
-    // Auto-hide alerts after 5 seconds (skip alerts inside modals — they are managed separately)
-    document.querySelectorAll('.alert').forEach(alert => {
-        if (alert.closest('.modal')) return;
-        setTimeout(() => {
-            alert.style.opacity = '0';
-            alert.style.transform = 'translateY(-20px)';
-            setTimeout(() => {
-                alert.remove();
-            }, 300);
-        }, 5000);
-    });
-
     // Price input formatting
     const priceInputs = document.querySelectorAll('input[type="number"]');
     priceInputs.forEach(input => {
@@ -3575,14 +3625,7 @@ include 'admin_navbar.php';
     if (msvConfirmSaleBtn) {
         msvConfirmSaleBtn.addEventListener('click', function() {
             const form = document.getElementById('msvSaleForm');
-            const alertEl = document.getElementById('msvSaleAlert');
-            
-            // Reset alert
-            if (alertEl) {
-                alertEl.className = 'msv-sale-alert d-none';
-                alertEl.textContent = '';
-            }
-            
+
             // Client-side validation
             const salePrice = parseFloat(form.querySelector('[name="sale_price"]').value);
             const saleDate = form.querySelector('[name="sale_date"]').value;
@@ -3673,19 +3716,9 @@ include 'admin_navbar.php';
     }
     
     function showMsvSaleAlert(type, message) {
-        const alertEl = document.getElementById('msvSaleAlert');
-        if (alertEl) {
-            alertEl.className = 'msv-sale-alert alert alert-' + type;
-            alertEl.textContent = message;
-            // Scroll the modal body to the top so the alert is visible
-            const modalBody = alertEl.closest('.modal-body');
-            if (modalBody) {
-                modalBody.scrollTop = 0;
-            } else {
-                const modalEl = document.getElementById('markSoldModal');
-                if (modalEl) modalEl.scrollTop = 0;
-            }
-        }
+        const toastType = (type === 'danger') ? 'error' : type;
+        const toastTitle = (type === 'danger') ? 'Validation Error' : 'Success';
+        showToast(toastType, toastTitle, message, type === 'danger' ? 5000 : 6000);
     }
 
     // Mobile FAB Toggle

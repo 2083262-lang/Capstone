@@ -178,7 +178,6 @@
                         <h6 class="edit-section-title">
                             <i class="bi bi-images me-2"></i>Featured Photos
                         </h6>
-                        <div id="editFeaturedAlert" class="alert d-none mb-2" role="alert"></div>
                         <div class="upload-zone mb-3">
                             <label for="editFeaturedPhotosInput" class="upload-area">
                                 <i class="bi bi-cloud-upload upload-icon-small"></i>
@@ -199,7 +198,6 @@
                         <h6 class="edit-section-title">
                             <i class="bi bi-layers me-2"></i>Floor Photos
                         </h6>
-                        <div id="editFloorAlert" class="alert d-none mb-2" role="alert"></div>
                         <div id="editFloorPhotosContainer">
                             <div class="text-center text-muted py-4">
                                 <i class="bi bi-building" style="font-size: 2rem;"></i>
@@ -548,33 +546,17 @@ function _resetDeferredState() {
     _adminOriginalPhotoCount = 0;
 }
 
-// ── Alert helpers ──
+// ── Alert helpers (delegate to parent-page showToast) ──
 function showFeaturedAlert(ok, msg) {
-    const el = document.getElementById('editFeaturedAlert');
-    if (!el) return;
-    el.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
-    el.classList.add(ok ? 'alert-success' : 'alert-danger');
-    el.textContent = msg;
-    setTimeout(() => el.classList.add('d-none'), 5000);
+    showToast(ok ? 'success' : 'error', ok ? 'Photos Updated' : 'Photo Error', msg, 5000);
 }
 function showFloorAlert(ok, msg) {
-    const el = document.getElementById('editFloorAlert');
-    if (!el) return;
-    el.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
-    el.classList.add(ok ? 'alert-success' : 'alert-danger');
-    el.textContent = msg;
-    setTimeout(() => el.classList.add('d-none'), 5000);
+    showToast(ok ? 'success' : 'error', ok ? 'Floor Photos Updated' : 'Floor Photo Error', msg, 5000);
 }
 function showPhotoAlert(message, type) {
-    const modalBody = document.querySelector('#editPropertyModal .modal-body');
-    const existing = modalBody.querySelector('.photo-alert');
-    if (existing) existing.remove();
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type} alert-dismissible fade show photo-alert`;
-    alert.style.marginBottom = '1rem';
-    alert.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-    modalBody.insertBefore(alert, modalBody.firstChild);
-    setTimeout(() => { if (alert.parentNode) alert.remove(); }, 5000);
+    const toastType = type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'error';
+    const toastTitle = type === 'success' ? 'Saved' : type === 'warning' ? 'Saved with Warnings' : 'Error';
+    showToast(toastType, toastTitle, message, type === 'success' ? 5000 : 6000);
 }
 
 // ══════════════════════════════════════════════════════════════

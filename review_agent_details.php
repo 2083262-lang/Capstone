@@ -583,34 +583,78 @@ $stmt_fetch_agent->close();
             color: var(--text-primary);
         }
 
-        /* ===== ALERTS ===== */
-        .alert-custom {
-            border: none;
-            border-radius: 4px;
-            padding: 0.75rem 1.25rem;
-            margin-bottom: 1.5rem;
-            border-left: 4px solid;
-            font-size: 0.85rem;
-            font-weight: 500;
+        /* ===== TOAST NOTIFICATIONS ===== */
+        #toastContainer {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            pointer-events: none;
         }
-
-        .alert-custom.alert-success {
-            background: rgba(34, 197, 94, 0.06);
-            color: #166534;
-            border-left-color: var(--success);
+        .app-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 0.9rem 1.1rem;
+            min-width: 300px;
+            max-width: 380px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06);
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+            animation: toast-in .35s cubic-bezier(.34,1.56,.64,1) forwards;
         }
-
-        .alert-custom.alert-danger {
-            background: rgba(239, 68, 68, 0.06);
-            color: #991b1b;
-            border-left-color: var(--danger);
+        @keyframes toast-in  { from { opacity:0; transform: translateX(60px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+        .app-toast.toast-out { animation: toast-out .3s ease forwards; }
+        @keyframes toast-out { to { opacity:0; transform: translateX(60px) scale(.9); max-height:0; padding:0; margin:0; } }
+        .app-toast::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
         }
-
-        .alert-custom.alert-info {
-            background: rgba(37, 99, 235, 0.06);
-            color: #1e40af;
-            border-left-color: var(--blue);
+        .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+        .app-toast.toast-warning::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast-icon {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
         }
+        .toast-success .app-toast-icon { background: rgba(212,175,55,0.12); color: #d4af37; }
+        .toast-error   .app-toast-icon { background: rgba(239,68,68,0.1);   color: #ef4444; }
+        .toast-info    .app-toast-icon { background: rgba(37,99,235,0.1);   color: #2563eb; }
+        .toast-warning .app-toast-icon { background: rgba(212,175,55,0.12); color: #d4af37; }
+        .app-toast-body      { flex: 1; min-width: 0; }
+        .app-toast-title     { font-size: 0.82rem; font-weight: 700; color: #111827; margin-bottom: 0.2rem; }
+        .app-toast-msg       { font-size: 0.78rem; color: #6b7280; line-height: 1.4; word-break: break-word; }
+        .app-toast-close {
+            background: none; border: none; cursor: pointer;
+            color: #9ca3af; font-size: 0.8rem;
+            padding: 0; line-height: 1;
+            flex-shrink: 0;
+            transition: color .2s;
+        }
+        .app-toast-close:hover { color: #374151; }
+        .app-toast-progress {
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 2px;
+            border-radius: 0 0 0 12px;
+        }
+        .toast-success .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        .toast-warning .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
 
         /* ===== MODALS ===== */
         .modal-content {
@@ -709,16 +753,27 @@ include 'admin_navbar.php';
 
 <div class="admin-content">
 
-    <?php if ($error_message): ?>
-        <div class="alert-custom alert-danger" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo $error_message; ?>
-        </div>
-    <?php endif; ?>
-    
-    <?php if ($success_message): ?>
-        <div class="alert-custom alert-success" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i><?php echo $success_message; ?>
-        </div>
+    <?php if ($success_message || $error_message): ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php if ($success_message):
+            if (stripos($success_message, 'approved') !== false) {
+                $toast_title = 'Agent Approved';
+            } elseif (stripos($success_message, 'rejected') !== false) {
+                $toast_title = 'Agent Rejected';
+            } elseif (stripos($success_message, 'disabled') !== false) {
+                $toast_title = 'Agent Disabled';
+            } else {
+                $toast_title = 'Action Complete';
+            }
+        ?>
+            showToast('success', '<?= $toast_title ?>', '<?= addslashes($success_message) ?>', 6000);
+        <?php endif; ?>
+        <?php if ($error_message): ?>
+            showToast('error', 'Error', '<?= addslashes($error_message) ?>', 6000);
+        <?php endif; ?>
+    });
+    </script>
     <?php endif; ?>
 
     <?php if ($agent_data): ?>
@@ -894,7 +949,7 @@ include 'admin_navbar.php';
                         </div>
                         
                         <?php if ($is_rejected): ?>
-                            <div class="alert-custom alert-danger mb-3">
+                            <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.18);border-left:3px solid #ef4444;border-radius:4px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#991b1b;">
                                 <i class="bi bi-x-circle me-1"></i>
                                 <small>This agent has been rejected and cannot be approved without reactivation.</small>
                             </div>
@@ -1083,7 +1138,43 @@ include 'admin_navbar.php';
 <?php include 'logout_modal.php'; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
 <script>
+// ===== TOAST =====
+function showToast(type, title, message, duration) {
+    duration = duration || 4500;
+    const container = document.getElementById('toastContainer');
+    const icons = {
+        success: 'bi-check-circle-fill',
+        error:   'bi-x-circle-fill',
+        info:    'bi-info-circle-fill',
+        warning: 'bi-exclamation-triangle-fill'
+    };
+    const toast = document.createElement('div');
+    toast.className = `app-toast toast-${type}`;
+    toast.innerHTML = `
+        <div class="app-toast-icon"><i class="bi ${icons[type] || icons.info}"></i></div>
+        <div class="app-toast-body">
+            <div class="app-toast-title">${title}</div>
+            <div class="app-toast-msg">${message}</div>
+        </div>
+        <button class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))">&times;</button>
+        <div class="app-toast-progress" style="animation: toast-progress ${duration}ms linear forwards;"></div>
+    `;
+    container.appendChild(toast);
+    const timer = setTimeout(() => dismissToast(toast), duration);
+    toast._timer = timer;
+}
+function dismissToast(toast) {
+    if (!toast || toast._dismissed) return;
+    toast._dismissed = true;
+    clearTimeout(toast._timer);
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.remove(), 320);
+}
     document.addEventListener('DOMContentLoaded', function() {
         let isFormSubmitting = false;
         
@@ -1207,18 +1298,6 @@ include 'admin_navbar.php';
                 if (this.value.trim()) this.classList.remove('is-invalid');
             });
         });
-    });
-
-    // Auto-hide alerts after 5 seconds
-    document.querySelectorAll('.alert-custom').forEach(alert => {
-        if (!alert.classList.contains('alert-info')) {
-            setTimeout(() => {
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateY(-10px)';
-                alert.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                setTimeout(() => alert.remove(), 300);
-            }, 5000);
-        }
     });
 
     // Keyboard shortcuts
