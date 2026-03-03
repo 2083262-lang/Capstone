@@ -972,6 +972,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
         .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
         .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+        .app-toast.toast-warning::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
         .app-toast-icon {
             width: 36px; height: 36px;
             border-radius: 8px;
@@ -982,6 +983,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .toast-success .app-toast-icon { background: rgba(212,175,55,0.12); color: #d4af37; }
         .toast-error   .app-toast-icon { background: rgba(239,68,68,0.1);   color: #ef4444; }
         .toast-info    .app-toast-icon { background: rgba(37,99,235,0.1);   color: #2563eb; }
+        .toast-warning .app-toast-icon { background: rgba(212,175,55,0.12); color: #d4af37; }
         .app-toast-body { flex: 1; min-width: 0; }
         .app-toast-title {
             font-size: 0.82rem;
@@ -1012,6 +1014,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .toast-success .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
         .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
         .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        .toast-warning .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
         @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
 
         /* ===== RESPONSIVE ===== */
@@ -1475,6 +1478,18 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             <?php if ($error_message): ?>
                 showToast('error', 'Error', '<?= addslashes(htmlspecialchars($error_message)) ?>', 6000);
             <?php endif; ?>
+            <?php if ($status_counts['Pending'] > 0): ?>
+                setTimeout(function() {
+                    showToast(
+                        'warning',
+                        '<?= $status_counts['Pending'] === 1 ? "1 Pending Sale Approval" : $status_counts['Pending'] . " Pending Sale Approvals" ?>',
+                        '<?= $status_counts['Pending'] === 1
+                            ? "1 sale verification is awaiting your review. Open it to approve or reject."
+                            : $status_counts['Pending'] . " sale verifications are awaiting your review and approval." ?>',
+                        6000
+                    );
+                }, <?= ($success_message || $error_message) ? 700 : 400 ?>);
+            <?php endif; ?>
             <?php if ($needs_finalization_count > 0): ?>
                 setTimeout(function() {
                     showToast(
@@ -1485,7 +1500,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                             : $needs_finalization_count . " approved sales are still waiting for commission finalization. Look for the <strong>Needs Finalization</strong> badge on the cards." ?>',
                         8000
                     );
-                }, <?= ($success_message || $error_message) ? 600 : 300 ?>);
+                }, <?= ($success_message || $error_message) ? 1400 : ($status_counts['Pending'] > 0 ? 1100 : 300) ?>);
             <?php endif; ?>
         });
         </script>
@@ -2063,7 +2078,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     function showToast(type, title, message, duration) {
         duration = duration || 4500;
         const container = document.getElementById('toastContainer');
-        const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+        const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill', warning: 'bi-exclamation-triangle-fill' };
         const toast = document.createElement('div');
         toast.className = `app-toast toast-${type}`;
         toast.innerHTML = `
