@@ -954,10 +954,9 @@ switch ($active_status) {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.3);
-      backdrop-filter: blur(4px);
+      background: rgba(15, 23, 42, 0.4);
       opacity: 0;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.2s ease;
       pointer-events: none;
     }
     .filter-sidebar.active .filter-sidebar-overlay {
@@ -968,14 +967,14 @@ switch ($active_status) {
     .filter-sidebar-content {
       position: absolute;
       top: 0; right: 0;
-      width: 380px;
+      width: 480px;
       max-width: 90vw;
       height: 100%;
-      background: var(--card-bg);
-      border-left: 1px solid #e2e8f0;
-      box-shadow: -4px 0 40px rgba(0, 0, 0, 0.1);
+      background: #ffffff;
+      border-left: 1px solid rgba(37, 99, 235, 0.15);
+      box-shadow: -8px 0 32px rgba(15, 23, 42, 0.1);
       transform: translateX(100%);
-      transition: transform 0.3s ease;
+      transition: transform 0.25s ease;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -985,91 +984,202 @@ switch ($active_status) {
     }
 
     .filter-header {
-      background: linear-gradient(180deg, #fafbfc 0%, var(--card-bg) 100%);
-      padding: 1.25rem 1.75rem;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #fff;
+      padding: 1.5rem 2rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #e2e8f0;
       position: relative;
+      overflow: hidden;
     }
     .filter-header::after {
       content: '';
       position: absolute;
       bottom: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+      height: 2px;
+      background: linear-gradient(90deg, var(--gold), var(--blue));
     }
     .filter-header h4 {
       font-weight: 700;
-      font-size: 1.1rem;
-      color: var(--text-primary);
+      font-size: 1.15rem;
       display: flex;
       align-items: center;
-      margin-bottom: 0;
+      gap: 0.75rem;
+      margin: 0;
+      color: #fff;
     }
-    .filter-header h4 i { color: var(--gold-dark); }
+    .filter-header h4 i {
+      color: var(--gold);
+      font-size: 1.3rem;
+    }
 
-    .btn-close-sidebar {
-      background: #f8f9fa;
-      border: 1px solid #e2e8f0;
-      color: var(--text-secondary);
-      width: 34px;
-      height: 34px;
+    .btn-close-filter {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      width: 36px;
+      height: 36px;
       border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: all 0.2s ease;
+      font-size: 1rem;
     }
-    .btn-close-sidebar:hover {
-      background: rgba(239, 68, 68, 0.06);
-      border-color: rgba(239, 68, 68, 0.2);
-      color: var(--danger);
+    .btn-close-filter:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
     }
 
     .filter-body {
       flex: 1;
       overflow-y: auto;
-      padding: 1.5rem 1.75rem;
+      padding: 1.5rem;
+      background: #f8fafc;
     }
-    .filter-group { margin-bottom: 1.25rem; }
-    .filter-label {
-      display: block;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--text-secondary);
-      margin-bottom: 0.5rem;
-    }
-    .filter-input, .filter-select {
-      width: 100%;
-      padding: 0.6rem 0.85rem;
-      background: #fafbfc;
-      border: 1px solid #e2e8f0;
+    .filter-section {
+      background: #fff;
       border-radius: 4px;
-      color: var(--text-primary);
-      font-size: 0.85rem;
-      transition: all 0.2s ease;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border: 1px solid #e2e8f0;
     }
-    .filter-input:focus, .filter-select:focus {
-      outline: none;
+    .filter-section:last-child { margin-bottom: 0; }
+    .filter-section-title {
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .filter-section-title i {
+      color: var(--gold);
+      font-size: 1rem;
+    }
+    .filter-search-box { position: relative; }
+    .filter-search-box input {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.75rem;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      transition: all 0.2s ease;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
+    .filter-search-box input::placeholder { color: #94a3b8; }
+    .filter-search-box input:focus {
       border-color: var(--blue);
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+      outline: none;
     }
-    .filter-input::placeholder { color: #94a3b8; }
-
-    .filter-section-divider {
-      padding: 0.75rem 0;
-      margin: 0.5rem 0;
+    .filter-search-icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 0.95rem;
+      pointer-events: none;
+    }
+    .filter-select {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+    .filter-select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+      outline: none;
+    }
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.9rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .filter-chip:hover {
+      background: #f8fafc;
+      border-color: var(--gold);
+    }
+    .filter-chip.active {
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: #fff;
+      border-color: var(--gold);
+      font-weight: 600;
+    }
+    .date-range-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .date-range-grid input[type="date"] {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+    .date-range-grid input[type="date"]:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+      outline: none;
+    }
+    .date-range-divider {
+      color: #94a3b8;
+      font-weight: 600;
+      font-size: 1rem;
+      text-align: center;
+    }
+    .filter-footer {
+      padding: 1.25rem 1.5rem;
+      background: #fff;
       border-top: 1px solid #e2e8f0;
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-secondary);
+      display: flex;
+      gap: 0.75rem;
+    }
+    .filter-footer .btn {
+      flex: 1;
+      padding: 0.7rem 1.25rem;
+      font-weight: 600;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      font-size: 0.85rem;
+    }
+    .filter-footer .btn:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
     /* ===== CALENDAR SIDEBAR ===== */
@@ -1952,17 +2062,39 @@ include 'admin_navbar.php';
 <div class="filter-sidebar" id="filterSidebar">
   <div class="filter-sidebar-overlay" id="filterOverlay"></div>
   <div class="filter-sidebar-content">
+
+    <!-- Header -->
     <div class="filter-header">
-      <h4><i class="fas fa-filter me-2"></i>Filters & Search</h4>
-      <button class="btn-close-sidebar" id="closeFiltersBtn"><i class="fas fa-times"></i></button>
+      <h4>
+        <i class="bi bi-funnel"></i>
+        Filters & Search
+      </h4>
+      <button class="btn-close-filter" id="closeFiltersBtn">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
+
+    <!-- Body -->
     <div class="filter-body">
-      <div class="filter-group">
-        <label class="filter-label"><i class="fas fa-search me-2"></i> Search</label>
-        <input type="text" id="searchInput" class="filter-input" placeholder="Search by client name, email, phone, or address..." autocomplete="off">
+
+      <!-- Search -->
+      <div class="filter-section">
+        <div class="filter-section-title">
+          <i class="bi bi-search"></i>
+          Search
+        </div>
+        <div class="filter-search-box">
+          <i class="bi bi-search filter-search-icon"></i>
+          <input type="text" id="searchInput" placeholder="Client name, email, phone, or address…" autocomplete="off">
+        </div>
       </div>
-      <div class="filter-group">
-        <label class="filter-label"><i class="fas fa-building me-2"></i> Property</label>
+
+      <!-- Property -->
+      <div class="filter-section">
+        <div class="filter-section-title">
+          <i class="bi bi-building"></i>
+          Property
+        </div>
         <select id="propertyFilter" class="filter-select">
           <option value="">All Properties</option>
           <?php foreach ($properties as $prop): ?>
@@ -1972,39 +2104,78 @@ include 'admin_navbar.php';
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="filter-group">
-        <label class="filter-label"><i class="fas fa-route me-2"></i> Tour Type</label>
-        <select id="tourTypeFilter" class="filter-select">
+
+      <!-- Tour Type -->
+      <div class="filter-section">
+        <div class="filter-section-title">
+          <i class="bi bi-compass"></i>
+          Tour Type
+        </div>
+        <div class="filter-chips" id="tourTypeChips">
+          <button type="button" class="filter-chip active" data-value="">All</button>
+          <button type="button" class="filter-chip" data-value="public">
+            <i class="bi bi-people"></i> Public
+          </button>
+          <button type="button" class="filter-chip" data-value="private">
+            <i class="bi bi-lock"></i> Private
+          </button>
+        </div>
+        <!-- Hidden select synced by JS -->
+        <select id="tourTypeFilter" class="d-none">
           <option value="">All Types</option>
           <option value="public">Public Tours</option>
           <option value="private">Private Tours</option>
         </select>
       </div>
-      <div class="filter-group">
-        <label class="filter-label"><i class="fas fa-eye me-2"></i> Read Status</label>
-        <select id="readStatusFilter" class="filter-select">
+
+      <!-- Read Status -->
+      <div class="filter-section">
+        <div class="filter-section-title">
+          <i class="bi bi-eye"></i>
+          Read Status
+        </div>
+        <div class="filter-chips" id="readStatusChips">
+          <button type="button" class="filter-chip active" data-value="">All</button>
+          <button type="button" class="filter-chip" data-value="unread">
+            <i class="bi bi-circle-fill" style="font-size:0.55rem;color:#d4af37;"></i> Unread
+          </button>
+          <button type="button" class="filter-chip" data-value="read">
+            <i class="bi bi-check-circle"></i> Read
+          </button>
+        </div>
+        <!-- Hidden select synced by JS -->
+        <select id="readStatusFilter" class="d-none">
           <option value="">All</option>
           <option value="unread">Unread Only</option>
           <option value="read">Read Only</option>
         </select>
       </div>
-      <div class="filter-section-divider">
-        <span><i class="fas fa-calendar-range me-2"></i>Date Range</span>
+
+      <!-- Date Range -->
+      <div class="filter-section">
+        <div class="filter-section-title">
+          <i class="bi bi-calendar-range"></i>
+          Tour Date Range
+        </div>
+        <div class="date-range-grid">
+          <input type="date" id="dateFromFilter">
+          <span class="date-range-divider">—</span>
+          <input type="date" id="dateToFilter">
+        </div>
       </div>
-      <div class="filter-group">
-        <label class="filter-label"><i class="fas fa-calendar-day me-2"></i> From Date</label>
-        <input type="date" id="dateFromFilter" class="filter-input">
-      </div>
-      <div class="filter-group">
-        <label class="filter-label"><i class="fas fa-calendar-day me-2"></i> To Date</label>
-        <input type="date" id="dateToFilter" class="filter-input">
-      </div>
-      <div class="filter-group">
-        <button type="button" class="btn btn-outline-admin w-100" id="clearFiltersBtn">
-          <i class="fas fa-times me-2"></i>Clear All Filters
-        </button>
-      </div>
+
+    </div><!-- /.filter-body -->
+
+    <!-- Footer -->
+    <div class="filter-footer">
+      <button type="button" class="btn btn-outline-secondary" id="clearFiltersBtn">
+        <i class="bi bi-x-circle me-1"></i>Clear All
+      </button>
+      <button type="button" class="btn btn-gold" id="closeFiltersApplyBtn">
+        <i class="bi bi-check2 me-1"></i>Apply Filters
+      </button>
     </div>
+
   </div>
 </div>
 
@@ -2516,11 +2687,37 @@ function dismissToast(toast) {
   document.getElementById('dateFromFilter').addEventListener('change', applyFilters);
   document.getElementById('dateToFilter').addEventListener('change', applyFilters);
 
+  // ===== FILTER CHIP SYNC =====
+  function initFilterChips(chipContainerId, selectId) {
+    const chips = document.querySelectorAll('#' + chipContainerId + ' .filter-chip');
+    const select = document.getElementById(selectId);
+    chips.forEach(chip => {
+      chip.addEventListener('click', function() {
+        chips.forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+        select.value = this.dataset.value;
+        select.dispatchEvent(new Event('change'));
+      });
+    });
+  }
+  initFilterChips('tourTypeChips', 'tourTypeFilter');
+  initFilterChips('readStatusChips', 'readStatusFilter');
+
+  // Apply Filters footer button — just closes the drawer
+  const closeFiltersApplyBtn = document.getElementById('closeFiltersApplyBtn');
+  if (closeFiltersApplyBtn) closeFiltersApplyBtn.addEventListener('click', () => {
+    document.getElementById('filterSidebar').classList.remove('active');
+  });
+
   document.getElementById('clearFiltersBtn').addEventListener('click', function() {
     document.getElementById('searchInput').value = '';
     document.getElementById('propertyFilter').value = '';
+    // Reset tour type chips
     document.getElementById('tourTypeFilter').value = '';
+    document.querySelectorAll('#tourTypeChips .filter-chip').forEach((c, i) => c.classList.toggle('active', i === 0));
+    // Reset read status chips
     document.getElementById('readStatusFilter').value = '';
+    document.querySelectorAll('#readStatusChips .filter-chip').forEach((c, i) => c.classList.toggle('active', i === 0));
     document.getElementById('dateFromFilter').value = '';
     document.getElementById('dateToFilter').value = '';
     applyFilters();
