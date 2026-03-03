@@ -184,22 +184,53 @@ $total_property_types = count($property_types);
 
         .item-count { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.75rem; }
 
-        /* ===== TOAST ===== */
-        .settings-toast {
+        /* ===== TOAST NOTIFICATIONS ===== */
+        #toastContainer {
             position: fixed;
-            bottom: 2rem;
-            right: 2rem;
+            top: 1.5rem;
+            right: 1.5rem;
             z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            pointer-events: none;
+        }
+        .app-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 0.9rem 1.1rem;
             min-width: 300px;
+            max-width: 380px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06);
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+            animation: toast-in .35s cubic-bezier(.34,1.56,.64,1) forwards;
         }
-        .settings-toast .toast {
-            border: none;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-        }
-        .settings-toast .toast-header { border-radius: 8px 8px 0 0; font-weight: 600; }
-        .toast-success .toast-header { background: rgba(34,197,94,0.1); color: #16a34a; border-bottom: 1px solid rgba(34,197,94,0.15); }
-        .toast-error .toast-header { background: rgba(239,68,68,0.1); color: #dc2626; border-bottom: 1px solid rgba(239,68,68,0.15); }
+        @keyframes toast-in  { from { opacity:0; transform: translateX(60px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+        .app-toast.toast-out { animation: toast-out .3s ease forwards; }
+        @keyframes toast-out { to { opacity:0; transform: translateX(60px) scale(.9); max-height:0; padding:0; margin:0; } }
+        .app-toast::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+        .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+        .app-toast-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+        .toast-success .app-toast-icon { background: rgba(212,175,55,0.12); color: #d4af37; }
+        .toast-error   .app-toast-icon { background: rgba(239,68,68,0.1);   color: #ef4444; }
+        .toast-info    .app-toast-icon { background: rgba(37,99,235,0.1);   color: #2563eb; }
+        .app-toast-body  { flex: 1; min-width: 0; }
+        .app-toast-title { font-size: 0.82rem; font-weight: 700; color: #111827; margin-bottom: 0.2rem; }
+        .app-toast-msg   { font-size: 0.78rem; color: #6b7280; line-height: 1.4; word-break: break-word; }
+        .app-toast-close { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 0.8rem; padding: 0; line-height: 1; flex-shrink: 0; transition: color .2s; }
+        .app-toast-close:hover { color: #374151; }
+        .app-toast-progress { position: absolute; bottom: 0; left: 0; height: 2px; border-radius: 0 0 0 12px; }
+        .toast-success .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
 
         .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary); }
         .empty-state i { font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem; }
@@ -521,8 +552,8 @@ $total_property_types = count($property_types);
         </div>
     </div>
 
-    <!-- Toast container -->
-    <div class="settings-toast" id="toastContainer"></div>
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -535,7 +566,7 @@ $total_property_types = count($property_types);
         const name = input.value.trim();
 
         if (!name) { input.focus(); return; }
-        if (name.length > 100) { showToast('error', 'Name must be 100 characters or less.'); return; }
+        if (name.length > 100) { showToast('error', 'Validation Error', 'Name must be 100 characters or less.'); return; }
 
         const fd = new FormData();
         fd.append('action', 'add');
@@ -547,7 +578,7 @@ $total_property_types = count($property_types);
             .then(data => {
                 if (data.success) {
                     input.value = '';
-                    showToast('success', data.message);
+                    showToast('success', 'Added', data.message);
                     // Add chip dynamically
                     const grid = document.getElementById(type === 'amenity' ? 'amenityGrid' : (type === 'ptype' ? 'ptypeGrid' : 'specGrid'));
                     const chip = document.createElement('div');
@@ -560,10 +591,10 @@ $total_property_types = count($property_types);
                     updateCount(type);
                     updateBadge(type);
                 } else {
-                    showToast('error', data.message || 'Failed to add.');
+                    showToast('error', 'Error', data.message || 'Failed to add.');
                 }
             })
-            .catch(() => showToast('error', 'Network error. Please try again.'));
+            .catch(() => showToast('error', 'Error', 'Network error. Please try again.'));
     }
 
     // Allow Enter key to add
@@ -604,13 +635,13 @@ $total_property_types = count($property_types);
                         chip.style.transform = 'scale(0.8)';
                         setTimeout(() => { chip.remove(); updateCount(pendingDelete.type); updateBadge(pendingDelete.type); }, 300);
                     }
-                    showToast('success', data.message);
+                    showToast('success', 'Deleted', data.message);
                 } else {
-                    showToast('error', data.message || 'Failed to delete.');
+                    showToast('error', 'Error', data.message || 'Failed to delete.');
                 }
                 closeDeleteConfirm();
             })
-            .catch(() => { showToast('error', 'Network error.'); closeDeleteConfirm(); });
+            .catch(() => { showToast('error', 'Error', 'Network error.'); closeDeleteConfirm(); });
     }
 
     // Close overlay on background click
@@ -650,22 +681,32 @@ $total_property_types = count($property_types);
         if (badges[tabIndex]) badges[tabIndex].textContent = total;
     }
 
-    function showToast(type, message) {
+    // ===== TOAST =====
+    function showToast(type, title, message, duration) {
+        duration = duration || 4500;
         const container = document.getElementById('toastContainer');
-        const id = 'toast_' + Date.now();
-        const html = `<div id="${id}" class="toast ${type === 'success' ? 'toast-success' : 'toast-error'}" role="alert" data-bs-delay="4000">
-            <div class="toast-header">
-                <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'} me-2"></i>
-                <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
-                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="toast"></button>
+        const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+        const toast = document.createElement('div');
+        toast.className = `app-toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="app-toast-icon"><i class="bi ${icons[type] || icons.info}"></i></div>
+            <div class="app-toast-body">
+                <div class="app-toast-title">${title}</div>
+                <div class="app-toast-msg">${message}</div>
             </div>
-            <div class="toast-body" style="font-size:0.88rem;">${escapeHtml(message)}</div>
-        </div>`;
-        container.insertAdjacentHTML('beforeend', html);
-        const el = document.getElementById(id);
-        const toast = new bootstrap.Toast(el);
-        toast.show();
-        el.addEventListener('hidden.bs.toast', () => el.remove());
+            <button class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))">&times;</button>
+            <div class="app-toast-progress" style="animation: toast-progress ${duration}ms linear forwards;"></div>
+        `;
+        container.appendChild(toast);
+        const timer = setTimeout(() => dismissToast(toast), duration);
+        toast._timer = timer;
+    }
+    function dismissToast(toast) {
+        if (!toast || toast._dismissed) return;
+        toast._dismissed = true;
+        clearTimeout(toast._timer);
+        toast.classList.add('toast-out');
+        setTimeout(() => toast.remove(), 320);
     }
 
     function escapeHtml(str) {
