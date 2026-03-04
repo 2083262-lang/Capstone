@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'connection.php';
+require_once __DIR__ . '/config/session_timeout.php';
 require_once __DIR__ . '/config/paths.php';
 
 // Admin access check

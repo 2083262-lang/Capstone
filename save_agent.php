@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/config/session_timeout.php';
 // Check if the user is an admin. If not, redirect to login page.
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     header("Location: login.php");

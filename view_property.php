@@ -4,6 +4,7 @@ ob_start();
 session_start();
 include 'connection.php';
 require_once __DIR__ . '/mail_helper.php';
+require_once __DIR__ . '/config/session_timeout.php';
 require_once __DIR__ . '/config/paths.php';
 
 // --- Security Check: Ensure admin is logged in ---

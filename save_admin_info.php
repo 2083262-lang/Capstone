@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'connection.php';
+require_once __DIR__ . '/config/session_timeout.php';
 
 // Check if user is logged in and is an admin
 if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'admin') {

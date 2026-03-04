@@ -4,6 +4,7 @@ ob_start();
 session_start();
 include 'connection.php';
 include 'review_agent_details_process.php';
+require_once __DIR__ . '/config/session_timeout.php';
 require_once __DIR__ . '/config/paths.php';
 
 $sql_fetch_agent = "SELECT 

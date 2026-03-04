@@ -3,6 +3,7 @@ session_start();
 require_once 'connection.php';
 require_once 'mail_helper.php';
 require_once __DIR__ . '/email_template.php';
+require_once __DIR__ . '/config/session_timeout.php';
 require_once __DIR__ . '/config/paths.php';
 
 // Admin-only access

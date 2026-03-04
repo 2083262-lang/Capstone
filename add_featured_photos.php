@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/config/session_timeout.php';
 header('Content-Type: application/json');
 include 'connection.php';
 

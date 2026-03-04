@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/connection.php';
 require_once __DIR__ . '/mail_helper.php';
 require_once __DIR__ . '/email_template.php';
+require_once __DIR__ . '/config/session_timeout.php';
 
 header('Content-Type: application/json');
 

@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'connection.php'; // Your database connection
+require_once __DIR__ . '/config/session_timeout.php';
 
 // Check if the user is logged in and has a valid role
 if (!isset($_SESSION['account_id']) || !in_array($_SESSION['user_role'], ['admin', 'agent'])) {

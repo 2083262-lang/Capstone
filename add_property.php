@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'connection.php'; // Your database connection
+require_once __DIR__ . '/config/session_timeout.php';
 require_once __DIR__ . '/config/paths.php';
 
 // Check if the user is logged in and is either an admin or an agent

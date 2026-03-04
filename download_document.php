@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'connection.php';
+require_once __DIR__ . '/config/session_timeout.php';
 
 // Admin-only access
 if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'admin') {
