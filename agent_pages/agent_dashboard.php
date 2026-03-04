@@ -172,6 +172,18 @@ $stmt->execute();
 $pending_sales = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
+// -- Today's Confirmed Tours Count --
+$today_tours_query = "SELECT COUNT(*) as today_count
+    FROM tour_requests 
+    WHERE agent_account_id = ? 
+    AND request_status = 'Confirmed' 
+    AND tour_date = CURDATE()";
+$stmt = $conn->prepare($today_tours_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$today_tours = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
 $conn->close();
 
 // Helper: greeting based on time of day
@@ -1018,6 +1030,256 @@ $member_since = isset($agent_info['date_registered']) ? date('M Y', strtotime($a
             .kpi-grid { grid-template-columns: 1fr; }
             .quick-actions-grid { grid-template-columns: 1fr 1fr; }
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Dark Agent Portal Theme
+           CSR / Progressive Hydration
+           ================================================================ */
+
+        /* ── Core shimmer animation (dark theme) ── */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+
+        /* ── Real content: hidden until hydration reveals it ── */
+        #page-content {
+            display: none;
+        }
+
+        /* ── Skeleton component base styles (dark theme) ── */
+        .sk-welcome-hero {
+            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            padding: 2.5rem 3rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-welcome-hero::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent);
+        }
+
+        .sk-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .sk-kpi-card {
+            background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        .sk-kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .sk-panel {
+            background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        .sk-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(37,99,235,0.1);
+        }
+        .sk-panel-body {
+            padding: 1.5rem;
+        }
+
+        .sk-qa-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        .sk-qa-btn {
+            background: linear-gradient(135deg, rgba(26,26,26,0.9) 0%, rgba(15,15,15,0.95) 100%);
+            border: 1px solid rgba(212,175,55,0.15);
+            border-radius: 4px;
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sk-tour-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid rgba(37,99,235,0.08);
+            margin-bottom: 0.75rem;
+        }
+        .sk-tour-item:last-child { margin-bottom: 0; }
+
+        .sk-prop-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+        .sk-prop-card {
+            background: rgba(26,26,26,0.6);
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .sk-stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(37,99,235,0.08);
+        }
+        .sk-stat-row:last-child { border-bottom: none; }
+
+        .sk-top-prop-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid rgba(37,99,235,0.08);
+            margin-bottom: 0.75rem;
+        }
+        .sk-top-prop-item:last-child { margin-bottom: 0; }
+
+        .sk-activity-item {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(37,99,235,0.06);
+        }
+        .sk-activity-item:last-child { border-bottom: none; }
+
+        .sk-line { display: block; border-radius: 4px; }
+
+        /* ================================================================
+           TOAST NOTIFICATION SYSTEM — Dark Agent Portal Theme
+           ================================================================ */
+        #toastContainer {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            pointer-events: none;
+        }
+        .app-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            background: linear-gradient(135deg, rgba(26,26,26,0.97) 0%, rgba(10,10,10,0.98) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 12px;
+            padding: 0.9rem 1.1rem;
+            min-width: 300px;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+            animation: toast-in .35s cubic-bezier(.34,1.56,.64,1) forwards;
+            backdrop-filter: blur(12px);
+        }
+        @keyframes toast-in  { from { opacity:0; transform: translateX(60px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+        .app-toast.toast-out { animation: toast-out .3s ease forwards; }
+        @keyframes toast-out { to { opacity:0; transform: translateX(60px) scale(.9); max-height:0; padding:0; margin:0; } }
+
+        /* Left accent bar */
+        .app-toast::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+        }
+        .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+
+        /* Icon badge */
+        .app-toast-icon {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .toast-success .app-toast-icon { background: rgba(212,175,55,0.15); color: #d4af37; }
+        .toast-error   .app-toast-icon { background: rgba(239,68,68,0.12);  color: #ef4444; }
+        .toast-info    .app-toast-icon { background: rgba(37,99,235,0.12);  color: #3b82f6; }
+
+        /* Body text */
+        .app-toast-body      { flex: 1; min-width: 0; }
+        .app-toast-title     { font-size: 0.82rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.2rem; }
+        .app-toast-msg       { font-size: 0.78rem; color: #9ca4ab; line-height: 1.4; word-break: break-word; }
+
+        /* Close button */
+        .app-toast-close {
+            background: none; border: none; cursor: pointer;
+            color: #5d6d7d; font-size: 0.8rem;
+            padding: 0; line-height: 1;
+            flex-shrink: 0;
+            transition: color .2s;
+        }
+        .app-toast-close:hover { color: #f1f5f9; }
+
+        /* Auto-dismiss progress bar */
+        .app-toast-progress {
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 2px;
+            border-radius: 0 0 0 12px;
+        }
+        .toast-success .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
+
+        /* ── Skeleton responsive ── */
+        @media (max-width: 1200px) { .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) {
+            .sk-kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+            .sk-qa-grid { grid-template-columns: repeat(2, 1fr); }
+            .sk-welcome-hero { padding: 1.5rem; }
+            .sk-prop-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .sk-kpi-grid { grid-template-columns: 1fr; }
+            .sk-qa-grid { grid-template-columns: 1fr 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -1029,6 +1291,324 @@ include 'agent_navbar.php';
 ?>
 
 <div class="dashboard-content">
+
+    <!-- NO-JS FALLBACK -->
+    <noscript><style>
+        #sk-screen    { display: none !important; }
+        #page-content { display: block !important; opacity: 1 !important; }
+    </style></noscript>
+
+    <!-- SKELETON SCREEN -->
+    <div id="sk-screen" role="presentation" aria-hidden="true">
+
+        <!-- Welcome Hero Skeleton -->
+        <div class="sk-welcome-hero">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem;">
+                <div>
+                    <div class="sk-line sk-shimmer" style="width:320px;height:28px;margin-bottom:10px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:280px;height:14px;margin-bottom:8px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:240px;height:12px;"></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:1rem;">
+                    <div>
+                        <div class="sk-line sk-shimmer" style="width:140px;height:18px;margin-bottom:6px;margin-left:auto;"></div>
+                        <div class="sk-line sk-shimmer" style="width:80px;height:10px;margin-left:auto;"></div>
+                    </div>
+                    <div class="sk-shimmer" style="width:50px;height:50px;border-radius:4px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Grid Skeleton -->
+        <div class="sk-kpi-grid">
+            <div class="sk-kpi-card">
+                <div class="sk-kpi-header">
+                    <div class="sk-line sk-shimmer" style="width:90px;height:10px;"></div>
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                </div>
+                <div class="sk-line sk-shimmer" style="width:60px;height:28px;margin-bottom:8px;"></div>
+                <div class="sk-line sk-shimmer" style="width:130px;height:11px;"></div>
+            </div>
+            <div class="sk-kpi-card">
+                <div class="sk-kpi-header">
+                    <div class="sk-line sk-shimmer" style="width:110px;height:10px;"></div>
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                </div>
+                <div class="sk-line sk-shimmer" style="width:100px;height:28px;margin-bottom:8px;"></div>
+                <div class="sk-line sk-shimmer" style="width:110px;height:11px;"></div>
+            </div>
+            <div class="sk-kpi-card">
+                <div class="sk-kpi-header">
+                    <div class="sk-line sk-shimmer" style="width:120px;height:10px;"></div>
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                </div>
+                <div class="sk-line sk-shimmer" style="width:90px;height:28px;margin-bottom:8px;"></div>
+                <div class="sk-line sk-shimmer" style="width:140px;height:11px;"></div>
+            </div>
+            <div class="sk-kpi-card">
+                <div class="sk-kpi-header">
+                    <div class="sk-line sk-shimmer" style="width:95px;height:10px;"></div>
+                    <div class="sk-kpi-icon sk-shimmer"></div>
+                </div>
+                <div class="sk-line sk-shimmer" style="width:50px;height:28px;margin-bottom:8px;"></div>
+                <div class="sk-line sk-shimmer" style="width:120px;height:11px;"></div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Skeleton -->
+        <div class="sk-panel">
+            <div class="sk-panel-header">
+                <div class="sk-line sk-shimmer" style="width:130px;height:16px;"></div>
+            </div>
+            <div class="sk-panel-body">
+                <div class="sk-qa-grid">
+                    <div class="sk-qa-btn">
+                        <div class="sk-shimmer" style="width:50px;height:50px;border-radius:4px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:90px;height:13px;"></div>
+                    </div>
+                    <div class="sk-qa-btn">
+                        <div class="sk-shimmer" style="width:50px;height:50px;border-radius:4px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:85px;height:13px;"></div>
+                    </div>
+                    <div class="sk-qa-btn">
+                        <div class="sk-shimmer" style="width:50px;height:50px;border-radius:4px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:95px;height:13px;"></div>
+                    </div>
+                    <div class="sk-qa-btn">
+                        <div class="sk-shimmer" style="width:50px;height:50px;border-radius:4px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:88px;height:13px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two-Column Layout Skeleton -->
+        <div class="row g-4">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+                <!-- Upcoming Tours Skeleton -->
+                <div class="sk-panel">
+                    <div class="sk-panel-header">
+                        <div class="sk-line sk-shimmer" style="width:140px;height:16px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:65px;height:13px;"></div>
+                    </div>
+                    <div class="sk-panel-body">
+                        <div class="sk-tour-item">
+                            <div style="display:flex;gap:1rem;align-items:center;flex:1;">
+                                <div class="sk-shimmer" style="width:52px;height:52px;border-radius:4px;flex-shrink:0;"></div>
+                                <div>
+                                    <div class="sk-line sk-shimmer" style="width:180px;height:14px;margin-bottom:6px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:140px;height:11px;"></div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:0.5rem;">
+                                <div class="sk-shimmer" style="width:75px;height:26px;border-radius:2px;"></div>
+                                <div class="sk-shimmer" style="width:70px;height:26px;border-radius:2px;"></div>
+                            </div>
+                        </div>
+                        <div class="sk-tour-item">
+                            <div style="display:flex;gap:1rem;align-items:center;flex:1;">
+                                <div class="sk-shimmer" style="width:52px;height:52px;border-radius:4px;flex-shrink:0;"></div>
+                                <div>
+                                    <div class="sk-line sk-shimmer" style="width:200px;height:14px;margin-bottom:6px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:120px;height:11px;"></div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:0.5rem;">
+                                <div class="sk-shimmer" style="width:75px;height:26px;border-radius:2px;"></div>
+                                <div class="sk-shimmer" style="width:70px;height:26px;border-radius:2px;"></div>
+                            </div>
+                        </div>
+                        <div class="sk-tour-item">
+                            <div style="display:flex;gap:1rem;align-items:center;flex:1;">
+                                <div class="sk-shimmer" style="width:52px;height:52px;border-radius:4px;flex-shrink:0;"></div>
+                                <div>
+                                    <div class="sk-line sk-shimmer" style="width:160px;height:14px;margin-bottom:6px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:150px;height:11px;"></div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:0.5rem;">
+                                <div class="sk-shimmer" style="width:75px;height:26px;border-radius:2px;"></div>
+                                <div class="sk-shimmer" style="width:70px;height:26px;border-radius:2px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Listings Skeleton -->
+                <div class="sk-panel">
+                    <div class="sk-panel-header">
+                        <div class="sk-line sk-shimmer" style="width:120px;height:16px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:65px;height:13px;"></div>
+                    </div>
+                    <div class="sk-panel-body">
+                        <div class="sk-prop-grid">
+                            <div class="sk-prop-card">
+                                <div class="sk-shimmer" style="width:100%;height:180px;"></div>
+                                <div style="padding:1.25rem;">
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                        <div class="sk-line sk-shimmer" style="width:100px;height:18px;"></div>
+                                        <div class="sk-shimmer" style="width:55px;height:20px;border-radius:2px;"></div>
+                                    </div>
+                                    <div class="sk-line sk-shimmer" style="width:85%;height:12px;margin-bottom:10px;"></div>
+                                    <div style="display:flex;gap:1rem;">
+                                        <div class="sk-line sk-shimmer" style="width:40px;height:11px;"></div>
+                                        <div class="sk-line sk-shimmer" style="width:40px;height:11px;"></div>
+                                        <div class="sk-line sk-shimmer" style="width:60px;height:11px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sk-prop-card">
+                                <div class="sk-shimmer" style="width:100%;height:180px;"></div>
+                                <div style="padding:1.25rem;">
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                        <div class="sk-line sk-shimmer" style="width:110px;height:18px;"></div>
+                                        <div class="sk-shimmer" style="width:50px;height:20px;border-radius:2px;"></div>
+                                    </div>
+                                    <div class="sk-line sk-shimmer" style="width:75%;height:12px;margin-bottom:10px;"></div>
+                                    <div style="display:flex;gap:1rem;">
+                                        <div class="sk-line sk-shimmer" style="width:40px;height:11px;"></div>
+                                        <div class="sk-line sk-shimmer" style="width:40px;height:11px;"></div>
+                                        <div class="sk-line sk-shimmer" style="width:60px;height:11px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <!-- Portfolio Overview Skeleton -->
+                <div class="sk-panel">
+                    <div class="sk-panel-header">
+                        <div class="sk-line sk-shimmer" style="width:140px;height:16px;"></div>
+                    </div>
+                    <div class="sk-panel-body">
+                        <div class="sk-stat-row">
+                            <div class="sk-line sk-shimmer" style="width:90px;height:12px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:30px;height:14px;"></div>
+                        </div>
+                        <div class="sk-stat-row">
+                            <div class="sk-line sk-shimmer" style="width:100px;height:12px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:25px;height:14px;"></div>
+                        </div>
+                        <div class="sk-stat-row">
+                            <div class="sk-line sk-shimmer" style="width:110px;height:12px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:28px;height:14px;"></div>
+                        </div>
+                        <div class="sk-stat-row">
+                            <div class="sk-line sk-shimmer" style="width:80px;height:12px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:40px;height:14px;"></div>
+                        </div>
+                        <div class="sk-stat-row">
+                            <div class="sk-line sk-shimmer" style="width:75px;height:12px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:35px;height:14px;"></div>
+                        </div>
+                        <div class="sk-stat-row">
+                            <div class="sk-line sk-shimmer" style="width:105px;height:12px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:60px;height:14px;"></div>
+                        </div>
+                        <div class="sk-stat-row">
+                            <div class="sk-line sk-shimmer" style="width:110px;height:12px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:28px;height:14px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Performing Skeleton -->
+                <div class="sk-panel">
+                    <div class="sk-panel-header">
+                        <div class="sk-line sk-shimmer" style="width:120px;height:16px;"></div>
+                    </div>
+                    <div class="sk-panel-body">
+                        <div class="sk-top-prop-item">
+                            <div class="sk-shimmer" style="width:80px;height:60px;border-radius:4px;flex-shrink:0;"></div>
+                            <div style="flex:1;">
+                                <div class="sk-line sk-shimmer" style="width:85%;height:13px;margin-bottom:6px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:60%;height:11px;margin-bottom:6px;"></div>
+                                <div style="display:flex;gap:0.75rem;">
+                                    <div class="sk-line sk-shimmer" style="width:40px;height:10px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:35px;height:10px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:65px;height:10px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sk-top-prop-item">
+                            <div class="sk-shimmer" style="width:80px;height:60px;border-radius:4px;flex-shrink:0;"></div>
+                            <div style="flex:1;">
+                                <div class="sk-line sk-shimmer" style="width:75%;height:13px;margin-bottom:6px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:55%;height:11px;margin-bottom:6px;"></div>
+                                <div style="display:flex;gap:0.75rem;">
+                                    <div class="sk-line sk-shimmer" style="width:40px;height:10px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:35px;height:10px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:65px;height:10px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sk-top-prop-item">
+                            <div class="sk-shimmer" style="width:80px;height:60px;border-radius:4px;flex-shrink:0;"></div>
+                            <div style="flex:1;">
+                                <div class="sk-line sk-shimmer" style="width:80%;height:13px;margin-bottom:6px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:50%;height:11px;margin-bottom:6px;"></div>
+                                <div style="display:flex;gap:0.75rem;">
+                                    <div class="sk-line sk-shimmer" style="width:40px;height:10px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:35px;height:10px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:65px;height:10px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Skeleton -->
+                <div class="sk-panel">
+                    <div class="sk-panel-header">
+                        <div class="sk-line sk-shimmer" style="width:120px;height:16px;"></div>
+                    </div>
+                    <div class="sk-panel-body">
+                        <div class="sk-activity-item">
+                            <div class="sk-shimmer" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;"></div>
+                            <div style="flex:1;">
+                                <div class="sk-line sk-shimmer" style="width:140px;height:13px;margin-bottom:5px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:180px;height:11px;margin-bottom:4px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:120px;height:10px;"></div>
+                            </div>
+                        </div>
+                        <div class="sk-activity-item">
+                            <div class="sk-shimmer" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;"></div>
+                            <div style="flex:1;">
+                                <div class="sk-line sk-shimmer" style="width:130px;height:13px;margin-bottom:5px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:160px;height:11px;margin-bottom:4px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:110px;height:10px;"></div>
+                            </div>
+                        </div>
+                        <div class="sk-activity-item">
+                            <div class="sk-shimmer" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;"></div>
+                            <div style="flex:1;">
+                                <div class="sk-line sk-shimmer" style="width:150px;height:13px;margin-bottom:5px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:170px;height:11px;margin-bottom:4px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:130px;height:10px;"></div>
+                            </div>
+                        </div>
+                        <div class="sk-activity-item">
+                            <div class="sk-shimmer" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;"></div>
+                            <div style="flex:1;">
+                                <div class="sk-line sk-shimmer" style="width:120px;height:13px;margin-bottom:5px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:150px;height:11px;margin-bottom:4px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:100px;height:10px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /#sk-screen -->
+
+    <!-- REAL CONTENT (hidden until hydrated) -->
+    <div id="page-content">
 
     <!-- Welcome Hero -->
     <div class="welcome-hero">
@@ -1411,13 +1991,50 @@ include 'agent_navbar.php';
         </div>
     </div>
 
-</div>
+    </div><!-- /#page-content -->
+
+</div><!-- /.dashboard-content -->
 
 <?php include 'logout_agent_modal.php'; ?>
 
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+// ===== TOAST FUNCTIONS =====
+function showToast(type, title, message, duration) {
+    duration = duration || 4500;
+    var container = document.getElementById('toastContainer');
+    var icons = {
+        success: 'bi-check-circle-fill',
+        error:   'bi-x-circle-fill',
+        info:    'bi-info-circle-fill'
+    };
+    var toast = document.createElement('div');
+    toast.className = 'app-toast toast-' + type;
+    toast.innerHTML =
+        '<div class="app-toast-icon"><i class="bi ' + (icons[type] || icons.info) + '"></i></div>' +
+        '<div class="app-toast-body">' +
+            '<div class="app-toast-title">' + title + '</div>' +
+            '<div class="app-toast-msg">' + message + '</div>' +
+        '</div>' +
+        '<button class="app-toast-close" onclick="dismissToast(this.closest(&quot;.app-toast&quot;))">&times;</button>' +
+        '<div class="app-toast-progress" style="animation: toast-progress ' + duration + 'ms linear forwards;"></div>';
+    container.appendChild(toast);
+    var timer = setTimeout(function() { dismissToast(toast); }, duration);
+    toast._timer = timer;
+}
+function dismissToast(toast) {
+    if (!toast || toast._dismissed) return;
+    toast._dismissed = true;
+    clearTimeout(toast._timer);
+    toast.classList.add('toast-out');
+    setTimeout(function() { toast.remove(); }, 320);
+}
+
+// Visual animations + toasts fire AFTER skeleton hydration
+document.addEventListener('skeleton:hydrated', function() {
     // Animate KPI values on load
     document.querySelectorAll('.kpi-value').forEach(el => {
         const text = el.textContent.trim();
@@ -1470,7 +2087,120 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.kpi-card').forEach((card, i) => {
         card.style.transitionDelay = (i * 0.1) + 's';
     });
+
+    // ===== TOAST NOTIFICATIONS (staggered 600ms apart) =====
+    var toastDelay = 0;
+    var TOAST_GAP = 600;
+
+    <?php if (($today_tours['today_count'] ?? 0) > 0): ?>
+    setTimeout(function() {
+        showToast('success', 'Today\'s Schedule',
+            'You have <?= (int)$today_tours['today_count'] ?> confirmed tour<?= (int)$today_tours['today_count'] !== 1 ? "s" : "" ?> scheduled for today.', 6000);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if (($tour_stats['pending_tours'] ?? 0) > 0): ?>
+    setTimeout(function() {
+        showToast('info', 'Pending Tours',
+            'You have <?= (int)$tour_stats['pending_tours'] ?> tour request<?= (int)$tour_stats['pending_tours'] !== 1 ? "s" : "" ?> awaiting your response.', 6000);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if (($stats['pending_approval'] ?? 0) > 0): ?>
+    setTimeout(function() {
+        showToast('info', 'Pending Approval',
+            '<?= (int)$stats['pending_approval'] ?> propert<?= (int)$stats['pending_approval'] !== 1 ? "ies are" : "y is" ?> pending admin approval.', 5500);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if (count($pending_sales) > 0): ?>
+    setTimeout(function() {
+        showToast('info', 'Sale Verifications',
+            '<?= count($pending_sales) ?> sale verification<?= count($pending_sales) !== 1 ? "s are" : " is" ?> currently under review.', 5500);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if (($commissions['unpaid_commission'] ?? 0) > 0): ?>
+    setTimeout(function() {
+        showToast('success', 'Pending Commissions',
+            'You have ₱<?= number_format($commissions['unpaid_commission'], 0) ?> in pending commissions.', 5500);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if (($stats['active_listings'] ?? 0) == 0 && ($stats['total_listings'] ?? 0) == 0): ?>
+    setTimeout(function() {
+        showToast('info', 'Get Started',
+            'Add your first property listing to begin building your portfolio!', 7000);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
 });
+</script>
+
+<!-- SKELETON HYDRATION — Progressive Content Reveal (Agent Portal) -->
+<script>
+(function () {
+    'use strict';
+
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart = Date.now();
+
+    function hydrate() {
+        var sk = document.getElementById('sk-screen');
+        var pc = document.getElementById('page-content');
+
+        if (!pc) return;
+        if (!sk) {
+            pc.style.cssText = 'display:block;opacity:1;';
+            document.dispatchEvent(new Event('skeleton:hydrated'));
+            return;
+        }
+
+        pc.style.display = 'block';
+        pc.style.opacity = '0';
+
+        requestAnimationFrame(function () {
+            sk.style.transition = 'opacity 0.35s ease';
+            sk.style.opacity    = '0';
+
+            pc.style.transition = 'opacity 0.42s ease 0.1s';
+            requestAnimationFrame(function () {
+                pc.style.opacity = '1';
+            });
+        });
+
+        window.setTimeout(function () {
+            if (sk && sk.parentNode) sk.parentNode.removeChild(sk);
+            pc.style.transition = '';
+            pc.style.opacity    = '';
+
+            document.dispatchEvent(new Event('skeleton:hydrated'));
+        }, 520);
+    }
+
+    function scheduleHydration() {
+        var elapsed   = Date.now() - skeletonStart;
+        var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+
+        if (remaining > 0) {
+            window.setTimeout(hydrate, remaining);
+        } else {
+            hydrate();
+        }
+    }
+
+    if (document.readyState === 'complete') {
+        scheduleHydration();
+    } else {
+        window.addEventListener('load', scheduleHydration);
+    }
+
+}());
 </script>
 </body>
 </html>

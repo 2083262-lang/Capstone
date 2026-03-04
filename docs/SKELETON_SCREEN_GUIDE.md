@@ -1,6 +1,8 @@
 # Skeleton Screens — CSR / Progressive Hydration Guide
 
-> **Purpose:** Step-by-step implementation guide for adding skeleton loading screens to any admin page in this system. Applied first to `admin_property_sale_approvals.php` — use this as your reference template.
+> **Purpose:** Step-by-step implementation guide for adding skeleton loading screens to any page in this system. Covers both the **Admin Panel (light theme)** and the **Agent Portal (dark theme)**.
+> - Admin reference: `admin_property_sale_approvals.php`
+> - Agent Portal reference: `agent_pages/agent_dashboard.php`
 
 ---
 
@@ -30,6 +32,7 @@
 8. [Do's and Don'ts](#8-dos-and-donts)
 9. [Checklist](#9-checklist)
 10. [Troubleshooting](#10-troubleshooting)
+11. [Agent Portal — Dark Theme Variant](#11-agent-portal--dark-theme-variant)
 
 ---
 
@@ -1050,3 +1053,385 @@ Use this when applying to a new page:
 ---
 
 *Reference implementation: [`admin_property_sale_approvals.php`](../admin_property_sale_approvals.php)*
+
+---
+
+## 11. Agent Portal — Dark Theme Variant
+
+All pages inside `agent_pages/` use a **black + gold + blue dark theme**. The skeleton must match — dark card backgrounds, barely-visible shimmer on dark surfaces, and gold/blue accent top bars.
+
+Everything from Sections 1–10 still applies. This section documents **only what is different**.
+
+---
+
+### 11.1 — What Changes vs. the Admin (Light) Theme
+
+| Property | Admin (Light) | Agent Portal (Dark) |
+|---|---|---|
+| `body` background | `#f5f5f5` / white | `#0a0a0a` (deep black) |
+| Skeleton card background | `#fff` | `linear-gradient(135deg, rgba(26,26,26,0.8), rgba(10,10,10,0.9))` |
+| Shimmer gradient | `#f0f0f0 → #e8e8e8 → #f0f0f0` | `rgba(white,0.03) → rgba(white,0.06) → rgba(white,0.03)` |
+| Skeleton card border | `rgba(37,99,235,0.1)` | `rgba(37,99,235,0.15)` |
+| Top accent bar | `gold → blue` linear gradient | Same `gold → blue` |
+| Content container class | `.admin-content` | `.dashboard-content` |
+| Noscript fallback targets | Same `#sk-screen` / `#page-content` | Same |
+| JS hydration script | Identical | Identical |
+
+---
+
+### 11.2 — Part A (CSS) — Dark Shimmer + Dark Cards
+
+Replace the light shimmer and card backgrounds with the dark equivalents. Paste this block before `</style>` **instead of** the light Part A CSS.
+
+```css
+/* ================================================================
+   SKELETON SCREEN SYSTEM — Dark Agent Portal Theme
+   CSR / Progressive Hydration
+   ================================================================ */
+
+/* ── Core shimmer animation (dark surfaces) ── */
+@keyframes sk-shimmer {
+    0%   { background-position: -800px 0; }
+    100% { background-position:  800px 0; }
+}
+.sk-shimmer {
+    /* Very subtle white shimmer — visible on dark backgrounds */
+    background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.03) 25%,
+        rgba(255,255,255,0.06) 50%,
+        rgba(255,255,255,0.03) 75%
+    );
+    background-size: 1600px 100%;
+    animation: sk-shimmer 1.6s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+/* ── Real content: hidden until hydration reveals it ── */
+#page-content { display: none; }
+
+/* ── Welcome hero skeleton (matches .welcome-hero) ── */
+.sk-welcome-hero {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    border: 1px solid rgba(37,99,235,0.15);
+    border-radius: 4px;
+    padding: 2.5rem 3rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+.sk-welcome-hero::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #d4af37, #2563eb, transparent);
+}
+
+/* ── KPI grid ── */
+.sk-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+.sk-kpi-card {
+    background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+    border: 1px solid rgba(37,99,235,0.15);
+    border-radius: 4px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.sk-kpi-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+.sk-kpi-icon   { width: 48px; height: 48px; border-radius: 4px; flex-shrink: 0; }
+
+/* ── Panel (matches .panel) ── */
+.sk-panel {
+    background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+    border: 1px solid rgba(37,99,235,0.15);
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+.sk-panel-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(37,99,235,0.1);
+}
+.sk-panel-body { padding: 1.5rem; }
+
+/* ── Quick action grid ── */
+.sk-qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.sk-qa-btn {
+    background: linear-gradient(135deg, rgba(26,26,26,0.9) 0%, rgba(15,15,15,0.95) 100%);
+    border: 1px solid rgba(212,175,55,0.15);
+    border-radius: 4px; padding: 1.5rem 1rem;
+    display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+}
+
+/* ── Tour / list item rows ── */
+.sk-tour-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem; border-radius: 4px; border: 1px solid rgba(37,99,235,0.08);
+    margin-bottom: 0.75rem;
+}
+.sk-tour-item:last-child { margin-bottom: 0; }
+
+/* ── Property card grid (2-col) ── */
+.sk-prop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+.sk-prop-card { background: rgba(26,26,26,0.6); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; overflow: hidden; }
+
+/* ── Portfolio stat rows ── */
+.sk-stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.75rem 0; border-bottom: 1px solid rgba(37,99,235,0.08);
+}
+.sk-stat-row:last-child { border-bottom: none; }
+
+/* ── Top-performing rows ── */
+.sk-top-prop-item { display: flex; gap: 1rem; padding: 1rem; border-radius: 4px; border: 1px solid rgba(37,99,235,0.08); margin-bottom: 0.75rem; }
+.sk-top-prop-item:last-child { margin-bottom: 0; }
+
+/* ── Activity timeline rows ── */
+.sk-activity-item { display: flex; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(37,99,235,0.06); }
+.sk-activity-item:last-child { border-bottom: none; }
+
+.sk-line { display: block; border-radius: 4px; }
+
+/* ── Responsive ── */
+@media (max-width: 1200px) { .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) {
+    .sk-kpi-grid     { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .sk-qa-grid      { grid-template-columns: repeat(2, 1fr); }
+    .sk-welcome-hero { padding: 1.5rem; }
+    .sk-prop-grid    { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+    .sk-kpi-grid { grid-template-columns: 1fr; }
+    .sk-qa-grid  { grid-template-columns: 1fr 1fr; }
+}
+```
+
+---
+
+### 11.3 — Part B (HTML) — Container Class
+
+Agent portal pages use `.dashboard-content` instead of `.admin-content`. The `#sk-screen` / `#page-content` IDs are unchanged:
+
+```html
+<div class="dashboard-content">
+
+    <noscript><style>
+        #sk-screen    { display: none !important; }
+        #page-content { display: block !important; opacity: 1 !important; }
+    </style></noscript>
+
+    <div id="sk-screen" role="presentation" aria-hidden="true">
+        <!-- ← Dark skeleton components from Section 11.4 -->
+    </div><!-- /#sk-screen -->
+
+    <div id="page-content">
+        <!-- ← All existing PHP content stays here, unchanged -->
+    </div><!-- /#page-content -->
+
+</div><!-- /.dashboard-content -->
+```
+
+---
+
+### 11.4 — Dark Component Recipes
+
+Use these inside `#sk-screen` for agent portal pages.
+
+#### Welcome Hero
+
+```html
+<div class="sk-welcome-hero">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem;">
+        <div>
+            <div class="sk-line sk-shimmer" style="width:320px;height:28px;margin-bottom:10px;"></div>
+            <div class="sk-line sk-shimmer" style="width:280px;height:14px;margin-bottom:8px;"></div>
+            <div class="sk-line sk-shimmer" style="width:240px;height:12px;"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+            <div>
+                <div class="sk-line sk-shimmer" style="width:140px;height:18px;margin-bottom:6px;margin-left:auto;"></div>
+                <div class="sk-line sk-shimmer" style="width:80px;height:10px;margin-left:auto;"></div>
+            </div>
+            <div class="sk-shimmer" style="width:50px;height:50px;border-radius:4px;"></div>
+        </div>
+    </div>
+</div>
+```
+
+#### KPI Grid (4 cards)
+
+```html
+<div class="sk-kpi-grid">
+    <!-- Repeat the block below once per KPI card -->
+    <div class="sk-kpi-card">
+        <div class="sk-kpi-header">
+            <div class="sk-line sk-shimmer" style="width:90px;height:10px;"></div>
+            <div class="sk-kpi-icon sk-shimmer"></div>
+        </div>
+        <div class="sk-line sk-shimmer" style="width:60px;height:28px;margin-bottom:8px;"></div>
+        <div class="sk-line sk-shimmer" style="width:130px;height:11px;"></div>
+    </div>
+    <!-- × 3 more -->
+</div>
+```
+
+#### Generic Panel
+
+```html
+<div class="sk-panel">
+    <div class="sk-panel-header">
+        <div class="sk-line sk-shimmer" style="width:140px;height:16px;"></div>
+        <div class="sk-line sk-shimmer" style="width:65px;height:13px;"></div>
+    </div>
+    <div class="sk-panel-body">
+        <!-- Insert tour rows, prop grid, stat rows, etc. here -->
+    </div>
+</div>
+```
+
+#### Tour Row
+
+```html
+<div class="sk-tour-item">
+    <div style="display:flex;gap:1rem;align-items:center;flex:1;">
+        <div class="sk-shimmer" style="width:52px;height:52px;border-radius:4px;flex-shrink:0;"></div>
+        <div>
+            <div class="sk-line sk-shimmer" style="width:180px;height:14px;margin-bottom:6px;"></div>
+            <div class="sk-line sk-shimmer" style="width:140px;height:11px;"></div>
+        </div>
+    </div>
+    <div style="display:flex;gap:0.5rem;">
+        <div class="sk-shimmer" style="width:75px;height:26px;border-radius:2px;"></div>
+        <div class="sk-shimmer" style="width:70px;height:26px;border-radius:2px;"></div>
+    </div>
+</div>
+```
+
+#### Property Card Grid (2-col)
+
+```html
+<div class="sk-prop-grid">
+    <div class="sk-prop-card">
+        <div class="sk-shimmer" style="width:100%;height:180px;"></div>
+        <div style="padding:1.25rem;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                <div class="sk-line sk-shimmer" style="width:100px;height:18px;"></div>
+                <div class="sk-shimmer" style="width:55px;height:20px;border-radius:2px;"></div>
+            </div>
+            <div class="sk-line sk-shimmer" style="width:85%;height:12px;margin-bottom:10px;"></div>
+            <div style="display:flex;gap:1rem;">
+                <div class="sk-line sk-shimmer" style="width:40px;height:11px;"></div>
+                <div class="sk-line sk-shimmer" style="width:40px;height:11px;"></div>
+                <div class="sk-line sk-shimmer" style="width:60px;height:11px;"></div>
+            </div>
+        </div>
+    </div>
+    <!-- × 1 more -->
+</div>
+```
+
+#### Portfolio Stat Rows
+
+```html
+<div class="sk-stat-row">
+    <div class="sk-line sk-shimmer" style="width:90px;height:12px;"></div>
+    <div class="sk-line sk-shimmer" style="width:30px;height:14px;"></div>
+</div>
+<!-- Repeat for each stat (7 rows on agent dashboard) -->
+```
+
+#### Top-Performing Property Rows
+
+```html
+<div class="sk-top-prop-item">
+    <div class="sk-shimmer" style="width:80px;height:60px;border-radius:4px;flex-shrink:0;"></div>
+    <div style="flex:1;">
+        <div class="sk-line sk-shimmer" style="width:85%;height:13px;margin-bottom:6px;"></div>
+        <div class="sk-line sk-shimmer" style="width:60%;height:11px;margin-bottom:6px;"></div>
+        <div style="display:flex;gap:0.75rem;">
+            <div class="sk-line sk-shimmer" style="width:40px;height:10px;"></div>
+            <div class="sk-line sk-shimmer" style="width:35px;height:10px;"></div>
+            <div class="sk-line sk-shimmer" style="width:65px;height:10px;"></div>
+        </div>
+    </div>
+</div>
+<!-- × 3 total -->
+```
+
+#### Activity Timeline Rows
+
+```html
+<div class="sk-activity-item">
+    <div class="sk-shimmer" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;"></div>
+    <div style="flex:1;">
+        <div class="sk-line sk-shimmer" style="width:140px;height:13px;margin-bottom:5px;"></div>
+        <div class="sk-line sk-shimmer" style="width:180px;height:11px;margin-bottom:4px;"></div>
+        <div class="sk-line sk-shimmer" style="width:120px;height:10px;"></div>
+    </div>
+</div>
+<!-- × 4 total -->
+```
+
+---
+
+### 11.5 — Part C (JS) — Hydration Script
+
+The script is **identical** to the admin version (Section 4, Part C). Copy it verbatim. Only the comment label differs:
+
+```html
+<!-- SKELETON HYDRATION — Progressive Content Reveal (Agent Portal) -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart = Date.now();
+    /* ... identical body to admin version ... */
+}());
+</script>
+```
+
+---
+
+### 11.6 — Step-by-Step Differences for Agent Portal
+
+| Step | Admin | Agent Portal |
+|---|---|---|
+| Step 1 — CSS | Light Part A (Section 4) | **Dark Part A** (Section 11.2) |
+| Step 2 — Container | `<div class="admin-content">` | `<div class="dashboard-content">` |
+| Step 4 — Skeleton HTML | Light recipes (Section 6) | **Dark recipes** (Section 11.4) |
+| Step 7 — Close wrapper | Before `</div><!-- /.admin-content -->` | Before `</div><!-- /.dashboard-content -->` |
+| Steps 3, 5, 6, 8, 9 | Identical | Identical |
+
+---
+
+### 11.7 — Agent Portal Checklist
+
+- [ ] **CSS** — Dark shimmer (`rgba(255,255,255,0.03→0.06→0.03)`) used instead of light `#f0f0f0`
+- [ ] **CSS** — Skeleton card backgrounds use `rgba(26,26,26)` / `rgba(10,10,10)` not `#fff`
+- [ ] **CSS** — `.sk-kpi-grid` column count matches real KPI count
+- [ ] **CSS** — Responsive breakpoints match agent page
+- [ ] **HTML** — `<noscript>` fallback after `<div class="dashboard-content">`
+- [ ] **HTML** — `<div id="sk-screen" role="presentation" aria-hidden="true">` present
+- [ ] **HTML** — Dark component recipes used for all major sections
+- [ ] **HTML** — `#sk-screen` and `#page-content` are siblings inside `.dashboard-content`
+- [ ] **JS** — Hydration script is a separate `<script>` block after the main script, before `</body>`
+- [ ] **JS** — `window 'load'` trigger (not `DOMContentLoaded`)
+- [ ] **JS** — KPI counter animations and IntersectionObserver on `skeleton:hydrated`
+- [ ] **JS** — Toast notifications staggered with `setTimeout` inside `skeleton:hydrated`
+- [ ] **Test** — Dark skeleton shapes visible on black background (not invisible)
+- [ ] **Test** — Shimmer animation perceptible on dark surface
+- [ ] **Test** — No white flash between skeleton fade-out and real content fade-in
+- [ ] **Test** — JS disabled: content shows immediately via `<noscript>`
+
+---
+
+*Reference implementations:*
+- Admin (light): [`admin_property_sale_approvals.php`](../admin_property_sale_approvals.php)
+- Agent Portal (dark): [`agent_pages/agent_dashboard.php`](../agent_pages/agent_dashboard.php)
