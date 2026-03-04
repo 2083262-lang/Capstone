@@ -1,5 +1,6 @@
 <?php
 include '../connection.php';
+require_once __DIR__ . '/../config/paths.php';
 
 // Initialize variables
 $error_message = '';
@@ -227,9 +228,9 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $property_data ? htmlspecialchars($property_data['StreetAddress']) . ' - ' . htmlspecialchars($property_data['City']) : 'Property Details'; ?> | HomeEstate Realty</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
+    <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
     
     <style>
         :root {
@@ -2441,9 +2442,9 @@ $conn->close();
 
 </div><!-- /#page-content -->
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
+<script src="<?= ASSETS_JS ?>chart.umd.min.js"></script>
+<script src="<?= ASSETS_JS ?>chartjs-adapter-date-fns.bundle.min.js"></script>
 
 <!-- SKELETON HYDRATION — Progressive Content Reveal (User Portal) -->
 <script>
@@ -2478,7 +2479,6 @@ $conn->close();
     else { window.addEventListener('load', hydrate); }
 }());
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
 <script>
 // Property image data from PHP

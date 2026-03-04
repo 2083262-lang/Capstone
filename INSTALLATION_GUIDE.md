@@ -426,19 +426,21 @@ Your project uses `via.placeholder.com` as a fallback for missing profile pictur
 
 ### Where it's used
 
-| File | What it does |
-|------|--------------|
-| `admin_navbar.php` | Admin avatar fallback |
-| `admin_profile.php` | Admin profile picture fallback |
-| `admin_property_card_template.php` | Property card "No Image" fallback |
-| `agent_pages/agent_navbar.php` | Agent avatar fallback |
-| `agent_pages/agent_profile.php` | Agent profile picture fallback (×3) |
-| `agent_pages/property_card_template.php` | Property card "No Image" fallback |
-| `view_property.php` | Property hero image fallback, agent avatar |
-| `user_pages/property_details_backup.php` | Property gallery fallback, agent avatar (×2) |
-| `user_pages/agent_profile.php` | Agent profile picture (×2) |
-| `user_pages/agents.php` | Agent listing fallback |
-| `add_agent.php` | Company logo, profile circle |
+| File | What it does | # of refs |
+|------|--------------|:---------:|
+| `admin_navbar.php` | Admin avatar fallback | 1 |
+| `admin_profile.php` | Admin profile picture fallback | 1 |
+| `admin_property_card_template.php` | Property card "No Image" fallback | 1 |
+| `agent_pages/agent_navbar.php` | Agent avatar fallback (default + `onerror`) | 2 |
+| `agent_pages/agent_profile.php` | Agent profile picture fallback (×3) | 3 |
+| `agent_pages/property_card_template.php` | Property card "No Image" fallback | 1 |
+| `view_property.php` | Property hero image fallback, agent avatar, JS fallback | 3 |
+| `user_pages/property_details_backup.php` | Property gallery fallback, agent avatar (×2) | 3 |
+| `user_pages/agent_profile.php` | Agent profile picture (×2) | 2 |
+| `user_pages/agents.php` | Agent listing fallback | 1 |
+| `add_agent.php` | Company logo, profile circle | 2 |
+
+> **Important — Fragment files (`admin_navbar.php`, `admin_sidebar.php`, `admin_property_card_template.php`, `agent_pages/agent_navbar.php`, `agent_pages/property_card_template.php`):** These files are `include`d/`require`d by parent pages that already load `config/paths.php`. Do **NOT** add a second `require_once` for `paths.php` inside them — the `BASE_URL` constant will already be defined by the parent page. Just replace the `via.placeholder.com` URLs directly using `<?= BASE_URL ?>images/placeholder-avatar.svg` or `<?= BASE_URL ?>images/placeholder.svg`.
 
 ### Step 7C-a — Create a local placeholder image
 
@@ -494,6 +496,8 @@ These will need to be handled case-by-case since URLs include different sizes an
 | `https://via.placeholder.com/160x60?text=LOGO` | `<?= BASE_URL ?>images/logo.png` (use your actual logo file) |
 
 > **Tip:** Since some of these are inside PHP string concatenation (e.g., appending initials), you may need to adjust the PHP logic slightly. Check each replacement individually.
+
+> **Warning — PHP string context matters:** Some `via.placeholder.com` URLs sit inside PHP string assignments (e.g., `$profile_image_src = 'https://via.placeholder.com/40';`). For these, you must replace with a PHP expression: `$profile_image_src = BASE_URL . 'images/placeholder-avatar.svg';`. Do **not** use the `<?= ... ?>` HTML shorthand inside PHP logic blocks — that syntax is only for HTML template output.
 
 > **Priority:** This phase is **lower priority** than Phases 2-9 because placeholder images are only shown when a real image is missing. However, replacing them ensures a fully offline-capable system.
 
@@ -589,6 +593,8 @@ require_once __DIR__ . '/config/paths.php';        // For ROOT-level files
 require_once __DIR__ . '/../config/paths.php';     // For files in agent_pages/ or user_pages/
 ```
 
+> **Exception — Fragment files that are `include`d by other pages** (like `admin_navbar.php`, `admin_sidebar.php`, `admin_property_card_template.php`, `agent_pages/agent_navbar.php`, `agent_pages/property_card_template.php`): Do **NOT** add `require_once` for `paths.php` to these files. They are always loaded by a parent page that already includes `paths.php`, so `BASE_URL`, `ASSETS_CSS`, and `ASSETS_JS` are already defined. Adding a duplicate `require_once` won't break anything (because of the `if (!defined('BASE_URL'))` guard), but it's unnecessary clutter.
+
 ### Step 9b — Replace CDN links
 
 Use the following **find → replace** mapping across all PHP files:
@@ -640,46 +646,61 @@ This file uses a `media="print" onload` pattern + `<noscript>` for Inter. Replac
 <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
 ```
 
+#### Special: `user_pages/property_details.php` — Remove duplicate script tag
+
+This file loads `chartjs-adapter-date-fns` **twice** (once near line 2446 and again near line 2481). After replacing both CDN URLs with the local path, **delete the second (duplicate) `<script>` tag entirely**:
+
+```html
+<!-- KEEP this one (near line 2446): -->
+<script src="<?= ASSETS_JS ?>chartjs-adapter-date-fns.bundle.min.js"></script>
+
+<!-- DELETE this duplicate (near line 2481) — it was loaded 35 lines above: -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+```
+
+Loading the same script twice can cause Chart.js adapter registration errors.
+
 ### Step 9c — Complete file list to update
 
 Below is every file that contains CDN references. Check each one off as you update it:
 
 **Root-level files** (use `require_once __DIR__ . '/config/paths.php';`):
 
-- [ ] `add_agent.php`
+- [ ] `add_agent.php` ← also has `via.placeholder.com` logo + avatar
 - [ ] `add_property.php`
 - [ ] `admin_dashboard.php`
-- [ ] `admin_navbar.php`
 - [ ] `admin_notification_view.php`
 - [ ] `admin_notifications.php`
-- [ ] `admin_profile.php`
+- [ ] `admin_profile.php` ← also has `via.placeholder.com` avatar
 - [ ] `admin_property_sale_approvals.php`
 - [ ] `admin_settings.php`
-- [ ] `admin_sidebar.php` ← **also has Flaticon UIcons CDN link**
 - [ ] `agent.php`
 - [ ] `agent_info_form.php`
 - [ ] `login.php`
 - [ ] `property.php`
 - [ ] `property_tour_requests.php`
 - [ ] `register.php`
-- [ ] `reports.php`
+- [ ] `reports.php` ← has Chart.js + jsPDF + SheetJS CDN links
 - [ ] `review_agent_details.php`
 - [ ] `test_admin_modal.php`
 - [ ] `tour_requests.php`
 - [ ] `two_factor.php`
-- [ ] `view_property.php`
+- [ ] `view_property.php` ← also has `via.placeholder.com` (×3, including one in JavaScript)
 
-**Included fragment files** (these are `include`d by other pages — they also need CDN links replaced):
+**Included fragment files** (these are `include`d by parent pages — do **NOT** add `require_once` for `paths.php` here; the parent page already defines `BASE_URL` / `ASSETS_CSS` / `ASSETS_JS`. Just replace the CDN URLs and placeholder URLs):
 
-- [ ] `admin_navbar.php` ← Bootstrap Icons CDN
+- [ ] `admin_navbar.php` ← Bootstrap Icons CDN + `via.placeholder.com` avatar
 - [ ] `admin_sidebar.php` ← Bootstrap Icons CDN + Flaticon UIcons CDN
+- [ ] `admin_property_card_template.php` ← `via.placeholder.com` property image fallback
+- [ ] `agent_pages/agent_navbar.php` ← `via.placeholder.com` avatar fallback (×2)
+- [ ] `agent_pages/property_card_template.php` ← `via.placeholder.com` property image fallback
 
 **`agent_pages/` files** (use `require_once __DIR__ . '/../config/paths.php';`):
 
 - [ ] `agent_commissions.php`
 - [ ] `agent_dashboard.php`
 - [ ] `agent_notifications.php`
-- [ ] `agent_profile.php`
+- [ ] `agent_profile.php` ← also has `via.placeholder.com` (×3)
 - [ ] `agent_property.php`
 - [ ] `agent_tour_requests.php`
 - [ ] `view_agent_property.php`
@@ -687,12 +708,12 @@ Below is every file that contains CDN references. Check each one off as you upda
 **`user_pages/` files** (use `require_once __DIR__ . '/../config/paths.php';`):
 
 - [ ] `about.php`
-- [ ] `agent_profile.php`
-- [ ] `agents.php`
+- [ ] `agent_profile.php` ← also has `via.placeholder.com` (×2)
+- [ ] `agents.php` ← also has `via.placeholder.com`
 - [ ] `index.php`
-- [ ] `property_details.php`
-- [ ] `property_details_backup.php`
-- [ ] `search_results.php`
+- [ ] `property_details.php` ← ⚠️ has **duplicate** `chartjs-adapter-date-fns` script — delete one after replacing (see Special note above)
+- [ ] `property_details_backup.php` ← also has `via.placeholder.com` (×3)
+- [ ] `search_results.php` ← ⚠️ has lazy-load font trick — see Special note above
 
 ### Example — Before & After
 
@@ -736,6 +757,19 @@ And for JS at the bottom:
 
 Do this for each row in the replacement table above.
 
+### Step 9d — Final audit: Confirm zero remaining CDN references
+
+After completing all replacements, run this in your VS Code terminal to verify **no CDN links remain**:
+
+```powershell
+# Search all PHP files for any remaining CDN references
+Select-String -Path (Get-ChildItem -Recurse -Filter *.php).FullName `
+  -Pattern 'cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com|cdn-uicons\.flaticon\.com|via\.placeholder\.com' |
+  Select-Object Filename, LineNumber, Line | Format-Table -AutoSize
+```
+
+If this returns **no results**, every external link has been successfully replaced. If any remain, update those files before proceeding to Phase 10.
+
 ---
 
 ## Phase 10 — Verify & Test
@@ -777,8 +811,11 @@ All files should have reasonable sizes (not 0 KB or a few bytes — that means t
 | Page looks unstyled | `bootstrap.min.css` path is wrong | Verify `config/paths.php` is included; check `ASSETS_CSS` output |
 | Modals don't open | `bootstrap.bundle.min.js` missing or 0 bytes | Re-download in Phase 2; verify file size > 0 |
 | Charts don't render | `chart.umd.min.js` not loaded | Check Network tab for 404; re-run Phase 5 |
+| Chart.js adapter error in console | `chartjs-adapter-date-fns` loaded twice | Delete the duplicate `<script>` tag in `user_pages/property_details.php` (see Phase 9b Special note) |
 | PDF export fails | jsPDF not loaded | Check Network tab; re-run Phase 6 |
 | Font looks different | Inter `.woff2` files corrupted or wrong font loaded | Re-download in Phase 7; clear browser cache |
+| Broken placeholder images offline | `via.placeholder.com` URLs not replaced | Re-check Phase 7C; search codebase for remaining `via.placeholder.com` |
+| `BASE_URL` undefined error in fragment | `require_once paths.php` missing from the **parent** page | Add the include to the parent page (e.g., `admin_dashboard.php`), not the fragment |
 
 ---
 

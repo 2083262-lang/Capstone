@@ -1,5 +1,6 @@
 <?php
 include '../connection.php';
+require_once __DIR__ . '/../config/paths.php';
 
 // Get agent account_id from URL
 $agent_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -99,7 +100,7 @@ if ($agent) {
     $bio = htmlspecialchars($agent['bio'] ?? 'Dedicated real estate professional committed to helping you find your perfect property.');
     $profile_pic = !empty($agent['profile_picture_url'])
         ? '../' . htmlspecialchars($agent['profile_picture_url'])
-        : 'https://via.placeholder.com/200?text=' . strtoupper(substr($agent['first_name'], 0, 1));
+        : BASE_URL . 'images/placeholder-avatar.svg';
     $member_since = !empty($agent['date_registered']) ? date('F Y', strtotime($agent['date_registered'])) : 'N/A';
 
     // Stats
@@ -169,9 +170,9 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $agent ? $full_name . ' - Agent Profile' : 'Agent Profile'; ?> | HomeEstate Realty</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
+    <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
     
     <style>
         :root {
@@ -1579,7 +1580,7 @@ $conn->close();
                 $sim_exp = $sim_years === 0 ? 'New Agent' : ($sim_years === 1 ? '1 Year' : $sim_years . ' Years');
                 $sim_pic = !empty($sim_agent['profile_picture_url'])
                     ? '../' . htmlspecialchars($sim_agent['profile_picture_url'])
-                    : 'https://via.placeholder.com/200?text=' . strtoupper(substr($sim_agent['first_name'], 0, 1));
+                    : BASE_URL . 'images/placeholder-avatar.svg';
                 $sim_listings = (int)$sim_agent['listing_count'];
                 $sim_sales = (int)$sim_agent['sales_count'];
             ?>
@@ -1615,7 +1616,7 @@ $conn->close();
 
 </div><!-- /#page-content -->
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 
 <!-- SKELETON HYDRATION — Progressive Content Reveal (User Portal) -->
 <script>

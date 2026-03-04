@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'connection.php';
+require_once __DIR__ . '/config/paths.php';
 
 // Admin access check
 $is_admin = false;
@@ -233,16 +234,16 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reports & Analytics - HomeEstate Realty</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
+    <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>fontawesome-all.min.css">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="<?= ASSETS_JS ?>chart.umd.min.js"></script>
     <!-- Export Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="<?= ASSETS_JS ?>jspdf.umd.min.js"></script>
+    <script src="<?= ASSETS_JS ?>jspdf.plugin.autotable.min.js"></script>
+    <script src="<?= ASSETS_JS ?>xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-color: #161209;
@@ -1186,7 +1187,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         </div>
     </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 <script>
 // =============================================
 // DATA FROM PHP

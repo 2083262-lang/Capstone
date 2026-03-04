@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/config/paths.php';
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     header("Location: login.php");
     exit();
@@ -22,10 +23,10 @@ if (isset($_SESSION['message'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Agent - Admin Panel</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
+    <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>fontawesome-all.min.css">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
     <link rel="stylesheet" href="css/admin_layout.css">
 
     <style>
@@ -164,7 +165,7 @@ if (isset($_SESSION['message'])) {
 
 <div class="sidebar">
     <div class="sidebar-logo">
-        <img src="https://via.placeholder.com/160x60?text=LOGO" alt="Company Logo">
+        <img src="<?= BASE_URL ?>images/placeholder.svg" alt="Company Logo">
     </div>
     <a href="admin_dashboard.php"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
     <a href="property.php"><i class="fas fa-building me-2"></i> Properties</a>
@@ -185,7 +186,7 @@ if (isset($_SESSION['message'])) {
             </li>
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="https://via.placeholder.com/40" class="rounded-circle me-2" alt="Profile">
+                    <img src="<?= BASE_URL ?>images/placeholder-avatar.svg" class="rounded-circle me-2" alt="Profile">
                     <?php echo htmlspecialchars($_SESSION['username']); ?>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
@@ -265,6 +266,6 @@ if (isset($_SESSION['message'])) {
 <!-- Modals -->
  <?php include 'logout_modal.php'; ?>
  
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 </body>
 </html>

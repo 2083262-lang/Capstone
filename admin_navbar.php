@@ -137,7 +137,7 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
 ?>
 
 <!-- Ensure Bootstrap Icons are available on any page that includes the navbar -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
 <!-- Standardized Admin Layout CSS -->
 <link rel="stylesheet" href="css/admin_layout.css">
 
@@ -1012,7 +1012,7 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
             <div class="user-dropdown dropdown">
                 <a href="#" class="user-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                     <?php
-                    $avatar_src = 'https://via.placeholder.com/35/bc9e42/ffffff?text=' . strtoupper(substr($first_name, 0, 1));
+                    $avatar_src = BASE_URL . 'images/placeholder-avatar.svg';
                     if (!empty($admin_profile['profile_picture_url'])) {
                         $avatar_src = htmlspecialchars($admin_profile['profile_picture_url']);
                     }

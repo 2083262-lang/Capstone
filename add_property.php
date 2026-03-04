@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'connection.php'; // Your database connection
+require_once __DIR__ . '/config/paths.php';
 
 // Check if the user is logged in and is either an admin or an agent
 if (!isset($_SESSION['account_id']) || !in_array($_SESSION['user_role'], ['admin', 'agent'])) {
@@ -25,10 +26,10 @@ unset($_SESSION['message']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add New Property - Admin Panel</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
+    <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>fontawesome-all.min.css">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
 
     <style>
         /* ================================================
@@ -1451,7 +1452,7 @@ unset($_SESSION['message']);
 <!-- Toast Container -->
 <div id="toastContainer"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 <script src="script/add_property_script.js"></script>
 <script>
 // ===== TOAST NOTIFICATION SYSTEM =====

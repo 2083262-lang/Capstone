@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'connection.php';
+require_once __DIR__ . '/config/paths.php';
 
 // Check if admin is logged in
 $is_admin = false;
@@ -150,9 +151,9 @@ function view_time_ago($dt) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($notif['title']); ?> - Notifications</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
+    <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
     <style>
         :root {
             --primary-color: #161209; --secondary-color: #bc9e42;
@@ -385,7 +386,7 @@ function view_time_ago($dt) {
 
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 </body>
 </html>
 <?php $conn->close(); ?>

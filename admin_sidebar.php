@@ -22,9 +22,9 @@ $menu_items = [
 ?>
 
 <!-- Ensure Bootstrap Icons are available on any page that includes the sidebar -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
 <!-- Flaticon Uicons Regular Straight - used for sidebar navigation icons -->
-<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-straight/css/uicons-regular-straight.css">
+<link rel="stylesheet" href="<?= ASSETS_CSS ?>uicons-regular-straight.css">
 <!-- Standardized Admin Layout CSS -->
 <link rel="stylesheet" href="css/admin_layout.css">
 

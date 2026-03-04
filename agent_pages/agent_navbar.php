@@ -38,7 +38,7 @@ if (!isset($agent_username) && isset($_SESSION['account_id'])) {
 
 // Build a robust profile image URL
 $raw_profile = isset($agent_info['profile_picture_url']) ? $agent_info['profile_picture_url'] : '';
-$profile_image_src = 'https://via.placeholder.com/40';
+$profile_image_src = BASE_URL . 'images/placeholder-avatar.svg';
 if (!empty($raw_profile)) {
     if (preg_match('/^https?:\/\//i', $raw_profile)) {
         $profile_image_src = $raw_profile;
@@ -701,7 +701,7 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
                 <!-- Profile Dropdown -->
                 <div class="dropdown profile-dropdown">
                     <button class="profile-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <img src="<?php echo htmlspecialchars($profile_image_src); ?>" alt="Profile" onerror="this.onerror=null;this.src='https://via.placeholder.com/40';"> 
+                        <img src="<?php echo htmlspecialchars($profile_image_src); ?>" alt="Profile" onerror="this.onerror=null;this.src='<?= BASE_URL ?>images/placeholder-avatar.svg';"> 
                         <span><?php echo htmlspecialchars($navbar_display_name); ?></span>
                         <span class="agent-role-badge">AGENT</span>
                         <i class="bi bi-chevron-down dropdown-arrow"></i>

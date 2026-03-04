@@ -1,5 +1,6 @@
 <?php
 include '../connection.php'; // Your database connection
+require_once __DIR__ . '/../config/paths.php';
 
 // Initialize variables
 $error_message = '';
@@ -116,9 +117,9 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $property_data ? htmlspecialchars($property_data['StreetAddress']) : 'Property Details'; ?> - Prestige Properties</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
+    <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
     
     <style>
         :root {
@@ -1397,7 +1398,7 @@ $conn->close();
                     <?php endforeach; ?>
                 <?php else: ?>
                     <div class="slide active">
-                        <img src="https://via.placeholder.com/1920x1080?text=No+Images+Available" 
+                        <img src="<?= BASE_URL ?>images/placeholder.svg" 
                              alt="No image available">
                     </div>
                 <?php endif; ?>
@@ -1598,7 +1599,7 @@ $conn->close();
                                 <h5>Listed By</h5>
                                 <div style="display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem;">
                                     <div class="agent-image-wrapper">
-                                        <img src="../<?php echo htmlspecialchars($agent_info['profile_picture_url'] ?? 'https://via.placeholder.com/90?text=Agent'); ?>" 
+                                        <img src="<?php echo !empty($agent_info['profile_picture_url']) ? '../' . htmlspecialchars($agent_info['profile_picture_url']) : BASE_URL . 'images/placeholder-avatar.svg'; ?>" 
                                              alt="Agent" 
                                              class="agent-contact-img">
                                         <div class="agent-badge">
@@ -1784,7 +1785,7 @@ $conn->close();
                 <!-- Agent Profile Section -->
                 <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); margin-bottom: 2rem;">
                     <div style="position: relative; display: inline-block; margin-bottom: 1rem;">
-                        <img src="../<?php echo htmlspecialchars($agent_info['profile_picture_url'] ?? 'https://via.placeholder.com/100?text=Agent'); ?>" 
+                        <img src="<?php echo !empty($agent_info['profile_picture_url']) ? '../' . htmlspecialchars($agent_info['profile_picture_url']) : BASE_URL . 'images/placeholder-avatar.svg'; ?>" 
                              alt="Agent" 
                              style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid var(--secondary-color); box-shadow: var(--shadow-md);">
                         <div style="position: absolute; bottom: 0; right: 0; width: 32px; height: 32px; background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-gold) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: var(--shadow-sm);">
@@ -1855,7 +1856,7 @@ $conn->close();
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 <script>
     // Property images array and slideshow variables
     const propertyImages = <?php echo json_encode(array_map(function($img) { return '../' . $img; }, $property_images)); ?>;

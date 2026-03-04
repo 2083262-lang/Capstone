@@ -46,7 +46,7 @@ elseif ($approval_status_class === 'approved') { $badge_icon = 'bi-check-circle-
 elseif ($approval_status_class === 'rejected') { $badge_icon = 'bi-x-circle-fill'; }
 
 // Image URL
-$img_url = !empty($property['PhotoURL']) ? htmlspecialchars($property['PhotoURL']) : 'https://via.placeholder.com/400x280/f0f2f5/94a3b8?text=No+Image';
+$img_url = !empty($property['PhotoURL']) ? htmlspecialchars($property['PhotoURL']) : BASE_URL . 'images/placeholder.svg';
 
 // Listing badge
 $listing_status = $property['Status'] ?? 'For Sale';

@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../connection.php';
+require_once __DIR__ . '/../config/paths.php';
 
 // Check if the user is logged in AND their role is 'agent'
 if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'agent') {
@@ -85,7 +86,7 @@ $conn->close();
 
 // Build profile image URL
 $raw_profile = $agent_info['profile_picture_url'] ?? '';
-$profile_image_src = 'https://via.placeholder.com/200';
+$profile_image_src = BASE_URL . 'images/placeholder-avatar.svg';
 if (!empty($raw_profile)) {
     if (preg_match('/^https?:\/\//i', $raw_profile)) {
         $profile_image_src = $raw_profile;
@@ -112,10 +113,10 @@ $active_page = 'agent_profile.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - HomeEstate Realty</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
+    <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>fontawesome-all.min.css">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
 
     <style>
         :root {
@@ -1153,7 +1154,7 @@ $active_page = 'agent_profile.php';
             <!-- Avatar -->
             <div class="profile-avatar-wrapper">
                 <img src="<?php echo htmlspecialchars($profile_image_src); ?>" alt="Agent Profile Photo" class="profile-avatar"
-                     onerror="this.onerror=null;this.src='https://via.placeholder.com/200?text=Agent';">
+                     onerror="this.onerror=null;this.src='<?= BASE_URL ?>images/placeholder-avatar.svg';">
                 <span class="profile-status-badge <?php echo ($agent_info['is_approved'] ?? 0) ? 'approved' : 'pending'; ?>">
                     <?php echo ($agent_info['is_approved'] ?? 0) ? 'Verified' : 'Pending Verification'; ?>
                 </span>
@@ -1342,7 +1343,7 @@ $active_page = 'agent_profile.php';
                     <div class="mb-4">
                         <div class="avatar-upload-zone">
                             <img id="avatarPreview" src="<?php echo htmlspecialchars($profile_image_src); ?>" alt="Preview" class="avatar-preview"
-                                 onerror="this.onerror=null;this.src='https://via.placeholder.com/100?text=Agent';">
+                                 onerror="this.onerror=null;this.src='<?= BASE_URL ?>images/placeholder-avatar.svg';">
                             <div class="avatar-upload-info">
                                 <label class="btn-choose-file" for="profilePhotoInput">
                                     <i class="bi bi-cloud-arrow-up"></i> Choose Photo
@@ -1436,7 +1437,7 @@ $active_page = 'agent_profile.php';
 
 <?php include 'logout_agent_modal.php'; ?>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 

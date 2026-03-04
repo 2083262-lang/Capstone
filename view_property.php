@@ -4,6 +4,7 @@ ob_start();
 session_start();
 include 'connection.php';
 require_once __DIR__ . '/mail_helper.php';
+require_once __DIR__ . '/config/paths.php';
 
 // --- Security Check: Ensure admin is logged in ---
 if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'admin') {
@@ -668,10 +669,10 @@ ob_end_flush();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Review Property - Admin Panel</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
+    <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>fontawesome-all.min.css">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
     
     <style>
         /* ================================================
@@ -2475,7 +2476,7 @@ include 'admin_navbar.php';
 
                 <div class="gallery-grid">
                     <div class="gallery-grid-main" onclick="openLightbox(0)">
-                        <img src="<?php echo htmlspecialchars($property_images[0] ?? 'https://via.placeholder.com/1200x600?text=No+Image'); ?>" 
+                        <img src="<?php echo htmlspecialchars($property_images[0] ?? (BASE_URL . 'images/placeholder.svg')); ?>" 
                              alt="Main property view" id="mainHeroImage">
                         
                         <!-- Status Badges (inside image) -->
@@ -2940,7 +2941,7 @@ include 'admin_navbar.php';
                                 </h3>
                                 <div class="agent-card">
                                             <?php
-                                            $listed_by_avatar = 'https://via.placeholder.com/80?text=N/A';
+                                            $listed_by_avatar = BASE_URL . 'images/placeholder-avatar.svg';
                                             if (!empty($agent_info['admin_profile_picture_url'])) {
                                                 $listed_by_avatar = $agent_info['admin_profile_picture_url'];
                                             } elseif (!empty($agent_info['agent_profile_picture_url'])) {
@@ -3175,8 +3176,8 @@ include 'admin_navbar.php';
 <!-- Toast Container -->
 <div id="toastContainer"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
+<script src="<?= ASSETS_JS ?>chart.umd.min.js"></script>
 <script>
     // ===== TOAST NOTIFICATION SYSTEM =====
     function showToast(type, title, message, duration) {
@@ -3302,7 +3303,7 @@ include 'admin_navbar.php';
         } else {
             console.warn('No images found for:', viewType, floorNum);
             // Show placeholder if no images
-            mainImage.src = 'https://via.placeholder.com/1200x600?text=No+Images+Available';
+            mainImage.src = '<?= BASE_URL ?>images/placeholder.svg';
             updateSidebar([]);
         }
     }

@@ -45,7 +45,7 @@ $interval = $today->diff($listingDateObj);
 $days_on_market = $interval->days;
 
 // --- Image URL ---
-$img_url = !empty($property['PhotoURL']) ? '../' . htmlspecialchars($property['PhotoURL']) : 'https://via.placeholder.com/400x280/1a1a1a/333333?text=No+Image';
+$img_url = !empty($property['PhotoURL']) ? '../' . htmlspecialchars($property['PhotoURL']) : BASE_URL . 'images/placeholder.svg';
 
 // --- Stats ---
 $views = (int)($property['ViewsCount'] ?? 0);
