@@ -23,7 +23,9 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['apply_filters'])) {
 $sql = "SELECT 
             p.*, 
             pi.PhotoURL,
+            a.account_id AS poster_account_id,
             a.first_name AS poster_first_name,
+            a.last_name AS poster_last_name,
             ur.role_name AS poster_role_name,
             rd.monthly_rent AS rd_monthly_rent,
             rd.security_deposit AS rd_security_deposit,
@@ -74,6 +76,18 @@ $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && st
 $property_types_db = [];
 $pt_result = $conn->query("SELECT type_name FROM property_types ORDER BY type_name ASC");
 if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_db[] = $pt_row['type_name']; } }
+
+// Fetch unique listers (accounts who created properties)
+$listers_db = [];
+$listers_result = $conn->query("
+    SELECT DISTINCT a.account_id, a.first_name, a.last_name, ur.role_name
+    FROM accounts a
+    JOIN property_log pl ON a.account_id = pl.account_id AND pl.action = 'CREATED'
+    JOIN property p ON pl.property_id = p.property_ID
+    LEFT JOIN user_roles ur ON a.role_id = ur.role_id
+    ORDER BY a.first_name ASC, a.last_name ASC
+");
+if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_db[] = $lr; } }
 
 ?>
 <!DOCTYPE html>
@@ -2139,6 +2153,23 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
                     </div>
                 </div>
 
+                <!-- Listed By Section -->
+                <div class="filter-section">
+                    <div class="filter-section-title">
+                        <i class="bi bi-person-badge"></i>
+                        Listed By
+                    </div>
+                    <select id="listedByFilter" class="filter-select">
+                        <option value="">All Agents &amp; Admins</option>
+                        <?php foreach ($listers_db as $lr): ?>
+                        <option value="<?php echo (int)$lr['account_id']; ?>">
+                            <?php echo htmlspecialchars($lr['first_name'] . ' ' . $lr['last_name']); ?>
+                            <?php if (!empty($lr['role_name'])): ?>(<?php echo ucfirst($lr['role_name']); ?>)<?php endif; ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
                 <!-- Results Summary -->
                 <div class="filter-results-summary">
                     <i class="bi bi-check-circle-fill"></i>
@@ -2245,6 +2276,7 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
                 'YearBuilt' => $p['YearBuilt'] ?? '',
                 'ViewsCount' => $p['ViewsCount'] ?? 0,
                 'Likes' => $p['Likes'] ?? 0,
+                'poster_account_id' => $p['poster_account_id'] ?? null,
             ];
         }, $properties)); ?>;
 
@@ -2560,7 +2592,8 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
             county: '',
             statuses: new Set(['For Sale', 'For Rent', 'Pending Sold', 'Sold']),
             approvalStatuses: new Set(['pending', 'approved', 'rejected']),
-            parking: ''
+            parking: '',
+            listedBy: ''
         };
 
         // Open/Close Filter Sidebar
@@ -2628,6 +2661,9 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
                 // Listing Date
                 if (document.getElementById('listingDateFrom')?.value && property.ListingDate < document.getElementById('listingDateFrom').value) return false;
                 if (document.getElementById('listingDateTo')?.value && property.ListingDate > document.getElementById('listingDateTo').value) return false;
+
+                // Listed By
+                if (comprehensiveFilters.listedBy && String(property.poster_account_id) !== String(comprehensiveFilters.listedBy)) return false;
                 
                 return true;
             });
@@ -2663,6 +2699,7 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
             if (comprehensiveFilters.approvalStatuses.size < 3) count++;
             if (comprehensiveFilters.parking) count++;
             if (document.getElementById('listingDateFrom')?.value || document.getElementById('listingDateTo')?.value) count++;
+            if (comprehensiveFilters.listedBy) count++;
             return count;
         }
 
@@ -2825,6 +2862,11 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
         document.getElementById('listingDateFrom')?.addEventListener('change', applyComprehensiveFilters);
         document.getElementById('listingDateTo')?.addEventListener('change', applyComprehensiveFilters);
 
+        document.getElementById('listedByFilter')?.addEventListener('change', (e) => {
+            comprehensiveFilters.listedBy = e.target.value;
+            applyComprehensiveFilters();
+        });
+
         // Quick filters
         document.querySelectorAll('[data-price-range]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -2900,7 +2942,8 @@ if ($pt_result) { while ($pt_row = $pt_result->fetch_assoc()) { $property_types_
                 county: '',
                 statuses: new Set(['For Sale', 'For Rent', 'Pending Sold', 'Sold']),
                 approvalStatuses: new Set(['pending', 'approved', 'rejected']),
-                parking: ''
+                parking: '',
+                listedBy: ''
             };
             
             updateChipStates();

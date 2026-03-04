@@ -14,6 +14,7 @@ $sort = isset($_GET['sort']) ? $_GET['sort'] : 'newest';
 $partial = isset($_GET['partial']) ? $_GET['partial'] : '';
 $category = isset($_GET['category']) ? $_GET['category'] : 'all';
 $search_query = isset($_GET['q']) ? trim($_GET['q']) : '';
+$posted_by = isset($_GET['posted_by']) ? (int)$_GET['posted_by'] : 0;
 
 // Pagination parameters
 $sr_per_page = 24;
@@ -30,6 +31,7 @@ if ($min_price > 0) $active_filter_count++;
 if ($max_price < 999999999) $active_filter_count++;
 if ($bedrooms > 0) $active_filter_count++;
 if ($bathrooms > 0) $active_filter_count++;
+if ($posted_by > 0) $active_filter_count++;
 
 // ─── PARTIAL AJAX RENDER (deferred grid fetch) ───
 if ($partial === 'grid') {
@@ -57,6 +59,7 @@ if ($partial === 'grid') {
     if ($max_price < 999999999) $sql .= " AND p.ListingPrice <= " . $max_price;
     if ($bedrooms > 0) $sql .= " AND p.Bedrooms >= " . $bedrooms;
     if ($bathrooms > 0) $sql .= " AND p.Bathrooms >= " . $bathrooms;
+    if ($posted_by > 0) $sql .= " AND pl.account_id = " . $posted_by;
     if ($search_query) {
         $escaped_q = $conn->real_escape_string($search_query);
         $sql .= " AND (p.StreetAddress LIKE '%$escaped_q%' OR p.City LIKE '%$escaped_q%' OR p.Province LIKE '%$escaped_q%' OR p.PropertyType LIKE '%$escaped_q%')";
@@ -209,6 +212,17 @@ $cities = $cities_result->fetch_all(MYSQLI_ASSOC);
 $types_result = $conn->query("SELECT type_name AS PropertyType FROM property_types ORDER BY type_name ASC");
 $types = $types_result->fetch_all(MYSQLI_ASSOC);
 
+// Fetch agents/admins who posted properties
+$agents_result = $conn->query("
+    SELECT DISTINCT a.account_id, a.first_name, a.last_name, ur.role_name
+    FROM accounts a
+    JOIN property_log pl ON a.account_id = pl.account_id AND pl.action = 'CREATED'
+    JOIN property p ON pl.property_id = p.property_ID AND p.approval_status = 'approved'
+    LEFT JOIN user_roles ur ON a.role_id = ur.role_id
+    ORDER BY a.first_name ASC, a.last_name ASC
+");
+$agents = $agents_result ? $agents_result->fetch_all(MYSQLI_ASSOC) : [];
+
 $price_range_result = $conn->query("SELECT MIN(ListingPrice) AS minp, MAX(ListingPrice) AS maxp FROM property WHERE approval_status = 'approved' AND Status NOT IN ('Sold','Pending Sold')");
 $price_range = $price_range_result ? $price_range_result->fetch_assoc() : ['minp' => 0, 'maxp' => 100000000];
 $min_bound = isset($price_range['minp']) ? (int)$price_range['minp'] : 0;
@@ -350,81 +364,114 @@ $conn->close();
         /* Filter Drawer (Right Side) */
         .drawer-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6); z-index: 1040;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+            z-index: 1040;
             opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0.25s;
         }
         .drawer-overlay.open { opacity: 1; visibility: visible; }
         .filter-drawer {
-            position: fixed; top: 0; right: -420px; width: 400px; max-width: 90vw;
-            height: 100vh; background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
-            border-left: 1px solid rgba(37,99,235,0.15); z-index: 1050;
-            display: flex; flex-direction: column; transition: right 0.3s ease; overflow: hidden;
+            position: fixed; top: 0; right: 0; width: 520px; max-width: 92vw;
+            height: 100vh; height: 100dvh;
+            background: linear-gradient(180deg, #131316 0%, #0c0c0e 100%);
+            border-left: 1px solid rgba(37,99,235,0.15);
+            z-index: 1050;
+            display: flex; flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.32s cubic-bezier(0.22,1,0.36,1);
+            box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+            overflow: hidden;
         }
-        .filter-drawer.open { right: 0; }
+        .filter-drawer.open { transform: translateX(0); }
         .drawer-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;
+            padding: 22px 28px; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+            background: rgba(255,255,255,0.015);
         }
         .drawer-header h3 {
-            font-size: 1.125rem; font-weight: 700; color: var(--white);
+            font-size: 1.2rem; font-weight: 700; color: var(--white);
             display: flex; align-items: center; gap: 10px;
         }
-        .drawer-header h3 i { color: var(--gold); }
+        .drawer-header h3 i { color: var(--gold); font-size: 1.1rem; }
+        .drawer-header .drawer-subtitle {
+            font-size: 0.8rem; color: var(--gray-500); font-weight: 400; margin-top: 2px;
+        }
         .drawer-close {
-            width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+            width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
             background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px; color: var(--gray-400); font-size: 1.1rem; cursor: pointer;
+            border-radius: 10px; color: var(--gray-400); font-size: 1.15rem; cursor: pointer;
             transition: all 0.15s;
         }
         .drawer-close:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: #ef4444; }
-        .drawer-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .drawer-body {
+            flex: 1; overflow-y: auto; padding: 24px 28px;
+            overscroll-behavior: contain;
+        }
         .drawer-body::-webkit-scrollbar { width: 5px; }
         .drawer-body::-webkit-scrollbar-track { background: transparent; }
-        .drawer-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        .drawer-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+        .drawer-body::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
         .drawer-footer {
-            padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 18px 28px; border-top: 1px solid rgba(255,255,255,0.07);
             display: flex; gap: 10px; flex-shrink: 0;
+            background: rgba(255,255,255,0.015);
         }
         .drawer-footer .btn-apply {
-            flex: 1; padding: 12px;
+            flex: 1; padding: 13px;
             background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-            border: none; border-radius: 8px; color: var(--black); font-weight: 700;
+            border: none; border-radius: 10px; color: var(--black); font-weight: 700;
             font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .drawer-footer .btn-apply:hover { box-shadow: 0 4px 16px rgba(212,175,55,0.3); }
+        .drawer-footer .btn-apply:hover { box-shadow: 0 4px 20px rgba(212,175,55,0.35); transform: translateY(-1px); }
         .drawer-footer .btn-clear {
-            padding: 12px 20px; background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+            padding: 13px 22px; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
             color: var(--gray-300); font-weight: 600; font-size: 0.85rem;
             cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
         }
         .drawer-footer .btn-clear:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.25); color: #ef4444; }
 
-        /* Filter Groups */
+        /* Filter Groups - Enhanced */
+        .filter-section-divider {
+            height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+            margin: 20px 0;
+        }
+        .filter-columns {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+        }
+
+        /* Filter Groups - Enhanced */
         .filter-group { margin-bottom: 22px; }
         .filter-label {
-            font-size: 0.8125rem; font-weight: 600; color: var(--gray-300);
+            font-size: 0.78rem; font-weight: 700; color: var(--gray-300);
             margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
-            text-transform: uppercase; letter-spacing: 0.5px;
+            text-transform: uppercase; letter-spacing: 0.6px;
         }
-        .filter-label i { color: var(--gold); font-size: 0.9rem; }
+        .filter-label i { color: var(--gold); font-size: 0.85rem; }
         .filter-select {
-            width: 100%; padding: 11px 14px; background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
-            color: var(--white); font-size: 0.875rem; transition: border-color 0.2s; cursor: pointer;
+            width: 100%; padding: 11px 40px 11px 14px; background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.09); border-radius: 10px;
+            color: var(--white); font-size: 0.875rem; transition: border-color 0.2s, background 0.2s; cursor: pointer;
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path fill='%23a0aab5' d='M0 0l5 6 5-6z'/></svg>");
+            background-repeat: no-repeat; background-position: right 14px center; background-size: 10px 6px;
         }
-        .filter-select:hover { border-color: rgba(255,255,255,0.2); }
+        input.filter-select {
+            background-image: none; padding-right: 14px;
+        }
+        .filter-select:hover { border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); }
         .filter-select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
         .filter-select option { background-color: var(--black-light); color: var(--white); }
         .filter-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
         .filter-btn {
-            padding: 8px 16px; background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            padding: 9px 18px; background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.09); border-radius: 10px;
             color: var(--gray-400); font-size: 0.8125rem; cursor: pointer;
-            font-weight: 600; transition: all 0.15s;
+            font-weight: 600; transition: all 0.18s;
         }
-        .filter-btn:hover { background: rgba(255,255,255,0.1); color: var(--white); border-color: rgba(255,255,255,0.2); }
-        .filter-btn.active { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: var(--black); border-color: var(--gold); }
+        .filter-btn:hover { background: rgba(255,255,255,0.1); color: var(--white); border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
+        .filter-btn.active { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: var(--black); border-color: var(--gold); box-shadow: 0 2px 8px rgba(212,175,55,0.25); }
 
         /* Price Slider */
         .price-slider-container { position: relative; height: 40px; margin-bottom: 1rem; margin-top: 0.5rem; }
@@ -609,10 +656,11 @@ $conn->close();
             .properties-grid { grid-template-columns: 1fr; }
             .results-header { gap: 10px; }
             .results-actions { width: 100%; justify-content: space-between; }
-            .filter-drawer { width: 100%; max-width: 100vw; right: -100%; }
+            .filter-drawer { width: 100%; max-width: 100vw; }
             .sort-label { display: none; }
             .sort-select { min-width: auto; }
             .category-buttons { grid-template-columns: 1fr; }
+            .filter-columns { grid-template-columns: 1fr; }
         }
         @media (min-width: 769px) and (max-width: 1024px) {
             .properties-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
@@ -627,122 +675,161 @@ $conn->close();
 <?php include 'navbar.php'; ?>
 
 <!-- Drawer Overlay -->
-<div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
+<div class="drawer-overlay" id="drawerOverlay"></div>
 
 <!-- Filter Drawer (Right Side) -->
 <div class="filter-drawer" id="filterDrawer">
     <div class="drawer-header">
-        <h3><i class="bi bi-sliders"></i> Filter Properties</h3>
+        <div>
+            <h3><i class="bi bi-sliders2"></i> Filter Properties</h3>
+            <div class="drawer-subtitle">Refine your property search</div>
+        </div>
         <button class="drawer-close" onclick="toggleDrawer()"><i class="bi bi-x-lg"></i></button>
     </div>
-    <div class="drawer-body">
-        <form id="filterForm" onsubmit="return false;">
-            <div class="filter-group">
-                <label class="filter-label"><i class="bi bi-grid-3x3-gap"></i> Categories</label>
-                <div class="category-buttons">
-                    <button type="button" class="category-btn <?php echo $category === 'most_viewed' ? 'active' : ''; ?>" data-category="most_viewed" onclick="setCategoryFilter('most_viewed')">
-                        <i class="bi bi-eye-fill"></i> Most Viewed
-                    </button>
-                    <button type="button" class="category-btn <?php echo $category === 'most_liked' ? 'active' : ''; ?>" data-category="most_liked" onclick="setCategoryFilter('most_liked')">
-                        <i class="bi bi-heart-fill"></i> Most Liked
-                    </button>
-                    <button type="button" class="category-btn <?php echo $category === 'most_beds' ? 'active' : ''; ?>" data-category="most_beds" onclick="setCategoryFilter('most_beds')">
-                        <i class="bi bi-door-open-fill"></i> Most Beds
-                    </button>
-                    <button type="button" class="category-btn <?php echo $category === 'for_sale' ? 'active' : ''; ?>" data-category="for_sale" onclick="setCategoryFilter('for_sale')">
-                        <i class="bi bi-house-door-fill"></i> For Sale
-                    </button>
-                    <button type="button" class="category-btn <?php echo $category === 'for_rent' ? 'active' : ''; ?>" data-category="for_rent" onclick="setCategoryFilter('for_rent')">
-                        <i class="bi bi-key-fill"></i> For Rent
-                    </button>
-                </div>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="bi bi-search"></i> Search</label>
-                <input type="text" class="filter-select" id="searchInput" placeholder="Address, city, or type..." value="<?php echo htmlspecialchars($search_query); ?>" style="cursor: text;">
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="bi bi-geo-alt"></i> Location</label>
-                <select class="filter-select" id="citySelect">
-                    <option value="">All Cities</option>
-                    <?php foreach ($cities as $c): ?>
-                        <option value="<?php echo htmlspecialchars($c['City']); ?>" <?php echo $city === $c['City'] ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($c['City']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="bi bi-building"></i> Property Type</label>
-                <select class="filter-select" id="typeSelect">
-                    <option value="">All Types</option>
-                    <?php foreach ($types as $t): ?>
-                        <option value="<?php echo htmlspecialchars($t['PropertyType']); ?>" <?php echo $property_type === $t['PropertyType'] ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($t['PropertyType']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="bi bi-tag"></i> Status</label>
-                <div class="filter-buttons">
-                    <button type="button" class="filter-btn <?php echo $status === '' ? 'active' : ''; ?>" onclick="setFilter('status', '')">All</button>
-                    <button type="button" class="filter-btn <?php echo $status === 'For Sale' ? 'active' : ''; ?>" onclick="setFilter('status', 'For Sale')">For Sale</button>
-                    <button type="button" class="filter-btn <?php echo $status === 'For Rent' ? 'active' : ''; ?>" onclick="setFilter('status', 'For Rent')">For Rent</button>
-                </div>
-                <input type="hidden" id="statusInput" value="<?php echo htmlspecialchars($status); ?>">
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="bi bi-currency-exchange"></i> Price Range</label>
-                <div class="price-slider-container">
-                    <div class="price-slider-track">
-                        <div class="price-slider-range" id="priceSliderRange"></div>
-                    </div>
-                    <input type="range" id="priceMinSlider" class="price-range-slider" min="<?php echo $min_bound; ?>" max="<?php echo $max_bound; ?>" value="<?php echo $min_price > 0 ? $min_price : $min_bound; ?>" step="100000">
-                    <input type="range" id="priceMaxSlider" class="price-range-slider" min="<?php echo $min_bound; ?>" max="<?php echo $max_bound; ?>" value="<?php echo $max_price < 999999999 ? $max_price : $max_bound; ?>" step="100000">
-                </div>
-                <div class="price-range-inputs">
-                    <div class="price-input">
-                        <span class="currency-symbol">P</span>
-                        <input type="text" id="priceMinDisplay" value="<?php echo number_format($min_price > 0 ? $min_price : $min_bound); ?>" readonly>
-                    </div>
-                    <span class="range-divider">-</span>
-                    <div class="price-input">
-                        <span class="currency-symbol">P</span>
-                        <input type="text" id="priceMaxDisplay" value="<?php echo number_format($max_price < 999999999 ? $max_price : $max_bound); ?>" readonly>
+    <div class="drawer-body" id="drawerBody">
+            <form id="filterForm" onsubmit="return false;">
+                <!-- Categories -->
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-grid-3x3-gap"></i> Quick Categories</label>
+                    <div class="category-buttons">
+                        <button type="button" class="category-btn <?php echo $category === 'most_viewed' ? 'active' : ''; ?>" data-category="most_viewed" onclick="setCategoryFilter('most_viewed')">
+                            <i class="bi bi-eye-fill"></i> Most Viewed
+                        </button>
+                        <button type="button" class="category-btn <?php echo $category === 'most_liked' ? 'active' : ''; ?>" data-category="most_liked" onclick="setCategoryFilter('most_liked')">
+                            <i class="bi bi-heart-fill"></i> Most Liked
+                        </button>
+                        <button type="button" class="category-btn <?php echo $category === 'most_beds' ? 'active' : ''; ?>" data-category="most_beds" onclick="setCategoryFilter('most_beds')">
+                            <i class="bi bi-door-open-fill"></i> Most Beds
+                        </button>
+                        <button type="button" class="category-btn <?php echo $category === 'for_sale' ? 'active' : ''; ?>" data-category="for_sale" onclick="setCategoryFilter('for_sale')">
+                            <i class="bi bi-house-door-fill"></i> For Sale
+                        </button>
+                        <button type="button" class="category-btn <?php echo $category === 'for_rent' ? 'active' : ''; ?>" data-category="for_rent" onclick="setCategoryFilter('for_rent')">
+                            <i class="bi bi-key-fill"></i> For Rent
+                        </button>
                     </div>
                 </div>
-                <input type="hidden" id="minPriceInput" value="<?php echo $min_price > 0 ? $min_price : $min_bound; ?>">
-                <input type="hidden" id="maxPriceInput" value="<?php echo $max_price < 999999999 ? $max_price : $max_bound; ?>">
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="bi bi-door-open"></i> Bedrooms</label>
-                <div class="filter-buttons">
-                    <button type="button" class="filter-btn <?php echo $bedrooms === 0 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 0)">Any</button>
-                    <button type="button" class="filter-btn <?php echo $bedrooms === 1 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 1)">1+</button>
-                    <button type="button" class="filter-btn <?php echo $bedrooms === 2 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 2)">2+</button>
-                    <button type="button" class="filter-btn <?php echo $bedrooms === 3 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 3)">3+</button>
-                    <button type="button" class="filter-btn <?php echo $bedrooms === 4 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 4)">4+</button>
+
+                <div class="filter-section-divider"></div>
+
+                <!-- Search -->
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-search"></i> Search</label>
+                    <input type="text" class="filter-select" id="searchInput" placeholder="Address, city, or property type..." value="<?php echo htmlspecialchars($search_query); ?>" style="cursor: text;">
                 </div>
-                <input type="hidden" id="bedroomsInput" value="<?php echo $bedrooms; ?>">
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="bi bi-droplet"></i> Bathrooms</label>
-                <div class="filter-buttons">
-                    <button type="button" class="filter-btn <?php echo $bathrooms === 0 ? 'active' : ''; ?>" onclick="setFilter('bathrooms', 0)">Any</button>
-                    <button type="button" class="filter-btn <?php echo $bathrooms === 1 ? 'active' : ''; ?>" onclick="setFilter('bathrooms', 1)">1+</button>
-                    <button type="button" class="filter-btn <?php echo $bathrooms === 2 ? 'active' : ''; ?>" onclick="setFilter('bathrooms', 2)">2+</button>
-                    <button type="button" class="filter-btn <?php echo $bathrooms === 3 ? 'active' : ''; ?>" onclick="setFilter('bathrooms', 3)">3+</button>
+
+                <!-- Location & Property Type - Side by side -->
+                <div class="filter-columns">
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="bi bi-geo-alt"></i> Location</label>
+                        <select class="filter-select" id="citySelect">
+                            <option value="">All Cities</option>
+                            <?php foreach ($cities as $c): ?>
+                                <option value="<?php echo htmlspecialchars($c['City']); ?>" <?php echo $city === $c['City'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($c['City']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="bi bi-building"></i> Property Type</label>
+                        <select class="filter-select" id="typeSelect">
+                            <option value="">All Types</option>
+                            <?php foreach ($types as $t): ?>
+                                <option value="<?php echo htmlspecialchars($t['PropertyType']); ?>" <?php echo $property_type === $t['PropertyType'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($t['PropertyType']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
-                <input type="hidden" id="bathroomsInput" value="<?php echo $bathrooms; ?>">
-            </div>
-            <input type="hidden" id="sortInput" value="<?php echo htmlspecialchars($sort); ?>">
-            <input type="hidden" id="categoryInput" value="<?php echo htmlspecialchars($category); ?>">
-        </form>
-    </div>
+
+                <!-- Posted By Agent -->
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-person-badge"></i> Posted By</label>
+                    <select class="filter-select" id="postedBySelect">
+                        <option value="0">All Agents</option>
+                        <?php foreach ($agents as $ag): ?>
+                            <option value="<?php echo (int)$ag['account_id']; ?>" <?php echo $posted_by === (int)$ag['account_id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($ag['first_name'] . ' ' . $ag['last_name']); ?>
+                                <?php if (!empty($ag['role_name'])): ?> (<?php echo ucfirst($ag['role_name']); ?>)<?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="filter-section-divider"></div>
+
+                <!-- Status -->
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-tag"></i> Status</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn <?php echo $status === '' ? 'active' : ''; ?>" onclick="setFilter('status', '')">All</button>
+                        <button type="button" class="filter-btn <?php echo $status === 'For Sale' ? 'active' : ''; ?>" onclick="setFilter('status', 'For Sale')">For Sale</button>
+                        <button type="button" class="filter-btn <?php echo $status === 'For Rent' ? 'active' : ''; ?>" onclick="setFilter('status', 'For Rent')">For Rent</button>
+                    </div>
+                    <input type="hidden" id="statusInput" value="<?php echo htmlspecialchars($status); ?>">
+                </div>
+
+                <!-- Price Range -->
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-currency-exchange"></i> Price Range</label>
+                    <div class="price-slider-container">
+                        <div class="price-slider-track">
+                            <div class="price-slider-range" id="priceSliderRange"></div>
+                        </div>
+                        <input type="range" id="priceMinSlider" class="price-range-slider" min="<?php echo $min_bound; ?>" max="<?php echo $max_bound; ?>" value="<?php echo $min_price > 0 ? $min_price : $min_bound; ?>" step="100000">
+                        <input type="range" id="priceMaxSlider" class="price-range-slider" min="<?php echo $min_bound; ?>" max="<?php echo $max_bound; ?>" value="<?php echo $max_price < 999999999 ? $max_price : $max_bound; ?>" step="100000">
+                    </div>
+                    <div class="price-range-inputs">
+                        <div class="price-input">
+                            <span class="currency-symbol">P</span>
+                            <input type="text" id="priceMinDisplay" value="<?php echo number_format($min_price > 0 ? $min_price : $min_bound); ?>" readonly>
+                        </div>
+                        <span class="range-divider">-</span>
+                        <div class="price-input">
+                            <span class="currency-symbol">P</span>
+                            <input type="text" id="priceMaxDisplay" value="<?php echo number_format($max_price < 999999999 ? $max_price : $max_bound); ?>" readonly>
+                        </div>
+                    </div>
+                    <input type="hidden" id="minPriceInput" value="<?php echo $min_price > 0 ? $min_price : $min_bound; ?>">
+                    <input type="hidden" id="maxPriceInput" value="<?php echo $max_price < 999999999 ? $max_price : $max_bound; ?>">
+                </div>
+
+                <div class="filter-section-divider"></div>
+
+                <!-- Bedrooms & Bathrooms - Side by side -->
+                <div class="filter-columns">
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="bi bi-door-open"></i> Bedrooms</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn <?php echo $bedrooms === 0 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 0)">Any</button>
+                            <button type="button" class="filter-btn <?php echo $bedrooms === 1 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 1)">1+</button>
+                            <button type="button" class="filter-btn <?php echo $bedrooms === 2 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 2)">2+</button>
+                            <button type="button" class="filter-btn <?php echo $bedrooms === 3 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 3)">3+</button>
+                            <button type="button" class="filter-btn <?php echo $bedrooms === 4 ? 'active' : ''; ?>" onclick="setFilter('bedrooms', 4)">4+</button>
+                        </div>
+                        <input type="hidden" id="bedroomsInput" value="<?php echo $bedrooms; ?>">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="bi bi-droplet"></i> Bathrooms</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn <?php echo $bathrooms === 0 ? 'active' : ''; ?>" onclick="setFilter('bathrooms', 0)">Any</button>
+                            <button type="button" class="filter-btn <?php echo $bathrooms === 1 ? 'active' : ''; ?>" onclick="setFilter('bathrooms', 1)">1+</button>
+                            <button type="button" class="filter-btn <?php echo $bathrooms === 2 ? 'active' : ''; ?>" onclick="setFilter('bathrooms', 2)">2+</button>
+                            <button type="button" class="filter-btn <?php echo $bathrooms === 3 ? 'active' : ''; ?>" onclick="setFilter('bathrooms', 3)">3+</button>
+                        </div>
+                        <input type="hidden" id="bathroomsInput" value="<?php echo $bathrooms; ?>">
+                    </div>
+                </div>
+                <input type="hidden" id="sortInput" value="<?php echo htmlspecialchars($sort); ?>">
+                <input type="hidden" id="categoryInput" value="<?php echo htmlspecialchars($category); ?>">
+                <input type="hidden" id="postedByInput" value="<?php echo $posted_by; ?>">
+            </form>
+        </div>
     <div class="drawer-footer">
-        <button class="btn-clear" onclick="clearFilters()"><i class="bi bi-x-circle me-1"></i> Reset</button>
-        <button class="btn-apply" onclick="applyAndClose()"><i class="bi bi-check2 me-1"></i> Apply Filters</button>
+        <button class="btn-clear" onclick="clearFilters()"><i class="bi bi-arrow-counterclockwise"></i> Reset All</button>
+        <button class="btn-apply" onclick="applyAndClose()"><i class="bi bi-check2-circle"></i> Apply Filters</button>
     </div>
 </div>
 
@@ -806,27 +893,25 @@ $conn->close();
     function toggleDrawer() {
         const drawer = document.getElementById('filterDrawer');
         const overlay = document.getElementById('drawerOverlay');
-        const navbar = document.querySelector('.navbar');
         const isOpening = !drawer.classList.contains('open');
         
         if (isOpening) {
-            // Calculate scrollbar width before hiding overflow
-            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+            drawer.classList.add('open');
+            overlay.classList.add('open');
+            document.documentElement.style.overflow = 'hidden';
             document.body.style.overflow = 'hidden';
-            document.body.style.paddingRight = scrollbarWidth + 'px';
-            // Compensate sticky navbar so it doesn't shift right
-            if (navbar && scrollbarWidth > 0) {
-                navbar.style.paddingRight = scrollbarWidth + 'px';
-            }
         } else {
+            drawer.classList.remove('open');
+            overlay.classList.remove('open');
+            document.documentElement.style.overflow = '';
             document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-            if (navbar) navbar.style.paddingRight = '';
         }
-        
-        drawer.classList.toggle('open');
-        overlay.classList.toggle('open');
     }
+
+    // Close drawer when clicking overlay
+    document.getElementById('drawerOverlay').addEventListener('click', function() {
+        toggleDrawer();
+    });
 
     function applyAndClose() {
         updateResults();
@@ -845,6 +930,7 @@ $conn->close();
         const maxPrice = document.getElementById('maxPriceInput').value;
         const category = document.getElementById('categoryInput').value;
         const searchQ = document.getElementById('searchInput').value.trim();
+        const postedBy = document.getElementById('postedBySelect').value;
 
         if (city) params.set('city', city);
         if (type) params.set('property_type', type);
@@ -856,6 +942,7 @@ $conn->close();
         if (sort) params.set('sort', sort);
         if (category && category !== 'all') params.set('category', category);
         if (searchQ) params.set('q', searchQ);
+        if (Number(postedBy) > 0) params.set('posted_by', postedBy);
         // Pagination
         const pg = page || 1;
         if (pg > 1) params.set('page', pg);
@@ -963,6 +1050,8 @@ $conn->close();
         const maxP = Number(document.getElementById('maxPriceInput').value);
         const minBound = Number(document.getElementById('priceMinSlider').min);
         const maxBound = Number(document.getElementById('priceMaxSlider').max);
+        const postedByEl = document.getElementById('postedBySelect');
+        const postedBy = postedByEl.value;
 
         const category = document.getElementById('categoryInput').value;
         if (category && category !== 'all') {
@@ -975,6 +1064,10 @@ $conn->close();
         if (Number(beds) > 0) chips.push({ label: beds + '+ Beds', clear: () => { setFilter('bedrooms', 0); } });
         if (Number(baths) > 0) chips.push({ label: baths + '+ Baths', clear: () => { setFilter('bathrooms', 0); } });
         if (minP > minBound || maxP < maxBound) chips.push({ label: 'P' + numberWithCommas(minP) + ' - P' + numberWithCommas(maxP), clear: () => { resetPrice(); updateResults(); } });
+        if (Number(postedBy) > 0) {
+            const agentName = postedByEl.options[postedByEl.selectedIndex]?.text || 'Agent';
+            chips.push({ label: 'By: ' + agentName, clear: () => { document.getElementById('postedBySelect').value='0'; updateResults(); } });
+        }
 
         bar.innerHTML = chips.map((c, i) =>
             '<span class="filter-chip">' + c.label + ' <span class="chip-remove" data-idx="' + i + '"><i class="bi bi-x"></i></span></span>'
@@ -994,6 +1087,7 @@ $conn->close();
         if (document.getElementById('statusInput').value) count++;
         if (Number(document.getElementById('bedroomsInput').value) > 0) count++;
         if (Number(document.getElementById('bathroomsInput').value) > 0) count++;
+        if (Number(document.getElementById('postedBySelect').value) > 0) count++;
         const minP = Number(document.getElementById('minPriceInput').value);
         const maxP = Number(document.getElementById('maxPriceInput').value);
         const minBound = Number(document.getElementById('priceMinSlider').min);
@@ -1038,6 +1132,7 @@ $conn->close();
         document.getElementById('bedroomsInput').value = 0;
         document.getElementById('bathroomsInput').value = 0;
         document.getElementById('searchInput').value = '';
+        document.getElementById('postedBySelect').value = '0';
         clearCategory();
         resetPrice();
         refreshButtonGroup('statusInput');
@@ -1084,6 +1179,7 @@ $conn->close();
 
         document.getElementById('citySelect').addEventListener('change', () => updateResults());
         document.getElementById('typeSelect').addEventListener('change', () => updateResults());
+        document.getElementById('postedBySelect').addEventListener('change', () => updateResults());
 
         const searchInput = document.getElementById('searchInput');
         const debouncedSearch = debounce(() => updateResults(), 400);
