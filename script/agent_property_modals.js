@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
     const form = document.getElementById('editPropertyForm');
     if (!form) return;
-    const alertBox = document.getElementById('updateAlert');
     const descTextarea = form.querySelector('[name="ListingDescription"]');
     const charCountEl = document.getElementById('charCount');
 
@@ -52,9 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function showAlert(ok, msg) {
-        alertBox.classList.remove('d-none', 'alert-success', 'alert-danger');
-        alertBox.classList.add(ok ? 'alert-success' : 'alert-danger');
-        alertBox.innerHTML = '<i class="bi bi-' + (ok ? 'check-circle-fill' : 'exclamation-triangle-fill') + '"></i> ' + msg;
+        showToast(ok ? 'success' : 'error', ok ? 'Success' : 'Error', msg, ok ? 4500 : 6000);
     }
 
     if (descTextarea && charCountEl) {
@@ -131,14 +128,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const grid = document.getElementById('photosGrid');
     const uploadInput = document.getElementById('photoUploadInput');
     const orderBtn = document.getElementById('savePhotoOrderBtn');
-    const alertEl = document.getElementById('photosAlert');
 
     if (!grid) return;
 
     function showPhotosAlert(ok, msg) {
-        alertEl.classList.remove('d-none', 'alert-success', 'alert-danger');
-        alertEl.classList.add(ok ? 'alert-success' : 'alert-danger');
-        alertEl.innerHTML = '<i class="bi bi-' + (ok ? 'check-circle-fill' : 'exclamation-triangle-fill') + '"></i> ' + msg;
+        showToast(ok ? 'success' : 'error', ok ? 'Photos' : 'Error', msg, ok ? 4500 : 6000);
     }
 
     function getOrder() { return Array.from(grid.querySelectorAll('[data-url]')).map(el => el.getAttribute('data-url')); }
@@ -277,12 +271,7 @@ let _floorState = {};
 })();
 
 function showFloorAlert(ok, msg) {
-    const alertEl = document.getElementById('floorImagesAlert');
-    if (!alertEl) return;
-    alertEl.classList.remove('d-none', 'alert-success', 'alert-danger');
-    alertEl.classList.add(ok ? 'alert-success' : 'alert-danger');
-    alertEl.innerHTML = '<i class="bi bi-' + (ok ? 'check-circle-fill' : 'exclamation-triangle-fill') + '"></i> ' + msg;
-    setTimeout(() => alertEl.classList.add('d-none'), 5000);
+    showToast(ok ? 'success' : 'error', ok ? 'Floor Images' : 'Error', msg, ok ? 4500 : 6000);
 }
 
 function switchFloorTab(floorNum) {
@@ -521,12 +510,9 @@ function deleteFloorImage(floorNum, photoUrl, btnEl) {
     const newPriceInput = document.getElementById('newPriceInput');
     const currentPrice = window._currentListingPrice || 0;
     const previewBox = document.getElementById('priceChangePreview');
-    const alertBox = document.getElementById('priceUpdateAlert');
 
     function showPriceAlert(ok, msg) {
-        alertBox.classList.remove('d-none', 'alert-success', 'alert-danger');
-        alertBox.classList.add(ok ? 'alert-success' : 'alert-danger');
-        alertBox.innerHTML = '<i class="bi bi-' + (ok ? 'check-circle-fill' : 'exclamation-triangle-fill') + '"></i> ' + msg;
+        showToast(ok ? 'success' : 'error', ok ? 'Price Updated' : 'Error', msg, ok ? 4500 : 6000);
     }
 
     if (newPriceInput) {
@@ -623,10 +609,14 @@ function deleteFloorImage(floorNum, photoUrl, btnEl) {
                     } else if (data?.success) {
                         content.innerHTML = '<div class="text-center py-5"><i class="bi bi-calendar-x" style="font-size:3rem;color:var(--gray-600);opacity:0.4;"></i><p style="color:var(--gray-500);margin-top:12px;">No tour requests for this property yet.</p></div>';
                     } else {
-                        content.innerHTML = '<div class="flash-alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> ' + (data?.message || 'Failed to load.') + '</div>';
+                        content.innerHTML = '<div class="text-center py-5"><i class="bi bi-exclamation-triangle" style="font-size:3rem;color:var(--gray-600);opacity:0.4;"></i><p style="color:var(--gray-500);margin-top:12px;">' + (data?.message || 'Failed to load tour requests.') + '</p></div>';
+                        showToast('error', 'Error', data?.message || 'Failed to load tour requests.', 6000);
                     }
                 })
-                .catch(() => { content.innerHTML = '<div class="flash-alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> Network error.</div>'; });
+                .catch(() => {
+                    content.innerHTML = '<div class="text-center py-5"><i class="bi bi-wifi-off" style="font-size:3rem;color:var(--gray-600);opacity:0.4;"></i><p style="color:var(--gray-500);margin-top:12px;">Network error. Please try again.</p></div>';
+                    showToast('error', 'Network Error', 'Could not load tour requests. Check your connection.', 6000);
+                });
         });
     }
 })();
