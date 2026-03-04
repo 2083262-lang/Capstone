@@ -1186,11 +1186,143 @@ $conn->close();
                 justify-content: center;
             }
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Dark User Portal Theme
+           CSR / Progressive Hydration
+           ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0.03) 25%,
+                rgba(255,255,255,0.06) 50%,
+                rgba(255,255,255,0.03) 75%
+            );
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+        .sk-hero {
+            min-height: 60vh;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
+            padding: 120px 20px 80px;
+            border-bottom: 1px solid rgba(37,99,235,0.2);
+        }
+        .sk-hero-inner { text-align: center; max-width: 900px; margin: 0 auto; }
+        .sk-section {
+            padding: 60px 20px 100px;
+            background: linear-gradient(180deg, var(--black-light) 0%, #0d0d0d 100%);
+        }
+        .sk-filter-box {
+            background: linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(17,17,17,0.98) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px; padding: 32px; margin-bottom: 48px;
+            position: relative; overflow: hidden;
+        }
+        .sk-filter-box::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--blue) 0%, var(--gold) 50%, var(--blue) 100%); opacity: 0.6;
+        }
+        .sk-results-bar {
+            padding: 12px 16px; margin-bottom: 24px;
+            background: rgba(0,0,0,0.2); border-left: 3px solid rgba(212,175,55,0.3); border-radius: 2px;
+        }
+        .sk-agents-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 32px;
+        }
+        .sk-agent-card {
+            background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+            border: 1px solid rgba(37,99,235,0.15); border-radius: 4px; padding: 32px;
+        }
+        .sk-agent-header {
+            display: flex; gap: 20px; margin-bottom: 24px; padding-bottom: 24px;
+            border-bottom: 1px solid rgba(37,99,235,0.1);
+        }
+        .sk-line { display: block; border-radius: 4px; }
+        @media (max-width: 768px) {
+            .sk-hero { min-height: 50vh; padding: 100px 20px 60px; }
+            .sk-agents-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 
 <?php include 'navbar.php'; ?>
+
+<noscript><style>
+    #sk-screen    { display: none !important; }
+    #page-content { display: block !important; opacity: 1 !important; }
+</style></noscript>
+
+<!-- ════ SKELETON SCREEN ════ -->
+<div id="sk-screen" role="presentation" aria-hidden="true">
+    <!-- Hero skeleton -->
+    <div class="sk-hero">
+        <div class="sk-hero-inner">
+            <div class="sk-line sk-shimmer" style="width:140px;height:24px;margin:0 auto 24px;"></div>
+            <div class="sk-line sk-shimmer" style="width:420px;max-width:90%;height:44px;margin:0 auto 16px;"></div>
+            <div class="sk-line sk-shimmer" style="width:560px;max-width:95%;height:16px;margin:0 auto 8px;"></div>
+            <div class="sk-line sk-shimmer" style="width:480px;max-width:85%;height:16px;margin:0 auto;"></div>
+        </div>
+    </div>
+    <!-- Agents section skeleton -->
+    <div class="sk-section">
+        <div class="container">
+            <!-- Filter box -->
+            <div class="sk-filter-box">
+                <div class="sk-line sk-shimmer" style="width:220px;height:20px;margin-bottom:24px;"></div>
+                <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
+                    <div>
+                        <div class="sk-line sk-shimmer" style="width:200px;height:12px;margin-bottom:8px;"></div>
+                        <div class="sk-shimmer" style="width:100%;height:52px;border-radius:3px;"></div>
+                    </div>
+                    <div>
+                        <div class="sk-line sk-shimmer" style="width:80px;height:12px;margin-bottom:8px;"></div>
+                        <div class="sk-shimmer" style="width:100%;height:52px;border-radius:3px;"></div>
+                    </div>
+                </div>
+                <div style="margin-top:16px;">
+                    <div class="sk-line sk-shimmer" style="width:110px;height:12px;margin-bottom:8px;"></div>
+                    <div class="sk-shimmer" style="width:100%;height:52px;border-radius:3px;"></div>
+                </div>
+            </div>
+            <!-- Results bar -->
+            <div class="sk-results-bar">
+                <div class="sk-line sk-shimmer" style="width:200px;height:14px;"></div>
+            </div>
+            <!-- Agent cards grid -->
+            <div class="sk-agents-grid">
+                <?php for ($sk = 0; $sk < 6; $sk++): ?>
+                <div class="sk-agent-card">
+                    <div class="sk-agent-header">
+                        <div class="sk-shimmer" style="width:80px;height:80px;border-radius:4px;flex-shrink:0;"></div>
+                        <div style="flex:1;">
+                            <div class="sk-line sk-shimmer" style="width:65%;height:18px;margin-bottom:8px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:50%;height:14px;margin-bottom:8px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:40%;height:12px;"></div>
+                        </div>
+                    </div>
+                    <div class="sk-line sk-shimmer" style="width:100%;height:14px;margin-bottom:6px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:95%;height:14px;margin-bottom:6px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:70%;height:14px;margin-bottom:24px;"></div>
+                    <div class="sk-shimmer" style="width:100%;height:64px;border-radius:4px;margin-bottom:20px;"></div>
+                    <div class="sk-shimmer" style="width:100%;height:60px;border-radius:6px;margin-bottom:10px;"></div>
+                    <div class="sk-shimmer" style="width:100%;height:60px;border-radius:6px;margin-bottom:16px;"></div>
+                    <div class="sk-shimmer" style="width:100%;height:48px;border-radius:4px;"></div>
+                </div>
+                <?php endfor; ?>
+            </div>
+        </div>
+    </div>
+</div><!-- /#sk-screen -->
+
+<div id="page-content">
 
 <!-- Hero Section -->
 <section class="agents-hero">
@@ -1454,7 +1586,43 @@ $conn->close();
     </div>
 </section>
 
+</div><!-- /#page-content -->
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- SKELETON HYDRATION — Progressive Content Reveal (User Portal) -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart = Date.now();
+    function hydrate() {
+        var sk = document.getElementById('sk-screen');
+        var pc = document.getElementById('page-content');
+        if (!sk || !pc) return;
+        var elapsed = Date.now() - skeletonStart;
+        var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+        setTimeout(function () {
+            sk.style.transition = 'opacity 0.35s ease';
+            sk.style.opacity = '0';
+            setTimeout(function () {
+                sk.style.display = 'none';
+                pc.style.display = 'block';
+                pc.style.opacity = '0';
+                pc.style.transition = 'opacity 0.4s ease';
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        pc.style.opacity = '1';
+                        document.dispatchEvent(new Event('skeleton:hydrated'));
+                    });
+                });
+            }, 360);
+        }, remaining);
+    }
+    if (document.readyState === 'complete') { hydrate(); }
+    else { window.addEventListener('load', hydrate); }
+}());
+</script>
 
 <script>
 (function() {

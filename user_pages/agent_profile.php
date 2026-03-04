@@ -1001,11 +1001,292 @@ $conn->close();
             .profile-stat-value { font-size: 1.5rem; }
             .profile-action-btn { width: 100%; justify-content: center; }
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Dark User Portal Theme
+           CSR / Progressive Hydration
+           ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0.03) 25%,
+                rgba(255,255,255,0.06) 50%,
+                rgba(255,255,255,0.03) 75%
+            );
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+        .sk-line { display: block; border-radius: 4px; }
+
+        /* Breadcrumb skeleton */
+        .sk-breadcrumb {
+            background: linear-gradient(135deg, rgba(10,10,10,0.95) 0%, rgba(15,15,15,0.98) 100%);
+            padding: 20px 0; margin-top: 35px;
+            border-bottom: 1px solid rgba(37,99,235,0.15);
+        }
+
+        /* Profile header skeleton */
+        .sk-profile-header {
+            padding: 60px 0;
+            background: linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(10,10,10,0.98) 100%);
+            border-bottom: 1px solid rgba(37,99,235,0.15);
+        }
+        .sk-profile-header-inner {
+            display: flex; gap: 48px; align-items: flex-start;
+        }
+        .sk-stats-row { display: flex; gap: 16px; }
+        .sk-stat-box {
+            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 4px; padding: 16px 24px; text-align: center; min-width: 120px;
+        }
+
+        /* Profile content skeleton */
+        .sk-profile-content { padding: 48px 0 80px; }
+        .sk-profile-grid {
+            display: grid; grid-template-columns: 1fr 340px; gap: 36px; align-items: start;
+        }
+        .sk-card {
+            background: linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(17,17,17,0.98) 100%);
+            border: 1px solid rgba(37,99,235,0.12); border-radius: 4px;
+            padding: 32px; margin-bottom: 24px; position: relative; overflow: hidden;
+        }
+        .sk-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--blue) 0%, var(--gold) 50%, var(--blue) 100%); opacity: 0.5;
+        }
+        .sk-sidebar-card {
+            background: linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(17,17,17,0.98) 100%);
+            border: 1px solid rgba(37,99,235,0.12); border-radius: 4px;
+            padding: 28px; margin-bottom: 20px; position: relative; overflow: hidden;
+        }
+        .sk-sidebar-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--gold) 0%, var(--blue) 100%); opacity: 0.5;
+        }
+        .sk-info-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+        }
+        .sk-info-item {
+            background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 4px; padding: 18px 20px;
+        }
+        .sk-contact-item {
+            display: flex; align-items: center; gap: 14px; padding: 16px;
+            background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 4px; margin-bottom: 12px;
+        }
+        .sk-contact-icon {
+            width: 44px; height: 44px; border-radius: 4px; flex-shrink: 0;
+            background: rgba(37,99,235,0.1); border: 1px solid rgba(37,99,235,0.2);
+        }
+        .sk-sidebar-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .sk-sidebar-row:last-child { border-bottom: none; }
+
+        /* Similar agents skeleton */
+        .sk-similar-section {
+            padding: 60px 0 80px; border-top: 1px solid rgba(37,99,235,0.15);
+        }
+        .sk-similar-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;
+        }
+        .sk-sim-card {
+            background: linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(17,17,17,0.98) 100%);
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;
+        }
+
+        @media (max-width: 1024px) {
+            .sk-profile-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .sk-profile-header-inner { flex-direction: column; align-items: center; text-align: center; gap: 28px; }
+            .sk-stats-row { justify-content: center; flex-wrap: wrap; }
+            .sk-info-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 
 <?php include 'navbar.php'; ?>
+
+<noscript><style>
+    #sk-screen    { display: none !important; }
+    #page-content { display: block !important; opacity: 1 !important; }
+</style></noscript>
+
+<!-- ════ SKELETON SCREEN ════ -->
+<div id="sk-screen" role="presentation" aria-hidden="true">
+    <!-- Breadcrumb skeleton -->
+    <div class="sk-breadcrumb">
+        <div class="container">
+            <div style="display:flex;gap:8px;align-items:center;">
+                <div class="sk-line sk-shimmer" style="width:50px;height:14px;"></div>
+                <div class="sk-line sk-shimmer" style="width:8px;height:14px;"></div>
+                <div class="sk-line sk-shimmer" style="width:60px;height:14px;"></div>
+                <div class="sk-line sk-shimmer" style="width:8px;height:14px;"></div>
+                <div class="sk-line sk-shimmer" style="width:120px;height:14px;"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Profile header skeleton -->
+    <div class="sk-profile-header">
+        <div class="container">
+            <div class="sk-profile-header-inner">
+                <div class="sk-shimmer" style="width:200px;height:200px;border-radius:6px;flex-shrink:0;border:3px solid rgba(212,175,55,0.15);"></div>
+                <div style="flex:1;">
+                    <div class="sk-line sk-shimmer" style="width:320px;max-width:80%;height:36px;margin-bottom:8px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:220px;max-width:60%;height:18px;margin-bottom:24px;"></div>
+                    <div style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:24px;">
+                        <div class="sk-line sk-shimmer" style="width:140px;height:16px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:160px;height:16px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:180px;height:16px;"></div>
+                    </div>
+                    <div class="sk-stats-row">
+                        <?php for ($s = 0; $s < 4; $s++): ?>
+                        <div class="sk-stat-box">
+                            <div class="sk-line sk-shimmer" style="width:48px;height:28px;margin:0 auto 6px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:64px;height:10px;margin:0 auto;"></div>
+                        </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Profile content skeleton -->
+    <div class="sk-profile-content">
+        <div class="container">
+            <div class="sk-profile-grid">
+                <!-- Main column -->
+                <div>
+                    <!-- Bio card -->
+                    <div class="sk-card">
+                        <div class="sk-line sk-shimmer" style="width:180px;height:20px;margin-bottom:20px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:100%;height:14px;margin-bottom:8px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:95%;height:14px;margin-bottom:8px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:88%;height:14px;margin-bottom:8px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:72%;height:14px;"></div>
+                    </div>
+                    <!-- Details card -->
+                    <div class="sk-card">
+                        <div class="sk-line sk-shimmer" style="width:200px;height:20px;margin-bottom:20px;"></div>
+                        <div class="sk-info-grid">
+                            <?php for ($d = 0; $d < 6; $d++): ?>
+                            <div class="sk-info-item">
+                                <div class="sk-line sk-shimmer" style="width:80px;height:10px;margin-bottom:8px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:110px;height:16px;"></div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                    <!-- Specializations card -->
+                    <div class="sk-card">
+                        <div class="sk-line sk-shimmer" style="width:170px;height:20px;margin-bottom:20px;"></div>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                            <div class="sk-shimmer" style="width:130px;height:36px;border-radius:3px;"></div>
+                            <div class="sk-shimmer" style="width:110px;height:36px;border-radius:3px;"></div>
+                            <div class="sk-shimmer" style="width:150px;height:36px;border-radius:3px;"></div>
+                        </div>
+                    </div>
+                    <!-- Listings -->
+                    <div style="margin-top:16px;">
+                        <div class="sk-line sk-shimmer" style="width:220px;height:24px;margin-bottom:8px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:280px;height:14px;margin-bottom:28px;"></div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
+                            <?php for ($l = 0; $l < 3; $l++): ?>
+                            <div style="background:linear-gradient(135deg,rgba(26,26,26,0.95) 0%,rgba(17,17,17,0.98) 100%);border:1px solid rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">
+                                <div class="sk-shimmer" style="height:200px;width:100%;border-radius:0;"></div>
+                                <div style="padding:20px;">
+                                    <div class="sk-line sk-shimmer" style="width:140px;height:20px;margin-bottom:10px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:90%;height:14px;margin-bottom:16px;"></div>
+                                    <div style="display:flex;gap:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);">
+                                        <div class="sk-line sk-shimmer" style="width:60px;height:14px;"></div>
+                                        <div class="sk-line sk-shimmer" style="width:60px;height:14px;"></div>
+                                        <div class="sk-line sk-shimmer" style="width:70px;height:14px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </div>
+                <!-- Sidebar -->
+                <aside>
+                    <div>
+                        <!-- Contact card -->
+                        <div class="sk-sidebar-card">
+                            <div class="sk-line sk-shimmer" style="width:180px;height:16px;margin-bottom:20px;"></div>
+                            <div class="sk-contact-item">
+                                <div class="sk-contact-icon sk-shimmer"></div>
+                                <div style="flex:1;">
+                                    <div class="sk-line sk-shimmer" style="width:40px;height:10px;margin-bottom:6px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:180px;height:14px;"></div>
+                                </div>
+                            </div>
+                            <div class="sk-contact-item">
+                                <div class="sk-contact-icon sk-shimmer"></div>
+                                <div style="flex:1;">
+                                    <div class="sk-line sk-shimmer" style="width:45px;height:10px;margin-bottom:6px;"></div>
+                                    <div class="sk-line sk-shimmer" style="width:140px;height:14px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Quick info card -->
+                        <div class="sk-sidebar-card">
+                            <div class="sk-line sk-shimmer" style="width:100px;height:16px;margin-bottom:20px;"></div>
+                            <?php for ($q = 0; $q < 8; $q++): ?>
+                            <div class="sk-sidebar-row">
+                                <div class="sk-line sk-shimmer" style="width:90px;height:14px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:60px;height:14px;"></div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+    <!-- Similar agents skeleton -->
+    <div class="sk-similar-section">
+        <div class="container">
+            <div style="text-align:center;margin-bottom:40px;">
+                <div class="sk-line sk-shimmer" style="width:220px;height:28px;margin:0 auto 10px;"></div>
+                <div class="sk-line sk-shimmer" style="width:360px;max-width:90%;height:16px;margin:0 auto;"></div>
+            </div>
+            <div class="sk-similar-grid">
+                <?php for ($sa = 0; $sa < 4; $sa++): ?>
+                <div class="sk-sim-card">
+                    <div class="sk-shimmer" style="height:200px;width:100%;border-radius:0;"></div>
+                    <div style="padding:20px;">
+                        <div class="sk-line sk-shimmer" style="width:70%;height:18px;margin-bottom:8px;"></div>
+                        <div class="sk-line sk-shimmer" style="width:55%;height:13px;margin-bottom:16px;"></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);">
+                            <div style="text-align:center;">
+                                <div class="sk-line sk-shimmer" style="width:32px;height:20px;margin:0 auto 4px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:50px;height:10px;margin:0 auto;"></div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div class="sk-line sk-shimmer" style="width:32px;height:20px;margin:0 auto 4px;"></div>
+                                <div class="sk-line sk-shimmer" style="width:40px;height:10px;margin:0 auto;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endfor; ?>
+            </div>
+        </div>
+    </div>
+</div><!-- /#sk-screen -->
+
+<div id="page-content">
 
 <!-- Breadcrumb -->
 <div class="breadcrumb-section">
@@ -1332,7 +1613,43 @@ $conn->close();
 
 <?php endif; ?>
 
+</div><!-- /#page-content -->
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- SKELETON HYDRATION — Progressive Content Reveal (User Portal) -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart = Date.now();
+    function hydrate() {
+        var sk = document.getElementById('sk-screen');
+        var pc = document.getElementById('page-content');
+        if (!sk || !pc) return;
+        var elapsed = Date.now() - skeletonStart;
+        var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+        setTimeout(function () {
+            sk.style.transition = 'opacity 0.35s ease';
+            sk.style.opacity = '0';
+            setTimeout(function () {
+                sk.style.display = 'none';
+                pc.style.display = 'block';
+                pc.style.opacity = '0';
+                pc.style.transition = 'opacity 0.4s ease';
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        pc.style.opacity = '1';
+                        document.dispatchEvent(new Event('skeleton:hydrated'));
+                    });
+                });
+            }, 360);
+        }, remaining);
+    }
+    if (document.readyState === 'complete') { hydrate(); }
+    else { window.addEventListener('load', hydrate); }
+}());
+</script>
 
 </body>
 </html>

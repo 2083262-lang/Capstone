@@ -250,6 +250,10 @@ $conn->close();
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
+        html {
+            overflow-y: scroll; /* Always show scrollbar — prevents navbar shift between pages */
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, var(--black) 0%, var(--black-lighter) 100%);
@@ -805,6 +809,7 @@ $conn->close();
     function toggleDrawer() {
         const drawer = document.getElementById('filterDrawer');
         const overlay = document.getElementById('drawerOverlay');
+        const navbar = document.querySelector('.navbar');
         const isOpening = !drawer.classList.contains('open');
         
         if (isOpening) {
@@ -812,9 +817,14 @@ $conn->close();
             const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
             document.body.style.overflow = 'hidden';
             document.body.style.paddingRight = scrollbarWidth + 'px';
+            // Compensate sticky navbar so it doesn't shift right
+            if (navbar && scrollbarWidth > 0) {
+                navbar.style.paddingRight = scrollbarWidth + 'px';
+            }
         } else {
             document.body.style.overflow = '';
             document.body.style.paddingRight = '';
+            if (navbar) navbar.style.paddingRight = '';
         }
         
         drawer.classList.toggle('open');

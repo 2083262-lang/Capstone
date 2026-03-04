@@ -1435,3 +1435,368 @@ The script is **identical** to the admin version (Section 4, Part C). Copy it ve
 *Reference implementations:*
 - Admin (light): [`admin_property_sale_approvals.php`](../admin_property_sale_approvals.php)
 - Agent Portal (dark): [`agent_pages/agent_dashboard.php`](../agent_pages/agent_dashboard.php)
+
+---
+
+## Section 12 — User Portal (Public Pages) — Dark Theme Variant
+
+The **User Portal** (`user_pages/` directory) shares the same dark theme palette as the Agent Portal but has a fundamentally different page structure: there is **no dashboard wrapper class** (no `.admin-content` or `.dashboard-content`). Content sections are direct children of `<body>` after the shared `navbar.php` include. The skeleton screen siblings (`#sk-screen` and `#page-content`) live directly inside `<body>`.
+
+---
+
+### 12.1 — Structural Difference vs Admin / Agent Portal
+
+| Aspect | Admin / Agent Portal | User Portal (Public Pages) |
+|---|---|---|
+| Wrapper | `.admin-content` / `.dashboard-content` | **None** — `<body>` is the container |
+| Sidebar | Yes (sticky sidebar) | No sidebar |
+| Navbar | Portal-specific navbar | Shared `navbar.php` (sticky-top) |
+| `#sk-screen` + `#page-content` location | Inside wrapper div | **Direct children of `<body>`** after navbar |
+| Theme | Admin = light; Agent = dark | **Dark** (identical palette to Agent Portal) |
+
+Because there's no wrapper, the insertion pattern simplifies:
+
+```
+<body>
+  <?php include 'navbar.php'; ?>
+  <noscript>...</noscript>
+  <div id="sk-screen">...</div>
+  <div id="page-content">
+    <!-- all real page sections -->
+  </div>
+  <script> /* hydration */ </script>
+</body>
+```
+
+---
+
+### 12.2 — Part A (CSS) — Dark Shimmer (User Portal)
+
+The CSS is **identical** to Agent Portal (Section 11.2). Copy it into each user page's `<style>` block, right before `</style>`:
+
+```css
+/* ================================================================
+   SKELETON SCREEN SYSTEM — Dark User Portal Theme
+   CSR / Progressive Hydration
+   ================================================================ */
+@keyframes sk-shimmer {
+    0%   { background-position: -800px 0; }
+    100% { background-position:  800px 0; }
+}
+.sk-shimmer {
+    background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.03) 25%,
+        rgba(255,255,255,0.06) 50%,
+        rgba(255,255,255,0.03) 75%
+    );
+    background-size: 1600px 100%;
+    animation: sk-shimmer 1.6s ease-in-out infinite;
+    border-radius: 4px;
+}
+#page-content { display: none; }
+.sk-line { display: block; border-radius: 4px; }
+```
+
+Additional page-specific skeleton classes (e.g. `.sk-hero`, `.sk-filter-box`, `.sk-card`, `.sk-breadcrumb`, `.sk-profile-header`, etc.) should be defined per page to match its unique layout sections. See Sections 12.4 and 12.5 for recipes.
+
+---
+
+### 12.3 — Part B (Noscript Fallback)
+
+Place directly after `<?php include 'navbar.php'; ?>`:
+
+```html
+<noscript><style>
+    #sk-screen    { display: none !important; }
+    #page-content { display: block !important; opacity: 1 !important; }
+</style></noscript>
+```
+
+---
+
+### 12.4 — Recipe: Agent Listing Page (`agents.php`)
+
+**Page sections:** Hero → Filter bar (search + location + specialization) → Results count → Agent cards grid (server-side pagination)
+
+**Skeleton structure:**
+
+```html
+<div id="sk-screen" role="presentation" aria-hidden="true">
+    <!-- Hero skeleton -->
+    <div class="sk-hero">
+        <!-- badge line, title line, 2 subtitle lines — centred -->
+    </div>
+    <!-- Agents section skeleton -->
+    <div class="sk-section">
+        <div class="container">
+            <!-- Filter box skeleton (input placeholders) -->
+            <div class="sk-filter-box">...</div>
+            <!-- Results bar skeleton -->
+            <div class="sk-results-bar">...</div>
+            <!-- Agent cards grid: 6 placeholder cards -->
+            <div class="sk-agents-grid">
+                <?php for ($sk = 0; $sk < 6; $sk++): ?>
+                <div class="sk-agent-card">
+                    <!-- avatar 80×80, 3 text lines, info bars, CTA -->
+                </div>
+                <?php endfor; ?>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+**Key CSS classes:**
+
+| Class | Purpose |
+|---|---|
+| `.sk-hero` | Full-width hero placeholder (`min-height: 60vh`, dark gradient, bottom border) |
+| `.sk-section` | Main content area below hero |
+| `.sk-filter-box` | Matches `.filter-section` styling (gradient, blue border, gold-blue top bar) |
+| `.sk-results-bar` | Thin bar with gold left border |
+| `.sk-agents-grid` | `repeat(auto-fill, minmax(340px, 1fr))` matching real grid |
+| `.sk-agent-card` | Dark gradient card with blue border |
+
+**Pagination note:** Server-side pagination (Scenario A) — each page load triggers a full skeleton cycle automatically. No special JS needed.
+
+---
+
+### 12.5 — Recipe: Agent Profile Page (`agent_profile.php`)
+
+**Page sections:** Breadcrumb → Profile header (avatar + name + meta + stats) → 2-column content grid (main cards + sidebar) → Similar agents grid
+
+**Skeleton structure:**
+
+```html
+<div id="sk-screen" role="presentation" aria-hidden="true">
+    <!-- Breadcrumb skeleton -->
+    <div class="sk-breadcrumb">
+        <div class="container">
+            <!-- 3 breadcrumb segments as shimmer lines -->
+        </div>
+    </div>
+    <!-- Profile header skeleton -->
+    <div class="sk-profile-header">
+        <div class="container">
+            <div class="sk-profile-header-inner">
+                <!-- 200×200 avatar placeholder -->
+                <!-- Name, specialisation, meta lines, 4 stat boxes -->
+            </div>
+        </div>
+    </div>
+    <!-- 2-column content skeleton -->
+    <div class="sk-profile-content">
+        <div class="container">
+            <div class="sk-profile-grid">
+                <div>
+                    <!-- Bio card (.sk-card) with text lines -->
+                    <!-- Details card with .sk-info-grid (6 items, 2-col) -->
+                    <!-- Specializations card with tag placeholders -->
+                    <!-- Listings grid (3 property card placeholders) -->
+                </div>
+                <aside>
+                    <!-- Contact card (.sk-sidebar-card) with 2 contact items -->
+                    <!-- Quick info card with 8 rows -->
+                </aside>
+            </div>
+        </div>
+    </div>
+    <!-- Similar agents skeleton -->
+    <div class="sk-similar-section">
+        <div class="container">
+            <!-- Centred title + subtitle -->
+            <div class="sk-similar-grid">
+                <!-- 4 similar-agent card placeholders -->
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+**Key CSS classes:**
+
+| Class | Purpose |
+|---|---|
+| `.sk-breadcrumb` | Thin breadcrumb bar with dark bg and blue border-bottom |
+| `.sk-profile-header` | Matches `.profile-header` (60px vertical padding, dark gradient) |
+| `.sk-profile-header-inner` | Flex row: avatar + details column |
+| `.sk-stats-row` / `.sk-stat-box` | 4 stat boxes in a flex row |
+| `.sk-profile-grid` | 2-column grid (`1fr 340px`) matching `.profile-grid` |
+| `.sk-card` | Content card with gradient top bar (matches `.content-card`) |
+| `.sk-sidebar-card` | Sidebar card with gold-blue top bar (matches `.sidebar-card`) |
+| `.sk-info-grid` / `.sk-info-item` | 2-column detail grid |
+| `.sk-contact-item` / `.sk-contact-icon` | Contact row with icon placeholder |
+| `.sk-sidebar-row` | Key-value row with bottom border |
+| `.sk-similar-section` / `.sk-similar-grid` | Similar agents area (`minmax(280px, 1fr)`) |
+| `.sk-sim-card` | Similar agent card placeholder |
+
+**Responsive breakpoints:**
+- `1024px`: Grid collapses to single column
+- `768px`: Header stacks vertically, info grid goes single column
+
+---
+
+### 12.6 — Recipe: Property Details Page (`property_details.php`)
+
+**Page sections:** Breadcrumb → Property Hero (image gallery) → Property Header (title/price/stats) → 2-column content grid (features + description + amenities + property info + price history chart | agent card + tour card) → Similar Properties grid → Floating Like Button → Image Lightbox → Request Tour Modal
+
+**Structural notes:**
+- The inline `<style>` block for the Request Tour Modal lives inside `#page-content` (it will be hidden with real content and revealed together)
+- The like button and lightbox are also real UI elements — include them inside `#page-content`
+- Close `#page-content` just before the Bootstrap `<script>` tags
+
+**Skeleton structure:**
+
+```html
+<div id="sk-screen" role="presentation" aria-hidden="true">
+    <!-- Breadcrumb skeleton -->
+    <div class="sk-breadcrumb">...</div>
+    <!-- Property hero (image gallery) skeleton -->
+    <div class="sk-hero">
+        <div class="container">
+            <div class="sk-gallery-grid">          <!-- 2fr 1fr, 600px height -->
+                <div class="sk-shimmer"></div>     <!-- main image -->
+                <div class="sk-gallery-sidebar">  <!-- 2 stacked sidebar slots -->
+                    <div class="sk-shimmer"></div>
+                    <div class="sk-shimmer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Property header skeleton -->
+    <div class="container">
+        <div class="sk-prop-header">
+            <!-- status badge line, title line, address line, price + stats row -->
+        </div>
+        <!-- 2-column content skeleton (1fr 400px) -->
+        <div class="sk-content-grid">
+            <div>
+                <!-- .sk-card: features grid (6 feature boxes) -->
+                <!-- .sk-card: description (5 text lines) -->
+                <!-- .sk-card: amenities (8-item grid) -->
+                <!-- .sk-card: property info (6 key-value pairs, 2-col) -->
+            </div>
+            <aside>
+                <!-- .sk-agent-card: avatar + name + licence box + 2 contact rows -->
+                <!-- .sk-card: tour card (title + text + button placeholder) -->
+            </aside>
+        </div>
+    </div>
+    <!-- Similar properties skeleton -->
+    <div class="sk-similar-section">
+        <div class="container">
+            <!-- centred title + subtitle -->
+            <div class="sk-similar-grid">   <!-- minmax(280px, 1fr) -->
+                <!-- 4 .sk-sim-card placeholders -->
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+**Key CSS classes and dimensions:**
+
+| Class | Purpose |
+|---|---|
+| `.sk-breadcrumb` | Thin breadcrumb bar with dark background, `margin-top: 35px`, blue bottom border |
+| `.sk-hero` | Matches `.property-hero` (dark gradient, `padding: 60px 0`, blue bottom border) |
+| `.sk-gallery-grid` | `grid-template-columns: 2fr 1fr`, `height: 600px`, `overflow: hidden` |
+| `.sk-gallery-sidebar` | `grid-template-rows: 1fr 1fr` — two image slots stacked |
+| `.sk-prop-header` | Above the 2-col grid, padding matches real header |
+| `.sk-content-grid` | `grid-template-columns: 1fr 400px`, `gap: 40px` — matches `.property-content` |
+| `.sk-card` | Gradient card with blue-to-gold top bar (matches `.content-card`) |
+| `.sk-features-grid` | `repeat(auto-fill, minmax(150px, 1fr))` matching `.features-grid` |
+| `.sk-feature-box` | Individual feature placeholder (circle icon + 2 lines) |
+| `.sk-amenities` | `repeat(auto-fill, minmax(200px, 1fr))` grid of shimmer rows |
+| `.sk-agent-card` | Gold-to-blue top bar variant of `.sk-card` |
+| `.sk-similar-section` | Bottom section with `border-top` matching `.similar-properties-section` |
+| `.sk-similar-grid` | `minmax(280px, 1fr)` grid matching `.similar-properties-grid` |
+| `.sk-sim-card` | Card with full-width image area + body text lines |
+
+**Responsive breakpoints:**
+- `1024px`: Content grid collapses to single column
+- `768px`: Gallery grid collapses to single column, sidebar slots hidden, features grid goes 2-col
+
+---
+
+### 12.7 — Part C (JS) — Hydration Script
+
+The script is **identical** to the admin/agent version (Section 4, Part C). Place it as a separate `<script>` block after Bootstrap JS and before `</body>`:
+
+```html
+<!-- SKELETON HYDRATION — Progressive Content Reveal (User Portal) -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart = Date.now();
+    function hydrate() {
+        var sk = document.getElementById('sk-screen');
+        var pc = document.getElementById('page-content');
+        if (!sk || !pc) return;
+        var elapsed = Date.now() - skeletonStart;
+        var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+        setTimeout(function () {
+            sk.style.transition = 'opacity 0.35s ease';
+            sk.style.opacity = '0';
+            setTimeout(function () {
+                sk.style.display = 'none';
+                pc.style.display = 'block';
+                pc.style.opacity = '0';
+                pc.style.transition = 'opacity 0.4s ease';
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        pc.style.opacity = '1';
+                        document.dispatchEvent(new Event('skeleton:hydrated'));
+                    });
+                });
+            }, 360);
+        }, remaining);
+    }
+    if (document.readyState === 'complete') { hydrate(); }
+    else { window.addEventListener('load', hydrate); }
+}());
+</script>
+```
+
+---
+
+### 12.8 — Step-by-Step Differences for User Portal
+
+| Step | Admin | Agent Portal | User Portal |
+|---|---|---|---|
+| Step 1 — CSS | Light Part A | Dark Part A | **Dark Part A** (same as Agent) |
+| Step 2 — Container | `.admin-content` | `.dashboard-content` | **`<body>` directly** (no wrapper) |
+| Step 4 — Skeleton HTML | Light recipes | Dark recipes | **Dark recipes** (page-specific layouts) |
+| Step 7 — Close wrapper | `</div><!-- /.admin-content -->` | `</div><!-- /.dashboard-content -->` | `</div><!-- /#page-content -->` before scripts |
+| Steps 3, 5, 6, 8, 9 | Identical | Identical | Identical |
+
+---
+
+### 12.9 — User Portal Checklist
+
+- [ ] **CSS** — Dark shimmer (`rgba(255,255,255,0.03→0.06→0.03)`) — not light `#f0f0f0`
+- [ ] **CSS** — Skeleton card backgrounds use `rgba(26,26,26)` / `rgba(10,10,10)` — not `#fff`
+- [ ] **CSS** — Page-specific skeleton classes defined (hero, filter, profile header, etc.)
+- [ ] **CSS** — Responsive breakpoints match the real page's breakpoints
+- [ ] **HTML** — No wrapper div — `#sk-screen` and `#page-content` are direct `<body>` children
+- [ ] **HTML** — `<noscript>` fallback placed immediately after `<?php include 'navbar.php'; ?>`
+- [ ] **HTML** — `<div id="sk-screen" role="presentation" aria-hidden="true">` present
+- [ ] **HTML** — All major visible sections have skeleton counterparts
+- [ ] **HTML** — `#page-content` wraps all real content (hero through last section)
+- [ ] **HTML** — `</div><!-- /#page-content -->` closes before `<script>` tags
+- [ ] **JS** — Hydration script is a separate `<script>` block after Bootstrap JS, before `</body>`
+- [ ] **JS** — `window 'load'` trigger (not `DOMContentLoaded`)
+- [ ] **Test** — Dark skeleton shapes visible on black background (not invisible)
+- [ ] **Test** — Shimmer animation perceptible on dark surface
+- [ ] **Test** — No white flash between skeleton fade-out and real content fade-in
+- [ ] **Test** — JS disabled: content shows immediately via `<noscript>`
+- [ ] **Test** — Server-side paginated pages show skeleton on each navigation
+
+---
+
+*Reference implementations:*
+- Admin (light): [`admin_property_sale_approvals.php`](../admin_property_sale_approvals.php)
+- Agent Portal (dark): [`agent_pages/agent_dashboard.php`](../agent_pages/agent_dashboard.php)
+- User Portal (dark): [`user_pages/agents.php`](../user_pages/agents.php), [`user_pages/agent_profile.php`](../user_pages/agent_profile.php), [`user_pages/property_details.php`](../user_pages/property_details.php)
