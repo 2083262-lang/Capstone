@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../connection.php';
+require_once __DIR__ . '/../config/session_timeout.php';
 require_once __DIR__ . '/../config/paths.php';
 
 if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'agent') {

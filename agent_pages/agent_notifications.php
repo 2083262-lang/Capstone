@@ -2,6 +2,7 @@
 session_start();
 include '../connection.php';
 require_once 'agent_notification_helper.php';
+require_once __DIR__ . '/../config/session_timeout.php';
 require_once __DIR__ . '/../config/paths.php';
 
 // Auth check

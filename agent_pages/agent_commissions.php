@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../connection.php';
+require_once __DIR__ . '/../config/session_timeout.php';
 require_once __DIR__ . '/../config/paths.php';
 
 // Agent-only access

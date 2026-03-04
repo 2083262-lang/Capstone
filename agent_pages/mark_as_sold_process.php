@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../connection.php';
+require_once __DIR__ . '/../config/session_timeout.php';
 
 // Respond with JSON for fetch-based submissions
 function respond_json($success, $message, $extra = []) {

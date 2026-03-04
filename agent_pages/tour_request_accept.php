@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../connection.php';
+require_once __DIR__ . '/../config/session_timeout.php';
 
 require_once __DIR__ . '/../mail_helper.php';
 require_once __DIR__ . '/../email_template.php';

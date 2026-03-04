@@ -9,6 +9,7 @@
  *   - delete      → Delete a single notification
  */
 session_start();
+require_once __DIR__ . '/../config/session_timeout.php';
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'agent') {

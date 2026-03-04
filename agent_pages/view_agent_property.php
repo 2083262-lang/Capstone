@@ -2,6 +2,7 @@
 $active_page = 'agent_property.php';
 session_start();
 include '../connection.php';
+require_once __DIR__ . '/../config/session_timeout.php';
 require_once __DIR__ . '/../config/paths.php';
 
 // Security Check: Ensure agent is logged in
