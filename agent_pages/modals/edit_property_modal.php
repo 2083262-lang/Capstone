@@ -13,8 +13,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div id="updateAlert" class="flash-alert d-none" role="alert"></div>
-
                 <form id="editPropertyForm" novalidate>
                     <input type="hidden" name="property_id" value="<?php echo (int)$property_id; ?>" />
 
@@ -271,7 +269,6 @@
                             <div style="font-size: 0.8rem; color: var(--gray-500);">JPEG, PNG, GIF &bull; Max 5MB each</div>
                         </label>
                         <input type="file" id="photoUploadInput" accept="image/*" multiple style="display: none;">
-                        <div id="photosAlert" class="flash-alert d-none" role="alert"></div>
                         <div id="photosGrid" class="edit-photos-grid">
                             <?php foreach ($property_images as $idx => $img): ?>
                                 <div class="edit-photo-item" data-url="<?php echo htmlspecialchars($img); ?>">
@@ -306,7 +303,6 @@
                                 <p>Manage floor-specific photos (up to 10 floors)</p>
                             </div>
                         </div>
-                        <div id="floorImagesAlert" class="flash-alert d-none" role="alert"></div>
 
                         <!-- Floor Tabs -->
                         <div class="floor-manager-tabs" id="floorManagerTabs">

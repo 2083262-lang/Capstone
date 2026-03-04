@@ -267,19 +267,7 @@ $days_on_market = $interval->days;
         .breadcrumb-item.active { color: var(--gray-300); }
         .breadcrumb-item + .breadcrumb-item::before { color: var(--gray-600); }
 
-        /* Flash Alerts */
-        .flash-alert {
-            border: none; border-radius: 4px; font-weight: 500; padding: 14px 20px;
-            display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
-        }
-        .flash-alert.alert-success {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.08));
-            color: #4ade80; border-left: 3px solid #22c55e;
-        }
-        .flash-alert.alert-danger {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08));
-            color: #ff6b6b; border-left: 3px solid #ef4444;
-        }
+        /* Flash Alerts — REMOVED: replaced by toast notification system */
 
         /* Status Badges */
         .agent-status-badge {
@@ -1324,7 +1312,6 @@ $days_on_market = $interval->days;
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="priceUpdateAlert" class="flash-alert d-none" role="alert"></div>
                     <form id="updatePriceForm">
                         <input type="hidden" name="property_id" value="<?php echo (int)$property_id; ?>">
                         <div class="current-price-display">
@@ -1448,7 +1435,7 @@ $days_on_market = $interval->days;
         else if (viewType === 'floor') {
             const floorKey = parseInt(floorNum);
             if (floorImages[floorKey] && Array.isArray(floorImages[floorKey]) && floorImages[floorKey].length > 0) { currentImages = floorImages[floorKey]; }
-            else { alert('No images available for Floor ' + floorKey); return; }
+            else { showToast('info', 'No Images', 'No images available for Floor ' + floorKey + '.', 4500); return; }
         }
         if (currentImages && currentImages.length > 0) {
             mainImage.src = '../' + currentImages[0];
