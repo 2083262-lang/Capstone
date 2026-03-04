@@ -1953,6 +1953,11 @@ include 'agent_navbar.php';
             <div class="panel">
                 <div class="panel-header">
                     <div class="panel-title"><i class="bi bi-clock-history"></i> Recent Activity</div>
+                    <?php if (count($recent_activity) > 3): ?>
+                    <button class="panel-action" id="activityToggleBtn" onclick="toggleActivityFeed()" style="background:none;border:none;cursor:pointer;">
+                        View All <i class="bi bi-arrow-right" id="activityToggleIcon"></i>
+                    </button>
+                    <?php endif; ?>
                 </div>
                 <div class="panel-body">
                     <?php if (empty($recent_activity)): ?>
@@ -1961,21 +1966,22 @@ include 'agent_navbar.php';
                             <p>No recent activity to display</p>
                         </div>
                     <?php else: ?>
-                        <?php foreach ($recent_activity as $activity): ?>
+                        <?php
+                            $action_labels = [
+                                'CREATED'  => 'Listed new property',
+                                'UPDATED'  => 'Updated property',
+                                'DELETED'  => 'Removed property',
+                                'SOLD'     => 'Property sold',
+                                'REJECTED' => 'Property rejected'
+                            ];
+                        ?>
+                        <!-- First 3 always visible -->
+                        <?php foreach (array_slice($recent_activity, 0, 3) as $activity): ?>
                             <div class="activity-item">
                                 <div class="activity-dot <?php echo strtolower($activity['action']); ?>"></div>
                                 <div class="activity-info">
                                     <div class="act-title">
-                                        <?php
-                                            $action_labels = [
-                                                'CREATED' => 'Listed new property',
-                                                'UPDATED' => 'Updated property',
-                                                'DELETED' => 'Removed property',
-                                                'SOLD' => 'Property sold',
-                                                'REJECTED' => 'Property rejected'
-                                            ];
-                                            echo $action_labels[$activity['action']] ?? ucfirst(strtolower($activity['action']));
-                                        ?>
+                                        <?php echo $action_labels[$activity['action']] ?? ucfirst(strtolower($activity['action'])); ?>
                                     </div>
                                     <div class="act-desc">
                                         <?php echo htmlspecialchars($activity['StreetAddress'] . ', ' . $activity['City']); ?>
@@ -1986,6 +1992,41 @@ include 'agent_navbar.php';
                                 </div>
                             </div>
                         <?php endforeach; ?>
+
+                        <?php if (count($recent_activity) > 3): ?>
+                        <!-- Remaining items — hidden by default -->
+                        <div id="activityExtra" style="overflow:hidden; max-height:0; transition: max-height 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease; opacity:0;">
+                            <?php foreach (array_slice($recent_activity, 3) as $activity): ?>
+                                <div class="activity-item">
+                                    <div class="activity-dot <?php echo strtolower($activity['action']); ?>"></div>
+                                    <div class="activity-info">
+                                        <div class="act-title">
+                                            <?php echo $action_labels[$activity['action']] ?? ucfirst(strtolower($activity['action'])); ?>
+                                        </div>
+                                        <div class="act-desc">
+                                            <?php echo htmlspecialchars($activity['StreetAddress'] . ', ' . $activity['City']); ?>
+                                        </div>
+                                        <div class="act-time">
+                                            <?php echo date('M d, Y \a\t g:i A', strtotime($activity['log_timestamp'])); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- See More / See Less toggle button -->
+                        <button id="activitySeeMoreBtn" onclick="toggleActivityFeed()"
+                            style="display:flex; align-items:center; gap:0.4rem; margin-top:0.75rem; width:100%;
+                                   background: rgba(37,99,235,0.07); border: 1px solid rgba(37,99,235,0.18);
+                                   border-radius: 8px; padding: 0.55rem 1rem; cursor:pointer;
+                                   color: var(--blue-light); font-size:0.82rem; font-weight:600;
+                                   transition: background 0.2s, border-color 0.2s; justify-content:center;"
+                            onmouseover="this.style.background='rgba(37,99,235,0.13)'; this.style.borderColor='rgba(37,99,235,0.35)';"
+                            onmouseout="this.style.background='rgba(37,99,235,0.07)'; this.style.borderColor='rgba(37,99,235,0.18)';">
+                            <i class="bi bi-chevron-down" id="activitySeeBtnIcon" style="transition: transform 0.3s;"></i>
+                            <span id="activitySeeBtnText">See <?php echo count($recent_activity) - 3; ?> More</span>
+                        </button>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>
@@ -2033,6 +2074,39 @@ function dismissToast(toast) {
     clearTimeout(toast._timer);
     toast.classList.add('toast-out');
     setTimeout(function() { toast.remove(); }, 320);
+}
+
+// ===== RECENT ACTIVITY FEED TOGGLE =====
+var activityExpanded = false;
+function toggleActivityFeed() {
+    activityExpanded = !activityExpanded;
+    var extra     = document.getElementById('activityExtra');
+    var btn       = document.getElementById('activitySeeMoreBtn');
+    var btnText   = document.getElementById('activitySeeBtnText');
+    var btnIcon   = document.getElementById('activitySeeBtnIcon');
+    var headerBtn = document.getElementById('activityToggleBtn');
+    var headerIcon = document.getElementById('activityToggleIcon');
+
+    if (!extra) return;
+
+    if (activityExpanded) {
+        // Expand: measure real scroll height for smooth animation
+        extra.style.maxHeight = extra.scrollHeight + 'px';
+        extra.style.opacity   = '1';
+        if (btnText)   btnText.textContent  = 'See Less';
+        if (btnIcon)   btnIcon.style.transform = 'rotate(180deg)';
+        if (headerBtn) headerBtn.style.opacity = '0.5';
+        if (headerIcon) { headerIcon.className = 'bi bi-arrow-up'; }
+    } else {
+        // Collapse
+        extra.style.maxHeight = '0';
+        extra.style.opacity   = '0';
+        var remaining = extra.querySelectorAll('.activity-item').length;
+        if (btnText)   btnText.textContent  = 'See ' + remaining + ' More';
+        if (btnIcon)   btnIcon.style.transform = 'rotate(0deg)';
+        if (headerBtn) headerBtn.style.opacity = '1';
+        if (headerIcon) { headerIcon.className = 'bi bi-arrow-right'; }
+    }
 }
 
 // Visual animations + toasts fire AFTER skeleton hydration
