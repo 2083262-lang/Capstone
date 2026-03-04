@@ -971,12 +971,180 @@ $active_page = 'agent_profile.php';
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Dark Agent Portal Theme
+           ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0.03) 25%,
+                rgba(255,255,255,0.06) 50%,
+                rgba(255,255,255,0.03) 75%
+            );
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        /* Profile hero skeleton (mirrors .profile-hero) */
+        .sk-profile-hero {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-profile-hero::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #d4af37, #2563eb, #d4af37, transparent);
+        }
+
+        /* Stats bar skeleton (5-col, mirrors .stats-bar) */
+        .sk-stats-bar {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .sk-stat-card {
+            background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* Profile grid skeleton (mirrors .profile-grid 2-col) */
+        .sk-profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .sk-profile-panel {
+            background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sk-panel-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(37,99,235,0.1);
+        }
+        .sk-panel-body { padding: 1.25rem; }
+        .sk-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(37,99,235,0.06);
+        }
+        .sk-info-row:last-child { border-bottom: none; }
+        .sk-line { display: block; border-radius: 4px; }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sk-stats-bar { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .sk-stats-bar    { grid-template-columns: repeat(2, 1fr); }
+            .sk-profile-grid { grid-template-columns: 1fr; }
+            .sk-profile-hero { flex-direction: column; align-items: flex-start; padding: 1.5rem; }
+        }
+        @media (max-width: 576px) {
+            .sk-stats-bar { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 
 <?php include 'agent_navbar.php'; ?>
 
+<noscript><style>
+    #sk-screen    { display: none !important; }
+    #page-content { display: block !important; opacity: 1 !important; }
+</style></noscript>
+
+<div id="sk-screen" role="presentation" aria-hidden="true">
+
+    <div class="profile-content">
+
+        <!-- Skeleton: Profile Hero -->
+        <div class="sk-profile-hero">
+            <!-- Avatar placeholder -->
+            <div class="sk-shimmer" style="width:160px;height:160px;border-radius:4px;flex-shrink:0;"></div>
+            <!-- Info placeholder -->
+            <div style="flex:1;">
+                <div class="sk-line sk-shimmer" style="width:300px;height:28px;margin-bottom:0.6rem;"></div>
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                    <div class="sk-shimmer" style="width:90px;height:18px;border-radius:2px;"></div>
+                    <div class="sk-shimmer" style="width:150px;height:14px;border-radius:3px;"></div>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:1.5rem;margin-bottom:1.25rem;">
+                    <div class="sk-shimmer" style="width:180px;height:13px;border-radius:3px;"></div>
+                    <div class="sk-shimmer" style="width:120px;height:13px;border-radius:3px;"></div>
+                    <div class="sk-shimmer" style="width:140px;height:13px;border-radius:3px;"></div>
+                </div>
+                <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;">
+                    <div class="sk-shimmer" style="width:90px;height:24px;border-radius:3px;"></div>
+                    <div class="sk-shimmer" style="width:110px;height:24px;border-radius:3px;"></div>
+                    <div class="sk-shimmer" style="width:80px;height:24px;border-radius:3px;"></div>
+                </div>
+                <div class="sk-shimmer" style="width:130px;height:36px;border-radius:4px;"></div>
+            </div>
+        </div>
+
+        <!-- Skeleton: Stats Bar (5 cards) -->
+        <div class="sk-stats-bar">
+            <?php for ($i = 0; $i < 5; $i++): ?>
+            <div class="sk-stat-card">
+                <div class="sk-shimmer" style="width:40px;height:40px;border-radius:4px;"></div>
+                <div class="sk-line sk-shimmer" style="width:50%;height:22px;"></div>
+                <div class="sk-line sk-shimmer" style="width:75%;height:11px;"></div>
+            </div>
+            <?php endfor; ?>
+        </div>
+
+        <!-- Skeleton: Profile Grid (3 panels in 2-col layout) -->
+        <div class="sk-profile-grid">
+            <?php for ($i = 0; $i < 3; $i++): ?>
+            <div class="sk-profile-panel">
+                <div class="sk-panel-header">
+                    <div class="sk-line sk-shimmer" style="width:160px;height:15px;"></div>
+                </div>
+                <div class="sk-panel-body">
+                    <?php for ($j = 0; $j < 5; $j++): ?>
+                    <div class="sk-info-row">
+                        <div class="sk-shimmer" style="width:35%;height:12px;border-radius:3px;"></div>
+                        <div class="sk-shimmer" style="width:50%;height:12px;border-radius:3px;"></div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+            <?php endfor; ?>
+        </div>
+
+    </div>
+
+</div><!-- /#sk-screen -->
+
+<div id="page-content">
 <div class="profile-content">
 
     <!-- ===== PROFILE HERO ===== -->
@@ -1155,7 +1323,8 @@ $active_page = 'agent_profile.php';
 
     </div>
 
-</div>
+</div><!-- /.profile-content -->
+</div><!-- /#page-content -->
 
 <!-- ===== EDIT PROFILE MODAL ===== -->
 <div class="modal fade edit-modal" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
@@ -1398,8 +1567,50 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ===== Intersection Observer for fade-in animations =====
-    const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
+    // (Moved to skeleton:hydrated so elements animate into the visible content, not while skeleton is showing)
+
+});
+</script>
+
+<!-- SKELETON HYDRATION — Progressive Content Reveal (Agent Portal) -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart   = Date.now();
+    function hydrate() {
+        var elapsed   = Date.now() - skeletonStart;
+        var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+        setTimeout(function () {
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+            if (!sk || !pc) return;
+            pc.style.display    = 'block';
+            pc.style.opacity    = '0';
+            pc.style.transition = 'opacity 0.35s ease';
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    pc.style.opacity    = '1';
+                    sk.style.transition = 'opacity 0.25s ease';
+                    sk.style.opacity    = '0';
+                    setTimeout(function () {
+                        sk.style.display = 'none';
+                        document.dispatchEvent(new CustomEvent('skeleton:hydrated'));
+                    }, 260);
+                });
+            });
+        }, remaining);
+    }
+    if (document.readyState === 'complete') { hydrate(); }
+    else { window.addEventListener('load', hydrate); }
+}());
+</script>
+
+<!-- FADE-IN ANIMATIONS — fire after skeleton hydrates -->
+<script>
+document.addEventListener('skeleton:hydrated', function () {
+    var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
             if (entry.isIntersecting) {
                 entry.target.style.opacity = '1';
                 entry.target.style.transform = 'translateY(0)';
@@ -1408,14 +1619,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
 
-    document.querySelectorAll('.stat-card, .profile-panel').forEach((el, i) => {
+    document.querySelectorAll('.stat-card, .profile-panel').forEach(function (el, i) {
         el.style.opacity = '0';
         el.style.transform = 'translateY(15px)';
         el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
         el.style.transitionDelay = (i * 0.08) + 's';
         observer.observe(el);
     });
-
 });
 </script>
 </body>

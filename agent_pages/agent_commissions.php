@@ -842,6 +842,162 @@ $conn->close();
         @media (max-width: 576px) {
             .kpi-grid { grid-template-columns: 1fr; }
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Agent Commissions (Dark Theme)
+           ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -1600px 0; }
+            100% { background-position:  1600px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(90deg,
+                rgba(255,255,255,0.03) 25%,
+                rgba(255,255,255,0.06) 50%,
+                rgba(255,255,255,0.03) 75%);
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s infinite linear;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        .sk-page-header {
+            background: rgba(26,26,26,0.8);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 1.75rem 2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sk-page-header-left { display:flex; flex-direction:column; gap:10px; }
+
+        .sk-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .sk-kpi-card {
+            background: rgba(26,26,26,0.8);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .sk-chart-section {
+            background: rgba(26,26,26,0.8);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .sk-chart-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+            height: 120px;
+            margin-top: 1.25rem;
+        }
+        .sk-chart-bar-col { flex:1; display:flex; flex-direction:column-reverse; align-items:center; gap:4px; }
+
+        .sk-filter-bar {
+            background: rgba(26,26,26,0.8);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 0.875rem 1.25rem;
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .sk-table-wrapper {
+            background: rgba(26,26,26,0.8);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .sk-table-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sk-table-row {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .sk-line { display: block; border-radius: 4px; }
+
+        /* Dark toast system */
+        #toastContainer {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-width: 380px;
+            width: 100%;
+        }
+        .app-toast {
+            background: linear-gradient(135deg, rgba(26,26,26,0.97), rgba(15,15,15,0.97));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 1rem 1.1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+            backdrop-filter: blur(12px);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .app-toast.show { opacity: 1; transform: translateX(0); }
+        .app-toast.hide { opacity: 0; transform: translateX(calc(100% + 2rem)); }
+        .app-toast::before {
+            content: '';
+            position: absolute; top: 0; left: 0;
+            width: 4px; height: 100%;
+            border-radius: 12px 0 0 12px;
+        }
+        .app-toast.toast-success::before { background: #22c55e; }
+        .app-toast.toast-error::before   { background: #ef4444; }
+        .app-toast.toast-info::before    { background: #2563eb; }
+        .app-toast.toast-warning::before { background: #d4af37; }
+        .toast-icon { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; }
+        .app-toast.toast-success .toast-icon { color: #22c55e; }
+        .app-toast.toast-error   .toast-icon { color: #ef4444; }
+        .app-toast.toast-info    .toast-icon { color: #60a5fa; }
+        .app-toast.toast-warning .toast-icon { color: #d4af37; }
+        .toast-body { flex: 1; min-width: 0; }
+        .toast-title { font-size: 0.875rem; font-weight: 600; color: #f1f5f9; margin-bottom: 2px; }
+        .toast-msg   { font-size: 0.8rem; color: #9ca4ab; line-height: 1.5; }
+        .toast-dismiss {
+            background: none; border: none; color: #6b7280;
+            font-size: 1rem; cursor: pointer; padding: 0; flex-shrink: 0; line-height: 1;
+        }
+        .toast-dismiss:hover { color: #d1d5db; }
+
+        @media (max-width: 1200px) { .sk-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px)  {
+            .sk-kpi-grid   { grid-template-columns: 1fr 1fr; }
+            .sk-page-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .sk-chart-bars  { height: 80px; }
+        }
     </style>
 </head>
 <body>
@@ -852,6 +1008,93 @@ $conn->close();
     include 'agent_navbar.php';
     ?>
 
+    <noscript><style>
+        #sk-screen    { display: none !important; }
+        #page-content { display: block !important; opacity: 1 !important; }
+    </style></noscript>
+
+    <div id="sk-screen" role="presentation" aria-hidden="true">
+    <main class="commission-content">
+
+        <!-- sk: page header -->
+        <div class="sk-page-header">
+            <div class="sk-page-header-left">
+                <div class="sk-shimmer sk-line" style="width:220px;height:22px;"></div>
+                <div class="sk-shimmer sk-line" style="width:420px;height:13px;"></div>
+            </div>
+            <div class="sk-shimmer sk-line" style="width:150px;height:16px;"></div>
+        </div>
+
+        <!-- sk: 5-col KPI grid -->
+        <div class="sk-kpi-grid">
+            <?php for($i=0;$i<5;$i++): ?>
+            <div class="sk-kpi-card">
+                <div class="sk-shimmer" style="width:44px;height:44px;border-radius:10px;"></div>
+                <div class="sk-shimmer sk-line" style="width:65%;height:11px;"></div>
+                <div class="sk-shimmer sk-line" style="width:70%;height:24px;"></div>
+                <div class="sk-shimmer sk-line" style="width:50%;height:10px;"></div>
+            </div>
+            <?php endfor; ?>
+        </div>
+
+        <!-- sk: chart section -->
+        <div class="sk-chart-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="sk-shimmer sk-line" style="width:260px;height:16px;"></div>
+                <div class="sk-shimmer sk-line" style="width:100px;height:14px;"></div>
+            </div>
+            <div class="sk-chart-bars">
+                <?php
+                $bar_heights = [38,55,45,72,60,85,50,65,40,78,55,90];
+                foreach($bar_heights as $bh):
+                ?>
+                <div class="sk-chart-bar-col">
+                    <div class="sk-shimmer" style="width:100%;height:<?php echo $bh; ?>px;border-radius:4px 4px 0 0;"></div>
+                    <div class="sk-shimmer sk-line" style="width:90%;height:8px;margin-top:4px;"></div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <!-- sk: filter bar -->
+        <div class="sk-filter-bar">
+            <div class="sk-shimmer" style="flex:1;height:36px;border-radius:8px;"></div>
+            <?php for($i=0;$i<5;$i++): ?>
+            <div class="sk-shimmer" style="width:82px;height:32px;border-radius:20px;flex-shrink:0;"></div>
+            <?php endfor; ?>
+        </div>
+
+        <!-- sk: commission table -->
+        <div class="sk-table-wrapper">
+            <div class="sk-table-header">
+                <div class="sk-shimmer sk-line" style="width:180px;height:16px;"></div>
+                <div class="sk-shimmer sk-line" style="width:80px;height:13px;"></div>
+            </div>
+            <?php for($i=0;$i<6;$i++): ?>
+            <div class="sk-table-row">
+                <div style="flex:2;display:flex;flex-direction:column;gap:6px;">
+                    <div class="sk-shimmer sk-line" style="width:75%;height:13px;"></div>
+                    <div class="sk-shimmer sk-line" style="width:45%;height:11px;"></div>
+                </div>
+                <div style="flex:1.5;display:flex;flex-direction:column;gap:6px;">
+                    <div class="sk-shimmer sk-line" style="width:80%;height:13px;"></div>
+                    <div class="sk-shimmer sk-line" style="width:55%;height:11px;"></div>
+                </div>
+                <div style="flex:1;"><div class="sk-shimmer sk-line" style="width:80%;height:18px;"></div></div>
+                <div style="flex:1;"><div class="sk-shimmer" style="width:70px;height:22px;border-radius:20px;"></div></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                    <div class="sk-shimmer sk-line" style="width:80%;height:12px;"></div>
+                    <div class="sk-shimmer sk-line" style="width:55%;height:11px;"></div>
+                </div>
+                <div style="flex:0 0 50px;"><div class="sk-shimmer" style="width:44px;height:32px;border-radius:8px;"></div></div>
+            </div>
+            <?php endfor; ?>
+        </div>
+
+    </main>
+    </div><!-- /#sk-screen -->
+
+    <div id="page-content">
     <main class="commission-content">
         <!-- PAGE HEADER -->
         <div class="page-header">
@@ -1066,6 +1309,9 @@ $conn->close();
             <?php endif; ?>
         </div>
     </main>
+    </div><!-- /#page-content -->
+
+    <div id="toastContainer"></div>
 
     <!-- DETAIL MODAL -->
     <div class="modal fade" id="detailModal" tabindex="-1">
@@ -1197,6 +1443,76 @@ $conn->close();
     if (searchInput) {
         searchInput.addEventListener('input', applyFilters);
     }
+    </script>
+
+    <script>
+    function showToast(type, title, message, duration) {
+        const icons = { success:'bi bi-check-circle-fill', error:'bi bi-x-circle-fill', warning:'bi bi-exclamation-triangle-fill', info:'bi bi-info-circle-fill' };
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `app-toast toast-${type}`;
+        toast.innerHTML = `<i class="${icons[type] || icons.info} toast-icon"></i><div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg">${message}</div></div><button class="toast-dismiss" onclick="dismissToast(this)" aria-label="Dismiss">&times;</button>`;
+        container.appendChild(toast);
+        requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+        if (duration) setTimeout(() => dismissToast(toast.querySelector('.toast-dismiss')), duration);
+    }
+    function dismissToast(btn) {
+        const toast = btn.closest ? btn.closest('.app-toast') : btn.parentElement;
+        if (!toast) return;
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 350);
+    }
+    </script>
+
+    <script>
+    /* ── Skeleton hydration ── */
+    (function () {
+        const MIN_SKELETON_MS = 400;
+        const t0 = Date.now();
+        const skScreen    = document.getElementById('sk-screen');
+        const pageContent = document.getElementById('page-content');
+        function hydrate() {
+            const elapsed   = Date.now() - t0;
+            const remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+            setTimeout(function () {
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        if (skScreen) {
+                            skScreen.style.transition = 'opacity 0.25s ease';
+                            skScreen.style.opacity    = '0';
+                            setTimeout(function () { skScreen.style.display = 'none'; }, 250);
+                        }
+                        if (pageContent) {
+                            pageContent.style.display    = 'block';
+                            pageContent.style.opacity    = '0';
+                            pageContent.style.transition = 'opacity 0.35s ease';
+                            requestAnimationFrame(function () {
+                                requestAnimationFrame(function () {
+                                    pageContent.style.opacity = '1';
+                                });
+                            });
+                        }
+                        document.dispatchEvent(new CustomEvent('skeleton:hydrated'));
+                    });
+                });
+            }, remaining);
+        }
+        if (document.readyState === 'complete') { hydrate(); }
+        else { window.addEventListener('load', hydrate); }
+    }());
+    </script>
+
+    <script>
+    document.addEventListener('skeleton:hydrated', function () {
+        <?php $outstanding = $pendingCount + $calculatedCount; ?>
+        <?php if ($outstanding > 0): ?>
+        showToast('warning', 'Commissions Awaiting Payment',
+            '<?php echo $outstanding; ?> commission<?php echo $outstanding !== 1 ? "s" : ""; ?> totalling ₱<?php echo number_format($totalPending + $totalCalculated, 2); ?> are awaiting payment.',
+            7000);
+        <?php endif; ?>
+    });
     </script>
 </body>
 </html>

@@ -67,6 +67,18 @@ $amenities = $amenities_result->fetch_all(MYSQLI_ASSOC);
 $property_types_result = $conn->query("SELECT * FROM property_types ORDER BY type_name");
 $property_types = $property_types_result->fetch_all(MYSQLI_ASSOC);
 
+// Capture session message for toast notifications (before conn closes)
+$sk_toast_msg   = '';
+$sk_toast_type  = 'info';
+$sk_toast_title = 'Notice';
+if (isset($_SESSION['message'])) {
+    $sk_toast_msg   = addslashes(htmlspecialchars($_SESSION['message']));
+    if ($_SESSION['message_type'] === 'success')    { $sk_toast_type = 'success'; $sk_toast_title = 'Success'; }
+    elseif ($_SESSION['message_type'] === 'danger') { $sk_toast_type = 'error';   $sk_toast_title = 'Error';   }
+    else                                            { $sk_toast_type = 'info';    $sk_toast_title = 'Notice';  }
+    unset($_SESSION['message'], $_SESSION['message_type']);
+}
+
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -1483,6 +1495,163 @@ $conn->close();
                 max-width: 100vw;
             }
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Agent Portal (Dark Theme)
+           ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0.03) 25%,
+                rgba(255,255,255,0.06) 50%,
+                rgba(255,255,255,0.03) 75%
+            );
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        /* Page header skeleton */
+        .sk-page-header {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px;
+            padding: 2rem 3rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .sk-page-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #d4af37, #2563eb, transparent);
+        }
+
+        /* 6-column KPI grid — mirrors .kpi-grid */
+        .sk-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .sk-kpi-card {
+            background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        /* Tabs skeleton */
+        .sk-tabs-bar {
+            background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px 4px 0 0;
+            padding: 0.75rem 1rem 0;
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+
+        /* Property card placeholders */
+        .sk-prop-area {
+            background: linear-gradient(135deg, rgba(26,26,26,0.6) 0%, rgba(10,10,10,0.7) 100%);
+            border: 1px solid rgba(37,99,235,0.1);
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+        .sk-prop-card {
+            background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .sk-line { display: block; border-radius: 4px; }
+
+        /* Responsive — mirrors .kpi-grid breakpoints */
+        @media (max-width: 1400px) {
+            .sk-kpi-grid   { grid-template-columns: repeat(3, 1fr); }
+            .sk-prop-area  { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 992px) {
+            .sk-kpi-grid   { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .sk-kpi-grid   { grid-template-columns: 1fr 1fr; }
+            .sk-prop-area  { grid-template-columns: 1fr 1fr; }
+            .sk-page-header { flex-direction: column; align-items: flex-start; padding: 1.5rem; }
+        }
+        @media (max-width: 576px) {
+            .sk-kpi-grid   { grid-template-columns: 1fr; }
+            .sk-prop-area  { grid-template-columns: 1fr; }
+        }
+
+        /* ===== TOAST NOTIFICATIONS — Agent Portal (Dark Theme) ===== */
+        #toastContainer {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            pointer-events: none;
+        }
+        .app-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            background: linear-gradient(135deg, rgba(26,26,26,0.97) 0%, rgba(10,10,10,0.98) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 12px;
+            padding: 0.9rem 1.1rem;
+            min-width: 300px;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+            animation: toast-in .35s cubic-bezier(.34,1.56,.64,1) forwards;
+            backdrop-filter: blur(12px);
+        }
+        @keyframes toast-in  { from { opacity:0; transform: translateX(60px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+        .app-toast.toast-out { animation: toast-out .3s ease forwards; }
+        @keyframes toast-out { to { opacity:0; transform: translateX(60px) scale(.9); max-height:0; padding:0; margin:0; } }
+        .app-toast::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+        .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+        .app-toast-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+        .toast-success .app-toast-icon { background: rgba(212,175,55,0.15); color: #d4af37; }
+        .toast-error   .app-toast-icon { background: rgba(239,68,68,0.12);  color: #ef4444; }
+        .toast-info    .app-toast-icon { background: rgba(37,99,235,0.12);  color: #3b82f6; }
+        .app-toast-body     { flex:1; min-width:0; }
+        .app-toast-title    { font-size:0.82rem; font-weight:700; color:#f1f5f9; margin-bottom:0.2rem; }
+        .app-toast-msg      { font-size:0.78rem; color:#9ca4ab; line-height:1.4; word-break:break-word; }
+        .app-toast-close    { background:none; border:none; cursor:pointer; color:#5d6d7d; font-size:0.8rem; padding:0; line-height:1; flex-shrink:0; transition:color .2s; }
+        .app-toast-close:hover { color:#f1f5f9; }
+        .app-toast-progress { position:absolute; bottom:0; left:0; height:2px; border-radius:0 0 0 12px; }
+        .toast-success .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        @keyframes toast-progress { from { width:100%; } to { width:0%; } }
     </style>
 </head>
 <body>
@@ -1501,6 +1670,78 @@ $active_page = 'agent_property.php';
 include 'agent_navbar.php';
 ?>
 
+<noscript><style>
+    #sk-screen    { display: none !important; }
+    #page-content { display: block !important; opacity: 1 !important; }
+</style></noscript>
+
+<div id="sk-screen" role="presentation" aria-hidden="true">
+
+    <!-- Skeleton: Page Header -->
+    <div class="sk-page-header">
+        <div>
+            <div class="sk-line sk-shimmer" style="width:240px;height:24px;margin-bottom:10px;"></div>
+            <div class="sk-line sk-shimmer" style="width:380px;height:13px;"></div>
+        </div>
+        <div style="display:flex;gap:0.75rem;">
+            <div class="sk-shimmer" style="width:150px;height:38px;border-radius:4px;"></div>
+            <div class="sk-shimmer" style="width:160px;height:38px;border-radius:4px;"></div>
+        </div>
+    </div>
+
+    <!-- Skeleton: KPI Grid (6 cards) -->
+    <div class="sk-kpi-grid">
+        <?php for ($i = 0; $i < 6; $i++): ?>
+        <div class="sk-kpi-card">
+            <div class="sk-shimmer" style="width:40px;height:40px;border-radius:4px;"></div>
+            <div class="sk-line sk-shimmer" style="width:70%;height:11px;"></div>
+            <div class="sk-line sk-shimmer" style="width:40%;height:22px;"></div>
+        </div>
+        <?php endfor; ?>
+    </div>
+
+    <!-- Skeleton: Tabs bar -->
+    <div class="sk-tabs-bar">
+        <div class="sk-shimmer" style="width:70px;height:32px;border-radius:4px 4px 0 0;"></div>
+        <div class="sk-shimmer" style="width:115px;height:32px;border-radius:4px 4px 0 0;"></div>
+        <div class="sk-shimmer" style="width:80px;height:32px;border-radius:4px 4px 0 0;"></div>
+        <div class="sk-shimmer" style="width:105px;height:32px;border-radius:4px 4px 0 0;"></div>
+        <div class="sk-shimmer" style="width:60px;height:32px;border-radius:4px 4px 0 0;"></div>
+    </div>
+
+    <!-- Skeleton: Property card grid (3 cards) -->
+    <div class="sk-prop-area">
+        <?php for ($i = 0; $i < 3; $i++): ?>
+        <div class="sk-prop-card">
+            <div class="sk-shimmer" style="width:100%;height:200px;"></div>
+            <div style="padding:1.25rem;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+                    <div class="sk-line sk-shimmer" style="width:55%;height:16px;"></div>
+                    <div class="sk-shimmer" style="width:60px;height:20px;border-radius:3px;"></div>
+                </div>
+                <div class="sk-line sk-shimmer" style="width:38%;height:20px;margin-bottom:0.75rem;"></div>
+                <div class="sk-line sk-shimmer" style="width:80%;height:12px;margin-bottom:0.5rem;"></div>
+                <div style="display:flex;gap:1.25rem;margin-bottom:0.75rem;">
+                    <div class="sk-line sk-shimmer" style="width:45px;height:11px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:45px;height:11px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:55px;height:11px;"></div>
+                </div>
+                <div style="display:flex;gap:1rem;">
+                    <div class="sk-line sk-shimmer" style="width:55px;height:11px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:65px;height:11px;"></div>
+                </div>
+            </div>
+            <div style="padding:0 1.25rem 1.25rem;display:flex;gap:0.5rem;">
+                <div class="sk-shimmer" style="flex:1;height:36px;border-radius:4px;"></div>
+                <div class="sk-shimmer" style="flex:1;height:36px;border-radius:4px;"></div>
+            </div>
+        </div>
+        <?php endfor; ?>
+    </div>
+
+</div><!-- /#sk-screen -->
+
+<div id="page-content">
 <main class="property-content">
     <!-- Page Header -->
     <div class="page-header">
@@ -1556,15 +1797,7 @@ include 'agent_navbar.php';
         </div>
     </div>
 
-    <!-- Session Alert -->
-    <?php if (isset($_SESSION['message'])): ?>
-        <div class="alert <?php echo $_SESSION['message_type'] === 'success' ? 'alert-dark-custom' : ($_SESSION['message_type'] === 'danger' ? 'alert-danger-custom' : 'alert-warning-custom'); ?> alert-dismissible fade show mb-4" role="alert">
-            <i class="bi <?php echo $_SESSION['message_type'] === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'; ?> me-2"></i>
-            <?php echo $_SESSION['message']; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <?php unset($_SESSION['message'], $_SESSION['message_type']); ?>
-    <?php endif; ?>
+    <!-- Session feedback is shown as a toast via skeleton:hydrated -->
 
     <!-- Tabbed Listings -->
     <div class="property-tabs">
@@ -1853,6 +2086,7 @@ include 'agent_navbar.php';
         </div>
     </div>
 </main>
+</div><!-- /#page-content -->
 
 <!-- ===== ADD PROPERTY MODAL ===== -->
 <div class="modal fade modal-dark" id="addPropertyModal" tabindex="-1" aria-labelledby="addPropertyModalLabel" aria-hidden="true">
@@ -2161,8 +2395,38 @@ include 'agent_navbar.php';
 
 <?php include 'logout_agent_modal.php'; ?>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></script>
 <script>
+// ===== TOAST =====
+function showToast(type, title, message, duration) {
+    duration = duration || 4500;
+    var container = document.getElementById('toastContainer');
+    var icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+    var toast = document.createElement('div');
+    toast.className = 'app-toast toast-' + type;
+    toast.innerHTML =
+        '<div class="app-toast-icon"><i class="bi ' + (icons[type] || icons.info) + '"></i></div>' +
+        '<div class="app-toast-body">' +
+            '<div class="app-toast-title">' + title + '</div>' +
+            '<div class="app-toast-msg">' + message + '</div>' +
+        '</div>' +
+        '<button class="app-toast-close" onclick="dismissToast(this.closest(&quot;.app-toast&quot;))">&times;</button>' +
+        '<div class="app-toast-progress" style="animation: toast-progress ' + duration + 'ms linear forwards;"></div>';
+    container.appendChild(toast);
+    var timer = setTimeout(function() { dismissToast(toast); }, duration);
+    toast._timer = timer;
+}
+function dismissToast(toast) {
+    if (!toast || toast._dismissed) return;
+    toast._dismissed = true;
+    clearTimeout(toast._timer);
+    toast.classList.add('toast-out');
+    setTimeout(function() { toast.remove(); }, 320);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     // ===== ADD PROPERTY MODAL =====
     const addPropertyModal = document.getElementById('addPropertyModal');
@@ -2770,6 +3034,79 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(() => {
         applyFilters();
     }, 300);
+});
+</script>
+
+<!-- SKELETON HYDRATION — Progressive Content Reveal (Agent Portal) -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart   = Date.now();
+
+    function hydrate() {
+        var elapsed  = Date.now() - skeletonStart;
+        var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+        setTimeout(function () {
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+            if (!sk || !pc) return;
+
+            pc.style.display  = 'block';
+            pc.style.opacity  = '0';
+            pc.style.transition = 'opacity 0.35s ease';
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    pc.style.opacity = '1';
+                    sk.style.transition = 'opacity 0.25s ease';
+                    sk.style.opacity    = '0';
+                    setTimeout(function () {
+                        sk.style.display = 'none';
+                        document.dispatchEvent(new CustomEvent('skeleton:hydrated'));
+                    }, 260);
+                });
+            });
+        }, remaining);
+    }
+
+    if (document.readyState === 'complete') {
+        hydrate();
+    } else {
+        window.addEventListener('load', hydrate);
+    }
+}());
+</script>
+
+<!-- TOAST TRIGGERS — fire after skeleton fades out -->
+<script>
+document.addEventListener('skeleton:hydrated', function () {
+    var toastDelay = 0;
+    var TOAST_GAP  = 600;
+
+    <?php if ($sk_toast_msg): ?>
+    // Session feedback (add property, mark as sold, etc.)
+    setTimeout(function () {
+        showToast('<?= $sk_toast_type ?>', '<?= $sk_toast_title ?>', '<?= $sk_toast_msg ?>', 5500);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if (count($rejected_properties) > 0): ?>
+    // Rejected properties need agent action — high priority
+    setTimeout(function () {
+        showToast('error', 'Properties Rejected',
+            '<?= count($rejected_properties) ?> propert<?= count($rejected_properties) === 1 ? "y was" : "ies were" ?> rejected. Review and resubmit to go live.', 7000);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if (count($pending_sold_properties) > 0): ?>
+    // Pending sale verifications — awaiting admin confirmation
+    setTimeout(function () {
+        showToast('info', 'Sale Verifications',
+            '<?= count($pending_sold_properties) ?> sale verification<?= count($pending_sold_properties) === 1 ? " is" : "s are" ?> currently under admin review.', 6000);
+    }, toastDelay);
+    <?php endif; ?>
 });
 </script>
 </body>

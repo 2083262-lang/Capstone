@@ -1672,6 +1672,143 @@ $conn->close();
       .request-meta { gap: 0.75rem; }
       .page-header .header-actions { flex-direction: column; gap: 0.5rem; }
     }
+
+    /* ================================================================
+       SKELETON SCREEN SYSTEM — Agent Tour Requests (Dark Theme)
+       ================================================================ */
+    @keyframes sk-shimmer {
+        0%   { background-position: -1600px 0; }
+        100% { background-position:  1600px 0; }
+    }
+    .sk-shimmer {
+        background: linear-gradient(90deg,
+            rgba(255,255,255,0.03) 25%,
+            rgba(255,255,255,0.06) 50%,
+            rgba(255,255,255,0.03) 75%);
+        background-size: 1600px 100%;
+        animation: sk-shimmer 1.6s infinite linear;
+        border-radius: 4px;
+    }
+    #page-content { display: none; }
+
+    /* Page header skeleton */
+    .sk-page-header {
+        background: rgba(26,26,26,0.8);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 1.75rem 2rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+    .sk-page-header-left { display:flex; flex-direction:column; gap:10px; }
+    .sk-page-header-right { display:flex; gap:0.75rem; flex-shrink:0; }
+
+    /* 6-col KPI grid skeleton */
+    .sk-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .sk-kpi-card {
+        background: rgba(26,26,26,0.8);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    /* Status tabs skeleton */
+    .sk-tabs {
+        background: rgba(26,26,26,0.8);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 10px;
+        padding: 0.75rem 1.25rem;
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+        overflow: hidden;
+    }
+
+    /* Request card skeleton */
+    .sk-request-card {
+        background: rgba(26,26,26,0.8);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+    .sk-req-body   { flex: 1; display:flex; flex-direction:column; gap:8px; }
+    .sk-req-right  { display:flex; flex-direction:column; gap:8px; flex-shrink:0; align-items:flex-end; }
+    .sk-line { display: block; border-radius: 4px; }
+
+    /* Dark toast system */
+    #toastContainer {
+        position: fixed;
+        top: 1.5rem;
+        right: 1.5rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-width: 380px;
+        width: 100%;
+    }
+    .app-toast {
+        background: linear-gradient(135deg, rgba(26,26,26,0.97), rgba(15,15,15,0.97));
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 1rem 1.1rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.85rem;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+        backdrop-filter: blur(12px);
+        opacity: 0;
+        transform: translateX(100%);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .app-toast.show { opacity: 1; transform: translateX(0); }
+    .app-toast.hide { opacity: 0; transform: translateX(calc(100% + 2rem)); }
+    .app-toast::before {
+        content: '';
+        position: absolute; top: 0; left: 0;
+        width: 4px; height: 100%;
+        border-radius: 12px 0 0 12px;
+    }
+    .app-toast.toast-success::before { background: #22c55e; }
+    .app-toast.toast-error::before   { background: #ef4444; }
+    .app-toast.toast-info::before    { background: #2563eb; }
+    .app-toast.toast-warning::before { background: #d4af37; }
+    .toast-icon { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; }
+    .app-toast.toast-success .toast-icon { color: #22c55e; }
+    .app-toast.toast-error   .toast-icon { color: #ef4444; }
+    .app-toast.toast-info    .toast-icon { color: #60a5fa; }
+    .app-toast.toast-warning .toast-icon { color: #d4af37; }
+    .toast-body  { flex: 1; min-width: 0; }
+    .toast-title { font-size: 0.875rem; font-weight: 600; color: #f1f5f9; margin-bottom: 2px; }
+    .toast-msg   { font-size: 0.8rem; color: #9ca4ab; line-height: 1.5; }
+    .toast-dismiss {
+        background: none; border: none; color: #6b7280;
+        font-size: 1rem; cursor: pointer; padding: 0; flex-shrink: 0; line-height: 1;
+    }
+    .toast-dismiss:hover { color: #d1d5db; }
+
+    @media (max-width: 1400px) { .sk-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 768px)  {
+        .sk-kpi-grid    { grid-template-columns: repeat(2, 1fr); }
+        .sk-page-header { flex-direction: column; align-items: flex-start; }
+    }
   </style>
 </head>
 <body>
@@ -1682,6 +1819,68 @@ $active_page = 'agent_tour_requests.php';
 include 'agent_navbar.php'; 
 ?>
 
+<noscript><style>
+  #sk-screen    { display: none !important; }
+  #page-content { display: block !important; opacity: 1 !important; }
+</style></noscript>
+
+<div id="sk-screen" role="presentation" aria-hidden="true">
+<div class="tour-content">
+
+  <!-- sk: page header -->
+  <div class="sk-page-header">
+    <div class="sk-page-header-left">
+      <div class="sk-shimmer sk-line" style="width:200px;height:22px;"></div>
+      <div class="sk-shimmer sk-line" style="width:380px;height:13px;"></div>
+    </div>
+    <div class="sk-page-header-right">
+      <div class="sk-shimmer" style="width:145px;height:38px;border-radius:8px;"></div>
+      <div class="sk-shimmer" style="width:135px;height:38px;border-radius:8px;"></div>
+    </div>
+  </div>
+
+  <!-- sk: 6-col KPI grid -->
+  <div class="sk-kpi-grid">
+    <?php for($i=0;$i<6;$i++): ?>
+    <div class="sk-kpi-card">
+      <div class="sk-shimmer" style="width:44px;height:44px;border-radius:10px;"></div>
+      <div class="sk-shimmer sk-line" style="width:65%;height:11px;"></div>
+      <div class="sk-shimmer sk-line" style="width:50%;height:26px;"></div>
+    </div>
+    <?php endfor; ?>
+  </div>
+
+  <!-- sk: status tabs -->
+  <div class="sk-tabs">
+    <?php foreach(['80px','90px','95px','100px','110px','90px','75px'] as $w): ?>
+    <div class="sk-shimmer" style="width:<?php echo $w; ?>;height:20px;border-radius:4px;flex-shrink:0;"></div>
+    <?php endforeach; ?>
+  </div>
+
+  <!-- sk: request cards -->
+  <?php for($i=0;$i<4;$i++): ?>
+  <div class="sk-request-card">
+    <div class="sk-shimmer" style="width:52px;height:52px;border-radius:12px;flex-shrink:0;"></div>
+    <div class="sk-req-body">
+      <div class="sk-shimmer sk-line" style="width:55%;height:14px;"></div>
+      <div class="sk-shimmer sk-line" style="width:80%;height:12px;"></div>
+      <div style="display:flex;gap:0.75rem;">
+        <div class="sk-shimmer sk-line" style="width:100px;height:11px;"></div>
+        <div class="sk-shimmer sk-line" style="width:90px;height:11px;"></div>
+        <div class="sk-shimmer sk-line" style="width:80px;height:11px;"></div>
+      </div>
+    </div>
+    <div class="sk-req-right">
+      <div class="sk-shimmer" style="width:75px;height:22px;border-radius:20px;"></div>
+      <div class="sk-shimmer sk-line" style="width:90px;height:12px;"></div>
+    </div>
+  </div>
+  <?php endfor; ?>
+
+</div><!-- /.tour-content (skeleton) -->
+</div><!-- /#sk-screen -->
+
+<div id="page-content">
 <div class="tour-content">
   <!-- PAGE HEADER -->
   <div class="page-header">
@@ -1862,7 +2061,10 @@ include 'agent_navbar.php';
       <?php endforeach; ?>
     <?php endif; ?>
   </div>
-</div>
+</div><!-- /.tour-content -->
+</div><!-- /#page-content -->
+
+<div id="toastContainer"></div>
 
 <!-- ===== TOUR DETAILS MODAL ===== -->
 <div class="modal fade modal-dark" id="tourDetailsModal" tabindex="-1" aria-hidden="true">
@@ -3058,6 +3260,75 @@ include 'agent_navbar.php';
         });
       });
     });
+</script>
+
+<script>
+function showToast(type, title, message, duration) {
+    const icons = { success:'bi bi-check-circle-fill', error:'bi bi-x-circle-fill', warning:'bi bi-exclamation-triangle-fill', info:'bi bi-info-circle-fill' };
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `app-toast toast-${type}`;
+    toast.innerHTML = `<i class="${icons[type] || icons.info} toast-icon"></i><div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg">${message}</div></div><button class="toast-dismiss" onclick="dismissToast(this)" aria-label="Dismiss">&times;</button>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+    if (duration) setTimeout(() => dismissToast(toast.querySelector('.toast-dismiss')), duration);
+}
+function dismissToast(btn) {
+    const toast = btn.closest ? btn.closest('.app-toast') : btn.parentElement;
+    if (!toast) return;
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    setTimeout(() => toast.remove(), 350);
+}
+</script>
+
+<script>
+/* ── Skeleton hydration ── */
+(function () {
+    const MIN_SKELETON_MS = 400;
+    const t0 = Date.now();
+    const skScreen    = document.getElementById('sk-screen');
+    const pageContent = document.getElementById('page-content');
+    function hydrate() {
+        const elapsed   = Date.now() - t0;
+        const remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+        setTimeout(function () {
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    if (skScreen) {
+                        skScreen.style.transition = 'opacity 0.25s ease';
+                        skScreen.style.opacity    = '0';
+                        setTimeout(function () { skScreen.style.display = 'none'; }, 250);
+                    }
+                    if (pageContent) {
+                        pageContent.style.display    = 'block';
+                        pageContent.style.opacity    = '0';
+                        pageContent.style.transition = 'opacity 0.35s ease';
+                        requestAnimationFrame(function () {
+                            requestAnimationFrame(function () {
+                                pageContent.style.opacity = '1';
+                            });
+                        });
+                    }
+                    document.dispatchEvent(new CustomEvent('skeleton:hydrated'));
+                });
+            });
+        }, remaining);
+    }
+    if (document.readyState === 'complete') { hydrate(); }
+    else { window.addEventListener('load', hydrate); }
+}());
+</script>
+
+<script>
+document.addEventListener('skeleton:hydrated', function () {
+    <?php if ($counts['Pending'] > 0): ?>
+    showToast('warning', 'Pending Tour Requests',
+        '<?php echo $counts["Pending"]; ?> tour request<?php echo $counts["Pending"] !== 1 ? "s" : ""; ?> <?php echo $counts["Pending"] !== 1 ? "are" : "is"; ?> awaiting your response.',
+        7000);
+    <?php endif; ?>
+});
 </script>
 </body>
 </html>

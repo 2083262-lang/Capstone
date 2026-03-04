@@ -622,11 +622,244 @@ $days_on_market = $interval->days;
             font-weight: 500;
             font-size: 0.8em;
         }
+
+        /* ================================================================
+           SKELETON SCREEN SYSTEM — Dark Agent Portal Theme
+           ================================================================ */
+        @keyframes sk-shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .sk-shimmer {
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0.03) 25%,
+                rgba(255,255,255,0.06) 50%,
+                rgba(255,255,255,0.03) 75%
+            );
+            background-size: 1600px 100%;
+            animation: sk-shimmer 1.6s ease-in-out infinite;
+            border-radius: 4px;
+        }
+        #page-content { display: none; }
+
+        .sk-breadcrumb {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9rem 1.5rem;
+            background: rgba(26,26,26,0.6);
+            border-bottom: 1px solid rgba(37,99,235,0.1);
+        }
+
+        .sk-hero-gallery {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 12px;
+            padding: 40px 20px 0;
+            max-width: 1320px;
+            margin: 0 auto;
+        }
+        .sk-hero-main { height: 420px; border-radius: 4px; }
+        .sk-hero-sidebar { display: grid; grid-template-rows: repeat(2, 1fr); gap: 12px; }
+        .sk-hero-thumb { border-radius: 4px; }
+
+        .sk-prop-header {
+            padding: 2.5rem 0 1.5rem;
+            border-bottom: 1px solid rgba(37,99,235,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .sk-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 2rem;
+            padding-bottom: 3rem;
+        }
+
+        .sk-content-card {
+            background: linear-gradient(135deg, rgba(26,26,26,0.8) 0%, rgba(10,10,10,0.9) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+        }
+
+        .sk-feat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        .sk-feat-box { height: 80px; border-radius: 4px; }
+
+        .sk-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem 2rem;
+        }
+
+        .sk-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+        .sk-line { display: block; border-radius: 4px; }
+
+        @media (max-width: 1024px) {
+            .sk-detail-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .sk-hero-gallery { grid-template-columns: 1fr; }
+            .sk-hero-main { height: 300px; }
+            .sk-hero-sidebar { grid-template-columns: repeat(2, 1fr); grid-template-rows: auto; }
+            .sk-hero-thumb { height: 150px; }
+            .sk-feat-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ===== TOAST NOTIFICATIONS — Agent Portal (Dark Theme) ===== */
+        #toastContainer {
+            position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999;
+            display: flex; flex-direction: column; gap: 0.6rem; pointer-events: none;
+        }
+        .app-toast {
+            display: flex; align-items: flex-start; gap: 0.85rem;
+            background: linear-gradient(135deg, rgba(26,26,26,0.97) 0%, rgba(10,10,10,0.98) 100%);
+            border: 1px solid rgba(37,99,235,0.15); border-radius: 12px;
+            padding: 0.9rem 1.1rem; min-width: 300px; max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+            pointer-events: all; position: relative; overflow: hidden;
+            animation: toast-in .35s cubic-bezier(.34,1.56,.64,1) forwards;
+            backdrop-filter: blur(12px);
+        }
+        @keyframes toast-in  { from { opacity:0; transform: translateX(60px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+        .app-toast.toast-out { animation: toast-out .3s ease forwards; }
+        @keyframes toast-out { to { opacity:0; transform: translateX(60px) scale(.9); max-height:0; padding:0; margin:0; } }
+        .app-toast::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+        .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+        .app-toast-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+        .toast-success .app-toast-icon { background: rgba(212,175,55,0.15); color: #d4af37; }
+        .toast-error   .app-toast-icon { background: rgba(239,68,68,0.12);  color: #ef4444; }
+        .toast-info    .app-toast-icon { background: rgba(37,99,235,0.12);  color: #3b82f6; }
+        .app-toast-body     { flex:1; min-width:0; }
+        .app-toast-title    { font-size:0.82rem; font-weight:700; color:#f1f5f9; margin-bottom:0.2rem; }
+        .app-toast-msg      { font-size:0.78rem; color:#9ca4ab; line-height:1.4; word-break:break-word; }
+        .app-toast-close    { background:none; border:none; cursor:pointer; color:#5d6d7d; font-size:0.8rem; padding:0; line-height:1; flex-shrink:0; transition:color .2s; }
+        .app-toast-close:hover { color:#f1f5f9; }
+        .app-toast-progress { position:absolute; bottom:0; left:0; height:2px; border-radius:0 0 0 12px; }
+        .toast-success .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        @keyframes toast-progress { from { width:100%; } to { width:0%; } }
     </style>
 </head>
 <body>
     <?php include 'agent_navbar.php'; ?>
 
+<noscript><style>
+    #sk-screen    { display: none !important; }
+    #page-content { display: block !important; opacity: 1 !important; }
+</style></noscript>
+
+<div id="sk-screen" role="presentation" aria-hidden="true">
+
+    <!-- Skeleton: Breadcrumb bar -->
+    <div class="sk-breadcrumb">
+        <div class="sk-shimmer" style="width:260px;height:13px;border-radius:3px;"></div>
+        <div style="display:flex;gap:0.5rem;">
+            <div class="sk-shimmer" style="width:90px;height:28px;border-radius:4px;"></div>
+            <div class="sk-shimmer" style="width:90px;height:28px;border-radius:4px;"></div>
+        </div>
+    </div>
+
+    <!-- Skeleton: Hero image gallery -->
+    <div class="sk-hero-gallery">
+        <div class="sk-hero-main sk-shimmer"></div>
+        <div class="sk-hero-sidebar">
+            <div class="sk-hero-thumb sk-shimmer"></div>
+            <div class="sk-hero-thumb sk-shimmer"></div>
+        </div>
+    </div>
+
+    <!-- Skeleton: Property header + two-column detail -->
+    <div class="container" style="padding:0 20px;">
+
+        <div class="sk-prop-header">
+            <div class="sk-line sk-shimmer" style="width:90px;height:22px;border-radius:3px;margin-bottom:0.75rem;"></div>
+            <div class="sk-line sk-shimmer" style="width:55%;height:28px;margin-bottom:0.6rem;"></div>
+            <div class="sk-line sk-shimmer" style="width:42%;height:14px;margin-bottom:1.25rem;"></div>
+            <div class="sk-line sk-shimmer" style="width:28%;height:38px;margin-bottom:1rem;"></div>
+            <div style="display:flex;gap:1.5rem;">
+                <div class="sk-shimmer" style="width:80px;height:13px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:70px;height:13px;border-radius:3px;"></div>
+                <div class="sk-shimmer" style="width:130px;height:13px;border-radius:3px;"></div>
+            </div>
+        </div>
+
+        <div class="sk-detail-grid">
+
+            <!-- Main column: 3 content cards -->
+            <div>
+                <div class="sk-content-card" style="padding:1.5rem;">
+                    <div class="sk-line sk-shimmer" style="width:160px;height:17px;margin-bottom:1.25rem;"></div>
+                    <div class="sk-feat-grid">
+                        <?php for ($i = 0; $i < 6; $i++): ?>
+                        <div class="sk-feat-box sk-shimmer"></div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+                <div class="sk-content-card" style="padding:1.5rem;">
+                    <div class="sk-line sk-shimmer" style="width:170px;height:17px;margin-bottom:1rem;"></div>
+                    <div class="sk-line sk-shimmer" style="width:100%;height:12px;margin-bottom:6px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:96%;height:12px;margin-bottom:6px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:88%;height:12px;margin-bottom:6px;"></div>
+                    <div class="sk-line sk-shimmer" style="width:70%;height:12px;"></div>
+                </div>
+                <div class="sk-content-card" style="padding:1.5rem;">
+                    <div class="sk-line sk-shimmer" style="width:180px;height:17px;margin-bottom:1.25rem;"></div>
+                    <div class="sk-info-grid">
+                        <?php for ($i = 0; $i < 6; $i++): ?>
+                        <div>
+                            <div class="sk-line sk-shimmer" style="width:75%;height:11px;margin-bottom:6px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:55%;height:15px;"></div>
+                        </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar column: metrics + price timeline -->
+            <aside>
+                <div class="sk-content-card" style="padding:1.5rem;margin-bottom:1.5rem;">
+                    <div class="sk-line sk-shimmer" style="width:130px;height:15px;margin-bottom:1rem;"></div>
+                    <div class="sk-metrics-grid">
+                        <?php for ($i = 0; $i < 4; $i++): ?>
+                        <div style="background:rgba(26,26,26,0.5);border:1px solid rgba(37,99,235,0.1);border-radius:4px;padding:0.9rem;">
+                            <div class="sk-line sk-shimmer" style="width:70%;height:11px;margin-bottom:8px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:50%;height:22px;"></div>
+                        </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+                <div class="sk-content-card" style="padding:1.5rem;">
+                    <div class="sk-line sk-shimmer" style="width:120px;height:15px;margin-bottom:1.25rem;"></div>
+                    <?php for ($i = 0; $i < 3; $i++): ?>
+                    <div style="display:flex;gap:0.75rem;padding-bottom:1rem;">
+                        <div class="sk-shimmer" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;"></div>
+                        <div style="flex:1;">
+                            <div class="sk-line sk-shimmer" style="width:80%;height:13px;margin-bottom:5px;"></div>
+                            <div class="sk-line sk-shimmer" style="width:55%;height:11px;"></div>
+                        </div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+</div><!-- /#sk-screen -->
+
+<div id="page-content">
     <!-- Breadcrumb -->
     <div class="breadcrumb-section">
         <div class="container">
@@ -659,21 +892,7 @@ $days_on_market = $interval->days;
         </div>
     </div>
 
-    <!-- Flash Messages -->
-    <div class="container" style="margin-top: 20px;">
-        <?php if (!empty($success_message)): ?>
-            <div class="flash-alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle-fill"></i> <?php echo $success_message; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="filter: invert(1); opacity: 0.7;"></button>
-            </div>
-        <?php endif; ?>
-        <?php if (!empty($error_message)): ?>
-            <div class="flash-alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle-fill"></i> <?php echo $error_message; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="filter: invert(1); opacity: 0.7;"></button>
-            </div>
-        <?php endif; ?>
-    </div>
+    <!-- Flash messages shown as toasts via skeleton:hydrated -->
 
     <!-- Property Hero / Image Gallery -->
     <section class="agent-prop-hero">
@@ -1022,6 +1241,7 @@ $days_on_market = $interval->days;
             </aside>
         </div>
     </section>
+</div><!-- /#page-content -->
 
     <!-- Image Lightbox -->
     <div class="lightbox-overlay" id="lightbox" onclick="closeLightbox(event)">
@@ -1089,6 +1309,9 @@ $days_on_market = $interval->days;
     </div>
 
     <?php include 'logout_agent_modal.php'; ?>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
 
     <!-- Update Price Modal -->
     <div class="modal fade modal-dark" id="updatePriceModal" tabindex="-1" aria-labelledby="updatePriceModalLabel" aria-hidden="true">
@@ -1275,5 +1498,107 @@ $days_on_market = $interval->days;
     </script>
     <!-- Modal logic (separated for performance) -->
     <script src="../script/agent_property_modals.js"></script>
+
+<script>
+// ===== TOAST =====
+function showToast(type, title, message, duration) {
+    duration = duration || 4500;
+    var container = document.getElementById('toastContainer');
+    var icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+    var toast = document.createElement('div');
+    toast.className = 'app-toast toast-' + type;
+    toast.innerHTML =
+        '<div class="app-toast-icon"><i class="bi ' + (icons[type] || icons.info) + '"></i></div>' +
+        '<div class="app-toast-body">' +
+            '<div class="app-toast-title">' + title + '</div>' +
+            '<div class="app-toast-msg">' + message + '</div>' +
+        '</div>' +
+        '<button class="app-toast-close" onclick="dismissToast(this.closest(&quot;.app-toast&quot;))">&times;</button>' +
+        '<div class="app-toast-progress" style="animation: toast-progress ' + duration + 'ms linear forwards;"></div>';
+    container.appendChild(toast);
+    var timer = setTimeout(function() { dismissToast(toast); }, duration);
+    toast._timer = timer;
+}
+function dismissToast(toast) {
+    if (!toast || toast._dismissed) return;
+    toast._dismissed = true;
+    clearTimeout(toast._timer);
+    toast.classList.add('toast-out');
+    setTimeout(function() { toast.remove(); }, 320);
+}
+</script>
+
+<!-- SKELETON HYDRATION — Progressive Content Reveal (Agent Portal) -->
+<script>
+(function () {
+    'use strict';
+    var MIN_SKELETON_MS = 400;
+    var skeletonStart   = Date.now();
+    function hydrate() {
+        var elapsed   = Date.now() - skeletonStart;
+        var remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
+        setTimeout(function () {
+            var sk = document.getElementById('sk-screen');
+            var pc = document.getElementById('page-content');
+            if (!sk || !pc) return;
+            pc.style.display    = 'block';
+            pc.style.opacity    = '0';
+            pc.style.transition = 'opacity 0.35s ease';
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    pc.style.opacity    = '1';
+                    sk.style.transition = 'opacity 0.25s ease';
+                    sk.style.opacity    = '0';
+                    setTimeout(function () {
+                        sk.style.display = 'none';
+                        document.dispatchEvent(new CustomEvent('skeleton:hydrated'));
+                    }, 260);
+                });
+            });
+        }, remaining);
+    }
+    if (document.readyState === 'complete') { hydrate(); }
+    else { window.addEventListener('load', hydrate); }
+}());
+</script>
+
+<!-- TOAST TRIGGERS — fire after real content is visible -->
+<script>
+document.addEventListener('skeleton:hydrated', function () {
+    var toastDelay = 0;
+    var TOAST_GAP  = 600;
+
+    <?php if (!empty($success_message)): ?>
+    setTimeout(function () {
+        showToast('success', 'Success', '<?= addslashes($success_message) ?>', 5500);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if (!empty($error_message)): ?>
+    setTimeout(function () {
+        showToast('error', 'Error', '<?= addslashes($error_message) ?>', 6000);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if ($property_data['approval_status'] === 'rejected'): ?>
+    // Listing was rejected — agent needs to fix and resubmit
+    setTimeout(function () {
+        showToast('error', 'Listing Rejected',
+            'This property was rejected. Review the details and resubmit for admin approval.', 7000);
+    }, toastDelay);
+    toastDelay += TOAST_GAP;
+    <?php endif; ?>
+
+    <?php if ($sale_status === 'Rejected'): ?>
+    // Sale verification rejected — needs resubmission
+    setTimeout(function () {
+        showToast('error', 'Sale Rejected',
+            'The sale verification for this property was rejected. Please resubmit with the correct documents.', 7000);
+    }, toastDelay);
+    <?php endif; ?>
+});
+</script>
 </body>
 </html>
