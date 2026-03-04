@@ -130,7 +130,7 @@ if ($result) {
         if (empty($row['action_url'])) {
             switch ($row['item_type']) {
                 case 'agent':       $row['action_url'] = 'review_agent_details.php?id=' . $row['item_id']; break;
-                case 'tour':        $row['action_url'] = 'admin_tour_request_details.php?id=' . $row['item_id']; break;
+                case 'tour':        $row['action_url'] = 'tour_requests.php'; break;
                 case 'property':    $row['action_url'] = 'view_property.php?id=' . $row['item_id']; break;
                 case 'property_sale': $row['action_url'] = 'admin_property_sale_approvals.php'; break;
                 default:            $row['action_url'] = '#'; break;
@@ -1591,6 +1591,11 @@ function notif_time_ago($datetime) {
             ajaxPost('mark_read=1&notification_id=' + id).then(d => { if (d.success) location.reload(); });
         }
 
+        function markAndGo(e, id, url) {
+            e.preventDefault();
+            ajaxPost('mark_read=1&notification_id=' + id).finally(() => { window.location.href = url; });
+        }
+
         // ── Mark-All-Read Modal ────────────────────────
         const _marBackdrop = document.getElementById('marBackdrop');
         const _marConfirm  = document.getElementById('marConfirmBtn');
@@ -1703,7 +1708,7 @@ function render_notification_item($n) {
     $html .= '    </div>';
     $html .= '  </div>';
     $html .= '  <div class="notif-item-actions">';
-    $html .= '    <a href="' . $action_url . '" class="notif-action-btn btn-view" title="View Details"><i class="bi bi-arrow-right"></i></a>';
+    $html .= '    <a href="' . $action_url . '" class="notif-action-btn btn-view" title="View" onclick="markAndGo(event,' . $nid . ',\'' . $action_url . '\')"><i class="bi bi-arrow-right"></i></a>';
     if ($is_unread) {
         $html .= '    <button class="notif-action-btn btn-check" onclick="markAsRead(' . $nid . ')" title="Mark as Read"><i class="bi bi-check-lg"></i></button>';
     }
