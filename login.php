@@ -12,11 +12,15 @@ require_once __DIR__ . '/config/paths.php';
 $error_message = '';
 $registration_notice = '';
 $profile_notice = '';
+$timeout_notice = '';
 if (isset($_GET['registered']) && $_GET['registered'] == '1') {
     $registration_notice = "Registration successful! Please log in with your credentials to complete your agent profile.";
 }
 if (isset($_GET['profile_submitted']) && $_GET['profile_submitted'] == '1') {
     $profile_notice = "Your profile has been submitted for review. Please wait for admin approval before logging in. Check your email for details.";
+}
+if (isset($_GET['timeout']) && $_GET['timeout'] == '1') {
+    $timeout_notice = "Your session has expired due to inactivity. Please log in again to continue.";
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -579,6 +583,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </div>
 <?php endif; ?>
 
+<?php if ($timeout_notice): ?>
+<div class="toast-container" <?php echo ($registration_notice || $profile_notice) ? 'style="top: 100px;"' : ''; ?>>
+    <div class="custom-toast" id="timeoutToast">
+        <div class="d-flex align-items-start gap-3">
+            <i class="fas fa-clock toast-icon mt-1"></i>
+            <div class="flex-grow-1">
+                <strong>Session Expired</strong> <?php echo htmlspecialchars($timeout_notice); ?>
+            </div>
+            <button type="button" class="btn-close ms-2" onclick="dismissToast('timeoutToast')" aria-label="Close"></button>
+        </div>
+        <div class="toast-progress"></div>
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="main-container">
     <div class="form-section">
         <div class="login-wrapper">
@@ -644,7 +663,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Auto-dismiss all toasts after 7 seconds
     (function() {
-        ['registrationToast', 'profileToast'].forEach(function(id) {
+        ['registrationToast', 'profileToast', 'timeoutToast'].forEach(function(id) {
             var toast = document.getElementById(id);
             if (toast) {
                 setTimeout(function() { dismissToast(id); }, 7000);
