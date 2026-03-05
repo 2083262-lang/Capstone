@@ -29,6 +29,7 @@
 7. [Pages With Pagination](#7-pages-with-pagination)
    - [Scenario A — Server-Side Pagination (Full Page Reload)](#scenario-a--server-side-pagination-full-page-reload)
    - [Scenario B — AJAX Pagination (Grid-Only Reload)](#scenario-b--ajax-pagination-grid-only-reload)
+   - [Scenario C — AJAX-First CSR (Client-Side Rendered Grid)](#scenario-c--ajax-first-csr-client-side-rendered-grid-with-server-rendered-shell)
 8. [Do's and Don'ts](#8-dos-and-donts)
 9. [Checklist](#9-checklist)
 10. [Troubleshooting](#10-troubleshooting)
@@ -975,7 +976,344 @@ User clicks page 2
 | **SEO** | ✅ Full page, crawlable | ❌ Dynamic — not crawlable without extra work |
 | **Recommendation** | **Use this by default** | Only use when avoiding full-reload is a strict UX requirement |
 
-> **Recommendation for this system:** Use **Scenario A** (server-side) for all admin pages. It's simpler, SEO-friendly, and the skeleton screen already makes it feel instant. Scenario B is only worth the complexity on very heavy pages where re-rendering the full page header/sidebar on every click is noticeably slow.
+> **Recommendation for this system:** Use **Scenario A** (server-side) for all admin pages. It's simpler, SEO-friendly, and the skeleton screen already makes it feel instant. Scenario B is only worth the complexity on very heavy pages where re-rendering the full page header/sidebar on every click is noticeably slow. For **public-facing pages with complex filters and large datasets** (150+ records), use **Scenario C** below.
+
+---
+
+### Scenario C — AJAX-First CSR (Client-Side Rendered Grid with Server-Rendered Shell)
+
+**What happens:** The server renders only the page shell (navbar, filter drawer, skeleton placeholder) — no property data at all. The results grid is **always** loaded via AJAX (`?partial=grid`). Every interaction (pagination, filter change, search) triggers an AJAX fetch that replaces the grid area.
+
+This is the best pattern for pages that:
+- Have many interactive filters that must not trigger full page reloads
+- Will scale to 150–300+ records with pagination
+- Need instant filter response (debounced search, price sliders, dropdowns)
+- Require smooth transitions between data states
+
+---
+
+#### Architecture
+
+```
+┌──────────────────────────────────────────────────────┐
+│  FULL PAGE (server-rendered once)                    │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  navbar.php (static)                           │  │
+│  ├────────────────────────────────────────────────┤  │
+│  │  Filter Drawer (server-rendered, always stays) │  │
+│  ├────────────────────────────────────────────────┤  │
+│  │  Active Filter Chips (JS-managed)              │  │
+│  ├────────────────────────────────────────────────┤  │
+│  │  #resultsArea ← AJAX replaces this content     │  │
+│  │  ┌──────────────────────────────────────────┐  │  │
+│  │  │  Results Header + Filter Button          │  │  │
+│  │  │  Properties Grid (cards)                 │  │  │
+│  │  │  Pagination Bar                          │  │  │
+│  │  └──────────────────────────────────────────┘  │  │
+│  └────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────┘
+```
+
+```
+Initial page load
+      │
+      ├── Server renders page shell + skeleton placeholder in #resultsArea
+      ├── Browser paints skeleton immediately (shimmer visible)
+      ├── Inline JS runs → calls updateResults() which fires fetch(?partial=grid)
+      ├── PHP backend runs prepared-statement query → returns HTML fragment
+      ├── JS fades skeleton out (0.15s) → swaps innerHTML → fades new content in (0.3s)
+      └── User sees real property cards with smooth transition
+```
+
+```
+User changes filter / clicks page 2
+      │
+      ├── AbortController cancels any in-flight request
+      ├── #resultsArea dims to 40% opacity (CSS transition)
+      ├── Height locked (min-height) to prevent scroll jump
+      ├── fetch(?partial=grid&city=X&page=2) fires
+      ├── PHP returns new HTML fragment
+      ├── #resultsArea fades to 0% → innerHTML swapped → fades to 100%
+      ├── Height lock released after transition
+      └── URL bar updated via history.replaceState (no page reload)
+```
+
+---
+
+#### PHP Backend — Prepared Statements + Separate COUNT/SELECT
+
+```php
+// Build WHERE clause with parameter binding
+$where  = "p.approval_status = 'approved' AND p.Status NOT IN ('Sold','Pending Sold')";
+$params = [];
+$types  = '';
+
+if ($city) {
+    $where .= " AND p.City = ?";
+    $params[] = $city;
+    $types .= 's';
+}
+// ... repeat for each filter ...
+
+// For "posted by" filter: use EXISTS subquery instead of JOIN
+if ($posted_by > 0) {
+    $where .= " AND EXISTS (SELECT 1 FROM property_log pl
+                WHERE pl.property_id = p.property_ID
+                AND pl.action = 'CREATED' AND pl.account_id = ?)";
+    $params[] = $posted_by;
+    $types .= 'i';
+}
+
+// COUNT query — clean, no regex hack
+$count_stmt = $conn->prepare("SELECT COUNT(*) AS total FROM property p WHERE $where");
+if ($types) $count_stmt->bind_param($types, ...$params);
+$count_stmt->execute();
+$total = (int)$count_stmt->get_result()->fetch_assoc()['total'];
+$count_stmt->close();
+
+// SELECT query — uses same WHERE, adds ORDER BY + LIMIT/OFFSET
+$stmt = $conn->prepare("SELECT ... FROM property p WHERE $where ORDER BY ... LIMIT ? OFFSET ?");
+$stmt->bind_param($types . 'ii', ...array_merge($params, [$per_page, $offset]));
+$stmt->execute();
+$properties = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+```
+
+**Key improvements over Scenario B:**
+- No regex to strip ORDER BY from the query for counting
+- Prepared statements prevent SQL injection and enable query plan caching
+- EXISTS subquery avoids JOINing `property_log` on every request
+- Correlated image subquery only runs for the 24 rows returned by LIMIT (not all rows)
+
+---
+
+#### CSS — Loading Transitions
+
+```css
+/* Results area needs transition support */
+#resultsArea {
+    transition: opacity 0.25s ease-out;
+    min-height: 500px;  /* Prevents collapse during content swap */
+}
+```
+
+No separate overlay div needed. The entire `#resultsArea` handles its own opacity transition.
+
+---
+
+#### HTML — Pixel-Perfect Skeleton
+
+The skeleton must use the **exact same CSS class names** as real cards to inherit identical dimensions. This eliminates layout shift entirely.
+
+```html
+<div id="resultsArea">
+    <!-- Skeleton uses real card classes for zero layout shift -->
+    <div class="results-header">
+        <div class="results-count">
+            <span class="sk-text sk-shimmer" style="width:160px;height:20px;display:inline-block"></span>
+        </div>
+        <div class="results-actions">
+            <span class="sk-text sk-shimmer" style="width:120px;height:48px;display:inline-block;border-radius:8px"></span>
+        </div>
+    </div>
+    <div class="properties-grid">
+        <!-- Repeat 6 cards (fills viewport on most screens) -->
+        <div class="property-card sk-card">
+            <!-- Uses .property-image-container (height:220px from CSS) -->
+            <div class="property-image-container sk-shimmer"></div>
+            <!-- Uses .property-body (padding:18px 20px 20px from CSS) -->
+            <div class="property-body">
+                <div class="sk-text sk-shimmer" style="width:50%;height:28px;margin-bottom:8px"></div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">
+                    <div class="sk-text sk-shimmer" style="width:12px;height:12px;border-radius:50%"></div>
+                    <div class="sk-text sk-shimmer" style="width:75%;height:14px"></div>
+                </div>
+                <div style="display:flex;gap:14px;margin-bottom:14px">
+                    <div class="sk-text sk-shimmer" style="width:65px;height:14px"></div>
+                    <div class="sk-text sk-shimmer" style="width:65px;height:14px"></div>
+                    <div class="sk-text sk-shimmer" style="width:75px;height:14px"></div>
+                </div>
+                <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:14px;display:flex;justify-content:space-between">
+                    <div class="sk-text sk-shimmer" style="width:100px;height:12px"></div>
+                    <div class="sk-text sk-shimmer" style="width:90px;height:12px"></div>
+                </div>
+            </div>
+        </div>
+        <!-- ...repeat 5 more times... -->
+    </div>
+    <!-- Pagination skeleton -->
+    <div class="sr-pagination">
+        <div class="sk-text sk-shimmer" style="width:40px;height:40px;border-radius:8px"></div>
+        <!-- ...repeat 4 more... -->
+    </div>
+</div>
+```
+
+**Critical rule for sk-card:** Override `content-visibility`:
+```css
+.sk-card {
+    pointer-events: none;
+    content-visibility: visible !important; /* Prevent browser from skipping skeleton rendering */
+}
+```
+
+---
+
+#### JS — AJAX with AbortController + Smooth Transitions
+
+```javascript
+(function() {
+    'use strict';
+
+    var _abortCtrl = null;
+    var _firstLoad = true;
+
+    function updateResults(page) {
+        var pg = (typeof page === 'number') ? page : 1;
+
+        // Cancel any in-flight request (prevents race conditions)
+        if (_abortCtrl) _abortCtrl.abort();
+        _abortCtrl = new AbortController();
+
+        var area = document.getElementById('resultsArea');
+        var qs = buildQuery(pg);
+
+        // Update URL bar without page reload
+        var display = new URLSearchParams(qs);
+        display.delete('partial');
+        history.replaceState(null, '', location.pathname + '?' + display.toString());
+
+        // Loading state: dim current content (skip on first load — skeleton is the indicator)
+        if (!_firstLoad) {
+            area.style.opacity = '0.4';
+            area.style.pointerEvents = 'none';
+        }
+
+        // Lock height to prevent scroll jump during content swap
+        area.style.minHeight = area.offsetHeight + 'px';
+
+        fetch('search_results.php?' + qs, { signal: _abortCtrl.signal })
+            .then(function(res) { return res.text(); })
+            .then(function(html) {
+                // Phase 1: fade to invisible
+                area.style.transition = 'opacity 0.15s ease';
+                area.style.opacity = '0';
+
+                setTimeout(function() {
+                    // Phase 2: swap content while invisible
+                    area.innerHTML = html;
+
+                    // Phase 3: fade in new content
+                    area.style.transition = 'opacity 0.3s ease';
+                    void area.offsetHeight; // Force reflow for transition reset
+                    area.style.opacity = '1';
+                    area.style.pointerEvents = '';
+
+                    // Release height lock after transition completes
+                    setTimeout(function() { area.style.minHeight = ''; }, 350);
+
+                    _firstLoad = false;
+                }, _firstLoad ? 60 : 150);
+            })
+            .catch(function(e) {
+                if (e.name === 'AbortError') return; // Intentional — ignore
+                area.style.opacity = '1';
+                area.style.pointerEvents = '';
+                area.style.minHeight = '';
+            });
+    }
+
+    // Use event delegation for dynamically-loaded pagination buttons
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.sr-page-btn[data-page]');
+        if (btn && !btn.disabled) {
+            e.preventDefault();
+            goToPage(parseInt(btn.dataset.page));
+        }
+    });
+
+    // Initial load — replaces skeleton with real data
+    updateResults(1);
+})();
+```
+
+---
+
+#### Pagination Buttons — Data Attributes Instead of Inline Handlers
+
+Since pagination HTML is dynamically generated by the AJAX response, avoid inline `onclick` handlers. Use `data-page` attributes with event delegation:
+
+```html
+<!-- PHP partial render outputs: -->
+<button class="sr-page-btn" data-page="2">2</button>
+<button class="sr-page-btn sr-page-active" data-page="3">3</button>
+<button class="sr-page-btn" data-page="4">4</button>
+```
+
+```javascript
+// Single delegated listener handles all pagination clicks (including future AJAX-loaded buttons)
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.sr-page-btn[data-page]');
+    if (btn && !btn.disabled) {
+        e.preventDefault();
+        goToPage(parseInt(btn.dataset.page));
+    }
+});
+```
+
+---
+
+#### When to use Scenario C vs A/B
+
+| | Scenario A | Scenario B | **Scenario C** |
+|---|---|---|---|
+| **Best for** | Most admin pages | Heavy JS pages with existing AJAX | **Public search/listing pages with many filters** |
+| **Data loading** | Server-side (full page) | AJAX partial (grid only) | **AJAX-first (grid always loaded via fetch)** |
+| **Initial skeleton** | Full `#sk-screen` / `#page-content` | Full `#sk-screen` + partial overlay | **Inline skeleton in `#resultsArea` replaced by fetch** |
+| **Filter drawer** | N/A or full-page form | N/A | **Server-rendered, stays in DOM** |
+| **Page transitions** | Full page reload + skeleton | Grid overlay shimmer | **Opacity fade (dim → invisible → swap → fade in)** |
+| **Request cancellation** | N/A | None | **AbortController cancels stale requests** |
+| **Layout shift** | Skeleton → real (possible shift) | Overlay hides shift | **Zero shift (same CSS classes)** |
+| **Scalability** | Good | Good | **Excellent (150–300+ records, SQL prepared statements)** |
+| **Complexity** | Simple | Medium | **Medium-High** |
+
+> **Use Scenario C** for any page where:
+> - Multiple interactive filters change results without page reload
+> - Dataset will grow to 100+ records with pagination
+> - Users expect instant filter response (search-as-you-type, price sliders)
+> - The page shell (drawer, navbar) must stay stable while data changes
+
+---
+
+#### Scenario C Checklist
+
+- [ ] **PHP** — Prepared statements with `bind_param()` for all user input
+- [ ] **PHP** — Separate COUNT and SELECT queries (no regex to strip ORDER BY)
+- [ ] **PHP** — `exit;` after rendering partial to prevent full-page HTML leaking
+- [ ] **PHP** — Category values whitelisted (`in_array` check)
+- [ ] **HTML** — Skeleton cards use identical CSS classes as real cards (`.property-card`, `.property-body`, etc.)
+- [ ] **CSS** — `.sk-card { content-visibility: visible !important; }` to prevent skip-rendering
+- [ ] **CSS** — `#resultsArea { transition: opacity 0.25s ease-out; min-height: 500px; }`
+- [ ] **JS** — `AbortController` cancels previous fetch on every new request
+- [ ] **JS** — Height locked before content swap (`area.style.minHeight = area.offsetHeight + 'px'`)
+- [ ] **JS** — Height released after transition (`setTimeout → area.style.minHeight = ''`)
+- [ ] **JS** — Opacity transition: dim → 0 → swap → 1 (three-phase)
+- [ ] **JS** — `void area.offsetHeight` forces reflow before fade-in transition
+- [ ] **JS** — Event delegation for pagination buttons (`data-page` attribute)
+- [ ] **JS** — Event delegation for filter toggle button in AJAX-loaded header
+- [ ] **JS** — `history.replaceState` updates URL without page reload
+- [ ] **JS** — Debounced search input (400ms) and price slider (250ms)
+- [ ] **Images** — `loading="lazy"` + `decoding="async"` + `width`/`height` attributes
+- [ ] **Test** — Rapid filter changes: only the last request completes (AbortController)
+- [ ] **Test** — No scroll jump during pagination (height locking)
+- [ ] **Test** — Skeleton → real data transition is smooth (no flash)
+- [ ] **Test** — Filter chips update correctly after AJAX swap
+- [ ] **Test** — URL bar reflects current filters and page number
+- [ ] **Test** — Network error: page remains usable (catch block restores opacity)
+
+---
+
+*Reference implementation: [`user_pages/search_results.php`](../user_pages/search_results.php)*
 
 ---
 
