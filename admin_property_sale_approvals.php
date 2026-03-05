@@ -1331,6 +1331,60 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             white-space: nowrap;
         }
 
+        /* Commission table search bar */
+        .cm-search-bar {
+            position: relative;
+            margin-bottom: 0.85rem;
+            display: flex;
+            align-items: center;
+        }
+        .cm-search-icon {
+            position: absolute;
+            left: 0.85rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+        .cm-search-bar input {
+            width: 100%;
+            padding: 0.6rem 2.5rem 0.6rem 2.25rem;
+            border: 1px solid rgba(34,197,94,0.18);
+            border-radius: 4px;
+            font-size: 0.83rem;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            background: var(--card-bg);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .cm-search-bar input:focus {
+            outline: none;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34,197,94,0.08);
+        }
+        .cm-search-bar input::placeholder { color: rgba(0,0,0,0.28); }
+        .cm-search-clear {
+            position: absolute;
+            right: 0.75rem;
+            background: rgba(0,0,0,0.06);
+            border: none;
+            border-radius: 50%;
+            width: 20px; height: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            line-height: 1;
+            transition: background 0.15s;
+        }
+        .cm-search-clear:hover { background: rgba(220,38,38,0.1); color: #dc2626; }
+        .cm-no-results {
+            padding: 2rem;
+            text-align: center;
+            font-size: 0.83rem;
+            color: var(--text-secondary);
+        }
+        .cm-no-results i { font-size: 1.5rem; display: block; margin-bottom: 0.4rem; opacity: 0.4; }
+
         /* Commission table toggle */
         .cm-toggle-row {
             display: flex;
@@ -2621,6 +2675,13 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                 </div>
             </div>
 
+            <!-- Commission Section Search -->
+            <div class="cm-search-bar">
+                <i class="bi bi-search cm-search-icon"></i>
+                <input type="text" id="cmSearchInput" placeholder="Search by property, agent, city or reference…" autocomplete="off" oninput="cmSearch()">
+                <button type="button" class="cm-search-clear" id="cmSearchClear" onclick="cmClearSearch()" title="Clear search" style="display:none;">&times;</button>
+            </div>
+
             <!-- Toggle: Awaiting / Paid -->
             <div class="cm-toggle-row">
                 <button class="cm-toggle-btn active" data-cm-tab="awaiting" onclick="cmToggleTab('awaiting')">
@@ -3117,6 +3178,8 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                         <div class="filter-chip active" data-commission-status="all">All</div>
                         <div class="filter-chip" data-commission-status="needs_finalization"><i class="bi bi-exclamation-circle me-1 text-warning"></i>Needs Finalization</div>
                         <div class="filter-chip" data-commission-status="finalized"><i class="bi bi-check-circle me-1" style="color:#16a34a"></i>Finalized</div>
+                        <div class="filter-chip" data-commission-status="awaiting_payment"><i class="bi bi-hourglass-split me-1" style="color:#d97706"></i>Awaiting Payment</div>
+                        <div class="filter-chip" data-commission-status="paid"><i class="bi bi-check2-all me-1" style="color:#16a34a"></i>Paid</div>
                     </div>
                 </div>
 
@@ -3513,7 +3576,9 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             if (sf.priceMax < (sf._maxPrice || 999999999) && price > sf.priceMax) return false;
             if (sf._typeFilterActive && !sf.typeFilter.has(s.PropertyType)) return false;
             if (sf.commissionStatus === 'needs_finalization' && !(s.status === 'Approved' && !s.commission_amount)) return false;
-            if (sf.commissionStatus === 'finalized' && !s.commission_amount) return false;
+            if (sf.commissionStatus === 'finalized'        && !s.commission_amount) return false;
+            if (sf.commissionStatus === 'awaiting_payment' && !(s.status === 'Approved' && s.commission_amount && !['paid'].includes(s.commission_status))) return false;
+            if (sf.commissionStatus === 'paid'             && !(s.status === 'Approved' && s.commission_status === 'paid')) return false;
             if (sf.saleDateFrom && s.sale_date && s.sale_date < sf.saleDateFrom) return false;
             if (sf.saleDateTo   && s.sale_date && s.sale_date > sf.saleDateTo)   return false;
             if (sf.city  && s.City !== sf.city) return false;
@@ -3583,6 +3648,8 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         document.getElementById('sfCitySelect')  && (document.getElementById('sfCitySelect').value = '');
         document.getElementById('sfAgentSelect') && (document.getElementById('sfAgentSelect').value = '');
         document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+        // Also clear commission section search
+        cmClearSearch();
         sfApply();
     }
 
@@ -4158,6 +4225,61 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         document.querySelector(`.cm-toggle-btn[data-cm-tab="${tab}"]`).classList.add('active');
         document.getElementById('cmTableAwaiting').style.display = tab === 'awaiting' ? '' : 'none';
         document.getElementById('cmTablePaid').style.display = tab === 'paid' ? '' : 'none';
+        // Re-apply search when switching tabs
+        cmSearch();
+    }
+
+    function cmSearch() {
+        const input = document.getElementById('cmSearchInput');
+        const clearBtn = document.getElementById('cmSearchClear');
+        const q = (input ? input.value : '').toLowerCase().trim();
+        if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
+
+        // Determine which table is visible
+        const activeTab = document.querySelector('.cm-toggle-btn.active')?.dataset.cmTab || 'awaiting';
+        const tableId = activeTab === 'paid' ? 'cmTablePaid' : 'cmTableAwaiting';
+        const tableWrap = document.getElementById(tableId);
+        if (!tableWrap) return;
+
+        const rows = tableWrap.querySelectorAll('tbody tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            if (!q) {
+                row.style.display = '';
+                visibleCount++;
+                return;
+            }
+            // Search across all text content in the row
+            const rowText = row.innerText.toLowerCase();
+            const match = rowText.includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+
+        // Show/hide no-results message
+        let noRes = tableWrap.querySelector('.cm-no-results');
+        if (rows.length > 0 && visibleCount === 0 && q) {
+            if (!noRes) {
+                noRes = document.createElement('div');
+                noRes.className = 'cm-no-results';
+                noRes.innerHTML = `<i class="bi bi-search"></i>No commissions match <strong>&ldquo;${esc(input.value)}&rdquo;</strong>. <a href="#" onclick="cmClearSearch();return false;" style="color:#16a34a;font-weight:600;">Clear search</a>`;
+                tableWrap.appendChild(noRes);
+            } else {
+                noRes.innerHTML = `<i class="bi bi-search"></i>No commissions match <strong>&ldquo;${esc(input.value)}&rdquo;</strong>. <a href="#" onclick="cmClearSearch();return false;" style="color:#16a34a;font-weight:600;">Clear search</a>`;
+                noRes.style.display = '';
+            }
+        } else if (noRes) {
+            noRes.style.display = 'none';
+        }
+    }
+
+    function cmClearSearch() {
+        const input = document.getElementById('cmSearchInput');
+        if (input) input.value = '';
+        const clearBtn = document.getElementById('cmSearchClear');
+        if (clearBtn) clearBtn.style.display = 'none';
+        cmSearch();
     }
 
     function cmProcessPayment(verificationId) {
