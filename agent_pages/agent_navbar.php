@@ -856,10 +856,19 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
 
     // Auto-poll badge every 30 seconds
     function pollBadge() {
-        fetch(API_URL + '?action=fetch')
-            .then(r => r.json())
+        fetch(API_URL + '?action=fetch', {
+            headers: { 'X-Background-Poll': '1' }
+        })
+            .then(r => {
+                // If session expired, redirect to login
+                if (r.status === 401) {
+                    window.location.href = '../login.php?timeout=1';
+                    return null;
+                }
+                return r.json();
+            })
             .then(data => {
-                if (!data.success) return;
+                if (!data || !data.success) return;
                 if (data.unread > 0) {
                     badge.textContent = data.unread > 99 ? '99+' : data.unread;
                     badge.classList.add('has-unread');

@@ -56,6 +56,37 @@ define('SESSION_TIMEOUT_FLAG_KEY', 'session_timed_out');
 // TIMEOUT LOGIC
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Detect if the current request is an automated background poll (e.g. notification
+ * badge check). These requests should NOT reset the last-activity timestamp,
+ * otherwise the session will never expire while the browser tab stays open.
+ *
+ * A request is considered a background poll when EITHER:
+ *   1. It sends the custom header  X-Background-Poll: 1
+ *   2. It is an XMLHttpRequest / fetch to the agent_notifications_api with
+ *      action=fetch (the navbar badge poll).
+ */
+$_isBackgroundPoll = false;
+
+// Check for explicit header sent by polling JS
+if (
+    (isset($_SERVER['HTTP_X_BACKGROUND_POLL']) && $_SERVER['HTTP_X_BACKGROUND_POLL'] == '1')
+) {
+    $_isBackgroundPoll = true;
+}
+
+// Auto-detect the agent notification badge poll
+if (
+    !$_isBackgroundPoll
+    && isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+    && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
+    && isset($_GET['action'])
+    && $_GET['action'] === 'fetch'
+    && strpos(($_SERVER['SCRIPT_NAME'] ?? ''), 'notifications_api') !== false
+) {
+    $_isBackgroundPoll = true;
+}
+
 // Only process if timeout is enabled and user is authenticated
 if (SESSION_TIMEOUT_ENABLED && isset($_SESSION['account_id'])) {
     
@@ -72,6 +103,20 @@ if (SESSION_TIMEOUT_ENABLED && isset($_SESSION['account_id'])) {
             // ─────────────────────────────────────────────────────────────────
             // SESSION EXPIRED - Perform logout
             // ─────────────────────────────────────────────────────────────────
+
+            // For background polls, return a JSON 401 instead of redirecting
+            if ($_isBackgroundPoll) {
+                $_SESSION = array();
+                if (ini_get("session.use_cookies")) {
+                    $params = session_get_cookie_params();
+                    setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+                }
+                session_destroy();
+                header('Content-Type: application/json');
+                http_response_code(401);
+                echo json_encode(['error' => 'session_expired', 'message' => 'Your session has expired.']);
+                exit();
+            }
             
             // Store role for redirect logic before clearing session
             $user_role = $_SESSION['user_role'] ?? '';
@@ -122,9 +167,11 @@ if (SESSION_TIMEOUT_ENABLED && isset($_SESSION['account_id'])) {
     // ─────────────────────────────────────────────────────────────────────────
     // UPDATE LAST ACTIVITY TIMESTAMP
     // ─────────────────────────────────────────────────────────────────────────
-    // This runs on every page load for authenticated users, 
-    // keeping the session alive as long as they are active.
-    $_SESSION[SESSION_LAST_ACTIVITY_KEY] = $current_time;
+    // Only update for real user-initiated requests, NOT background polls.
+    // This ensures automated AJAX polling does not keep the session alive.
+    if (!$_isBackgroundPoll) {
+        $_SESSION[SESSION_LAST_ACTIVITY_KEY] = $current_time;
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
