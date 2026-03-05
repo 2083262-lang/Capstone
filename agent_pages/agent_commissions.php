@@ -31,6 +31,9 @@ $sql = "
         ac.commission_id, ac.sale_id, ac.agent_id,
         ac.commission_amount, ac.commission_percentage, ac.status,
         ac.calculated_at, ac.paid_at, ac.payment_reference, ac.created_at,
+        ac.payment_method, ac.payment_proof_path, ac.payment_proof_original_name,
+        ac.payment_notes, ac.paid_by,
+        pb.first_name AS paid_by_first, pb.last_name AS paid_by_last,
         fs.property_id, fs.final_sale_price, fs.sale_date,
         fs.buyer_name, fs.buyer_email,
         fs.additional_notes, fs.finalized_at,
@@ -39,6 +42,7 @@ $sql = "
     FROM agent_commissions ac
     JOIN finalized_sales fs ON fs.sale_id = ac.sale_id
     LEFT JOIN property p ON p.property_ID = fs.property_id
+    LEFT JOIN accounts pb ON pb.account_id = ac.paid_by
     WHERE ac.agent_id = ?
     ORDER BY ac.created_at DESC
 ";
@@ -1287,6 +1291,12 @@ $conn->close();
                             <td>
                                 <?php if ($r['paid_at']): ?>
                                 <div class="date-primary"><?php echo date('M j, Y', strtotime($r['paid_at'])); ?></div>
+                                <?php if ($r['payment_method']): ?>
+                                <div class="date-secondary"><?php 
+                                    $methodLabels = ['bank_transfer'=>'Bank Transfer','gcash'=>'GCash','maya'=>'Maya','cash'=>'Cash','check'=>'Check','other'=>'Other'];
+                                    echo htmlspecialchars($methodLabels[$r['payment_method']] ?? ucfirst($r['payment_method'])); 
+                                ?></div>
+                                <?php endif; ?>
                                 <?php else: ?>
                                 <span style="color:var(--gray-600);">—</span>
                                 <?php endif; ?>
@@ -1294,6 +1304,9 @@ $conn->close();
                             <td>
                                 <?php if (!empty($r['payment_reference'])): ?>
                                 <span class="payment-ref"><?php echo htmlspecialchars($r['payment_reference']); ?></span>
+                                <?php if ($r['payment_proof_path']): ?>
+                                <div style="margin-top:3px;"><a href="../download_commission_proof.php?id=<?php echo (int)$r['commission_id']; ?>" class="payment-ref" style="color:var(--accent);font-size:0.72rem;text-decoration:none;display:inline-flex;align-items:center;gap:3px;" title="Download proof"><i class="fas fa-download" style="font-size:0.6rem;"></i> Proof</a></div>
+                                <?php endif; ?>
                                 <?php else: ?>
                                 <span style="color:var(--gray-600);">—</span>
                                 <?php endif; ?>
@@ -1333,6 +1346,7 @@ $conn->close();
     <script>
     // Commission data for modal
     const commissions = <?php echo json_encode(array_map(function($r) {
+        $methodLabels = ['bank_transfer'=>'Bank Transfer','gcash'=>'GCash','maya'=>'Maya','cash'=>'Cash','check'=>'Check','other'=>'Other'];
         return [
             'property'   => trim(($r['StreetAddress'] ?? '') . ', ' . ($r['City'] ?? '')),
             'state'      => $r['Province'] ?? '',
@@ -1351,6 +1365,11 @@ $conn->close();
             'calculatedAt' => $r['calculated_at'] ? date('M j, Y g:i A', strtotime($r['calculated_at'])) : '—',
             'paidAt'     => $r['paid_at'] ? date('M j, Y g:i A', strtotime($r['paid_at'])) : null,
             'reference'  => $r['payment_reference'] ?? null,
+            'paymentMethod' => $r['payment_method'] ? ($methodLabels[$r['payment_method']] ?? ucfirst($r['payment_method'])) : null,
+            'paymentNotes'  => $r['payment_notes'] ?? null,
+            'hasProof'   => !empty($r['payment_proof_path']),
+            'commissionId' => (int)$r['commission_id'],
+            'paidBy'     => ($r['paid_by_first'] && $r['paid_by_last']) ? trim($r['paid_by_first'] . ' ' . $r['paid_by_last']) : null,
             'notes'      => $r['additional_notes'] ?? null,
         ];
     }, $rows)); ?>;
@@ -1391,9 +1410,13 @@ $conn->close();
         html += detailRow('Commission Rate', c.rate + '%');
         html += detailRow('Status', c.status);
         html += detailRow('Calculated At', c.calculatedAt);
-        if (c.paidAt) html += detailRow('Paid At', c.paidAt);
-        if (c.reference) html += detailRow('Payment Reference', `<span class="payment-ref">${c.reference}</span>`);
-        if (c.notes) html += detailRow('Notes', c.notes);
+        if (c.paidAt) html += detailRow('Paid At', `<span style="color:var(--success);font-weight:600;">${c.paidAt}</span>`);
+        if (c.paymentMethod) html += detailRow('Payment Method', c.paymentMethod);
+        if (c.reference) html += detailRow('Transaction Reference', `<span class="payment-ref">${c.reference}</span>`);
+        if (c.paidBy) html += detailRow('Paid By', c.paidBy);
+        if (c.hasProof) html += detailRow('Payment Proof', `<a href="../download_commission_proof.php?id=${c.commissionId}" style="color:var(--blue-light);text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-download" style="font-size:0.75rem;"></i> Download Proof</a>`);
+        if (c.paymentNotes) html += detailRow('Payment Notes', c.paymentNotes);
+        if (c.notes) html += detailRow('Sale Notes', c.notes);
 
         // Commission highlight
         html += `<div class="commission-highlight">

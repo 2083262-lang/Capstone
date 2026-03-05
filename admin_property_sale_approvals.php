@@ -191,9 +191,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'rejec
 // ===== SUCCESS MESSAGES =====
 if (isset($_GET['success'])) {
     switch ($_GET['success']) {
-        case 'approved':  $success_message = 'Sale verification approved! Property marked as SOLD.'; break;
-        case 'rejected':  $success_message = 'Sale verification rejected successfully.'; break;
-        case 'finalized': $success_message = 'Sale finalized and commission calculated.'; break;
+        case 'approved':        $success_message = 'Sale verification approved! Property marked as SOLD.'; break;
+        case 'rejected':        $success_message = 'Sale verification rejected successfully.'; break;
+        case 'finalized':       $success_message = 'Sale finalized and commission calculated.'; break;
+        case 'payment_processed': $success_message = 'Commission payment has been processed and marked as paid.'; break;
     }
 }
 
@@ -277,12 +278,17 @@ $sql = "
          FROM sale_verification_documents svd WHERE svd.verification_id = sv.verification_id) as documents_json,
         fs.sale_id AS finalized_sale_id,
         fs.buyer_email AS finalized_buyer_email,
-        ac.commission_amount, ac.commission_percentage, ac.status AS commission_status
+        ac.commission_id, ac.commission_amount, ac.commission_percentage, ac.status AS commission_status,
+        ac.paid_at AS commission_paid_at, ac.paid_by AS commission_paid_by,
+        ac.payment_method AS commission_payment_method, ac.payment_reference AS commission_payment_ref,
+        ac.payment_proof_path AS commission_proof_path, ac.payment_notes AS commission_payment_notes,
+        pb.first_name AS paid_by_first, pb.last_name AS paid_by_last
     FROM sale_verifications sv
     LEFT JOIN property p ON p.property_ID = sv.property_id
     LEFT JOIN accounts a ON a.account_id = sv.agent_id
     LEFT JOIN finalized_sales fs ON fs.verification_id = sv.verification_id
     LEFT JOIN agent_commissions ac ON ac.sale_id = fs.sale_id
+    LEFT JOIN accounts pb ON pb.account_id = ac.paid_by
     ORDER BY
         CASE sv.status WHEN 'Pending' THEN 1 WHEN 'Approved' THEN 2 WHEN 'Rejected' THEN 3 ELSE 4 END,
         sv.submitted_at DESC";
@@ -319,6 +325,25 @@ while ($row = $res->fetch_assoc()) {
     $sale_verifications[] = $row;
 }
 $stmt->close();
+
+// ===== COMMISSION MANAGEMENT DATA =====
+$commissions_for_management = array_filter($sale_verifications, function($s) {
+    return $s['status'] === 'Approved'
+        && !empty($s['commission_amount'])
+        && ($s['commission_status'] ?? '') !== 'paid';
+});
+$commissions_paid = array_filter($sale_verifications, function($s) {
+    return $s['status'] === 'Approved'
+        && !empty($s['commission_amount'])
+        && ($s['commission_status'] ?? '') === 'paid';
+});
+$commission_stats = [
+    'total_finalized' => count(array_filter($sale_verifications, fn($s) => $s['status'] === 'Approved' && !empty($s['commission_amount']))),
+    'awaiting'        => count($commissions_for_management),
+    'paid'            => count($commissions_paid),
+    'total_unpaid_amount' => array_sum(array_map(fn($s) => (float)($s['commission_amount'] ?? 0), array_values($commissions_for_management))),
+    'total_paid_amount'   => array_sum(array_map(fn($s) => (float)($s['commission_amount'] ?? 0), array_values($commissions_paid))),
+];
 
 // Status tabs config
 $status_tabs = [
@@ -975,6 +1000,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
         .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
         .app-toast.toast-warning::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-money::before   { background: linear-gradient(180deg, #22c55e, #16a34a); }
         .app-toast-icon {
             width: 36px; height: 36px;
             border-radius: 8px;
@@ -986,6 +1012,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .toast-error   .app-toast-icon { background: rgba(239,68,68,0.1);   color: #ef4444; }
         .toast-info    .app-toast-icon { background: rgba(37,99,235,0.1);   color: #2563eb; }
         .toast-warning .app-toast-icon { background: rgba(212,175,55,0.12); color: #d4af37; }
+        .toast-money   .app-toast-icon { background: rgba(34,197,94,0.12);  color: #22c55e; }
         .app-toast-body { flex: 1; min-width: 0; }
         .app-toast-title {
             font-size: 0.82rem;
@@ -1017,6 +1044,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
         .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
         .toast-warning .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-money   .app-toast-progress { background: linear-gradient(90deg, #22c55e, #16a34a); }
         @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
 
         /* ===== RESPONSIVE ===== */
@@ -1041,6 +1069,319 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             .page-header h1 { font-size: 1.15rem; }
             .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
             .sale-tabs .nav-link { padding: 0.6rem 0.7rem; font-size: 0.75rem; }
+        }
+
+        /* ===== COMMISSION MANAGEMENT SECTION (cm-) ===== */
+        .cm-section {
+            margin-top: 2.5rem;
+            margin-bottom: 2rem;
+        }
+        .cm-section-header {
+            background: var(--card-bg);
+            border: 1px solid rgba(34,197,94,0.15);
+            border-radius: 4px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .cm-section-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at top right, rgba(34,197,94,0.04) 0%, transparent 50%),
+                        radial-gradient(ellipse at bottom left, rgba(22,163,74,0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .cm-section-header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #22c55e, #16a34a, transparent);
+        }
+        .cm-header-inner {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .cm-header-left h2 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cm-header-left h2 i { color: #22c55e; }
+        .cm-header-left .cm-subtitle {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+        .cm-kpi-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .cm-kpi {
+            background: rgba(34,197,94,0.06);
+            border: 1px solid rgba(34,197,94,0.12);
+            border-radius: 4px;
+            padding: 0.6rem 1rem;
+            text-align: center;
+            min-width: 110px;
+        }
+        .cm-kpi-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+        .cm-kpi-value {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        .cm-kpi-value.money { color: #16a34a; }
+
+        /* Commission Table */
+        .cm-table-wrap {
+            background: var(--card-bg);
+            border: 1px solid rgba(34,197,94,0.12);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .cm-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .cm-table thead th {
+            background: rgba(34,197,94,0.05);
+            padding: 0.85rem 1rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(34,197,94,0.12);
+            white-space: nowrap;
+        }
+        .cm-table tbody tr {
+            transition: background 0.15s ease;
+        }
+        .cm-table tbody tr:hover {
+            background: rgba(34,197,94,0.03);
+        }
+        .cm-table tbody td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+        }
+        .cm-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .cm-agent-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cm-agent-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: rgba(34,197,94,0.1);
+            color: #16a34a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .cm-agent-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.82rem;
+        }
+        .cm-prop-cell {
+            max-width: 220px;
+        }
+        .cm-prop-addr {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.82rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .cm-prop-city {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+        .cm-amount {
+            font-weight: 700;
+            color: #16a34a;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .cm-rate {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .cm-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .cm-status-badge.calculated {
+            background: rgba(37,99,235,0.08);
+            color: #2563eb;
+        }
+        .cm-status-badge.processing {
+            background: rgba(245,158,11,0.1);
+            color: #d97706;
+        }
+        .cm-status-badge.paid {
+            background: rgba(34,197,94,0.1);
+            color: #16a34a;
+        }
+        .cm-btn-pay {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.85rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .cm-btn-pay:hover {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            box-shadow: 0 2px 8px rgba(34,197,94,0.3);
+            transform: translateY(-1px);
+        }
+        .cm-btn-pay:active {
+            transform: translateY(0);
+        }
+        .cm-btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.35rem 0.7rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .cm-btn-view:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+            background: rgba(37,99,235,0.04);
+        }
+        .cm-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cm-empty-state {
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        .cm-empty-state i {
+            font-size: 2.5rem;
+            color: #22c55e;
+            opacity: 0.4;
+            margin-bottom: 0.75rem;
+        }
+        .cm-empty-state h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+        }
+        .cm-empty-state p {
+            font-size: 0.82rem;
+        }
+        .cm-date {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        /* Commission table toggle */
+        .cm-toggle-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .cm-toggle-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(34,197,94,0.2);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .cm-toggle-btn.active {
+            background: rgba(34,197,94,0.08);
+            border-color: #22c55e;
+            color: #16a34a;
+        }
+        .cm-toggle-btn:hover:not(.active) {
+            border-color: rgba(34,197,94,0.4);
+            color: var(--text-primary);
+        }
+        .cm-toggle-count {
+            background: rgba(34,197,94,0.12);
+            color: #16a34a;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.1rem 0.45rem;
+            border-radius: 10px;
+        }
+
+        /* Responsive commission table */
+        @media (max-width: 768px) {
+            .cm-section-header { padding: 1rem; }
+            .cm-header-inner { flex-direction: column; align-items: flex-start; }
+            .cm-kpi-row { width: 100%; }
+            .cm-kpi { flex: 1; min-width: 0; }
+            .cm-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .cm-table { min-width: 700px; }
+        }
+        @media (max-width: 576px) {
+            .cm-header-left h2 { font-size: 1.1rem; }
+            .cm-kpi { padding: 0.4rem 0.6rem; }
+            .cm-kpi-value { font-size: 0.95rem; }
         }
 
         /* ===== FINALIZE SALE MODAL (fsm-) ===== */
@@ -1252,6 +1593,315 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             .fsm-body { padding: 1.1rem 1.1rem; }
             .fsm-header { padding: 1.1rem 1.1rem 1rem; }
             .fsm-footer { padding: 1rem 1.1rem 1.25rem; }
+        }
+
+        /* ===== PROCESS PAYMENT MODAL (ppm-) ===== */
+        .ppm-overlay .modal-dialog { max-width: 780px; }
+        .ppm-shell.modal-content {
+            background: #ffffff !important;
+            border: 1px solid rgba(22,163,74,0.12) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 28px 70px rgba(0,0,0,0.2) !important;
+            overflow: hidden;
+            padding: 0 !important;
+            font-family: 'Inter', sans-serif;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .ppm-header {
+            position: relative;
+            padding: 1.5rem 1.75rem 1.25rem;
+            border-bottom: 1px solid rgba(22,163,74,0.08);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .ppm-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #16a34a, #22c55e, transparent);
+        }
+        .ppm-header-icon {
+            width: 46px; height: 46px;
+            background: linear-gradient(135deg, rgba(22,163,74,0.1), rgba(22,163,74,0.2));
+            border: 1px solid rgba(22,163,74,0.25);
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.35rem;
+            color: #16a34a;
+            flex-shrink: 0;
+        }
+        .ppm-header-text { flex: 1; min-width: 0; }
+        .ppm-header-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin: 0;
+            line-height: 1.2;
+        }
+        .ppm-header-sub {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+        }
+        .ppm-header-sub strong { color: #16a34a; }
+        .ppm-close {
+            width: 30px; height: 30px;
+            background: rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.09);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s, color 0.15s;
+        }
+        .ppm-close:hover { background: rgba(220,38,38,0.08); color: #dc2626; border-color: rgba(220,38,38,0.2); }
+        .ppm-body {
+            padding: 1.5rem 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            overflow-y: auto;
+            flex: 1 1 auto;
+            max-height: calc(90vh - 180px);
+        }
+        .ppm-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .ppm-field { display: flex; flex-direction: column; gap: 0.35rem; }
+        .ppm-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+        .ppm-label i { color: #16a34a; margin-right: 0.2rem; }
+        .ppm-label .ppm-req { color: #ef4444; margin-left: 1px; }
+        .ppm-input {
+            width: 100%;
+            border: 1px solid rgba(22,163,74,0.15);
+            border-radius: 4px;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: rgba(22,163,74,0.015);
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+            font-family: inherit;
+            outline: none;
+        }
+        .ppm-input:focus {
+            border-color: #16a34a;
+            box-shadow: 0 0 0 3px rgba(22,163,74,0.08);
+            background: #fff;
+        }
+        .ppm-input::placeholder { color: rgba(0,0,0,0.28); }
+        .ppm-input.ppm-textarea { resize: vertical; min-height: 72px; }
+        .ppm-select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 12px;
+            padding-right: 2.25rem;
+            cursor: pointer;
+        }
+        /* Commission summary */
+        .ppm-comm-summary {
+            background: linear-gradient(135deg, rgba(22,163,74,0.06), rgba(37,99,235,0.04));
+            border: 1px solid rgba(22,163,74,0.18);
+            border-radius: 6px;
+            padding: 1rem 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .ppm-comm-summary-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+        .ppm-comm-summary-label i { color: #16a34a; margin-right: 0.3rem; }
+        .ppm-comm-summary-val {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #16a34a;
+            letter-spacing: -0.02em;
+            margin-top: 0.2rem;
+        }
+        .ppm-status-badge {
+            background: rgba(212,175,55,0.12);
+            color: var(--gold-dark);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.3rem 0.65rem;
+            border-radius: 4px;
+            border: 1px solid rgba(212,175,55,0.2);
+        }
+        .ppm-divider {
+            height: 1px;
+            background: rgba(22,163,74,0.07);
+            margin: 0 -1.75rem;
+        }
+        /* Upload zone */
+        .ppm-upload-zone {
+            position: relative;
+            border: 2px dashed rgba(22,163,74,0.25);
+            border-radius: 6px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: border-color 0.2s, background 0.2s;
+            cursor: pointer;
+        }
+        .ppm-upload-zone:hover,
+        .ppm-upload-zone.dragover {
+            border-color: #16a34a;
+            background: rgba(22,163,74,0.04);
+        }
+        .ppm-file-input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .ppm-upload-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .ppm-upload-icon {
+            font-size: 2rem;
+            color: rgba(22,163,74,0.4);
+        }
+        .ppm-upload-text {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .ppm-upload-hint {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+        .ppm-upload-preview {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .ppm-preview-icon {
+            font-size: 1.4rem;
+            color: #16a34a;
+        }
+        .ppm-preview-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ppm-preview-size {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+        .ppm-preview-remove {
+            background: rgba(220,38,38,0.08);
+            border: 1px solid rgba(220,38,38,0.15);
+            border-radius: 50%;
+            width: 24px; height: 24px;
+            display: flex; align-items: center; justify-content: center;
+            color: #dc2626;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+            z-index: 3;
+        }
+        .ppm-preview-remove:hover { background: rgba(220,38,38,0.15); }
+        /* Warning */
+        .ppm-warning {
+            background: rgba(245,158,11,0.06);
+            border: 1px solid rgba(245,158,11,0.2);
+            border-radius: 5px;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.78rem;
+            color: #92400e;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            line-height: 1.45;
+        }
+        .ppm-warning i { color: #f59e0b; font-size: 0.9rem; margin-top: 1px; flex-shrink: 0; }
+        .ppm-warning strong { color: #16a34a; }
+        .ppm-footer {
+            padding: 1.1rem 1.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.65rem;
+        }
+        .ppm-btn {
+            padding: 0.62rem 1.35rem;
+            border-radius: 4px;
+            font-size: 0.855rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border: none;
+            transition: all 0.15s;
+        }
+        .ppm-btn-cancel {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid rgba(0,0,0,0.12) !important;
+        }
+        .ppm-btn-cancel:hover { background: rgba(0,0,0,0.05); color: var(--text-primary); }
+        .ppm-btn-pay {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(22,163,74,0.35);
+            position: relative;
+            overflow: hidden;
+        }
+        .ppm-btn-pay::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; right: auto;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+            transition: left 0.45s;
+        }
+        .ppm-btn-pay:hover { filter: brightness(1.08); box-shadow: 0 6px 20px rgba(22,163,74,0.45); }
+        .ppm-btn-pay:hover::before { left: 100%; }
+        .ppm-btn-pay:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: none;
+            box-shadow: none;
+        }
+        @media (max-width: 576px) {
+            .ppm-row-2 { grid-template-columns: 1fr; }
+            .ppm-body { padding: 1.1rem 1.1rem; }
+            .ppm-header { padding: 1.1rem 1.1rem 1rem; }
+            .ppm-footer { padding: 1rem 1.1rem 1.25rem; }
         }
 
         .cfd-container {
@@ -1722,6 +2372,9 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             $needs_finalization_count = count(array_filter($sale_verifications, fn($s) =>
                 $s['status'] === 'Approved' && empty($s['commission_amount'])
             ));
+        $needs_payment_count = count(array_filter($sale_verifications, fn($s) =>
+                $s['status'] === 'Approved' && in_array($s['commission_status'] ?? '', ['calculated', 'processing'])
+            ));
         ?>
         <!--
             Toast notifications: deferred until AFTER skeleton hydration
@@ -1737,9 +2390,10 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                     $toast_type  = 'success';
                     if (isset($_GET['success'])) {
                         switch ($_GET['success']) {
-                            case 'approved':  $toast_title = 'Sale Approved'; break;
-                            case 'rejected':  $toast_title = 'Verification Rejected'; break;
-                            case 'finalized': $toast_title = 'Commission Finalized'; break;
+                            case 'approved':          $toast_title = 'Sale Approved'; break;
+                            case 'rejected':          $toast_title = 'Verification Rejected'; break;
+                            case 'finalized':         $toast_title = 'Commission Finalized'; break;
+                            case 'payment_processed': $toast_title = 'Payment Processed'; $toast_type = 'success'; break;
                         }
                     }
                 ?>
@@ -1771,6 +2425,18 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                         8000
                     );
                 }, <?= ($success_message || $error_message) ? 1400 : ($status_counts['Pending'] > 0 ? 1100 : 300) ?>);
+            <?php endif; ?>
+            <?php if ($needs_payment_count > 0): ?>
+                setTimeout(function() {
+                    showToast(
+                        'money',
+                        '<?= $needs_payment_count === 1 ? "1 Commission Awaiting Payment" : $needs_payment_count . " Commissions Awaiting Payment" ?>',
+                        '<?= $needs_payment_count === 1
+                            ? "1 finalized commission has not been paid yet. Look for the <strong>Process Payment</strong> button on the approved sale card."
+                            : $needs_payment_count . " finalized commissions are still unpaid. Look for the <strong>Process Payment</strong> button on each approved sale card." ?>',
+                        8000
+                    );
+                }, <?= ($success_message || $error_message) ? 2100 : ($status_counts['Pending'] > 0 ? 1800 : ($needs_finalization_count > 0 ? 1000 : 300)) ?>);
             <?php endif; ?>
         });
         </script>
@@ -1924,6 +2590,189 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                 <?php endif; ?>
             </div>
         </div>
+        <!-- ══════════════════════════════════════════════════════════════
+             COMMISSION MANAGEMENT SECTION — Separate from Sale Approvals
+             ══════════════════════════════════════════════════════════════ -->
+        <div class="cm-section" id="commissionManagement">
+            <div class="cm-section-header">
+                <div class="cm-header-inner">
+                    <div class="cm-header-left">
+                        <h2><i class="bi bi-cash-coin"></i> Commission Management</h2>
+                        <p class="cm-subtitle">Process and track agent commission payments for finalized sales</p>
+                    </div>
+                    <div class="cm-kpi-row">
+                        <div class="cm-kpi">
+                            <div class="cm-kpi-label">Total Finalized</div>
+                            <div class="cm-kpi-value"><?= $commission_stats['total_finalized'] ?></div>
+                        </div>
+                        <div class="cm-kpi">
+                            <div class="cm-kpi-label">Awaiting Payment</div>
+                            <div class="cm-kpi-value"><?= $commission_stats['awaiting'] ?></div>
+                        </div>
+                        <div class="cm-kpi">
+                            <div class="cm-kpi-label">Paid</div>
+                            <div class="cm-kpi-value"><?= $commission_stats['paid'] ?></div>
+                        </div>
+                        <div class="cm-kpi">
+                            <div class="cm-kpi-label">Unpaid Amount</div>
+                            <div class="cm-kpi-value money">₱<?= number_format($commission_stats['total_unpaid_amount'], 2) ?></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toggle: Awaiting / Paid -->
+            <div class="cm-toggle-row">
+                <button class="cm-toggle-btn active" data-cm-tab="awaiting" onclick="cmToggleTab('awaiting')">
+                    <i class="bi bi-hourglass-split"></i> Awaiting Payment
+                    <span class="cm-toggle-count"><?= $commission_stats['awaiting'] ?></span>
+                </button>
+                <button class="cm-toggle-btn" data-cm-tab="paid" onclick="cmToggleTab('paid')">
+                    <i class="bi bi-check2-all"></i> Paid
+                    <span class="cm-toggle-count"><?= $commission_stats['paid'] ?></span>
+                </button>
+            </div>
+
+            <!-- Awaiting Payment Table -->
+            <div class="cm-table-wrap" id="cmTableAwaiting">
+                <?php if (empty($commissions_for_management)): ?>
+                    <div class="cm-empty-state">
+                        <i class="bi bi-wallet2"></i>
+                        <h4>All Commissions Paid</h4>
+                        <p>There are no commissions awaiting payment processing.</p>
+                    </div>
+                <?php else: ?>
+                    <table class="cm-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Property</th>
+                                <th>Agent</th>
+                                <th>Sale Price</th>
+                                <th>Commission</th>
+                                <th>Sale Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $cmIdx = 0; foreach ($commissions_for_management as $cm): $cmIdx++; ?>
+                                <tr data-commission-id="<?= (int)$cm['commission_id'] ?>" data-verification-id="<?= (int)$cm['verification_id'] ?>">
+                                    <td style="font-weight:600;color:var(--text-secondary);"><?= $cmIdx ?></td>
+                                    <td>
+                                        <div class="cm-prop-cell">
+                                            <div class="cm-prop-addr" title="<?= htmlspecialchars($cm['StreetAddress']) ?>"><?= htmlspecialchars($cm['StreetAddress']) ?></div>
+                                            <div class="cm-prop-city"><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($cm['City']) ?></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="cm-agent-cell">
+                                            <div class="cm-agent-avatar">
+                                                <?= strtoupper(substr($cm['agent_first_name'] ?? '', 0, 1)) . strtoupper(substr($cm['agent_last_name'] ?? '', 0, 1)) ?>
+                                            </div>
+                                            <span class="cm-agent-name"><?= htmlspecialchars(($cm['agent_first_name'] ?? '') . ' ' . ($cm['agent_last_name'] ?? '')) ?></span>
+                                        </div>
+                                    </td>
+                                    <td style="font-weight:600;">₱<?= number_format($cm['sale_price'], 2) ?></td>
+                                    <td>
+                                        <div class="cm-amount">₱<?= number_format($cm['commission_amount'], 2) ?></div>
+                                        <div class="cm-rate"><?= number_format($cm['commission_percentage'] ?? 0, 1) ?>% rate</div>
+                                    </td>
+                                    <td><span class="cm-date"><?= htmlspecialchars($cm['sale_date_fmt']) ?></span></td>
+                                    <td>
+                                        <span class="cm-status-badge <?= strtolower($cm['commission_status'] ?? 'calculated') ?>">
+                                            <i class="bi bi-circle-fill" style="font-size:0.4rem;"></i>
+                                            <?= ucfirst($cm['commission_status'] ?? 'calculated') ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="cm-actions">
+                                            <button class="cm-btn-pay" onclick="cmProcessPayment(<?= (int)$cm['verification_id'] ?>)" title="Process commission payment">
+                                                <i class="bi bi-wallet2"></i> Process Payment
+                                            </button>
+                                            <button class="cm-btn-view" onclick="viewDetails(<?= (int)$cm['verification_id'] ?>)" title="View sale details">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+
+            <!-- Paid Commissions Table -->
+            <div class="cm-table-wrap" id="cmTablePaid" style="display:none;">
+                <?php if (empty($commissions_paid)): ?>
+                    <div class="cm-empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <h4>No Paid Commissions Yet</h4>
+                        <p>Commissions will appear here once they are marked as paid.</p>
+                    </div>
+                <?php else: ?>
+                    <table class="cm-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Property</th>
+                                <th>Agent</th>
+                                <th>Commission</th>
+                                <th>Payment Method</th>
+                                <th>Reference</th>
+                                <th>Paid At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $cpIdx = 0; foreach ($commissions_paid as $cp): $cpIdx++; ?>
+                                <tr>
+                                    <td style="font-weight:600;color:var(--text-secondary);"><?= $cpIdx ?></td>
+                                    <td>
+                                        <div class="cm-prop-cell">
+                                            <div class="cm-prop-addr" title="<?= htmlspecialchars($cp['StreetAddress']) ?>"><?= htmlspecialchars($cp['StreetAddress']) ?></div>
+                                            <div class="cm-prop-city"><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($cp['City']) ?></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="cm-agent-cell">
+                                            <div class="cm-agent-avatar">
+                                                <?= strtoupper(substr($cp['agent_first_name'] ?? '', 0, 1)) . strtoupper(substr($cp['agent_last_name'] ?? '', 0, 1)) ?>
+                                            </div>
+                                            <span class="cm-agent-name"><?= htmlspecialchars(($cp['agent_first_name'] ?? '') . ' ' . ($cp['agent_last_name'] ?? '')) ?></span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="cm-amount">₱<?= number_format($cp['commission_amount'], 2) ?></div>
+                                        <div class="cm-rate"><?= number_format($cp['commission_percentage'] ?? 0, 1) ?>% rate</div>
+                                    </td>
+                                    <td style="font-weight:600; text-transform:capitalize;"><?= htmlspecialchars(str_replace('_', ' ', $cp['commission_payment_method'] ?? '—')) ?></td>
+                                    <td>
+                                        <code style="font-size:0.78rem;background:rgba(34,197,94,0.06);padding:0.15rem 0.4rem;border-radius:3px;">
+                                            <?= htmlspecialchars($cp['commission_payment_ref'] ?? '—') ?>
+                                        </code>
+                                    </td>
+                                    <td>
+                                        <span class="cm-date">
+                                            <?= $cp['commission_paid_at'] ? date('M j, Y g:i A', strtotime($cp['commission_paid_at'])) : '—' ?>
+                                        </span>
+                                        <?php if (!empty($cp['paid_by_first'])): ?>
+                                            <div style="font-size:0.7rem;color:var(--text-secondary);">by <?= htmlspecialchars($cp['paid_by_first'] . ' ' . $cp['paid_by_last']) ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <button class="cm-btn-view" onclick="viewDetails(<?= (int)$cp['verification_id'] ?>)" title="View sale details">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+        </div>
+
         </div><!-- /#page-content -->
     </div><!-- /.admin-content -->
 
@@ -2061,6 +2910,99 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                     <div class="fsm-footer">
                         <button type="button" class="fsm-btn fsm-btn-cancel" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Cancel</button>
                         <button type="submit" class="fsm-btn fsm-btn-save"><i class="bi bi-check2-circle"></i> Save &amp; Calculate</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Overlay -->
+    <!-- Process Commission Payment Modal (ppm-) -->
+    <div class="modal fade ppm-overlay" id="processPaymentModal" tabindex="-1" aria-labelledby="processPaymentLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="ppm-shell modal-content">
+                <div class="ppm-header">
+                    <div class="ppm-header-icon"><i class="bi bi-wallet2"></i></div>
+                    <div class="ppm-header-text">
+                        <h5 class="ppm-header-title" id="processPaymentLabel">Process Commission Payment</h5>
+                        <div class="ppm-header-sub" id="ppmHelp">Loading&hellip;</div>
+                    </div>
+                    <button type="button" class="ppm-close" data-bs-dismiss="modal" aria-label="Close">&times;</button>
+                </div>
+                <form id="processPaymentForm" enctype="multipart/form-data">
+                    <div class="ppm-body">
+                        <input type="hidden" name="commission_id" id="ppm_commission_id">
+
+                        <!-- Commission summary -->
+                        <div class="ppm-comm-summary">
+                            <div class="ppm-comm-summary-left">
+                                <div class="ppm-comm-summary-label"><i class="bi bi-coin"></i> Commission Amount</div>
+                                <div class="ppm-comm-summary-val" id="ppmCommAmount">&mdash;</div>
+                            </div>
+                            <div class="ppm-comm-summary-right">
+                                <span class="ppm-status-badge" id="ppmStatusBadge">Calculated</span>
+                            </div>
+                        </div>
+
+                        <div class="ppm-divider"></div>
+
+                        <!-- Row: Payment Method + Reference -->
+                        <div class="ppm-row-2">
+                            <div class="ppm-field">
+                                <label class="ppm-label" for="ppm_payment_method"><i class="bi bi-credit-card-2-front"></i> Payment Method <span class="ppm-req">*</span></label>
+                                <select class="ppm-input ppm-select" id="ppm_payment_method" name="payment_method" required>
+                                    <option value="" disabled selected>Select method…</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="gcash">GCash</option>
+                                    <option value="maya">Maya</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="check">Check</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="ppm-field">
+                                <label class="ppm-label" for="ppm_payment_reference"><i class="bi bi-hash"></i> Transaction Reference <span class="ppm-req">*</span></label>
+                                <input type="text" class="ppm-input" id="ppm_payment_reference" name="payment_reference"
+                                       placeholder="e.g. BDO-TXN-20260302-001" required maxlength="100">
+                            </div>
+                        </div>
+
+                        <!-- File Upload -->
+                        <div class="ppm-field">
+                            <label class="ppm-label"><i class="bi bi-file-earmark-arrow-up"></i> Payment Proof <span class="ppm-req">*</span></label>
+                            <div class="ppm-upload-zone" id="ppmUploadZone">
+                                <input type="file" name="payment_proof" id="ppm_payment_proof" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf"
+                                       class="ppm-file-input" required>
+                                <div class="ppm-upload-content" id="ppmUploadContent">
+                                    <i class="bi bi-cloud-arrow-up ppm-upload-icon"></i>
+                                    <span class="ppm-upload-text">Click to upload or drag &amp; drop</span>
+                                    <span class="ppm-upload-hint">JPG, PNG, WEBP, GIF, PDF — Max 5 MB</span>
+                                </div>
+                                <div class="ppm-upload-preview" id="ppmUploadPreview" style="display:none;">
+                                    <i class="bi bi-file-earmark-check ppm-preview-icon"></i>
+                                    <span class="ppm-preview-name" id="ppmPreviewName"></span>
+                                    <span class="ppm-preview-size" id="ppmPreviewSize"></span>
+                                    <button type="button" class="ppm-preview-remove" id="ppmRemoveFile" title="Remove file">&times;</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="ppm-field">
+                            <label class="ppm-label" for="ppm_payment_notes"><i class="bi bi-chat-left-text"></i> Payment Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+                            <textarea class="ppm-input ppm-textarea" id="ppm_payment_notes" name="payment_notes"
+                                      placeholder="Any additional notes about this payment..."></textarea>
+                        </div>
+
+                        <!-- Warning -->
+                        <div class="ppm-warning">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span>This action cannot be undone. The commission will be permanently marked as <strong>PAID</strong>.</span>
+                        </div>
+                    </div>
+                    <div class="ppm-footer">
+                        <button type="button" class="ppm-btn ppm-btn-cancel" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Cancel</button>
+                        <button type="submit" class="ppm-btn ppm-btn-pay" id="ppmSubmitBtn"><i class="bi bi-check2-circle"></i> Confirm Payment</button>
                     </div>
                 </form>
             </div>
@@ -2282,6 +3224,15 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             document.getElementById('pcStep2').querySelector('span').textContent = 'Updating property status';
             document.getElementById('pcStep3').querySelector('span').textContent = 'Sending agent notification';
             document.getElementById('pcStep4').style.display = 'none';
+        } else if (mode === 'payment') {
+            title.textContent = 'Processing Payment';
+            sub.textContent   = 'Marking commission as paid\u2026';
+            icon.className = 'bi bi-wallet2';
+            document.getElementById('pcStep1').querySelector('span').textContent = 'Validating payment data';
+            document.getElementById('pcStep2').querySelector('span').textContent = 'Uploading payment proof';
+            document.getElementById('pcStep3').querySelector('span').textContent = 'Updating commission record';
+            document.getElementById('pcStep4').querySelector('span').textContent = 'Sending agent notification';
+            document.getElementById('pcStep4').style.display = '';
         } else {
             title.textContent = 'Finalizing Sale';
             sub.textContent   = 'Processing your request\u2026';
@@ -2297,7 +3248,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         const isFinalize = (mode !== 'approve' && mode !== 'reject');
         const visibleSteps = isFinalize ? allSteps : allSteps.slice(0, 3);
         const stepCount = visibleSteps.length;
-        // Longer delays for finalize (email adds time)
+        // Longer delays for finalize/payment (email adds time)
         const baseDelay = isFinalize ? 800 : 550;
 
         // Animate steps sequentially
@@ -2349,7 +3300,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     function showToast(type, title, message, duration) {
         duration = duration || 4500;
         const container = document.getElementById('toastContainer');
-        const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill', warning: 'bi-exclamation-triangle-fill' };
+        const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill', warning: 'bi-exclamation-triangle-fill', money: 'bi-cash-coin' };
         const toast = document.createElement('div');
         toast.className = `app-toast toast-${type}`;
         toast.innerHTML = `
@@ -2764,6 +3715,31 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
 
         // Commission
         if (sale.commission_amount && Number(sale.commission_amount) > 0) {
+            const commStatusClass = (sale.commission_status || 'pending').toLowerCase();
+            const methodLabels = {bank_transfer:'Bank Transfer',gcash:'GCash',maya:'Maya',cash:'Cash',check:'Check',other:'Other'};
+            let commExtra = '';
+            if (sale.commission_status === 'paid' && sale.commission_paid_at) {
+                const paidDate = new Date(sale.commission_paid_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+                const paidByName = (sale.paid_by_first && sale.paid_by_last) ? esc(sale.paid_by_first) + ' ' + esc(sale.paid_by_last) : 'Admin';
+                commExtra += `<div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(22,163,74,0.1);">`;
+                commExtra += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 1rem;">`;
+                if (sale.commission_payment_method) {
+                    commExtra += `<div><span style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);font-weight:600;">Payment Method</span><div style="font-weight:600;color:var(--text-primary);font-size:0.85rem;margin-top:2px;">${esc(methodLabels[sale.commission_payment_method] || sale.commission_payment_method)}</div></div>`;
+                }
+                if (sale.commission_payment_ref) {
+                    commExtra += `<div><span style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);font-weight:600;">Reference</span><div style="font-weight:600;color:var(--text-primary);font-size:0.85rem;margin-top:2px;font-family:monospace;">${esc(sale.commission_payment_ref)}</div></div>`;
+                }
+                commExtra += `<div><span style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);font-weight:600;">Paid On</span><div style="font-weight:600;color:#16a34a;font-size:0.85rem;margin-top:2px;">${paidDate}</div></div>`;
+                commExtra += `<div><span style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);font-weight:600;">Paid By</span><div style="font-weight:600;color:var(--text-primary);font-size:0.85rem;margin-top:2px;">${paidByName}</div></div>`;
+                commExtra += `</div>`;
+                if (sale.commission_proof_path) {
+                    commExtra += `<div style="margin-top:0.6rem;"><a href="download_commission_proof.php?id=${sale.commission_id}" class="svd-email-link" style="font-size:0.8rem;display:inline-flex;align-items:center;gap:0.3rem;"><i class="bi bi-file-earmark-arrow-down"></i> Download Payment Proof</a></div>`;
+                }
+                if (sale.commission_payment_notes) {
+                    commExtra += `<div style="margin-top:0.5rem;background:rgba(0,0,0,0.02);border-radius:4px;padding:0.5rem 0.65rem;font-size:0.8rem;color:var(--text-secondary);"><i class="bi bi-chat-left-text" style="margin-right:0.3rem;color:#16a34a;"></i>${esc(sale.commission_payment_notes)}</div>`;
+                }
+                commExtra += `</div>`;
+            }
             html += `<div class="svd-section">
                 <div class="svd-section-title"><i class="bi bi-cash-coin"></i> Commission</div>
                 <div class="svd-commission-panel">
@@ -2772,8 +3748,9 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                         <div class="cp-value">₱${Number(sale.commission_amount).toLocaleString(undefined,{minimumFractionDigits:2})}</div>
                         <div class="cp-pct">${Number(sale.commission_percentage)}% of ₱${saleP.toLocaleString()}</div>
                     </div>
-                    <span class="svd-commission-badge" style="text-transform:uppercase;">${esc(sale.commission_status || 'Pending')}</span>
+                    <span class="svd-commission-badge ${commStatusClass}" style="text-transform:uppercase;">${esc(sale.commission_status || 'Pending')}</span>
                 </div>
+                ${commExtra}
             </div>`;
         }
 
@@ -2836,8 +3813,19 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
                       <button class="btn-modal btn-modal-secondary" onclick="closeModal('detailsModal')"><i class="bi bi-x-lg"></i>Close</button>`;
         } else if (sale.status === 'Approved') {
             const hasCommission = sale.commission_amount && Number(sale.commission_amount) > 0;
-            footer = `<button class="btn-modal btn-modal-secondary" onclick="closeModal('detailsModal')"><i class="bi bi-x-lg"></i>Close</button>
-                      <button class="btn-modal btn-modal-primary" onclick="openFinalizeModal()"><i class="bi bi-cash-coin"></i>${hasCommission ? 'Edit' : 'Finalize'} Commission</button>`;
+            const commStatus = (sale.commission_status || '').toLowerCase();
+            const isPaid = commStatus === 'paid';
+            const canPay = hasCommission && (commStatus === 'calculated' || commStatus === 'processing');
+            footer = `<button class="btn-modal btn-modal-secondary" onclick="closeModal('detailsModal')"><i class="bi bi-x-lg"></i>Close</button>`;
+            if (!isPaid) {
+                footer += `<button class="btn-modal btn-modal-primary" onclick="openFinalizeModal()"><i class="bi bi-cash-coin"></i>${hasCommission ? 'Edit' : 'Finalize'} Commission</button>`;
+            }
+            if (canPay) {
+                footer += `<button class="btn-modal btn-modal-success" onclick="openPaymentModal()"><i class="bi bi-wallet2"></i> Process Payment</button>`;
+            }
+            if (isPaid) {
+                footer += `<span style="display:inline-flex;align-items:center;gap:0.35rem;color:#16a34a;font-weight:700;font-size:0.85rem;padding:0.5rem 1rem;background:rgba(22,163,74,0.06);border-radius:4px;border:1px solid rgba(22,163,74,0.15);"><i class="bi bi-check-circle-fill"></i> Commission Paid</span>`;
+            }
         } else {
             footer = `<button class="btn-modal btn-modal-secondary" onclick="closeModal('detailsModal')"><i class="bi bi-x-lg"></i>Close</button>`;
         }
@@ -3008,6 +3996,189 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
             console.error(err);
         }
     });
+
+    // ===== PROCESS COMMISSION PAYMENT =====
+    let paymentModalInstance = null;
+    document.addEventListener('DOMContentLoaded', () => {
+        const el = document.getElementById('processPaymentModal');
+        if (el && window.bootstrap) paymentModalInstance = new bootstrap.Modal(el);
+
+        // File upload interactions
+        const zone = document.getElementById('ppmUploadZone');
+        const input = document.getElementById('ppm_payment_proof');
+        const content = document.getElementById('ppmUploadContent');
+        const preview = document.getElementById('ppmUploadPreview');
+        const removeBtn = document.getElementById('ppmRemoveFile');
+
+        if (zone && input) {
+            // Drag & drop visual feedback
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    input.files = e.dataTransfer.files;
+                    ppmShowFilePreview(e.dataTransfer.files[0]);
+                }
+            });
+
+            input.addEventListener('change', () => {
+                if (input.files.length > 0) {
+                    ppmShowFilePreview(input.files[0]);
+                }
+            });
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    input.value = '';
+                    if (content) content.style.display = '';
+                    if (preview) preview.style.display = 'none';
+                });
+            }
+        }
+    });
+
+    function ppmShowFilePreview(file) {
+        const content = document.getElementById('ppmUploadContent');
+        const preview = document.getElementById('ppmUploadPreview');
+        const nameEl = document.getElementById('ppmPreviewName');
+        const sizeEl = document.getElementById('ppmPreviewSize');
+        if (!content || !preview) return;
+
+        content.style.display = 'none';
+        preview.style.display = 'flex';
+        if (nameEl) nameEl.textContent = file.name;
+        if (sizeEl) sizeEl.textContent = formatSize(file.size);
+    }
+
+    function openPaymentModal() {
+        const sale = currentViewedSale;
+        if (!sale || !sale.commission_id) {
+            showToast('error', 'Error', 'No commission found for this sale. Please finalize the commission first.');
+            return;
+        }
+        if (sale.commission_status === 'paid') {
+            showToast('info', 'Already Paid', 'This commission has already been paid.');
+            return;
+        }
+
+        // Reset form
+        const form = document.getElementById('processPaymentForm');
+        if (form) form.reset();
+        const content = document.getElementById('ppmUploadContent');
+        const preview = document.getElementById('ppmUploadPreview');
+        if (content) content.style.display = '';
+        if (preview) preview.style.display = 'none';
+
+        // Populate data
+        document.getElementById('ppm_commission_id').value = sale.commission_id;
+        document.getElementById('ppmCommAmount').textContent =
+            '₱' + Number(sale.commission_amount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+        document.getElementById('ppmStatusBadge').textContent = (sale.commission_status || 'calculated').toUpperCase();
+        document.getElementById('ppmHelp').innerHTML =
+            `Commission <strong>#${sale.commission_id}</strong> &bull; Agent: <strong>${esc(sale.agent_first_name)} ${esc(sale.agent_last_name)}</strong>`;
+
+        // Enable submit button
+        const submitBtn = document.getElementById('ppmSubmitBtn');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="bi bi-check2-circle"></i> Confirm Payment'; }
+
+        if (paymentModalInstance) paymentModalInstance.show();
+    }
+
+    const pf = document.getElementById('processPaymentForm');
+    if (pf) pf.addEventListener('submit', async e => {
+        e.preventDefault();
+        const fd = new FormData(pf);
+
+        // Client-side validation
+        const method = fd.get('payment_method');
+        const ref = (fd.get('payment_reference') || '').trim();
+        const proof = fd.get('payment_proof');
+
+        if (!method) {
+            showToast('error', 'Missing Field', 'Please select a payment method.');
+            return;
+        }
+        if (!ref) {
+            showToast('error', 'Missing Field', 'Transaction reference is required.');
+            return;
+        }
+        if (!proof || proof.size === 0) {
+            showToast('error', 'Missing File', 'Please upload payment proof.');
+            return;
+        }
+
+        // Validate file client-side
+        const maxSize = 5 * 1024 * 1024;
+        if (proof.size > maxSize) {
+            showToast('error', 'File Too Large', 'Payment proof must be 5 MB or smaller.');
+            return;
+        }
+        const allowedExts = ['jpg','jpeg','png','webp','gif','pdf'];
+        const ext = proof.name.split('.').pop().toLowerCase();
+        if (!allowedExts.includes(ext)) {
+            showToast('error', 'Invalid File', 'Allowed file types: JPG, PNG, WEBP, GIF, PDF.');
+            return;
+        }
+
+        // Disable button
+        const submitBtn = document.getElementById('ppmSubmitBtn');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="bi bi-arrow-repeat fa-spin"></i> Processing…'; }
+
+        showProcessing('Processing payment...', 'payment');
+
+        try {
+            const res = await fetch('process_commission_payment.php', { method: 'POST', body: fd });
+            const data = await res.json();
+            hideProcessing();
+
+            if (data.ok) {
+                if (paymentModalInstance) paymentModalInstance.hide();
+                const emailNote = data.email_sent ? '<br><small style="opacity:.75;"><i class="bi bi-envelope-check"></i> Agent notified via email</small>' : '';
+                showToast('success', 'Payment Processed', 'Commission has been marked as <strong>PAID</strong> successfully.' + emailNote, 5500);
+                setTimeout(() => { location.href = location.pathname + '?success=payment_processed'; }, 1800);
+            } else {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="bi bi-check2-circle"></i> Confirm Payment'; }
+                showToast('error', 'Payment Failed', data.message || 'Failed to process payment. Please try again.');
+            }
+        } catch (err) {
+            hideProcessing();
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="bi bi-check2-circle"></i> Confirm Payment'; }
+            showToast('error', 'Network Error', 'An unexpected error occurred. Please check your connection and try again.');
+            console.error(err);
+        }
+    });
+
+    // ===== COMMISSION MANAGEMENT TABLE =====
+    function cmToggleTab(tab) {
+        document.querySelectorAll('.cm-toggle-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.cm-toggle-btn[data-cm-tab="${tab}"]`).classList.add('active');
+        document.getElementById('cmTableAwaiting').style.display = tab === 'awaiting' ? '' : 'none';
+        document.getElementById('cmTablePaid').style.display = tab === 'paid' ? '' : 'none';
+    }
+
+    function cmProcessPayment(verificationId) {
+        // Find the sale in our data to set currentViewedSale, then open the payment modal
+        const sale = saleVerifications.find(s => s.verification_id == verificationId);
+        if (!sale) {
+            showToast('error', 'Error', 'Could not find the sale verification data. Please refresh the page.');
+            return;
+        }
+        if (!sale.commission_id) {
+            showToast('error', 'Not Finalized', 'This sale has not been finalized yet. Commission must be calculated first.');
+            return;
+        }
+        if (sale.commission_status === 'paid') {
+            showToast('info', 'Already Paid', 'This commission has already been paid. No action needed.');
+            return;
+        }
+        // Set global reference and open the existing payment modal
+        currentViewedSale = sale;
+        openPaymentModal();
+    }
 
     // ===== UTILITY =====
     function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }

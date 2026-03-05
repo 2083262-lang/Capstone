@@ -164,20 +164,36 @@ try {
     $cchk->close();
 
     if ($commId) {
-        $cupd = $conn->prepare("UPDATE agent_commissions SET agent_id = ?, commission_amount = ?, commission_percentage = ?, status = 'calculated', calculated_at = ?, payment_reference = ? WHERE commission_id = ?");
-        $cupd->bind_param('iddssi', $agent_id, $commission_amount, $commission_percentage, $now, $notes, $commId);
+        $cupd = $conn->prepare("UPDATE agent_commissions SET agent_id = ?, commission_amount = ?, commission_percentage = ?, status = 'calculated', calculated_at = ?, payment_notes = ?, processed_by = ? WHERE commission_id = ?");
+        $cupd->bind_param('iddssii', $agent_id, $commission_amount, $commission_percentage, $now, $notes, $_SESSION['account_id'], $commId);
         if (!$cupd->execute()) {
             throw new Exception('Failed to update commission.');
         }
         $cupd->close();
     } else {
-        $cins = $conn->prepare("INSERT INTO agent_commissions (sale_id, agent_id, commission_amount, commission_percentage, status, calculated_at, payment_reference, processed_by, created_at) VALUES (?, ?, ?, ?, 'calculated', ?, ?, ?, ?)");
+        $cins = $conn->prepare("INSERT INTO agent_commissions (sale_id, agent_id, commission_amount, commission_percentage, status, calculated_at, payment_notes, processed_by, created_at) VALUES (?, ?, ?, ?, 'calculated', ?, ?, ?, ?)");
         $cins->bind_param('iiddssis', $sale_id, $agent_id, $commission_amount, $commission_percentage, $now, $notes, $_SESSION['account_id'], $now);
         if (!$cins->execute()) {
             throw new Exception('Failed to create commission.');
         }
         $cins->close();
     }
+
+    // Audit log for calculated commission
+    $log_details = json_encode([
+        'commission_amount' => $commission_amount,
+        'commission_percentage' => $commission_percentage,
+        'final_sale_price' => $final_sale_price,
+        'agent_id' => $agent_id,
+        'property_id' => $property_id,
+        'admin_ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+    ], JSON_UNESCAPED_UNICODE);
+    $log_commission_id = $commId ?: $conn->insert_id;
+    $log_ip = $_SERVER['REMOTE_ADDR'] ?? null;
+    $audit = $conn->prepare("INSERT INTO commission_payment_logs (commission_id, action, old_status, new_status, details, performed_by, ip_address) VALUES (?, 'calculated', NULL, 'calculated', ?, ?, ?)");
+    $audit->bind_param('isis', $log_commission_id, $log_details, $_SESSION['account_id'], $log_ip);
+    $audit->execute();
+    $audit->close();
 
     $conn->commit();
 
