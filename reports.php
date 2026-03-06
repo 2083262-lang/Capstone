@@ -1256,7 +1256,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
 // =============================================
 // DATA FROM PHP
 // =============================================
-const DATA = {
+var DATA = {
     properties: <?php echo json_encode($property_report); ?>,
     sales: <?php echo json_encode($sales_report); ?>,
     rentals: <?php echo json_encode($rental_report); ?>,
@@ -1267,13 +1267,13 @@ const DATA = {
     propertyLogs: <?php echo json_encode($property_logs); ?>
 };
 
-let FILTERED = {
+var FILTERED = {
     properties: [...DATA.properties], sales: [...DATA.sales], rentals: [...DATA.rentals], agents: [...DATA.agents],
     tours: [...DATA.tours], adminLogs: [...DATA.adminLogs], statusLogs: [...DATA.statusLogs], propertyLogs: [...DATA.propertyLogs]
 };
 
-const ROWS_PER_PAGE = 25;
-let currentPages = { properties: 1, sales: 1, rentals: 1, agents: 1, tours: 1 };
+var ROWS_PER_PAGE = 25;
+var currentPages = { properties: 1, sales: 1, rentals: 1, agents: 1, tours: 1 };
 
 // =============================================
 // CHART.JS GLOBAL DEFAULTS
@@ -1289,7 +1289,7 @@ Chart.defaults.elements.bar.borderRadius = 4;
 Chart.defaults.elements.bar.borderSkipped = false;
 Chart.defaults.elements.line.tension = 0.4;
 
-const COLORS = {
+var COLORS = {
     gold: '#d4af37', goldLight: 'rgba(212,175,55,0.15)', goldDark: '#b8941f',
     blue: '#2563eb', blueLight: 'rgba(37,99,235,0.12)', blueDark: '#1e40af',
     green: '#16a34a', greenLight: 'rgba(34,197,94,0.12)',

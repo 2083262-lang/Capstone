@@ -3340,21 +3340,21 @@ include 'admin_navbar.php';
     }
 
     // Property image data from PHP
-    const featuredImages = <?php echo json_encode($property_images); ?>;
-    const floorImagesRaw = <?php echo json_encode($floor_images); ?>;
+    var featuredImages = <?php echo json_encode($property_images); ?>;
+    var floorImagesRaw = <?php echo json_encode($floor_images); ?>;
     
     // Convert floor images to a usable object
-    const floorImages = {};
+    var floorImages = {};
     for (const [key, value] of Object.entries(floorImagesRaw || {})) {
         floorImages[key] = value;
     }
     
     // Gallery state
-    let currentHeroView = 'featured';
-    let currentHeroFloor = null;
-    let currentLightboxImages = [];
-    let currentLightboxIndex = 0;
-    let currentLightboxLabel = 'Featured Images';
+    var currentHeroView = 'featured';
+    var currentHeroFloor = null;
+    var currentLightboxImages = [];
+    var currentLightboxIndex = 0;
+    var currentLightboxLabel = 'Featured Images';
 
     // Update sidebar thumbnails when switching views
     function updateSidebar(images) {
@@ -3515,8 +3515,8 @@ include 'admin_navbar.php';
     });
 
     // Price calculation in modal
-    const newPriceInput = document.getElementById('new_price');
-    const priceDisplay = document.getElementById('newPricePerSqFtDisplay');
+    var newPriceInput = document.getElementById('new_price');
+    var priceDisplay = document.getElementById('newPricePerSqFtDisplay');
     
     if (newPriceInput && priceDisplay) {
         newPriceInput.addEventListener('input', function() {
@@ -3536,9 +3536,9 @@ include 'admin_navbar.php';
     }
 
     // Price history show more/less
-    const showMoreBtn = document.getElementById('showMoreHistoryBtn');
-    const showLessBtn = document.getElementById('showLessHistoryBtn');
-    const extraRows = document.querySelectorAll('.extra-history-row');
+    var showMoreBtn = document.getElementById('showMoreHistoryBtn');
+    var showLessBtn = document.getElementById('showLessHistoryBtn');
+    var extraRows = document.querySelectorAll('.extra-history-row');
 
     if (showMoreBtn && showLessBtn) {
         showMoreBtn.addEventListener('click', function() {
@@ -3555,8 +3555,8 @@ include 'admin_navbar.php';
     }
 
     // Chart functionality
-    const priceHistoryData = <?php echo json_encode($price_history_raw); ?>;
-    let priceChart;
+    var priceHistoryData = <?php echo json_encode($price_history_raw); ?>;
+    var priceChart;
 
     function renderChart(data) {
         const ctx = document.getElementById('priceHistoryChart');
@@ -3715,12 +3715,12 @@ include 'admin_navbar.php';
     });
 
     // Intersection Observer for animation on scroll
-    const observerOptions = {
+    var observerOptions = {
         threshold: 0.1,
         rootMargin: '0px 0px -50px 0px'
     };
 
-    const observer = new IntersectionObserver((entries) => {
+    var observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.style.opacity = '1';
@@ -3765,7 +3765,7 @@ include 'admin_navbar.php';
     });
 
     // Price input formatting
-    const priceInputs = document.querySelectorAll('input[type="number"]');
+    var priceInputs = document.querySelectorAll('input[type="number"]');
     priceInputs.forEach(input => {
         input.addEventListener('input', function() {
             // Remove any non-numeric characters except decimal point
@@ -3827,13 +3827,13 @@ include 'admin_navbar.php';
     }, true);
 
     // Tooltip initialization for Bootstrap tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
     // Prevent double-click form submission
-    let formSubmitted = false;
+    var formSubmitted = false;
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', function() {
             if (formSubmitted) {
@@ -3849,7 +3849,7 @@ include 'admin_navbar.php';
     });
 
     // Reject Reason Modal wiring
-    const openRejectBtn = document.getElementById('openRejectModalBtn');
+    var openRejectBtn = document.getElementById('openRejectModalBtn');
     if (openRejectBtn) {
         const modalEl = document.getElementById('rejectReasonModal');
         const rejectModal = new bootstrap.Modal(modalEl);
@@ -3992,8 +3992,8 @@ include 'admin_navbar.php';
     })();
 
     // === Mark as Sold/Rented Modal Logic ===
-    const isRentalProperty = <?php echo json_encode($property_data['Status'] === 'For Rent'); ?>;
-    const msvConfirmSaleBtn = document.getElementById('msvConfirmSaleBtn');
+    var isRentalProperty = <?php echo json_encode($property_data['Status'] === 'For Rent'); ?>;
+    var msvConfirmSaleBtn = document.getElementById('msvConfirmSaleBtn');
     if (msvConfirmSaleBtn) {
         msvConfirmSaleBtn.addEventListener('click', function() {
             const form = document.getElementById('msvSaleForm');
@@ -4135,8 +4135,8 @@ include 'admin_navbar.php';
     }
 
     // Mobile FAB Toggle
-    const fabButton = document.getElementById('fabButton');
-    const fabMenu = document.getElementById('fabMenu');
+    var fabButton = document.getElementById('fabButton');
+    var fabMenu = document.getElementById('fabMenu');
     
     if (fabButton && fabMenu) {
         fabButton.addEventListener('click', function() {

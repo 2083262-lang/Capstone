@@ -841,6 +841,19 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
         .navbar-actions {
             gap: 0.5rem;
         }
+
+        .navbar-site-name .site-logo {
+            height: 28px;
+            width: 28px;
+        }
+
+        .navbar-site-name .site-brand {
+            font-size: 1rem;
+        }
+
+        .navbar-site-name .site-tagline {
+            display: none;
+        }
     }
 
     /* Theme Indicator */
@@ -852,6 +865,48 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
         display: inline-block;
         margin-right: 0.5rem;
         box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+    }
+
+    .navbar-site-name {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        line-height: 1;
+        user-select: none;
+        text-decoration: none;
+    }
+
+    .navbar-site-name .site-logo {
+        height: 36px;
+        width: 36px;
+        object-fit: contain;
+        filter: brightness(1.1) saturate(1.1);
+        flex-shrink: 0;
+    }
+
+    .navbar-site-name .site-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .navbar-site-name .site-brand {
+        font-size: 1.2rem;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.25));
+    }
+
+    .navbar-site-name .site-tagline {
+        font-size: 0.62rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.8px;
+        color: var(--gray-400);
     }
 
     /* Quick Actions */
@@ -890,37 +945,15 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
             <button class="sidebar-toggle" id="sidebarToggle">
                 <i class="bi bi-list"></i>
             </button>
-            
-            <!-- Page Title & Breadcrumb -->
-            <div>
-                <h1 class="page-title">
-                    <span class="theme-indicator"></span>
-                    <?php
-                    // // Add appropriate icon based on current page
-                    // $page_icons = [
-                    //     'admin_dashboard.php' => 'fas fa-tachometer-alt',
-                    //     'property.php' => 'fas fa-building',
-                    //     'view_property.php' => 'fas fa-eye',
-                    //     'agent.php' => 'fas fa-user-tie',
-                    //     'clients.php' => 'fas fa-users',
-                    //     'contracts.php' => 'fas fa-file-contract',
-                    //     'reports.php' => 'fas fa-chart-line',
-                    //     'settings.php' => 'fas fa-cog'
-                    // ];
-                    // if (isset($page_icons[$current_page])) {
-                    //     echo '<i class="' . $page_icons[$current_page] . '"></i>';
-                    // }
-                    ?>
-                    <?php echo $page_title; ?>
-                </h1>
-                <div class="breadcrumb-nav">
-                    <a href="<?= BASE_URL ?>admin_dashboard.php">Dashboard</a>
-                    <?php if ($current_page !== 'admin_dashboard.php'): ?>
-                        <span class="mx-1">•</span>
-                        <span><?php echo $page_titles[$current_page] ?? 'Current Page'; ?></span>
-                    <?php endif; ?>
-                </div>
-            </div>
+
+            <!-- Site Name -->
+            <span class="navbar-site-name">
+                <img src="<?= BASE_URL ?>images/Logo.png" alt="HomeEstate Realty" class="site-logo">
+                <span class="site-text">
+                    <span class="site-brand">HomeEstate Realty</span>
+                    <span class="site-tagline">Admin Panel</span>
+                </span>
+            </span>
         </div>
 
         <div class="navbar-right">

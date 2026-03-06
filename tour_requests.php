@@ -2281,7 +2281,7 @@ function dismissToast(toast) {
 }
 
   // ===== CALENDAR FUNCTIONALITY =====
-  const calendarData = {
+  var calendarData = {
     currentDate: new Date(),
     selectedDate: null,
     tours: <?php echo json_encode($tour_requests); ?>,
@@ -2293,7 +2293,7 @@ function dismissToast(toast) {
     return String(value).slice(0, 10);
   }
 
-  let debugMode = false;
+  var debugMode = false;
 
   function toggleDebugMode() {
     debugMode = document.getElementById('showAllStatusesToggle').checked;
@@ -2320,32 +2320,32 @@ function dismissToast(toast) {
   }
 
   // Open/Close Filter Sidebar
-  const openFiltersBtn = document.getElementById('openFiltersBtn');
+  var openFiltersBtn = document.getElementById('openFiltersBtn');
   if (openFiltersBtn) openFiltersBtn.addEventListener('click', () => {
     document.getElementById('filterSidebar').classList.add('active');
   });
-  const closeFiltersBtn = document.getElementById('closeFiltersBtn');
+  var closeFiltersBtn = document.getElementById('closeFiltersBtn');
   if (closeFiltersBtn) closeFiltersBtn.addEventListener('click', () => {
     document.getElementById('filterSidebar').classList.remove('active');
   });
-  const filterOverlay = document.getElementById('filterOverlay');
+  var filterOverlay = document.getElementById('filterOverlay');
   if (filterOverlay) filterOverlay.addEventListener('click', () => {
     document.getElementById('filterSidebar').classList.remove('active');
   });
 
   // Open/Close Calendar Sidebar
-  const openCalBtn = document.getElementById('openCalendarBtn');
+  var openCalBtn = document.getElementById('openCalendarBtn');
   if (openCalBtn) openCalBtn.addEventListener('click', () => {
     document.getElementById('calendarSidebar').classList.add('active');
     initializeToursByDate();
     renderCalendar();
     renderScheduledTours();
   });
-  const closeCalBtn = document.getElementById('closeCalendarBtn');
+  var closeCalBtn = document.getElementById('closeCalendarBtn');
   if (closeCalBtn) closeCalBtn.addEventListener('click', () => {
     document.getElementById('calendarSidebar').classList.remove('active');
   });
-  const calOverlay = document.getElementById('calendarOverlay');
+  var calOverlay = document.getElementById('calendarOverlay');
   if (calOverlay) calOverlay.addEventListener('click', () => {
     document.getElementById('calendarSidebar').classList.remove('active');
   });
@@ -2573,8 +2573,8 @@ function dismissToast(toast) {
   }
 
   // ===== REAL-TIME FILTER FUNCTIONALITY =====
-  const allTourData = <?php echo json_encode($tour_requests); ?>;
-  const currentStatusFilter = '<?php echo $active_status; ?>';
+  var allTourData = <?php echo json_encode($tour_requests); ?>;
+  var currentStatusFilter = '<?php echo $active_status; ?>';
 
   function debounce(func, wait) {
     let timeout;
@@ -2681,7 +2681,7 @@ function dismissToast(toast) {
     }
   }
 
-  const debouncedFilter = debounce(applyFilters, 300);
+  var debouncedFilter = debounce(applyFilters, 300);
   document.getElementById('searchInput').addEventListener('input', debouncedFilter);
   document.getElementById('propertyFilter').addEventListener('change', applyFilters);
   document.getElementById('tourTypeFilter').addEventListener('change', applyFilters);
@@ -2706,7 +2706,7 @@ function dismissToast(toast) {
   initFilterChips('readStatusChips', 'readStatusFilter');
 
   // Apply Filters footer button — just closes the drawer
-  const closeFiltersApplyBtn = document.getElementById('closeFiltersApplyBtn');
+  var closeFiltersApplyBtn = document.getElementById('closeFiltersApplyBtn');
   if (closeFiltersApplyBtn) closeFiltersApplyBtn.addEventListener('click', () => {
     document.getElementById('filterSidebar').classList.remove('active');
   });
@@ -2973,14 +2973,14 @@ function dismissToast(toast) {
   }
 
   // REJECT/CANCEL flows
-  const reasonModalEl = document.getElementById('reasonModal');
-  const reasonModal = new bootstrap.Modal(reasonModalEl);
-  const reasonText = document.getElementById('reasonText');
-  const reasonAlert = document.getElementById('reasonAlert');
-  const submitRejectBtn = document.getElementById('submitRejectBtn');
-  const submitCancelBtn = document.getElementById('submitCancelBtn');
-  let reasonAction = null;
-  let reasonTourId = null;
+  var reasonModalEl = document.getElementById('reasonModal');
+  var reasonModal = new bootstrap.Modal(reasonModalEl);
+  var reasonText = document.getElementById('reasonText');
+  var reasonAlert = document.getElementById('reasonAlert');
+  var submitRejectBtn = document.getElementById('submitRejectBtn');
+  var submitCancelBtn = document.getElementById('submitCancelBtn');
+  var reasonAction = null;
+  var reasonTourId = null;
 
   document.getElementById('rejectTourBtn').addEventListener('click', function() {
     reasonAction = 'reject';

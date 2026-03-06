@@ -559,7 +559,7 @@ $total_property_types = count($property_types);
 
     <script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
     <script>
-    let pendingDelete = { type: null, id: null, name: null };
+    var pendingDelete = { type: null, id: null, name: null };
 
     // ===== ADD ITEM =====
     function addItem(type) {

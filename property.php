@@ -2318,7 +2318,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         });
 
         // Embed properties data for client-side filtering
-        const allProperties = <?php echo json_encode(array_map(function($p){
+        var allProperties = <?php echo json_encode(array_map(function($p){
             // expose necessary fields to client for admin card display
             return [
                 'property_ID' => $p['property_ID'] ?? null,
@@ -2343,9 +2343,9 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         }, $properties)); ?>;
 
         // Determine price bounds
-        const prices = allProperties.map(p => p.ListingPrice || 0);
-        const PRICE_MIN = Math.min(...prices, 0);
-        const PRICE_MAX = Math.max(...prices, 100000000);
+        var prices = allProperties.map(p => p.ListingPrice || 0);
+        var PRICE_MIN = Math.min(...prices, 0);
+        var PRICE_MAX = Math.max(...prices, 100000000);
 
     document.addEventListener('DOMContentLoaded', () => {
             // initialize price sliders limits
@@ -2461,9 +2461,9 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         }
 
         // Pagination globals
-        const PROP_PER_PAGE = 12;
-        let propFilteredItems = {};
-        let propCurrentPage = { all: 1, pending: 1, 'pending-sold': 1, approved: 1, rejected: 1, sold: 1, 'pending-rented': 1, rented: 1 };
+        var PROP_PER_PAGE = 12;
+        var propFilteredItems = {};
+        var propCurrentPage = { all: 1, pending: 1, 'pending-sold': 1, approved: 1, rejected: 1, sold: 1, 'pending-rented': 1, rented: 1 };
 
         function renderGrids(filtered) {
             // Get all pre-rendered card wrappers
@@ -2645,7 +2645,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         // ===== COMPREHENSIVE FILTER SIDEBAR INTEGRATION =====
         // This integrates with the existing applyFilters and renderGrids functions
         
-        let comprehensiveFilters = {
+        var comprehensiveFilters = {
             search: '',
             priceMin: 0,
             priceMax: Infinity,
@@ -2791,11 +2791,11 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         }
 
         // Draggable Price Range Sliders
-        const priceMinSlider = document.getElementById('priceMinSlider');
-        const priceMaxSlider = document.getElementById('priceMaxSlider');
-        const priceMinInput = document.getElementById('priceMin');
-        const priceMaxInput = document.getElementById('priceMax');
-        const priceSliderRange = document.getElementById('priceSliderRange');
+        var priceMinSlider = document.getElementById('priceMinSlider');
+        var priceMaxSlider = document.getElementById('priceMaxSlider');
+        var priceMinInput = document.getElementById('priceMin');
+        var priceMaxInput = document.getElementById('priceMax');
+        var priceSliderRange = document.getElementById('priceSliderRange');
 
         function updatePriceSliderRange() {
             if (!priceMinSlider || !priceMaxSlider || !priceSliderRange) return;

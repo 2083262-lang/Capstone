@@ -3231,9 +3231,9 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     <script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
     <script>
     // ===== DATA =====
-    const saleVerifications = <?= json_encode($sale_verifications) ?>;
-    let currentViewedSale = null;
-    let currentDocId = null, currentDocName = '';
+    var saleVerifications = <?= json_encode($sale_verifications) ?>;
+    var currentViewedSale = null;
+    var currentDocId = null, currentDocName = '';
 
     // ===== MODAL HELPERS =====
     function _lockScroll()   { const sw = window.innerWidth - document.documentElement.clientWidth; document.body.style.paddingRight = sw + 'px'; document.body.style.overflow = 'hidden'; }
@@ -3248,7 +3248,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     });
 
     // Track step timer IDs so we can cancel them on early hide
-    let _pcTimers = [];
+    var _pcTimers = [];
 
     function showProcessing(msg, mode) {
         const o = document.getElementById('processingOverlay');
@@ -3388,8 +3388,8 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     }
 
     // ===== ADVANCED FILTER SYSTEM =====
-    const sf = { search: '', priceMin: 0, priceMax: 999999999, typeFilter: new Set(), commissionStatus: 'all', saleDateFrom: '', saleDateTo: '', city: '', agent: '', sort: 'newest', _maxPrice: 0, _allTypes: [] };
-    let _cardMap = null;
+    var sf = { search: '', priceMin: 0, priceMax: 999999999, typeFilter: new Set(), commissionStatus: 'all', saleDateFrom: '', saleDateTo: '', city: '', agent: '', sort: 'newest', _maxPrice: 0, _allTypes: [] };
+    var _cardMap = null;
 
     function sfBuildCardMap() {
         _cardMap = new Map();
@@ -3902,7 +3902,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     }
 
     // ===== SVD HERO GALLERY =====
-    let svdGalIdx = 0, svdGalTotal = 0;
+    var svdGalIdx = 0, svdGalTotal = 0;
     function svdGalleryInit(total) {
         svdGalIdx = 0;
         svdGalTotal = total;
@@ -3992,7 +3992,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     function downloadCurrentDocument() { if (currentDocId) downloadDoc(currentDocId); }
 
     // ===== FINALIZE COMMISSION =====
-    let finalizeModalInstance = null;
+    var finalizeModalInstance = null;
     document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById('finalizeSaleModal');
         if (el && window.bootstrap) finalizeModalInstance = new bootstrap.Modal(el);
@@ -4029,7 +4029,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         }
     }
 
-    const ff = document.getElementById('finalizeSaleForm');
+    var ff = document.getElementById('finalizeSaleForm');
     if (ff) ff.addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(ff);
@@ -4065,7 +4065,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
     });
 
     // ===== PROCESS COMMISSION PAYMENT =====
-    let paymentModalInstance = null;
+    var paymentModalInstance = null;
     document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById('processPaymentModal');
         if (el && window.bootstrap) paymentModalInstance = new bootstrap.Modal(el);
@@ -4155,7 +4155,7 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
         if (paymentModalInstance) paymentModalInstance.show();
     }
 
-    const pf = document.getElementById('processPaymentForm');
+    var pf = document.getElementById('processPaymentForm');
     if (pf) pf.addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(pf);

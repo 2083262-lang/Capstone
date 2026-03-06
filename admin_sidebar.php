@@ -95,8 +95,10 @@ $menu_items = [
     }
 
     .sidebar-brand {
-        padding: 1.5rem 1.5rem;
-        text-align: center;
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         border-bottom: 1px solid rgba(37, 99, 235, 0.2);
         background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(212, 175, 55, 0.05) 100%);
         position: relative;
@@ -114,29 +116,11 @@ $menu_items = [
     }
 
     .sidebar-brand img {
-        max-width: 100px;
-        height: auto;
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
         filter: brightness(1.1);
-    }
-
-    .sidebar-brand h4 {
-        background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: 700;
-        font-size: 1.25rem;
-        margin-top: 0.5rem;
-        margin-bottom: 0;
-        letter-spacing: 0.3px;
-        filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.3));
-    }
-
-    .sidebar-brand .text-light {
-        font-size: 0.75rem;
-        color: var(--gray-400);
-        margin-top: 0.25rem;
-        font-weight: 500;
+        flex-shrink: 0;
     }
 
     .sidebar-nav {
@@ -273,8 +257,6 @@ $menu_items = [
     <!-- Brand/Logo Section -->
     <div class="sidebar-brand">
         <img src="<?= BASE_URL ?>images/Logo.png" alt="HomeEstate Realty Logo">
-        <h4>HomeEstate Realty</h4>
-        <small class="text-light">Admin Panel</small>
     </div>
 
     <!-- Navigation Menu -->
@@ -304,6 +286,15 @@ $menu_items = [
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 
+<style>
+    /* PJAX page transition */
+    .admin-content.pjax-loading {
+        opacity: 0.4;
+        pointer-events: none;
+        transition: opacity 0.15s ease;
+    }
+</style>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Mobile sidebar toggle functionality
@@ -332,5 +323,294 @@ $menu_items = [
                 overlay.classList.remove('show');
             }
         });
+
+        // ================================================
+        // PJAX-STYLE NAVIGATION — prevents full page reload
+        // Keeps sidebar persistent, only swaps content area
+        // ================================================
+        (function initPjax() {
+            var pjaxActive = false; // prevent overlapping requests
+
+            // Update sidebar active state
+            function updateSidebarActive(url) {
+                var page = url.split('/').pop().split('?')[0];
+                sidebar.querySelectorAll('.sidebar-nav .nav-link').forEach(function(link) {
+                    var linkPage = link.getAttribute('href').split('/').pop().split('?')[0];
+                    if (linkPage === page ||
+                        ((page === 'view_property.php' || page === 'property_tour_requests.php') && linkPage === 'property.php')) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+
+            // Main PJAX load function
+            function pjaxNavigate(url, pushState) {
+                if (pjaxActive) return;
+                pjaxActive = true;
+
+                var contentEl = document.querySelector('.admin-content');
+                if (contentEl) contentEl.classList.add('pjax-loading');
+
+                fetch(url, { credentials: 'same-origin' })
+                    .then(function(res) {
+                        if (!res.ok) throw new Error(res.status);
+                        return res.text();
+                    })
+                    .then(function(html) {
+                        var parser = new DOMParser();
+                        var newDoc = parser.parseFromString(html, 'text/html');
+
+                        // 0. Clear existing toasts & remove old injected PJAX scripts
+                        var toastContainer = document.getElementById('toastContainer');
+                        if (toastContainer) toastContainer.innerHTML = '';
+                        document.querySelectorAll('script[data-pjax-injected]').forEach(function(s) { s.remove(); });
+
+                        // Navigation ID to guard stale callbacks
+                        window.__pjaxNavId = (window.__pjaxNavId || 0) + 1;
+                        var currentNavId = window.__pjaxNavId;
+
+                        // 1. Replace <head> styles
+                        document.head.querySelectorAll('style:not([data-pjax-keep])').forEach(function(s) { s.remove(); });
+                        newDoc.head.querySelectorAll('style').forEach(function(s) {
+                            document.head.appendChild(s.cloneNode(true));
+                        });
+                        var existingLinks = Array.from(document.head.querySelectorAll('link[rel="stylesheet"]')).map(function(l) { return l.getAttribute('href'); });
+                        newDoc.head.querySelectorAll('link[rel="stylesheet"]').forEach(function(link) {
+                            if (existingLinks.indexOf(link.getAttribute('href')) === -1) {
+                                document.head.appendChild(link.cloneNode(true));
+                            }
+                        });
+
+                        // 2. Replace document title
+                        document.title = newDoc.title || document.title;
+
+                        // 3. Replace ALL body content after the persistent .admin-navbar.
+                        //    This covers .admin-content, modals placed outside it,
+                        //    #toastContainer, and page inline scripts — fixing the
+                        //    "classList of null" error caused by modal HTML from a previous
+                        //    page lingering in the DOM after only swapping .admin-content.
+
+                        // 3a. Collect post-navbar nodes from the fetched document
+                        var fetchedNavbar = newDoc.querySelector('.admin-navbar');
+                        var afterNavNodes = [];
+                        if (fetchedNavbar) {
+                            var fn = fetchedNavbar.nextSibling;
+                            while (fn) { afterNavNodes.push(fn); fn = fn.nextSibling; }
+                        }
+
+                        // 3b. Remove all live DOM nodes that follow the persistent navbar
+                        var liveNavbar = document.querySelector('.admin-navbar');
+                        if (liveNavbar) {
+                            while (liveNavbar.nextSibling) {
+                                document.body.removeChild(liveNavbar.nextSibling);
+                            }
+                        }
+
+                        // 4. Manually hydrate skeleton — window 'load' never fires in PJAX
+                        // (handled below, after new nodes are inserted)
+
+                        // 5. Update sidebar active state
+                        updateSidebarActive(url);
+
+                        // 6. Intercept event listeners registered by new page scripts so we can
+                        //    control exactly when they fire instead of relying on browser events
+                        //    that may not re-fire during PJAX navigation.
+                        var origDocAEL = document.addEventListener.bind(document);
+                        var origWinAEL = window.addEventListener.bind(window);
+                        var skeletonListeners  = [];
+                        var domReadyListeners  = [];
+
+                        document.addEventListener = function(type, fn, opts) {
+                            if (type === 'skeleton:hydrated') { skeletonListeners.push(fn); return; }
+                            if (type === 'DOMContentLoaded')  { domReadyListeners.push(fn);  return; }
+                            return origDocAEL(type, fn, opts);
+                        };
+                        window.addEventListener = function(type, fn, opts) {
+                            // Discard window 'load' — hydration is handled manually (step after)
+                            if (type === 'load') return;
+                            return origWinAEL(type, fn, opts);
+                        };
+
+                        // 7. Insert post-navbar nodes from the fetched page.
+                        //    Non-script elements (admin-content, modals, toastContainer …):
+                        //      import into live doc, strip any nested <script> tags into a queue,
+                        //      then append — scripts inside divs do NOT execute via importNode.
+                        //    Script elements: controlled injection via createElement so that our
+                        //      listener interception (step 6) captures their registrations.
+                        //    Skip: sidebar PJAX script, skeleton hydrator, navbar script.
+                        var scriptQueue = [];
+
+                        afterNavNodes.forEach(function(node) {
+                            if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.COMMENT_NODE) {
+                                document.body.appendChild(document.importNode(node, false));
+                                return;
+                            }
+                            if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+                            if (node.tagName === 'SCRIPT') {
+                                scriptQueue.push(node);
+                                return;
+                            }
+
+                            // HTML element (div, nav, etc.) — import deeply, extract nested scripts
+                            var clone = document.importNode(node, true);
+                            clone.querySelectorAll('script').forEach(function(s) {
+                                scriptQueue.push(s);
+                                s.parentNode.removeChild(s);
+                            });
+                            document.body.appendChild(clone);
+                        });
+
+                        // Process the script queue SEQUENTIALLY with active listener
+                        // interception. External scripts (with src) must finish loading
+                        // before the next script runs, because inline scripts may depend
+                        // on libraries loaded by a preceding external script (e.g. Chart.js).
+                        function injectNextScript(idx) {
+                            // Base case: all scripts processed → finalize navigation
+                            if (idx >= scriptQueue.length) {
+                                // 8. Restore original event listener methods
+                                document.addEventListener = origDocAEL;
+                                window.addEventListener   = origWinAEL;
+
+                                // Manually hydrate skeleton — window 'load' never fires in PJAX
+                                var sk = document.getElementById('sk-screen');
+                                var pc = document.getElementById('page-content');
+                                if (sk) sk.remove();
+                                if (pc) {
+                                    pc.style.display  = 'block';
+                                    pc.style.opacity  = '1';
+                                    pc.style.transition = '';
+                                }
+
+                                // 9. Run captured DOMContentLoaded handlers immediately
+                                domReadyListeners.forEach(function(fn) {
+                                    try { fn(); } catch(e) { console.warn('PJAX DOMContentLoaded error:', e); }
+                                });
+
+                                // 10. Fire skeleton:hydrated listeners after a short delay
+                                setTimeout(function() {
+                                    if (window.__pjaxNavId !== currentNavId) return;
+                                    skeletonListeners.forEach(function(fn) {
+                                        try { fn(); } catch(e) { console.warn('PJAX skeleton:hydrated error:', e); }
+                                    });
+                                    skeletonListeners = [];
+                                }, 200);
+
+                                // 11. Push URL to browser history
+                                if (pushState !== false) {
+                                    history.pushState({ pjax: true }, '', url);
+                                }
+
+                                // 12. Scroll to top & close mobile sidebar
+                                window.scrollTo(0, 0);
+                                sidebar.classList.remove('show');
+                                overlay.classList.remove('show');
+                                pjaxActive = false;
+                                return;
+                            }
+
+                            var oldScript = scriptQueue[idx];
+                            var txt = oldScript.textContent || '';
+
+                            // Skip known scripts
+                            if (txt.indexOf('initPjax') !== -1) return injectNextScript(idx + 1);
+                            if (txt.indexOf('sk-screen') !== -1 && txt.indexOf('scheduleHydration') !== -1) return injectNextScript(idx + 1);
+                            if (txt.indexOf('adminNotifToggleBtn') !== -1) return injectNextScript(idx + 1);
+
+                            var rawSrc = oldScript.getAttribute('src');
+                            if (rawSrc) {
+                                // Deduplicate external scripts by filename
+                                var filename = rawSrc.split('/').pop().split('?')[0];
+                                if (document.querySelector('script[src*="' + filename + '"]')) return injectNextScript(idx + 1);
+                            }
+
+                            var newScript = document.createElement('script');
+                            newScript.setAttribute('data-pjax-injected', 'true');
+                            Array.from(oldScript.attributes).forEach(function(attr) {
+                                if (attr.name !== 'src' && attr.name !== 'data-pjax-injected') {
+                                    newScript.setAttribute(attr.name, attr.value);
+                                }
+                            });
+
+                            if (rawSrc) {
+                                // External script: wait for load before continuing
+                                newScript.src = new URL(rawSrc, url).href;
+                                newScript.onload  = function() { injectNextScript(idx + 1); };
+                                newScript.onerror = function() { console.warn('PJAX: failed to load', rawSrc); injectNextScript(idx + 1); };
+                                document.body.appendChild(newScript);
+                            } else {
+                                // Inline script: executes synchronously on append
+                                newScript.textContent = txt;
+                                document.body.appendChild(newScript);
+                                injectNextScript(idx + 1);
+                            }
+                        }
+
+                        // Start sequential script injection
+                        injectNextScript(0);
+                    })
+                    .catch(function(err) {
+                        console.warn('PJAX failed, falling back to full navigation:', err);
+                        pjaxActive = false;
+                        window.location.href = url;
+                    });
+            }
+
+            // Intercept sidebar link clicks
+            sidebar.addEventListener('click', function(e) {
+                var link = e.target.closest('.sidebar-nav .nav-link');
+                if (!link) return;
+                // Don't intercept logout or modal triggers
+                if (link.classList.contains('logout-link')) return;
+                if (link.getAttribute('data-bs-toggle')) return;
+
+                var href = link.getAttribute('href');
+                if (!href || href === '#') return;
+
+                // Only handle same-origin navigation
+                try {
+                    var targetUrl = new URL(href, window.location.origin);
+                    if (targetUrl.origin !== window.location.origin) return;
+                } catch (err) { return; }
+
+                e.preventDefault();
+                e.stopPropagation(); // Prevent click from reaching Bootstrap modal/dropdown handlers
+
+                // Clean up any lingering Bootstrap state before navigating
+                document.querySelectorAll('.modal-backdrop').forEach(function(el) { el.remove(); });
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+                // Close any visible Bootstrap modals gracefully
+                document.querySelectorAll('.modal.show').forEach(function(el) {
+                    try { var inst = bootstrap.Modal.getInstance(el); if (inst) inst.hide(); } catch(x) {}
+                });
+                // Close any open Bootstrap dropdowns
+                document.querySelectorAll('[data-bs-toggle="dropdown"].show, .dropdown-menu.show').forEach(function(el) {
+                    el.classList.remove('show');
+                    el.removeAttribute('aria-expanded');
+                });
+
+                // Don't navigate if already on this page
+                if (href === window.location.href || href === window.location.pathname) return;
+
+                pjaxNavigate(href, true);
+            });
+
+            // Handle browser back/forward buttons
+            window.addEventListener('popstate', function(e) {
+                if (e.state && e.state.pjax) {
+                    pjaxNavigate(window.location.href, false);
+                } else {
+                    // If user goes back to a non-PJAX page, do full reload
+                    window.location.reload();
+                }
+            });
+
+            // Store initial state so popstate works for the first page too
+            history.replaceState({ pjax: true }, '', window.location.href);
+        })();
     });
 </script>

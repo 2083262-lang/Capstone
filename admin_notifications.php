@@ -1597,9 +1597,9 @@ function notif_time_ago($datetime) {
         }
 
         // ── Mark-All-Read Modal ────────────────────────
-        const _marBackdrop = document.getElementById('marBackdrop');
-        const _marConfirm  = document.getElementById('marConfirmBtn');
-        const _marCancel   = document.getElementById('marCancelBtn');
+        var _marBackdrop = document.getElementById('marBackdrop');
+        var _marConfirm  = document.getElementById('marConfirmBtn');
+        var _marCancel   = document.getElementById('marCancelBtn');
 
         function openMarkAllReadModal() {
             _marBackdrop.classList.add('mar-open');
