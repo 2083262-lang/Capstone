@@ -1,6 +1,6 @@
 <?php
 // admin_sidebar.php
-include 'logout_modal.php';
+include __DIR__ . '/logout_modal.php';
 // Allow an including page to override the active item by setting $active_page before including this file
 if (isset($active_page) && !empty($active_page)) {
     $current_page = $active_page;
@@ -16,6 +16,8 @@ $menu_items = [
     'agent.php' => ['icon' => 'fi fi-rs-employees', 'title' => 'Agents'],
     'tour_requests.php' => ['icon' => 'fi fi-rs-map-marker-home', 'title' => 'Tour Requests'],
     'admin_property_sale_approvals.php' => ['icon' => 'fi fi-rs-sold-house', 'title' => 'Sale Approvals'],
+    'admin_rental_approvals.php' => ['icon' => 'bi bi-house-check', 'title' => 'Rental Approvals'],
+    'admin_rental_payments.php' => ['icon' => 'bi bi-cash-stack', 'title' => 'Rental Payments'],
     'admin_notifications.php' => ['icon' => 'fi fi-rs-bell', 'title' => 'Notifications'],
     'reports.php' => ['icon' => 'fi fi-rs-chart-pie-simple-circle-dollar', 'title' => 'Reports'],
 ];
@@ -26,7 +28,7 @@ $menu_items = [
 <!-- Flaticon Uicons Regular Straight - used for sidebar navigation icons -->
 <link rel="stylesheet" href="<?= ASSETS_CSS ?>uicons-regular-straight.css">
 <!-- Standardized Admin Layout CSS -->
-<link rel="stylesheet" href="css/admin_layout.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>css/admin_layout.css">
 
 <style>
     :root {
@@ -270,7 +272,7 @@ $menu_items = [
 <div class="admin-sidebar" id="adminSidebar">
     <!-- Brand/Logo Section -->
     <div class="sidebar-brand">
-        <img src="images/Logo.png" alt="HomeEstate Realty Logo">
+        <img src="<?= BASE_URL ?>images/Logo.png" alt="HomeEstate Realty Logo">
         <h4>HomeEstate Realty</h4>
         <small class="text-light">Admin Panel</small>
     </div>
@@ -279,7 +281,7 @@ $menu_items = [
     <nav class="sidebar-nav">
         <?php foreach ($menu_items as $page => $item): ?>
             <div class="nav-item">
-                <a href="<?php echo $page; ?>" class="nav-link <?php echo ($current_page === $page || (in_array($current_page, ['view_property.php','property_tour_requests.php']) && $page === 'property.php')) ? 'active' : ''; ?>">
+                <a href="<?= BASE_URL ?><?php echo $page; ?>" class="nav-link <?php echo ($current_page === $page || (in_array($current_page, ['view_property.php','property_tour_requests.php']) && $page === 'property.php')) ? 'active' : ''; ?>">
                     <i class="<?php echo $item['icon']; ?>"></i>
                     <?php echo $item['title']; ?>
                 </a>

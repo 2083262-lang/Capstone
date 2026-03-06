@@ -65,12 +65,15 @@ if ($stmt = $conn->prepare($sql)) {
 // --- Separate properties into categories ---
 // Note: 'approval_status' is the admin workflow status (pending/approved/rejected)
 // 'Status' is the listing status (For Sale/For Rent/Sold)
-$pending_properties = array_filter($properties, fn($p) => ($p['approval_status'] ?? '') == 'pending' && !(isset($p['Status']) && in_array(strtolower(trim($p['Status'])), ['sold','pending sold'])));
-$approved_properties = array_filter($properties, fn($p) => ($p['approval_status'] ?? '') == 'approved' && !(isset($p['Status']) && in_array(strtolower(trim($p['Status'])), ['sold','pending sold'])));
-$rejected_properties = array_filter($properties, fn($p) => ($p['approval_status'] ?? '') == 'rejected' && !(isset($p['Status']) && in_array(strtolower(trim($p['Status'])), ['sold','pending sold'])));
+$pending_properties = array_filter($properties, fn($p) => ($p['approval_status'] ?? '') == 'pending' && !(isset($p['Status']) && in_array(strtolower(trim($p['Status'])), ['sold','pending sold','rented','pending rented'])));
+$approved_properties = array_filter($properties, fn($p) => ($p['approval_status'] ?? '') == 'approved' && !(isset($p['Status']) && in_array(strtolower(trim($p['Status'])), ['sold','pending sold','rented','pending rented'])));
+$rejected_properties = array_filter($properties, fn($p) => ($p['approval_status'] ?? '') == 'rejected' && !(isset($p['Status']) && in_array(strtolower(trim($p['Status'])), ['sold','pending sold','rented','pending rented'])));
 // Pending Sold is represented by Status = 'Pending Sold'; Sold is Status = 'Sold'
 $pending_sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && strtolower(trim($p['Status'])) === 'pending sold');
 $sold_properties = array_filter($properties, fn($p) => isset($p['Status']) && strtolower(trim($p['Status'])) === 'sold');
+// Rented properties
+$rented_properties = array_filter($properties, fn($p) => isset($p['Status']) && strtolower(trim($p['Status'])) === 'rented');
+$pending_rented_properties = array_filter($properties, fn($p) => isset($p['Status']) && strtolower(trim($p['Status'])) === 'pending rented');
 
 // Fetch property types for filters
 $property_types_db = [];
@@ -317,6 +320,18 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
             border: 1px solid rgba(6, 182, 212, 0.15);
         }
 
+        .kpi-icon.purple {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.06) 0%, rgba(139, 92, 246, 0.12) 100%);
+            color: #7c3aed;
+            border: 1px solid rgba(139, 92, 246, 0.15);
+        }
+
+        .kpi-icon.pink {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.06) 0%, rgba(236, 72, 153, 0.12) 100%);
+            color: #db2777;
+            border: 1px solid rgba(236, 72, 153, 0.15);
+        }
+
         .kpi-card .kpi-label {
             font-size: 0.7rem;
             font-weight: 600;
@@ -520,6 +535,8 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         .badge-rejected { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.15); }
         .badge-sold { background: rgba(100, 116, 139, 0.1); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.15); }
         .badge-pending-sold { background: rgba(6, 182, 212, 0.1); color: #0891b2; border: 1px solid rgba(6, 182, 212, 0.15); }
+        .badge-rented { background: rgba(139, 92, 246, 0.1); color: #7c3aed; border: 1px solid rgba(139, 92, 246, 0.15); }
+        .badge-pending-rented { background: rgba(236, 72, 153, 0.1); color: #db2777; border: 1px solid rgba(236, 72, 153, 0.15); }
 
         .tab-content { padding: 1.5rem; }
 
@@ -610,6 +627,8 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         .status-badge.rejected { background: rgba(239, 68, 68, 0.9); color: #fff; }
         .status-badge.pending-sold { background: rgba(6, 182, 212, 0.9); color: #fff; }
         .status-badge.sold { background: rgba(100, 116, 139, 0.9); color: #fff; }
+        .status-badge.rented { background: rgba(139, 92, 246, 0.9); color: #fff; }
+        .status-badge.pending-rented { background: rgba(236, 72, 153, 0.9); color: #fff; }
 
         .admin-prop-card .listing-badge {
             position: absolute;
@@ -630,6 +649,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         .listing-badge.for-sale { background: rgba(37, 99, 235, 0.9); color: #fff; }
         .listing-badge.for-rent { background: rgba(212, 175, 55, 0.9); color: #fff; }
         .listing-badge.is-sold { background: rgba(100, 116, 139, 0.8); color: #fff; }
+        .listing-badge.is-rented { background: rgba(139, 92, 246, 0.8); color: #fff; }
 
         .admin-prop-card .type-badge {
             position: absolute;
@@ -1790,6 +1810,16 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
                 <div class="kpi-label">Sold</div>
                 <div class="kpi-value"><?php echo count($sold_properties); ?></div>
             </div>
+            <div class="kpi-card">
+                <div class="kpi-icon pink"><i class="bi bi-hourglass-bottom"></i></div>
+                <div class="kpi-label">Pending Rented</div>
+                <div class="kpi-value"><?php echo count($pending_rented_properties); ?></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon purple"><i class="bi bi-key-fill"></i></div>
+                <div class="kpi-label">Rented</div>
+                <div class="kpi-value"><?php echo count($rented_properties); ?></div>
+            </div>
         </div>
 
         <!-- Action Bar -->
@@ -1856,6 +1886,20 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
                         <span class="tab-badge badge-sold"><?php echo count($sold_properties); ?></span>
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pending-rented-tab" data-bs-toggle="tab" data-bs-target="#pending-rented-content" type="button" role="tab">
+                        <i class="bi bi-hourglass-bottom me-1"></i>
+                        Pending Rented
+                        <span class="tab-badge badge-pending-rented"><?php echo count($pending_rented_properties); ?></span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="rented-tab" data-bs-toggle="tab" data-bs-target="#rented-content" type="button" role="tab">
+                        <i class="bi bi-key-fill me-1"></i>
+                        Rented
+                        <span class="tab-badge badge-rented"><?php echo count($rented_properties); ?></span>
+                    </button>
+                </li>
             </ul>
 
             <div class="tab-content" id="propertyStatusTabsContent">
@@ -1888,6 +1932,16 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
                 <div class="tab-pane fade" id="sold-content" role="tabpanel">
                     <div class="properties-grid" id="sold-grid"></div>
                     <div class="pagination-bar" id="sold-pagination" style="display:none;"></div>
+                </div>
+                <!-- Pending Rented Properties -->
+                <div class="tab-pane fade" id="pending-rented-content" role="tabpanel">
+                    <div class="properties-grid" id="pending-rented-grid"></div>
+                    <div class="pagination-bar" id="pending-rented-pagination" style="display:none;"></div>
+                </div>
+                <!-- Rented Properties -->
+                <div class="tab-pane fade" id="rented-content" role="tabpanel">
+                    <div class="properties-grid" id="rented-grid"></div>
+                    <div class="pagination-bar" id="rented-pagination" style="display:none;"></div>
                 </div>
             </div>
 
@@ -2097,6 +2151,14 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
                         <label class="filter-chip">
                             <input type="checkbox" class="status-filter" value="Sold" checked>
                             <span>Sold</span>
+                        </label>
+                        <label class="filter-chip">
+                            <input type="checkbox" class="status-filter" value="Pending Rented" checked>
+                            <span>Pending Rented</span>
+                        </label>
+                        <label class="filter-chip">
+                            <input type="checkbox" class="status-filter" value="Rented" checked>
+                            <span>Rented</span>
                         </label>
                     </div>
                 </div>
@@ -2390,7 +2452,9 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
                 const byStatus = filtered.reduce((acc, cur) => { acc[cur.approval_status] = (acc[cur.approval_status]||0)+1; return acc; }, {});
                 const pendingSoldCount = filtered.filter(p => (p.Status||'').toLowerCase() === 'pending sold').length;
                 const soldCount = filtered.filter(p => (p.Status||'').toLowerCase() === 'sold').length;
-                summary.innerHTML = `<strong>${filtered.length}</strong> result(s) — Pending: ${byStatus['pending']||0}, Pending Sold: ${pendingSoldCount}, Approved: ${byStatus['approved']||0}, Rejected: ${byStatus['rejected']||0}, Sold: ${soldCount}`;
+                const pendingRentedCount = filtered.filter(p => (p.Status||'').toLowerCase() === 'pending rented').length;
+                const rentedCount = filtered.filter(p => (p.Status||'').toLowerCase() === 'rented').length;
+                summary.innerHTML = `<strong>${filtered.length}</strong> result(s) — Pending: ${byStatus['pending']||0}, Pending Sold: ${pendingSoldCount}, Approved: ${byStatus['approved']||0}, Rejected: ${byStatus['rejected']||0}, Sold: ${soldCount}, Pending Rented: ${pendingRentedCount}, Rented: ${rentedCount}`;
             }
 
             renderGrids(filtered);
@@ -2399,7 +2463,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         // Pagination globals
         const PROP_PER_PAGE = 12;
         let propFilteredItems = {};
-        let propCurrentPage = { all: 1, pending: 1, 'pending-sold': 1, approved: 1, rejected: 1, sold: 1 };
+        let propCurrentPage = { all: 1, pending: 1, 'pending-sold': 1, approved: 1, rejected: 1, sold: 1, 'pending-rented': 1, rented: 1 };
 
         function renderGrids(filtered) {
             // Get all pre-rendered card wrappers
@@ -2415,10 +2479,12 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
             // Group items
             const groupByApproval = (status) => filtered.filter(p => {
                 const sl = (p.Status||'').toLowerCase();
-                return (p.approval_status||'') === status && sl !== 'sold' && sl !== 'pending sold';
+                return (p.approval_status||'') === status && sl !== 'sold' && sl !== 'pending sold' && sl !== 'rented' && sl !== 'pending rented';
             });
             const pendingSoldItems = filtered.filter(p => (p.Status||'').toLowerCase() === 'pending sold');
             const soldItems = filtered.filter(p => (p.Status||'').toLowerCase() === 'sold');
+            const pendingRentedItems = filtered.filter(p => (p.Status||'').toLowerCase() === 'pending rented');
+            const rentedItems = filtered.filter(p => (p.Status||'').toLowerCase() === 'rented');
 
             // Store filtered items per key and reset to page 1
             propFilteredItems = {
@@ -2427,7 +2493,9 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
                 'pending-sold': pendingSoldItems,
                 approved: groupByApproval('approved'),
                 rejected: groupByApproval('rejected'),
-                sold: soldItems
+                sold: soldItems,
+                'pending-rented': pendingRentedItems,
+                rented: rentedItems
             };
             Object.keys(propCurrentPage).forEach(k => { propCurrentPage[k] = 1; });
 
@@ -2590,7 +2658,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
             yearMax: null,
             city: '',
             county: '',
-            statuses: new Set(['For Sale', 'For Rent', 'Pending Sold', 'Sold']),
+            statuses: new Set(['For Sale', 'For Rent', 'Pending Sold', 'Sold', 'Pending Rented', 'Rented']),
             approvalStatuses: new Set(['pending', 'approved', 'rejected']),
             parking: '',
             listedBy: ''
@@ -2695,7 +2763,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
             if (comprehensiveFilters.yearMin || comprehensiveFilters.yearMax) count++;
             if (comprehensiveFilters.city) count++;
             if (comprehensiveFilters.county) count++;
-            if (comprehensiveFilters.statuses.size < 4) count++;
+            if (comprehensiveFilters.statuses.size < 6) count++;
             if (comprehensiveFilters.approvalStatuses.size < 3) count++;
             if (comprehensiveFilters.parking) count++;
             if (document.getElementById('listingDateFrom')?.value || document.getElementById('listingDateTo')?.value) count++;
@@ -2940,7 +3008,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
                 yearMax: null,
                 city: '',
                 county: '',
-                statuses: new Set(['For Sale', 'For Rent', 'Pending Sold', 'Sold']),
+                statuses: new Set(['For Sale', 'For Rent', 'Pending Sold', 'Sold', 'Pending Rented', 'Rented']),
                 approvalStatuses: new Set(['pending', 'approved', 'rejected']),
                 parking: '',
                 listedBy: ''

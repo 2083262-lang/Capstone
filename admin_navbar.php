@@ -1,7 +1,7 @@
 <?php
 // admin_navbar.php
 // Ensure session is started and user info is available
-include 'logout_modal.php';
+include __DIR__ . '/logout_modal.php';
 if (!isset($_SESSION['username'])) {
     // Fallback if session not properly initialized
     $username = 'Admin';
@@ -95,12 +95,13 @@ if (isset($conn) && isset($_SESSION['account_id'])) {
             }
         }
         if (empty($notif['action_url'])) {
+            $base = defined('BASE_URL') ? BASE_URL : '';
             switch ($notif['item_type']) {
-                case 'agent':        $notif['action_url'] = 'review_agent_details.php?id=' . ($notif['item_id'] ?? 0); break;
-                case 'tour':         $notif['action_url'] = 'admin_tour_request_details.php?id=' . ($notif['item_id'] ?? 0); break;
-                case 'property':     $notif['action_url'] = 'view_property.php?id=' . ($notif['item_id'] ?? 0); break;
-                case 'property_sale':$notif['action_url'] = 'admin_property_sale_approvals.php'; break;
-                default:             $notif['action_url'] = 'admin_notifications.php'; break;
+                case 'agent':        $notif['action_url'] = $base . 'review_agent_details.php?id=' . ($notif['item_id'] ?? 0); break;
+                case 'tour':         $notif['action_url'] = $base . 'admin_tour_request_details.php?id=' . ($notif['item_id'] ?? 0); break;
+                case 'property':     $notif['action_url'] = $base . 'view_property.php?id=' . ($notif['item_id'] ?? 0); break;
+                case 'property_sale':$notif['action_url'] = $base . 'admin_property_sale_approvals.php'; break;
+                default:             $notif['action_url'] = $base . 'admin_notifications.php'; break;
             }
         }
         $recent_notifications[] = $notif;
@@ -139,7 +140,7 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
 <!-- Ensure Bootstrap Icons are available on any page that includes the navbar -->
 <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
 <!-- Standardized Admin Layout CSS -->
-<link rel="stylesheet" href="css/admin_layout.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>css/admin_layout.css">
 
 <style>
     :root {
@@ -913,7 +914,7 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
                     <?php echo $page_title; ?>
                 </h1>
                 <div class="breadcrumb-nav">
-                    <a href="admin_dashboard.php">Dashboard</a>
+                    <a href="<?= BASE_URL ?>admin_dashboard.php">Dashboard</a>
                     <?php if ($current_page !== 'admin_dashboard.php'): ?>
                         <span class="mx-1">•</span>
                         <span><?php echo $page_titles[$current_page] ?? 'Current Page'; ?></span>
@@ -1002,7 +1003,7 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
                             <?php endif; ?>
                         </div>
                         <div class="admin-notif-dropdown-footer">
-                            <a href="admin_notifications.php">View All Notifications <i class="bi bi-arrow-right ms-1"></i></a>
+                            <a href="<?= BASE_URL ?>admin_notifications.php">View All Notifications <i class="bi bi-arrow-right ms-1"></i></a>
                         </div>
                     </div>
                 </div>
@@ -1040,10 +1041,10 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
 
                     <!-- Navigation -->
                     <div class="pdd-section">
-                        <a href="admin_profile.php" class="pdd-menu-item">
+                        <a href="<?= BASE_URL ?>admin_profile.php" class="pdd-menu-item">
                             <i class="bi bi-person"></i> View Profile
                         </a>
-                        <a href="admin_settings.php" class="pdd-menu-item">
+                        <a href="<?= BASE_URL ?>admin_settings.php" class="pdd-menu-item">
                             <i class="bi bi-gear"></i> Account Settings
                         </a>
                     </div>
@@ -1093,7 +1094,7 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
         if (adminNotifMarkAllBtn) {
             adminNotifMarkAllBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                fetch('admin_notifications.php?mark_all_read=1', { method: 'GET' })
+                fetch('<?= BASE_URL ?>admin_notifications.php?mark_all_read=1', { method: 'GET' })
                     .then(() => {
                         // Remove unread styling from all items
                         document.querySelectorAll('.admin-notif-item.unread').forEach(item => {

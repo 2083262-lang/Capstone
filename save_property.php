@@ -341,21 +341,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $conn->begin_transaction();
         $uploaded_files = []; // track uploaded files for rollback cleanup
 
+        // Determine listing_type from Status
+        $listing_type_value = ($Status === 'For Rent') ? 'For Rent' : 'For Sale';
+
         try {
             // ---- Insert Property ----
             $sql = "INSERT INTO property (
                 StreetAddress, City, Barangay, Province, ZIP, PropertyType, YearBuilt, SquareFootage, LotSize,
                 Bedrooms, Bathrooms, ListingPrice, Status, ListingDate,
-                Source, MLSNumber, ListingDescription, ParkingType, approval_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                Source, MLSNumber, ListingDescription, ParkingType, listing_type, approval_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             $stmt = $conn->prepare($sql);
             $stmt->bind_param(
-                "ssssssiididssssssss",
+                "ssssssiididsssssssss",
                 $StreetAddress, $City, $Barangay, $Province, $ZIP, $PropertyType,
                 $YearBuilt, $SquareFootage, $LotSize, $Bedrooms, $Bathrooms,
                 $ListingPrice, $Status, $ListingDate, $Source, $MLSNumber,
-                $ListingDescription, $ParkingType, $approval_status_value
+                $ListingDescription, $ParkingType, $listing_type_value, $approval_status_value
             );
             $stmt->execute();
             $property_ID = $stmt->insert_id;

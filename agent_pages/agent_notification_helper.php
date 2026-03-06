@@ -13,7 +13,9 @@
  * @param int    $agent_id     The agent's account_id
  * @param string $type         Notification type enum: tour_new, tour_cancelled, tour_completed,
  *                             property_approved, property_rejected, sale_approved, sale_rejected,
- *                             commission_paid, general
+ *                             commission_paid, rental_approved, rental_rejected,
+ *                             rental_payment_confirmed, rental_payment_rejected,
+ *                             lease_expiring, lease_expired, general
  * @param string $title        Short notification title (max 150 chars)
  * @param string $message      Full notification message
  * @param int|null $ref_id     Reference ID (tour_id, property_id, etc.)
@@ -91,15 +93,21 @@ function formatNotifTimeAgo($datetime) {
  */
 function getNotifIcon($type) {
     $map = [
-        'tour_new'          => ['bi bi-calendar-plus', 'tour'],
-        'tour_cancelled'    => ['bi bi-calendar-x', 'cancelled'],
-        'tour_completed'    => ['bi bi-calendar-check', 'completed'],
-        'property_approved' => ['bi bi-check-circle', 'approved'],
-        'property_rejected' => ['bi bi-x-circle', 'rejected'],
-        'sale_approved'     => ['bi bi-cash-stack', 'sale'],
-        'sale_rejected'     => ['bi bi-exclamation-triangle', 'rejected'],
-        'commission_paid'   => ['bi bi-wallet2', 'commission'],
-        'general'           => ['bi bi-bell', 'general'],
+        'tour_new'                  => ['bi bi-calendar-plus', 'tour'],
+        'tour_cancelled'            => ['bi bi-calendar-x', 'cancelled'],
+        'tour_completed'            => ['bi bi-calendar-check', 'completed'],
+        'property_approved'         => ['bi bi-check-circle', 'approved'],
+        'property_rejected'         => ['bi bi-x-circle', 'rejected'],
+        'sale_approved'             => ['bi bi-cash-stack', 'sale'],
+        'sale_rejected'             => ['bi bi-exclamation-triangle', 'rejected'],
+        'commission_paid'           => ['bi bi-wallet2', 'commission'],
+        'rental_approved'           => ['bi bi-house-check', 'approved'],
+        'rental_rejected'           => ['bi bi-house-x', 'rejected'],
+        'rental_payment_confirmed'  => ['bi bi-check-circle', 'completed'],
+        'rental_payment_rejected'   => ['bi bi-x-circle', 'rejected'],
+        'lease_expiring'            => ['bi bi-clock-history', 'tour'],
+        'lease_expired'             => ['bi bi-calendar-x', 'cancelled'],
+        'general'                   => ['bi bi-bell', 'general'],
     ];
     return $map[$type] ?? $map['general'];
 }

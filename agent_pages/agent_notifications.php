@@ -67,9 +67,20 @@ if ($filter === 'unread') {
 }
 
 if ($type_filter !== 'all') {
-    $where[] = "notif_type = ?";
-    $params[] = $type_filter;
-    $types .= "s";
+    // Category-based filtering: match all types in a group
+    $type_categories = [
+        'tour_new'         => "notif_type LIKE 'tour%'",
+        'property_approved'=> "notif_type LIKE 'property%'",
+        'sale_approved'    => "(notif_type LIKE 'sale%' OR notif_type = 'commission_paid')",
+        'rental_approved'  => "(notif_type LIKE 'rental%' OR notif_type LIKE 'lease%')",
+    ];
+    if (isset($type_categories[$type_filter])) {
+        $where[] = $type_categories[$type_filter];
+    } else {
+        $where[] = "notif_type = ?";
+        $params[] = $type_filter;
+        $types .= "s";
+    }
 }
 
 $where_clause = "WHERE " . implode(" AND ", $where);
@@ -92,7 +103,8 @@ $count_sql = "SELECT
     SUM(is_read = 0) as unread,
     SUM(notif_type LIKE 'tour%') as tours,
     SUM(notif_type LIKE 'property%') as properties,
-    SUM(notif_type LIKE 'sale%' OR notif_type = 'commission_paid') as sales
+    SUM(notif_type LIKE 'sale%' OR notif_type = 'commission_paid') as sales,
+    SUM(notif_type LIKE 'rental%' OR notif_type LIKE 'lease%') as rentals
     FROM agent_notifications WHERE agent_account_id = ?";
 $stmt = $conn->prepare($count_sql);
 $stmt->bind_param("i", $agent_account_id);
@@ -105,6 +117,7 @@ $unread_count = (int)($counts['unread'] ?? 0);
 $tour_count = (int)($counts['tours'] ?? 0);
 $property_count = (int)($counts['properties'] ?? 0);
 $sale_count = (int)($counts['sales'] ?? 0);
+$rental_count = (int)($counts['rentals'] ?? 0);
 
 // Fetch agent info for navbar
 $agent_info_query = "SELECT ai.*, a.first_name, a.last_name, a.email FROM agent_information ai JOIN accounts a ON ai.account_id = a.account_id WHERE ai.account_id = ?";
@@ -239,6 +252,7 @@ $stmt->close();
         .notif-stat-icon.tours      { background: rgba(13, 202, 240, 0.12); color: #0dcaf0; }
         .notif-stat-icon.properties { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
         .notif-stat-icon.sales      { background: rgba(212, 175, 55, 0.12); color: var(--gold); }
+        .notif-stat-icon.rentals    { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
 
         .notif-stat-value {
             font-size: 1.5rem;
@@ -645,6 +659,13 @@ $stmt->close();
                     <div class="notif-stat-label">Sales & Commissions</div>
                 </div>
             </div>
+            <div class="notif-stat-card">
+                <div class="notif-stat-icon rentals"><i class="bi bi-house-check"></i></div>
+                <div>
+                    <div class="notif-stat-value"><?= $rental_count ?></div>
+                    <div class="notif-stat-label">Rental & Leases</div>
+                </div>
+            </div>
         </div>
 
         <!-- Filter Bar -->
@@ -664,6 +685,7 @@ $stmt->close();
                 <a href="?filter=<?= $filter ?>&type=tour_new" class="notif-filter-tab <?= $type_filter === 'tour_new' ? 'active' : '' ?>"><i class="bi bi-calendar-plus me-1"></i>Tours</a>
                 <a href="?filter=<?= $filter ?>&type=property_approved" class="notif-filter-tab <?= ($type_filter === 'property_approved' || $type_filter === 'property_rejected') ? 'active' : '' ?>"><i class="bi bi-building me-1"></i>Property</a>
                 <a href="?filter=<?= $filter ?>&type=sale_approved" class="notif-filter-tab <?= ($type_filter === 'sale_approved' || $type_filter === 'sale_rejected') ? 'active' : '' ?>"><i class="bi bi-cash-stack me-1"></i>Sales</a>
+                <a href="?filter=<?= $filter ?>&type=rental_approved" class="notif-filter-tab <?= $type_filter === 'rental_approved' ? 'active' : '' ?>"><i class="bi bi-house-check me-1"></i>Rentals</a>
             </div>
         </div>
 

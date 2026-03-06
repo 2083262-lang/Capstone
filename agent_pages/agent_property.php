@@ -50,11 +50,13 @@ $all_properties = $result->fetch_all(MYSQLI_ASSOC);
 $stmt_properties->close();
 
 // Separate properties into categories
-$approved_properties = array_filter($all_properties, fn($p) => $p['approval_status'] == 'approved' && $p['Status'] != 'Pending Sold' && $p['Status'] != 'Sold');
+$approved_properties = array_filter($all_properties, fn($p) => $p['approval_status'] == 'approved' && !in_array($p['Status'], ['Pending Sold', 'Sold', 'Pending Rented', 'Rented']));
 $pending_properties = array_filter($all_properties, fn($p) => $p['approval_status'] == 'pending');
 $rejected_properties = array_filter($all_properties, fn($p) => $p['approval_status'] == 'rejected');
 $pending_sold_properties = array_filter($all_properties, fn($p) => $p['Status'] == 'Pending Sold');
 $sold_properties = array_filter($all_properties, fn($p) => $p['Status'] == 'Sold');
+$pending_rented_properties = array_filter($all_properties, fn($p) => $p['Status'] == 'Pending Rented');
+$rented_properties = array_filter($all_properties, fn($p) => $p['Status'] == 'Rented');
 
 // Portfolio stats
 $total_value = array_sum(array_map(fn($p) => $p['ListingPrice'], array_filter($all_properties, fn($p) => $p['approval_status'] == 'approved' && $p['Status'] != 'Sold')));
@@ -309,6 +311,18 @@ $conn->close();
             border: 1px solid rgba(6, 182, 212, 0.2);
         }
 
+        .kpi-icon.purple {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.2) 100%);
+            color: #8b5cf6;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .kpi-icon.pink {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(236, 72, 153, 0.2) 100%);
+            color: #ec4899;
+            border: 1px solid rgba(236, 72, 153, 0.2);
+        }
+
         .kpi-card .kpi-label {
             font-size: 0.7rem;
             font-weight: 600;
@@ -406,6 +420,8 @@ $conn->close();
         .tab-count.red { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
         .tab-count.cyan { background: rgba(6, 182, 212, 0.1); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.2); }
         .tab-count.dark { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); }
+        .tab-count.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2); }
+        .tab-count.pink { background: rgba(236, 72, 153, 0.1); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.2); }
 
         /* ===== PROPERTY CARD (Dark Theme) ===== */
         .prop-card {
@@ -1793,6 +1809,16 @@ include 'agent_navbar.php';
             <div class="kpi-value"><?php echo count($sold_properties); ?></div>
         </div>
         <div class="kpi-card">
+            <div class="kpi-icon pink"><i class="bi bi-hourglass-split"></i></div>
+            <div class="kpi-label">Pending Rented</div>
+            <div class="kpi-value"><?php echo count($pending_rented_properties); ?></div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><i class="bi bi-key-fill"></i></div>
+            <div class="kpi-label">Rented</div>
+            <div class="kpi-value"><?php echo count($rented_properties); ?></div>
+        </div>
+        <div class="kpi-card">
             <div class="kpi-icon blue"><i class="bi bi-collection-fill"></i></div>
             <div class="kpi-label">Total</div>
             <div class="kpi-value"><?php echo count($all_properties); ?></div>
@@ -1827,6 +1853,16 @@ include 'agent_navbar.php';
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="sold-tab" data-bs-toggle="tab" data-bs-target="#sold-content" type="button" role="tab">
                     Sold <span class="tab-count dark"><?php echo count($sold_properties); ?></span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pending-rented-tab" data-bs-toggle="tab" data-bs-target="#pending-rented-content" type="button" role="tab">
+                    Pending Rented <span class="tab-count pink"><?php echo count($pending_rented_properties); ?></span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="rented-tab" data-bs-toggle="tab" data-bs-target="#rented-content" type="button" role="tab">
+                    Rented <span class="tab-count purple"><?php echo count($rented_properties); ?></span>
                 </button>
             </li>
         </ul>
@@ -1881,6 +1917,8 @@ include 'agent_navbar.php';
                             <option value="">All Statuses</option>
                             <option value="For Sale">For Sale</option>
                             <option value="For Rent">For Rent</option>
+                            <option value="Pending Rented">Pending Rented</option>
+                            <option value="Rented">Rented</option>
                         </select>
                     </div>
 
@@ -2080,6 +2118,38 @@ include 'agent_navbar.php';
                 <?php else: ?>
                     <div class="row g-4">
                         <?php foreach ($sold_properties as $property): ?>
+                            <?php include 'property_card_template.php'; ?>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Pending Rented Tab -->
+            <div class="tab-pane fade" id="pending-rented-content" role="tabpanel">
+                <?php if (empty($pending_rented_properties)): ?>
+                    <div class="empty-state">
+                        <i class="bi bi-hourglass"></i>
+                        <p>No properties with pending rental verification.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="row g-4">
+                        <?php foreach ($pending_rented_properties as $property): ?>
+                            <?php include 'property_card_template.php'; ?>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Rented Tab -->
+            <div class="tab-pane fade" id="rented-content" role="tabpanel">
+                <?php if (empty($rented_properties)): ?>
+                    <div class="empty-state">
+                        <i class="bi bi-key"></i>
+                        <p>No rented properties yet. Your first rental will appear here.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="row g-4">
+                        <?php foreach ($rented_properties as $property): ?>
                             <?php include 'property_card_template.php'; ?>
                         <?php endforeach; ?>
                     </div>
@@ -2391,6 +2461,340 @@ include 'agent_navbar.php';
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Mark as Rented Modal (Unified — matches admin Mark as Rented, agent dark theme) ===== -->
+<style>
+    #markAsRentedModal .modal-content {
+        background: #0f1117;
+        border: 1px solid rgba(212, 175, 55, 0.15);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    #markAsRentedModal .modal-header {
+        background: linear-gradient(135deg, #0a0a0a 0%, #111827 100%);
+        border-bottom: none;
+        padding: 1.4rem 1.75rem;
+        position: relative;
+    }
+    #markAsRentedModal .modal-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #b8941f, #2563eb);
+    }
+    #markAsRentedModal .modal-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #f1f5f9;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+    #markAsRentedModal .modal-title i { color: #d4af37; }
+    #markAsRentedModal .modal-body {
+        background: #0f1117;
+        padding: 1.5rem 1.75rem 0.75rem;
+    }
+    #markAsRentedModal .modal-footer {
+        background: #0a0d12;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        padding: 1rem 1.75rem;
+    }
+    /* Property confirm banner */
+    #markAsRentedModal .rental-confirm-card {
+        background: rgba(212, 175, 55, 0.04);
+        border: 1px solid rgba(212, 175, 55, 0.15);
+        border-left: 3px solid #d4af37;
+        border-radius: 4px;
+        padding: 0.9rem 1.25rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    #markAsRentedModal .rental-confirm-icon {
+        font-size: 1.75rem;
+        color: #d4af37;
+        flex-shrink: 0;
+        line-height: 1;
+    }
+    #markAsRentedModal .rental-confirm-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: #f1f5f9;
+    }
+    #markAsRentedModal .rental-confirm-address {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        margin-top: 0.2rem;
+    }
+    #markAsRentedModal .rental-confirm-rent-label {
+        font-size: 0.7rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    #markAsRentedModal .rental-confirm-rent-value {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #d4af37;
+    }
+    /* Section divider label */
+    #markAsRentedModal .form-section-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #94a3b8;
+        padding-bottom: 0.6rem;
+        margin-bottom: 0.85rem;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    #markAsRentedModal .form-section-label i { color: #d4af37; }
+    /* Labels and inputs */
+    #markAsRentedModal .form-label {
+        font-weight: 600;
+        font-size: 0.8rem;
+        color: #cbd5e1;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.4rem;
+    }
+    #markAsRentedModal .form-label .req { color: #ef4444; }
+    #markAsRentedModal .form-text {
+        font-size: 0.73rem;
+        color: #6b7280;
+        margin-top: 0.35rem;
+    }
+    #markAsRentedModal .form-control,
+    #markAsRentedModal .input-group-text {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 4px;
+        font-size: 0.88rem;
+        color: #f1f5f9;
+    }
+    #markAsRentedModal .input-group-text {
+        background: rgba(212, 175, 55, 0.06);
+        color: #d4af37;
+        font-weight: 700;
+        border-right: none;
+    }
+    #markAsRentedModal .input-group .form-control { border-left: none; }
+    #markAsRentedModal .form-control::placeholder { color: #4b5563; }
+    #markAsRentedModal .form-control:focus {
+        background: rgba(255,255,255,0.05);
+        border-color: #d4af37;
+        color: #f1f5f9;
+        box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.15);
+    }
+    #markAsRentedModal .form-control[type="date"] { color-scheme: dark; }
+    #markAsRentedModal .form-control[type="file"] { background: rgba(255,255,255,0.03); }
+    #markAsRentedModal .form-control[type="file"]::-webkit-file-upload-button {
+        background: rgba(212, 175, 55, 0.1);
+        border: none;
+        border-right: 1px solid rgba(255,255,255,0.1);
+        color: #d4af37;
+        padding: 0.35rem 0.75rem;
+        border-radius: 3px 0 0 3px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+    /* Submit button */
+    #markAsRentedModal .btn-submit-rental {
+        background: linear-gradient(135deg, #b8941f 0%, #d4af37 50%, #b8941f 100%);
+        color: #ffffff;
+        font-weight: 700;
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(184, 148, 31, 0.25);
+    }
+    #markAsRentedModal .btn-submit-rental:hover {
+        box-shadow: 0 6px 20px rgba(184, 148, 31, 0.4);
+        transform: translateY(-1px);
+        color: #ffffff;
+    }
+    #markAsRentedModal .btn-submit-rental:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    /* Cancel button */
+    #markAsRentedModal .btn-cancel-rental {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #94a3b8;
+        font-weight: 600;
+        font-size: 0.82rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: all 0.2s;
+    }
+    #markAsRentedModal .btn-cancel-rental:hover {
+        border-color: #ef4444;
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.05);
+    }
+    /* Submission notice */
+    #markAsRentedModal .submission-notice {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.73rem;
+        color: #6b7280;
+        flex: 1;
+    }
+    #markAsRentedModal .submission-notice i { color: #d4af37; }
+    /* Alert styling */
+    #markAsRentedModal .rental-alert {
+        padding: 0.65rem 1rem;
+        border-radius: 4px;
+        font-size: 0.82rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    #markAsRentedModal .rental-alert-danger {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+    }
+    #markAsRentedModal .rental-alert-success {
+        background: rgba(34, 197, 94, 0.08);
+        border: 1px solid rgba(34, 197, 94, 0.2);
+        color: #86efac;
+    }
+</style>
+
+<div class="modal fade" id="markAsRentedModal" tabindex="-1" aria-labelledby="markAsRentedModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="markAsRentedModalLabel">
+                    <i class="bi bi-key-fill me-2"></i>Mark Property as Rented
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body">
+                <form id="markRentedForm" enctype="multipart/form-data">
+                    <input type="hidden" name="property_id" id="rental_property_id">
+
+                    <!-- Property Confirmation Banner -->
+                    <div class="rental-confirm-card">
+                        <div class="rental-confirm-icon"><i class="bi bi-house-check-fill"></i></div>
+                        <div>
+                            <div class="rental-confirm-title" id="rentalConfirmType"></div>
+                            <div class="rental-confirm-address">
+                                <i class="bi bi-geo-alt me-1"></i><span id="rentalConfirmAddress"></span>
+                            </div>
+                        </div>
+                        <div class="ms-auto text-end" style="flex-shrink:0;">
+                            <div class="rental-confirm-rent-label">Monthly Rent</div>
+                            <div class="rental-confirm-rent-value" id="rentalConfirmRent"></div>
+                        </div>
+                    </div>
+
+                    <!-- Alert container -->
+                    <div id="rentalAlertContainer"></div>
+
+                    <!-- Section 1: Lease Details -->
+                    <div class="form-section-label"><i class="bi bi-calendar-range me-1"></i>Lease Details</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Monthly Rent (₱) <span class="req">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input type="number" step="0.01" min="1" class="form-control" name="monthly_rent" id="rental_monthly_rent" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Security Deposit (₱)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="security_deposit" id="rental_security_deposit" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Lease Term (Months) <span class="req">*</span></label>
+                            <input type="number" min="1" max="120" class="form-control" name="lease_term_months" id="rental_lease_term" value="12" required>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Lease Start Date <span class="req">*</span></label>
+                            <input type="date" class="form-control" name="lease_start_date" id="rental_lease_start" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Lease End Date</label>
+                            <input type="date" class="form-control" id="rental_lease_end" name="lease_end_date" readonly>
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Auto-calculated from start date &amp; term.</div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Tenant Information -->
+                    <div class="form-section-label"><i class="bi bi-person-fill me-1"></i>Tenant Information</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Tenant's Name <span class="req">*</span></label>
+                            <input type="text" class="form-control" name="tenant_name" placeholder="Tenant's full name" required maxlength="255">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tenant's Email</label>
+                            <input type="email" class="form-control" name="tenant_email" placeholder="tenant@email.com" maxlength="255">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tenant's Phone</label>
+                            <input type="tel" class="form-control" name="tenant_phone" placeholder="+63 9XX XXX XXXX" maxlength="20">
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Documentation -->
+                    <div class="form-section-label"><i class="bi bi-file-earmark-text-fill me-1"></i>Documentation</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Rental Documents <span class="req">*</span></label>
+                            <input type="file" class="form-control" name="rental_documents[]" id="rental_documents_input" multiple required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Lease agreement, tenant ID, proof of deposit, etc. Max 120MB per file.</div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Additional Notes</label>
+                            <textarea class="form-control" name="additional_notes" rows="2" maxlength="2000" placeholder="Any additional information about the rental..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer" style="justify-content:space-between;">
+                <div class="submission-notice">
+                    <i class="bi bi-shield-check"></i> Submission will be logged and reviewed.
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn-cancel-rental" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn-submit-rental" id="rentalSubmitBtn">
+                        <i class="bi bi-key-fill me-1"></i>Submit Verification
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -2778,6 +3182,137 @@ document.addEventListener('DOMContentLoaded', function () {
             const alerts = this.querySelectorAll('.alert');
             alerts.forEach(alert => alert.remove());
             markSoldForm.reset();
+        });
+    }
+
+    // ===== MARK AS RENTED MODAL (Unified) =====
+    const markRentedModal = document.getElementById('markAsRentedModal');
+    if (markRentedModal) {
+        const markRentedForm   = document.getElementById('markRentedForm');
+        const rentalSubmitBtn  = document.getElementById('rentalSubmitBtn');
+        const rentalLeaseStart = document.getElementById('rental_lease_start');
+        const rentalLeaseTerm  = document.getElementById('rental_lease_term');
+        const rentalLeaseEnd   = document.getElementById('rental_lease_end');
+        const rentalAlertBox   = document.getElementById('rentalAlertContainer');
+
+        function calcLeaseEnd() {
+            if (rentalLeaseStart.value && rentalLeaseTerm.value) {
+                const d = new Date(rentalLeaseStart.value);
+                d.setMonth(d.getMonth() + parseInt(rentalLeaseTerm.value));
+                rentalLeaseEnd.value = d.toISOString().split('T')[0];
+            } else {
+                rentalLeaseEnd.value = '';
+            }
+        }
+        rentalLeaseStart.addEventListener('change', calcLeaseEnd);
+        rentalLeaseTerm.addEventListener('input', calcLeaseEnd);
+
+        function showRentalAlert(msg, type) {
+            rentalAlertBox.innerHTML =
+                '<div class="rental-alert rental-alert-' + type + '">' +
+                '<i class="bi bi-' + (type === 'danger' ? 'exclamation-triangle-fill' : 'check-circle-fill') + '"></i> ' +
+                msg + '</div>';
+        }
+
+        // Populate modal from trigger button data attrs
+        markRentedModal.addEventListener('show.bs.modal', function(event) {
+            const btn = event.relatedTarget;
+            document.getElementById('rental_property_id').value = btn.getAttribute('data-property-id');
+
+            const pType   = btn.getAttribute('data-property-type') || 'Property';
+            const pTitle  = btn.getAttribute('data-property-title') || '';
+            const pCity   = btn.getAttribute('data-property-city') || '';
+            const pRent   = btn.getAttribute('data-monthly-rent');
+            const pDeposit = btn.getAttribute('data-security-deposit');
+            const pTerm   = btn.getAttribute('data-lease-term');
+
+            document.getElementById('rentalConfirmType').textContent = pType;
+            document.getElementById('rentalConfirmAddress').textContent = pTitle + (pCity ? ', ' + pCity : '');
+
+            const rentVal = pRent ? parseFloat(pRent) : 0;
+            document.getElementById('rentalConfirmRent').textContent =
+                '₱' + rentVal.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('rental_monthly_rent').value = rentVal || '';
+
+            if (pDeposit) document.getElementById('rental_security_deposit').value = parseFloat(pDeposit);
+            if (pTerm) {
+                rentalLeaseTerm.value = parseInt(pTerm) || 12;
+            }
+        });
+
+        // Submit via button click (button is outside form)
+        rentalSubmitBtn.addEventListener('click', function() {
+            rentalAlertBox.innerHTML = '';
+
+            // Validate required fields
+            const required = markRentedForm.querySelectorAll('[required]');
+            let valid = true;
+            required.forEach(function(inp) {
+                inp.classList.remove('is-invalid');
+                if (!inp.value || (inp.type === 'file' && inp.files.length === 0)) {
+                    inp.classList.add('is-invalid');
+                    valid = false;
+                }
+            });
+            if (!valid) {
+                showRentalAlert('Please fill in all required fields.', 'danger');
+                return;
+            }
+
+            // Validate file types
+            const docsInput = document.getElementById('rental_documents_input');
+            if (docsInput && docsInput.files.length) {
+                const allowed = ['application/pdf','image/jpeg','image/png',
+                    'application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+                for (let i = 0; i < docsInput.files.length; i++) {
+                    if (!allowed.includes(docsInput.files[i].type)) {
+                        showRentalAlert('Invalid file type: ' + docsInput.files[i].name, 'danger');
+                        return;
+                    }
+                    if (docsInput.files[i].size > 120 * 1024 * 1024) {
+                        showRentalAlert('File too large: ' + docsInput.files[i].name + ' (max 120MB)', 'danger');
+                        return;
+                    }
+                }
+            }
+
+            const origText = rentalSubmitBtn.innerHTML;
+            rentalSubmitBtn.disabled = true;
+            rentalSubmitBtn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i>Submitting...';
+
+            fetch('mark_as_rented_process.php', {
+                method: 'POST',
+                body: new FormData(markRentedForm)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Verification Submitted',
+                        data.message || 'Rental verification submitted. Awaiting admin review.', 5500);
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(markRentedModal).hide();
+                        window.location.reload();
+                    }, 1600);
+                } else {
+                    showRentalAlert(data.message || 'Submission failed.', 'danger');
+                    showToast('error', 'Submission Failed', data.message || 'Please check the form and try again.', 6000);
+                }
+            })
+            .catch(() => {
+                showRentalAlert('An error occurred. Please try again.', 'danger');
+                showToast('error', 'Connection Error', 'An error occurred. Please try again.', 6000);
+            })
+            .finally(() => {
+                rentalSubmitBtn.disabled = false;
+                rentalSubmitBtn.innerHTML = origText;
+            });
+        });
+
+        markRentedModal.addEventListener('hidden.bs.modal', function() {
+            rentalAlertBox.innerHTML = '';
+            markRentedForm.reset();
+            rentalLeaseEnd.value = '';
+            markRentedForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         });
     }
 

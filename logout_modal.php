@@ -321,7 +321,7 @@
             </div>
             <div class="logout-modal-footer">
                 <button type="button" class="btn-logout-cancel" data-bs-dismiss="modal">Stay Logged In</button>
-                <a href="logout.php" class="btn-logout-confirm" id="admLogoutConfirmBtn">
+                <a href="<?= defined('BASE_URL') ? BASE_URL : '' ?>logout.php" class="btn-logout-confirm" id="admLogoutConfirmBtn">
                     Sign Out <i class="bi bi-box-arrow-right"></i>
                 </a>
             </div>

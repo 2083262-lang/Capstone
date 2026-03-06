@@ -80,7 +80,7 @@ $is_owner = $stmt_check->get_result()->num_rows > 0;
 $stmt_check->close();
 
 // If rental, fetch rental details
-if (isset($property_data['Status']) && trim($property_data['Status']) === 'For Rent') {
+if (isset($property_data['Status']) && in_array(trim($property_data['Status']), ['For Rent', 'Pending Rented', 'Rented'])) {
     $rd_sql = "SELECT monthly_rent, security_deposit, lease_term_months, furnishing, available_from FROM rental_details WHERE property_id = ? LIMIT 1";
     $stmt_rd = $conn->prepare($rd_sql);
     $stmt_rd->bind_param("i", $property_id);
@@ -189,7 +189,24 @@ $sale_verification = $result_sale->fetch_assoc();
 $stmt_sale->close();
 $sale_status = $sale_verification ? $sale_verification['status'] : null;
 
+// Check for rental verification submissions (for rental properties)
+$rental_status = null;
+if (isset($property_data['Status']) && in_array(trim($property_data['Status']), ['For Rent', 'Pending Rented', 'Rented'])) {
+    $sql_rental_verification = "SELECT status FROM rental_verifications WHERE property_id = ? ORDER BY submitted_at DESC LIMIT 1";
+    $stmt_rv = $conn->prepare($sql_rental_verification);
+    $stmt_rv->bind_param("i", $property_id);
+    $stmt_rv->execute();
+    $result_rv = $stmt_rv->get_result();
+    $rental_verification = $result_rv->fetch_assoc();
+    $stmt_rv->close();
+    $rental_status = $rental_verification ? $rental_verification['status'] : null;
+}
+
+// Combine: either sale or rental verification blocks the button
+$verification_status = $sale_status ?? $rental_status;
+
 $is_property_sold = ($property_data['Status'] === 'Sold');
+$is_property_rented = ($property_data['Status'] === 'Rented');
 
 // Calculate metrics
 $price_per_sqft = 'N/A';
@@ -352,6 +369,18 @@ $days_on_market = $interval->days;
         .property-status-badge.for-rent {
             background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 50%, var(--blue-dark) 100%);
             color: var(--white);
+        }
+        .property-status-badge.rented {
+            background: linear-gradient(135deg, #047857 0%, #10b981 50%, #047857 100%);
+            color: var(--white);
+        }
+        .property-status-badge.pending-rented {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #d97706 100%);
+            color: var(--black);
+        }
+        .property-status-badge.pending-sold {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #d97706 100%);
+            color: var(--black);
         }
         .property-status-badge.sold {
             background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #dc2626 100%);
@@ -877,6 +906,14 @@ $days_on_market = $interval->days;
                     <?php elseif ($sale_status === 'Rejected'): ?>
                         <span class="agent-status-badge badge-sale-rejected"><i class="bi bi-x-circle-fill"></i> Sale Verification Rejected</span>
                     <?php endif; ?>
+
+                    <?php if ($rental_status === 'Pending'): ?>
+                        <span class="agent-status-badge badge-sale-pending"><i class="bi bi-hourglass-split"></i> Rental Verification Pending</span>
+                    <?php elseif ($rental_status === 'Approved'): ?>
+                        <span class="agent-status-badge badge-sale-approved"><i class="bi bi-patch-check-fill"></i> Rental Verified</span>
+                    <?php elseif ($rental_status === 'Rejected'): ?>
+                        <span class="agent-status-badge badge-sale-rejected"><i class="bi bi-x-circle-fill"></i> Rental Verification Rejected</span>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -935,7 +972,10 @@ $days_on_market = $interval->days;
     <section class="container" style="padding: 0 20px;">
         <!-- Property Header -->
         <div class="property-header">
-            <span class="property-status-badge <?php echo $property_data['Status'] === 'For Rent' ? 'for-rent' : ($property_data['Status'] === 'Sold' ? 'sold' : ''); ?>">
+            <span class="property-status-badge <?php 
+                $st = $property_data['Status'];
+                echo $st === 'For Rent' ? 'for-rent' : ($st === 'Sold' ? 'sold' : ($st === 'Rented' ? 'rented' : ($st === 'Pending Rented' ? 'pending-rented' : ($st === 'Pending Sold' ? 'pending-sold' : '')))); 
+            ?>">
                 <?php echo htmlspecialchars($property_data['Status']); ?>
             </span>
             <h1 class="property-title"><?php echo htmlspecialchars($property_data['StreetAddress']); ?></h1>
@@ -947,7 +987,7 @@ $days_on_market = $interval->days;
                 <?php endif; ?>
             </div>
             <div class="property-meta">
-                <div class="property-price">₱<?php echo number_format($property_data['ListingPrice']); ?></div>
+                <div class="property-price">₱<?php echo number_format($property_data['ListingPrice']); ?><?php if (in_array(trim($property_data['Status']), ['For Rent', 'Pending Rented', 'Rented'])): ?><span style="font-size:0.55em;font-weight:500;opacity:0.7;margin-left:4px;">/ month</span><?php endif; ?></div>
                 <div class="property-stats-bar">
                     <div class="stat-chip">
                         <i class="bi bi-eye-fill"></i>
@@ -1213,17 +1253,25 @@ $days_on_market = $interval->days;
                                 <i class="bi bi-lock-fill"></i>
                                 <div><strong>Property Sold</strong><br>This property is locked for editing to maintain historical accuracy.</div>
                             </div>
+                        <?php elseif ($is_property_rented): ?>
+                            <div class="locked-notice">
+                                <i class="bi bi-lock-fill"></i>
+                                <div><strong>Property Rented</strong><br>This property is locked for editing while the lease is active.</div>
+                            </div>
+                            <a href="rental_payments.php?property_id=<?php echo $property_id; ?>" class="quick-action success-action" style="text-decoration:none;display:flex;align-items:center;gap:0.5rem;">
+                                <i class="bi bi-house-check-fill"></i> Manage Lease & Payments
+                            </a>
                         <?php endif; ?>
 
                         <button type="button" class="quick-action" data-bs-toggle="modal" data-bs-target="#tourRequestsModal">
                             <i class="bi bi-calendar-check"></i> View Tour Requests
                         </button>
 
-                        <?php if ($property_data['approval_status'] === 'approved' && !$sale_status): ?>
+                        <?php if ($property_data['approval_status'] === 'approved' && !$verification_status): ?>
                             <button type="button" class="quick-action success-action" data-bs-toggle="modal" data-bs-target="#markSoldModal"
                                     data-property-id="<?php echo $property_id; ?>"
                                     data-property-title="<?php echo htmlspecialchars($property_data['StreetAddress']); ?>">
-                                <i class="bi bi-check-circle"></i> Mark as Sold
+                                <i class="bi bi-check-circle"></i> <?php echo ($property_data['Status'] === 'For Rent') ? 'Mark as Rented' : 'Mark as Sold'; ?>
                             </button>
                         <?php endif; ?>
                     </div>
@@ -1248,7 +1296,421 @@ $days_on_market = $interval->days;
     <!-- Edit/Update Property Modal (external include) -->
     <?php include 'modals/edit_property_modal.php'; ?>
 
-    <!-- Mark as Sold Modal -->
+    <!-- Mark as Sold / Rented Modal -->
+    <?php $is_rental_property = ($property_data['Status'] === 'For Rent'); ?>
+    <?php if ($is_rental_property): ?>
+    <!-- ===== Improved Rental Modal (matches admin design, agent dark theme) ===== -->
+    <style>
+        #markSoldModal .modal-content {
+            background: #0f1117;
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        #markSoldModal .modal-header {
+            background: linear-gradient(135deg, #0a0a0a 0%, #111827 100%);
+            border-bottom: none;
+            padding: 1.4rem 1.75rem;
+            position: relative;
+        }
+        #markSoldModal .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #b8941f, #2563eb);
+        }
+        #markSoldModal .modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        #markSoldModal .modal-title i { color: #d4af37; }
+        #markSoldModal .modal-body {
+            background: #0f1117;
+            padding: 1.5rem 1.75rem 0.75rem;
+        }
+        #markSoldModal .modal-footer {
+            background: #0a0d12;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 1rem 1.75rem;
+        }
+        #markSoldModal .rental-confirm-card {
+            background: rgba(212, 175, 55, 0.04);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-left: 3px solid #d4af37;
+            border-radius: 4px;
+            padding: 0.9rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        #markSoldModal .rental-confirm-icon {
+            font-size: 1.75rem;
+            color: #d4af37;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        #markSoldModal .rental-confirm-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #f1f5f9;
+        }
+        #markSoldModal .rental-confirm-address {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.2rem;
+        }
+        #markSoldModal .rental-confirm-rent-label {
+            font-size: 0.7rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        #markSoldModal .rental-confirm-rent-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #d4af37;
+        }
+        #markSoldModal .form-section-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #94a3b8;
+            padding-bottom: 0.6rem;
+            margin-bottom: 0.85rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        #markSoldModal .form-section-label i { color: #d4af37; }
+        #markSoldModal .form-label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.4rem;
+        }
+        #markSoldModal .form-label .req { color: #ef4444; }
+        #markSoldModal .form-text {
+            font-size: 0.73rem;
+            color: #6b7280;
+            margin-top: 0.35rem;
+        }
+        #markSoldModal .form-control,
+        #markSoldModal .input-group-text {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            font-size: 0.88rem;
+            color: #f1f5f9;
+        }
+        #markSoldModal .input-group-text {
+            background: rgba(212, 175, 55, 0.06);
+            color: #d4af37;
+            font-weight: 700;
+            border-right: none;
+        }
+        #markSoldModal .input-group .form-control { border-left: none; }
+        #markSoldModal .form-control::placeholder { color: #4b5563; }
+        #markSoldModal .form-control:focus {
+            background: rgba(255,255,255,0.05);
+            border-color: #d4af37;
+            color: #f1f5f9;
+            box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.15);
+        }
+        #markSoldModal .form-control[type="date"] { color-scheme: dark; }
+        #markSoldModal .form-control[type="file"] { background: rgba(255,255,255,0.03); }
+        #markSoldModal .form-control[type="file"]::-webkit-file-upload-button {
+            background: rgba(212, 175, 55, 0.1);
+            border: none;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            color: #d4af37;
+            padding: 0.35rem 0.75rem;
+            border-radius: 3px 0 0 3px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        #markSoldModal .btn-submit-rental {
+            background: linear-gradient(135deg, #b8941f 0%, #d4af37 50%, #b8941f 100%);
+            color: #ffffff;
+            font-weight: 700;
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(184, 148, 31, 0.25);
+        }
+        #markSoldModal .btn-submit-rental:hover {
+            box-shadow: 0 6px 20px rgba(184, 148, 31, 0.4);
+            transform: translateY(-1px);
+            color: #ffffff;
+        }
+        #markSoldModal .btn-submit-rental:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        #markSoldModal .btn-cancel-rental {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        #markSoldModal .btn-cancel-rental:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+        #markSoldModal .submission-notice {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.73rem;
+            color: #6b7280;
+            flex: 1;
+        }
+        #markSoldModal .submission-notice i { color: #d4af37; }
+        #markSoldModal .rental-alert {
+            padding: 0.65rem 1rem;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #markSoldModal .rental-alert-danger {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        #markSoldModal .rental-alert-success {
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+    </style>
+
+    <div class="modal fade" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <!-- Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="markSoldModalLabel">
+                        <i class="bi bi-key-fill me-2"></i>Mark Property as Rented
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body">
+                    <form action="mark_as_rented_process.php" method="POST" enctype="multipart/form-data" id="markSoldForm">
+                        <input type="hidden" name="property_id" value="<?php echo $property_id; ?>">
+
+                        <!-- Property Confirmation Banner -->
+                        <div class="rental-confirm-card">
+                            <div class="rental-confirm-icon"><i class="bi bi-house-check-fill"></i></div>
+                            <div>
+                                <div class="rental-confirm-title"><?php echo htmlspecialchars($property_data['PropertyType'] ?? 'Property'); ?></div>
+                                <div class="rental-confirm-address">
+                                    <i class="bi bi-geo-alt me-1"></i><?php echo htmlspecialchars($property_data['StreetAddress'] . ', ' . ($property_data['City'] ?? '')); ?>
+                                </div>
+                            </div>
+                            <div class="ms-auto text-end" style="flex-shrink:0;">
+                                <div class="rental-confirm-rent-label">Monthly Rent</div>
+                                <div class="rental-confirm-rent-value">₱<?php echo number_format($property_data['ListingPrice'], 2); ?></div>
+                            </div>
+                        </div>
+
+                        <!-- Alert container -->
+                        <div id="rentalAlertContainer"></div>
+
+                        <!-- Section 1: Lease Details -->
+                        <div class="form-section-label"><i class="bi bi-calendar-range me-1"></i>Lease Details</div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Monthly Rent (₱) <span class="req">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₱</span>
+                                    <input type="number" step="0.01" min="1" class="form-control" name="monthly_rent" id="monthly_rent"
+                                           value="<?php echo htmlspecialchars($rental_details['monthly_rent'] ?? $property_data['ListingPrice']); ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Security Deposit (₱)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₱</span>
+                                    <input type="number" step="0.01" min="0" class="form-control" name="security_deposit" id="security_deposit"
+                                           value="<?php echo htmlspecialchars($rental_details['security_deposit'] ?? '0'); ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Lease Term (Months) <span class="req">*</span></label>
+                                <input type="number" min="1" max="120" class="form-control" name="lease_term_months" id="lease_term_months"
+                                       value="<?php echo htmlspecialchars($rental_details['lease_term_months'] ?? '12'); ?>" required>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Lease Start Date <span class="req">*</span></label>
+                                <input type="date" class="form-control" name="lease_start_date" id="lease_start_date" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Lease End Date</label>
+                                <input type="date" class="form-control" id="lease_end_date" name="lease_end_date" readonly>
+                                <div class="form-text"><i class="bi bi-info-circle me-1"></i>Auto-calculated from start date &amp; term.</div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Tenant Information -->
+                        <div class="form-section-label"><i class="bi bi-person-fill me-1"></i>Tenant Information</div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Tenant's Name <span class="req">*</span></label>
+                                <input type="text" class="form-control" name="tenant_name" placeholder="Tenant's full name" required maxlength="255">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tenant's Email</label>
+                                <input type="email" class="form-control" name="tenant_email" placeholder="tenant@email.com" maxlength="255">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tenant's Phone</label>
+                                <input type="tel" class="form-control" name="tenant_phone" placeholder="+63 9XX XXX XXXX" maxlength="20">
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Documentation -->
+                        <div class="form-section-label"><i class="bi bi-file-earmark-text-fill me-1"></i>Documentation</div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <label class="form-label">Rental Documents <span class="req">*</span></label>
+                                <input type="file" class="form-control" name="rental_documents[]" id="rental_documents" multiple required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                <div class="form-text"><i class="bi bi-info-circle me-1"></i>Lease agreement, tenant ID, proof of deposit, etc. Max 120MB per file.</div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Notes -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <label class="form-label">Additional Notes</label>
+                                <textarea class="form-control" name="additional_notes" rows="2" maxlength="2000" placeholder="Any additional information about the rental..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer" style="justify-content:space-between;">
+                    <div class="submission-notice">
+                        <i class="bi bi-shield-check"></i> Submission will be logged and reviewed.
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn-cancel-rental" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" form="markSoldForm" class="btn-submit-rental">
+                            <i class="bi bi-key-fill me-1"></i>Submit Verification
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Auto-calculate lease end date
+    (function() {
+        const startEl = document.getElementById('lease_start_date');
+        const termEl  = document.getElementById('lease_term_months');
+        const endEl   = document.getElementById('lease_end_date');
+        function calc() {
+            if (startEl.value && termEl.value) {
+                const d = new Date(startEl.value);
+                d.setMonth(d.getMonth() + parseInt(termEl.value));
+                endEl.value = d.toISOString().split('T')[0];
+            } else { endEl.value = ''; }
+        }
+        startEl.addEventListener('change', calc);
+        termEl.addEventListener('input', calc);
+    })();
+
+    // Intercept rental form — submit via Fetch, show toast notifications
+    (function() {
+        const form     = document.getElementById('markSoldForm');
+        const alertBox = document.getElementById('rentalAlertContainer');
+        const modal    = document.getElementById('markSoldModal');
+        if (!form) return;
+
+        function showRentalAlert(msg, type) {
+            alertBox.innerHTML =
+                '<div class="rental-alert rental-alert-' + type + '">' +
+                '<i class="bi bi-' + (type === 'danger' ? 'exclamation-triangle-fill' : 'check-circle-fill') + '"></i> ' +
+                msg + '</div>';
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            alertBox.innerHTML = '';
+
+            const submitBtn = document.querySelector('button[form="markSoldForm"].btn-submit-rental');
+            const origText  = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i>Submitting...';
+            }
+
+            fetch('mark_as_rented_process.php', {
+                method: 'POST',
+                body: new FormData(form)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Verification Submitted',
+                        data.message || 'Rental verification submitted successfully. Awaiting admin review.', 5500);
+                    setTimeout(function() {
+                        if (modal) bootstrap.Modal.getInstance(modal)?.hide();
+                        window.location.reload();
+                    }, 1600);
+                } else {
+                    showRentalAlert(data.message || 'Submission failed.', 'danger');
+                    showToast('error', 'Submission Failed', data.message || 'Please check the form and try again.', 6000);
+                }
+            })
+            .catch(function() {
+                showRentalAlert('A network error occurred. Please try again.', 'danger');
+                showToast('error', 'Connection Error', 'An error occurred. Please try again.', 6000);
+            })
+            .finally(function() {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = origText; }
+            });
+        });
+
+        if (modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                alertBox.innerHTML = '';
+                form.reset();
+                const endEl = document.getElementById('lease_end_date');
+                if (endEl) endEl.value = '';
+            });
+        }
+    })();
+    </script>
+
+    <?php else: ?>
+    <!-- ===== Sale Modal (non-rental properties) ===== -->
     <div class="modal fade modal-dark" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -1258,10 +1720,10 @@ $days_on_market = $interval->days;
                 </div>
                 <div class="modal-body">
                     <form action="mark_as_sold_process.php" method="POST" enctype="multipart/form-data" id="markSoldForm">
-                        <input type="hidden" name="property_id" id="propertyId" value="<?php echo $property_id; ?>">
+                        <input type="hidden" name="property_id" value="<?php echo $property_id; ?>">
                         <div class="mb-3">
                             <p style="color: var(--gray-400);">You are about to mark the following property as sold:</p>
-                            <p style="font-weight: 700; color: var(--white);" id="propertyTitle"><?php echo htmlspecialchars($property_data['StreetAddress']); ?></p>
+                            <p style="font-weight: 700; color: var(--white);"><?php echo htmlspecialchars($property_data['StreetAddress']); ?></p>
                         </div>
                         <div class="mb-3">
                             <label for="sale_price" class="form-label">Sale Price (₱)</label>
@@ -1286,9 +1748,9 @@ $days_on_market = $interval->days;
                         </div>
                         <div class="mb-3">
                             <label for="additional_notes" class="form-label">Additional Notes</label>
-                            <textarea class="form-control" id="additional_notes" name="additional_notes" rows="2" placeholder="Optional notes about the sale"></textarea>
+                            <textarea class="form-control" id="additional_notes" name="additional_notes" rows="2" placeholder="Optional notes..."></textarea>
                         </div>
-                        <button type="submit" class="btn btn-gold w-100"><i class="bi bi-send-fill me-1"></i> Submit for Verification</button>
+                        <button type="submit" class="btn btn-gold w-100" id="soldSubmitBtn"><i class="bi bi-send-fill me-1"></i> Submit for Verification</button>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -1297,6 +1759,41 @@ $days_on_market = $interval->days;
             </div>
         </div>
     </div>
+    <script>
+    // Intercept sale form — submit via Fetch, show toast notifications
+    (function() {
+        var form  = document.getElementById('markSoldForm');
+        var modal = document.getElementById('markSoldModal');
+        if (!form) return;
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var btn  = document.getElementById('soldSubmitBtn');
+            var orig = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i>Submitting...'; }
+            fetch('mark_as_sold_process.php', { method: 'POST', body: new FormData(form) })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    showToast('success', 'Verification Submitted',
+                        data.message || 'Sale verification submitted successfully. Awaiting admin review.', 5500);
+                    setTimeout(function() {
+                        if (modal) bootstrap.Modal.getInstance(modal)?.hide();
+                        window.location.reload();
+                    }, 1600);
+                } else {
+                    showToast('error', 'Submission Failed', data.message || 'Please check the form and try again.', 6000);
+                }
+            })
+            .catch(function() {
+                showToast('error', 'Connection Error', 'An error occurred. Please try again.', 6000);
+            })
+            .finally(function() {
+                if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+            });
+        });
+    })();
+    </script>
+    <?php endif; ?>
 
     <?php include 'logout_agent_modal.php'; ?>
 

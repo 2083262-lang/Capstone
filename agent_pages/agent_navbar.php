@@ -669,6 +669,11 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
                         <i class="bi bi-wallet2 me-1 d-lg-none"></i>Commissions
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'agent_rental_payments.php' || (isset($active_page) && $active_page == 'agent_rental_payments.php') ? 'active' : ''; ?>" href="agent_rental_payments.php">
+                        <i class="bi bi-receipt me-1 d-lg-none"></i>Rental Payments
+                    </a>
+                </li>
             </ul>
 
             <!-- Right Side Actions -->

@@ -324,6 +324,9 @@ if (empty($errors)) {
     // Agent properties always start as 'pending' for review
     $approval_status = 'pending';
 
+    // Determine listing_type from Status
+    $listing_type_value = ($Status === 'For Rent') ? 'For Rent' : 'For Sale';
+
     $conn->begin_transaction();
 
     try {
@@ -331,16 +334,16 @@ if (empty($errors)) {
         $sql = "INSERT INTO property (
             StreetAddress, City, Barangay, Province, ZIP, PropertyType, YearBuilt, SquareFootage, LotSize,
             Bedrooms, Bathrooms, ListingPrice, Status, ListingDate,
-            Source, MLSNumber, ListingDescription, ParkingType, approval_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            Source, MLSNumber, ListingDescription, ParkingType, listing_type, approval_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $conn->prepare($sql);
         $stmt->bind_param(
-            "ssssssiididssssssss",
+            "ssssssiididsssssssss",
             $StreetAddress, $City, $Barangay, $Province, $ZIP, $PropertyType,
             $YearBuilt, $SquareFootage, $LotSize, $Bedrooms, $Bathrooms,
             $ListingPrice, $Status, $ListingDate, $Source, $MLSNumber,
-            $ListingDescription, $ParkingType, $approval_status
+            $ListingDescription, $ParkingType, $listing_type_value, $approval_status
         );
         $stmt->execute();
         $property_id = $conn->insert_id;

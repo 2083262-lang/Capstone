@@ -508,9 +508,9 @@ $result_property = $stmt_property->get_result();
 $property_data = $result_property->fetch_assoc();
 $stmt_property->close();
 
-// --- Fetch Rental Details if property is For Rent ---
+// --- Fetch Rental Details if property is a rental listing ---
 $rental_data = null;
-if ($property_data && $property_data['Status'] === 'For Rent') {
+if ($property_data && in_array($property_data['Status'], ['For Rent', 'Pending Rented', 'Rented'])) {
     $sql_rental = "SELECT monthly_rent, security_deposit, lease_term_months, furnishing, available_from 
                    FROM rental_details WHERE property_id = ? LIMIT 1";
     $stmt_rental = $conn->prepare($sql_rental);
@@ -523,8 +523,11 @@ if ($property_data && $property_data['Status'] === 'For Rent') {
 
 // --- Check for existing sale verification status ---
 $sale_status = null;
+$rental_status = null;
 $is_property_sold = false;
 $is_pending_sold = false;
+$is_property_rented = false;
+$is_pending_rented = false;
 if ($property_data) {
     $sql_sale_check = "SELECT status FROM sale_verifications WHERE property_id = ? ORDER BY submitted_at DESC LIMIT 1";
     $stmt_sale_check = $conn->prepare($sql_sale_check);
@@ -534,8 +537,26 @@ if ($property_data) {
     $sale_verification = $result_sale_check->fetch_assoc();
     $stmt_sale_check->close();
     $sale_status = $sale_verification ? $sale_verification['status'] : null;
+
+    // Check for rental verification status (for rental properties)
+    if (in_array($property_data['Status'], ['For Rent', 'Pending Rented', 'Rented'])) {
+        $sql_rental_check = "SELECT status FROM rental_verifications WHERE property_id = ? ORDER BY submitted_at DESC LIMIT 1";
+        $stmt_rental_check = $conn->prepare($sql_rental_check);
+        $stmt_rental_check->bind_param("i", $property_id_to_review);
+        $stmt_rental_check->execute();
+        $result_rental_check = $stmt_rental_check->get_result();
+        $rental_verification_row = $result_rental_check->fetch_assoc();
+        $stmt_rental_check->close();
+        $rental_status = $rental_verification_row ? $rental_verification_row['status'] : null;
+    }
+
+    // Combine: either sale or rental verification blocks the button
+    $sale_status = $sale_status ?? $rental_status;
+
     $is_property_sold = ($property_data['Status'] === 'Sold');
     $is_pending_sold = ($property_data['Status'] === 'Pending Sold');
+    $is_property_rented = ($property_data['Status'] === 'Rented');
+    $is_pending_rented = ($property_data['Status'] === 'Pending Rented');
 }
 
 if ($property_data) {
@@ -2446,6 +2467,12 @@ include 'admin_navbar.php';
             if ($status_value === 'For Rent') {
                 $status_badge_class = 'status-for-rent';
                 $status_icon = 'bi-key-fill';
+            } elseif ($status_value === 'Rented') {
+                $status_badge_class = 'status-sold';
+                $status_icon = 'bi-check-circle-fill';
+            } elseif ($status_value === 'Pending Rented') {
+                $status_badge_class = 'status-pending-sold';
+                $status_icon = 'bi-hourglass-split';
             } elseif ($status_value === 'Sold') {
                 $status_badge_class = 'status-sold';
                 $status_icon = 'bi-check-circle-fill';
@@ -2520,7 +2547,7 @@ include 'admin_navbar.php';
                 <div class="property-header-info container-fluid">
                     <h1 class="property-price-header">
                         ₱<?php echo number_format($property_data['ListingPrice']); ?>
-                        <?php if ($status_value === 'For Rent'): ?>
+                        <?php if (in_array($status_value, ['For Rent', 'Pending Rented', 'Rented'])): ?>
                             <span class="price-suffix">/ month</span>
                         <?php endif; ?>
                     </h1>
@@ -2541,8 +2568,8 @@ include 'admin_navbar.php';
             </div>
         </section>
 
-        <!-- Rental Details Section (shown only for For Rent properties) -->
-        <?php if ($status_value === 'For Rent' && $rental_data): ?>
+        <!-- Rental Details Section (shown for rental properties) -->
+        <?php if (in_array($status_value, ['For Rent', 'Pending Rented', 'Rented']) && $rental_data): ?>
         <div class="container-fluid px-0 mt-4">
             <div class="rental-details-card">
                 <h3 class="rental-details-title">
@@ -2882,9 +2909,27 @@ include 'admin_navbar.php';
                                         <i class="bi bi-hourglass-split"></i>
                                         <div><strong>Pending Sale Verification</strong><br>A sale verification has been submitted and is awaiting review. <a href="admin_property_sale_approvals.php">Review here</a>.</div>
                                     </div>
+                <?php elseif ($is_property_rented): ?>
+                    <div class="sold-locked-notice">
+                        <i class="bi bi-lock-fill"></i>
+                        <div><strong>Property Rented</strong><br>This property has an active lease and is locked for editing to maintain lease integrity.</div>
+                    </div>
+                    <?php if ($is_admin_poster): ?>
+                    <div class="d-grid gap-3 mt-3">
+                        <a href="admin_lease_management.php?property_id=<?php echo $property_id_to_review; ?>" class="btn btn-modern btn-update">
+                            <i class="bi bi-key me-2"></i>Manage Lease &amp; Payments
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                <?php elseif ($is_pending_rented): ?>
+                    <div class="pending-sold-notice">
+                        <i class="bi bi-hourglass-split"></i>
+                        <div><strong>Pending Rental Verification</strong><br>A rental verification has been submitted and is awaiting review. <a href="admin_rental_approvals.php">Review here</a>.</div>
+                    </div>
+
                                 <?php endif; ?>
 
-                                <?php if (!$is_approved && !$is_property_sold && !$is_pending_sold): ?>
+                                <?php if (!$is_approved && !$is_property_sold && !$is_pending_sold && !$is_property_rented && !$is_pending_rented): ?>
                                     <form id="adminActionForm" action="view_property.php?id=<?php echo $property_id_to_review; ?>" method="POST">
                                         <input type="hidden" name="property_id" value="<?php echo $property_id_to_review; ?>">
                                         <input type="hidden" name="client_timestamp" id="clientTimestamp">
@@ -2898,7 +2943,7 @@ include 'admin_navbar.php';
                                             </button>
                                         </div>
                                     </form>
-                                <?php elseif ($is_approved && !$is_property_sold && !$is_pending_sold): ?>
+                                <?php elseif ($is_approved && !$is_property_sold && !$is_pending_sold && !$is_property_rented && !$is_pending_rented): ?>
                                     <?php if ($is_admin_poster): ?>
                                     <div class="d-grid gap-3">
                                         <button type="button" class="btn btn-modern btn-update" data-bs-toggle="modal" data-bs-target="#updatePriceModal">
@@ -2913,7 +2958,7 @@ include 'admin_navbar.php';
                                     <?php if (!$sale_status): ?>
                                     <div class="d-grid gap-3 mt-3">
                                         <button type="button" class="btn btn-modern btn-sold" data-bs-toggle="modal" data-bs-target="#markSoldModal">
-                                            <i class="bi bi-check-circle me-2"></i>Mark as Sold
+                                            <i class="bi bi-check-circle me-2"></i><?php echo ($property_data['Status'] === 'For Rent') ? 'Mark as Rented' : 'Mark as Sold'; ?>
                                         </button>
                                     </div>
                                     <?php endif; ?>
@@ -3070,15 +3115,17 @@ include 'admin_navbar.php';
             <!-- Header -->
             <div class="modal-header">
                 <h5 class="modal-title" id="markSoldModalLabel">
-                    <i class="bi bi-patch-check-fill me-2"></i>Mark Property as Sold
+                    <i class="bi bi-patch-check-fill me-2"></i><?php echo ($property_data['Status'] === 'For Rent') ? 'Mark Property as Rented' : 'Mark Property as Sold'; ?>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
             <!-- Body -->
             <div class="modal-body">
+                <?php $is_rental_property = ($property_data['Status'] === 'For Rent'); ?>
                 <form id="msvSaleForm" enctype="multipart/form-data">
                     <input type="hidden" name="property_id" value="<?php echo $property_id_to_review; ?>">
+                    <input type="hidden" name="verification_type" value="<?php echo $is_rental_property ? 'rental' : 'sale'; ?>">
 
                     <!-- Property Confirmation Banner -->
                     <div class="property-confirm-card">
@@ -3092,10 +3139,87 @@ include 'admin_navbar.php';
                             </div>
                         </div>
                         <div class="ms-auto text-end" style="flex-shrink:0;">
+                            <?php if ($is_rental_property): ?>
+                            <div style="font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">Monthly Rent</div>
+                            <div style="font-size:1.1rem;font-weight:800;color:var(--gold-dark);">&#8369;<?php echo number_format($rental_data['monthly_rent'] ?? $property_data['ListingPrice'] ?? 0); ?></div>
+                            <?php else: ?>
                             <div style="font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">Listing Price</div>
                             <div style="font-size:1.1rem;font-weight:800;color:var(--gold-dark);">&#8369;<?php echo number_format($property_data['ListingPrice'] ?? 0); ?></div>
+                            <?php endif; ?>
                         </div>
                     </div>
+
+                    <?php if ($is_rental_property): ?>
+                    <!-- ===== RENTAL FIELDS ===== -->
+
+                    <!-- Row 1: Lease Details -->
+                    <div class="form-section-label"><i class="bi bi-calendar-range me-1"></i>Lease Details</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="admin_monthly_rent" class="form-label">Monthly Rent (&#8369;) <span class="req">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">&#8369;</span>
+                                <input type="number" step="0.01" min="1" class="form-control" id="admin_monthly_rent" name="monthly_rent"
+                                       placeholder="0.00" value="<?php echo htmlspecialchars($rental_data['monthly_rent'] ?? ''); ?>" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="admin_security_deposit" class="form-label">Security Deposit (&#8369;)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">&#8369;</span>
+                                <input type="number" step="0.01" min="0" class="form-control" id="admin_security_deposit" name="security_deposit"
+                                       placeholder="0.00" value="<?php echo htmlspecialchars($rental_data['security_deposit'] ?? ''); ?>">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="admin_lease_term" class="form-label">Lease Term (Months) <span class="req">*</span></label>
+                            <input type="number" min="1" max="120" class="form-control" id="admin_lease_term" name="lease_term_months"
+                                   placeholder="e.g. 12" value="<?php echo htmlspecialchars($rental_data['lease_term_months'] ?? '12'); ?>" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="admin_lease_start" class="form-label">Lease Start Date <span class="req">*</span></label>
+                            <input type="date" class="form-control" id="admin_lease_start" name="lease_start_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="admin_lease_end" class="form-label">Lease End Date</label>
+                            <input type="date" class="form-control" id="admin_lease_end" name="lease_end_date" readonly>
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Auto-calculated from start date &amp; term.</div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Tenant Info -->
+                    <div class="form-section-label"><i class="bi bi-person-fill me-1"></i>Tenant Information</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="admin_tenant_name" class="form-label">Tenant's Name <span class="req">*</span></label>
+                            <input type="text" class="form-control" id="admin_tenant_name" name="tenant_name" placeholder="Tenant's full name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="admin_tenant_email" class="form-label">Tenant's Email</label>
+                            <input type="email" class="form-control" id="admin_tenant_email" name="tenant_email" placeholder="tenant@email.com">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="admin_tenant_phone" class="form-label">Tenant's Phone</label>
+                            <input type="tel" class="form-control" id="admin_tenant_phone" name="tenant_phone" placeholder="+63 9XX XXX XXXX">
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Documents -->
+                    <div class="form-section-label"><i class="bi bi-file-earmark-text-fill me-1"></i>Documentation</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label for="msvSaleDocuments" class="form-label">Rental Documents <span class="req">*</span></label>
+                            <input type="file" class="form-control" id="msvSaleDocuments" name="rental_documents[]" multiple required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Lease agreement, tenant ID, proof of deposit, etc. Max 120MB per file.</div>
+                            <div id="msvDocPreview" class="msv-doc-preview doc-preview-grid mt-2"></div>
+                        </div>
+                    </div>
+
+                    <?php else: ?>
+                    <!-- ===== SALE FIELDS ===== -->
 
                     <!-- Row 1: Sale Details -->
                     <div class="form-section-label"><i class="bi bi-currency-exchange me-1"></i>Sale Details</div>
@@ -3138,11 +3262,13 @@ include 'admin_navbar.php';
                         </div>
                     </div>
 
-                    <!-- Row 4: Notes -->
+                    <?php endif; ?>
+
+                    <!-- Row 4: Notes (shared) -->
                     <div class="row g-3 mb-2">
                         <div class="col-12">
                             <label for="admin_additional_notes" class="form-label">Additional Notes</label>
-                            <textarea class="form-control" id="admin_additional_notes" name="additional_notes" rows="3" placeholder="Optional sale notes..."></textarea>
+                            <textarea class="form-control" id="admin_additional_notes" name="additional_notes" rows="3" placeholder="Optional notes..."></textarea>
                         </div>
                     </div>
 
@@ -3761,6 +3887,25 @@ include 'admin_navbar.php';
         });
     }
     
+    // === Lease End Date Auto-calculation (Rental properties) ===
+    (function() {
+        const startInput = document.getElementById('admin_lease_start');
+        const termInput = document.getElementById('admin_lease_term');
+        const endInput = document.getElementById('admin_lease_end');
+        if (!startInput || !termInput || !endInput) return;
+        function calcEnd() {
+            const start = startInput.value;
+            const months = parseInt(termInput.value);
+            if (!start || !months || months < 1) { endInput.value = ''; return; }
+            const d = new Date(start);
+            d.setMonth(d.getMonth() + months);
+            d.setDate(d.getDate() - 1); // lease ends the day before the Nth month anniversary
+            endInput.value = d.toISOString().split('T')[0];
+        }
+        startInput.addEventListener('change', calcEnd);
+        termInput.addEventListener('input', calcEnd);
+    })();
+
     // === Mark as Sold — File Preview Logic ===
     (function() {
         const fileInput = document.getElementById('msvSaleDocuments');
@@ -3846,53 +3991,94 @@ include 'admin_navbar.php';
         }
     })();
 
-    // === Mark as Sold Modal Logic ===
+    // === Mark as Sold/Rented Modal Logic ===
+    const isRentalProperty = <?php echo json_encode($property_data['Status'] === 'For Rent'); ?>;
     const msvConfirmSaleBtn = document.getElementById('msvConfirmSaleBtn');
     if (msvConfirmSaleBtn) {
         msvConfirmSaleBtn.addEventListener('click', function() {
             const form = document.getElementById('msvSaleForm');
 
-            // Client-side validation
-            const salePrice = parseFloat(form.querySelector('[name="sale_price"]').value);
-            const saleDate = form.querySelector('[name="sale_date"]').value;
-            const buyerName = form.querySelector('[name="buyer_name"]').value.trim();
-            const saleDocuments = form.querySelector('[name="sale_documents[]"]').files;
-            
-            if (!salePrice || salePrice <= 0) {
-                showMsvSaleAlert('danger', 'Please enter a valid sale price.');
-                return;
-            }
-            if (!saleDate) {
-                showMsvSaleAlert('danger', 'Please select a sale date.');
-                return;
-            }
-            // Validate date not in future
-            const today = new Date();
-            today.setHours(23, 59, 59, 999);
-            if (new Date(saleDate) > today) {
-                showMsvSaleAlert('danger', 'Sale date cannot be in the future.');
-                return;
-            }
-            if (!buyerName) {
-                showMsvSaleAlert('danger', 'Please enter the buyer\'s name.');
-                return;
-            }
-            if (!saleDocuments || saleDocuments.length === 0) {
-                showMsvSaleAlert('danger', 'Please upload at least one sale document.');
-                return;
-            }
-            
-            // Validate file types and sizes
+            // Common file validation
             const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
             const maxFileSize = 120 * 1024 * 1024; // 120MB
-            for (let i = 0; i < saleDocuments.length; i++) {
-                if (!allowedTypes.includes(saleDocuments[i].type)) {
-                    showMsvSaleAlert('danger', 'Invalid file type: ' + saleDocuments[i].name + '. Allowed: PDF, JPG, PNG, DOC.');
+
+            if (isRentalProperty) {
+                // ----- RENTAL VALIDATION -----
+                const monthlyRent = parseFloat((form.querySelector('[name="monthly_rent"]') || {}).value);
+                const leaseStart = (form.querySelector('[name="lease_start_date"]') || {}).value;
+                const leaseTerm = parseInt((form.querySelector('[name="lease_term_months"]') || {}).value);
+                const tenantName = (form.querySelector('[name="tenant_name"]') || {value:''}).value.trim();
+                const rentalDocs = form.querySelector('[name="rental_documents[]"]');
+                const docFiles = rentalDocs ? rentalDocs.files : [];
+
+                if (!monthlyRent || monthlyRent <= 0) {
+                    showMsvSaleAlert('danger', 'Please enter a valid monthly rent.');
                     return;
                 }
-                if (saleDocuments[i].size > maxFileSize) {
-                    showMsvSaleAlert('danger', 'File too large: ' + saleDocuments[i].name + ' (max 120MB).');
+                if (!leaseStart) {
+                    showMsvSaleAlert('danger', 'Please select a lease start date.');
                     return;
+                }
+                if (!leaseTerm || leaseTerm < 1 || leaseTerm > 120) {
+                    showMsvSaleAlert('danger', 'Lease term must be between 1 and 120 months.');
+                    return;
+                }
+                if (!tenantName) {
+                    showMsvSaleAlert('danger', 'Please enter the tenant\'s name.');
+                    return;
+                }
+                if (!docFiles || docFiles.length === 0) {
+                    showMsvSaleAlert('danger', 'Please upload at least one rental document.');
+                    return;
+                }
+                for (let i = 0; i < docFiles.length; i++) {
+                    if (!allowedTypes.includes(docFiles[i].type)) {
+                        showMsvSaleAlert('danger', 'Invalid file type: ' + docFiles[i].name + '. Allowed: PDF, JPG, PNG, DOC.');
+                        return;
+                    }
+                    if (docFiles[i].size > maxFileSize) {
+                        showMsvSaleAlert('danger', 'File too large: ' + docFiles[i].name + ' (max 120MB).');
+                        return;
+                    }
+                }
+            } else {
+                // ----- SALE VALIDATION -----
+                const salePrice = parseFloat(form.querySelector('[name="sale_price"]').value);
+                const saleDate = form.querySelector('[name="sale_date"]').value;
+                const buyerName = form.querySelector('[name="buyer_name"]').value.trim();
+                const saleDocuments = form.querySelector('[name="sale_documents[]"]').files;
+
+                if (!salePrice || salePrice <= 0) {
+                    showMsvSaleAlert('danger', 'Please enter a valid sale price.');
+                    return;
+                }
+                if (!saleDate) {
+                    showMsvSaleAlert('danger', 'Please select a sale date.');
+                    return;
+                }
+                const today = new Date();
+                today.setHours(23, 59, 59, 999);
+                if (new Date(saleDate) > today) {
+                    showMsvSaleAlert('danger', 'Sale date cannot be in the future.');
+                    return;
+                }
+                if (!buyerName) {
+                    showMsvSaleAlert('danger', 'Please enter the buyer\'s name.');
+                    return;
+                }
+                if (!saleDocuments || saleDocuments.length === 0) {
+                    showMsvSaleAlert('danger', 'Please upload at least one sale document.');
+                    return;
+                }
+                for (let i = 0; i < saleDocuments.length; i++) {
+                    if (!allowedTypes.includes(saleDocuments[i].type)) {
+                        showMsvSaleAlert('danger', 'Invalid file type: ' + saleDocuments[i].name + '. Allowed: PDF, JPG, PNG, DOC.');
+                        return;
+                    }
+                    if (saleDocuments[i].size > maxFileSize) {
+                        showMsvSaleAlert('danger', 'File too large: ' + saleDocuments[i].name + ' (max 120MB).');
+                        return;
+                    }
                 }
             }
             
@@ -3900,10 +4086,11 @@ include 'admin_navbar.php';
             msvConfirmSaleBtn.disabled = true;
             msvConfirmSaleBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Submitting...';
             
-            // Submit via fetch
+            // Submit via fetch — route to correct backend
             const formData = new FormData(form);
+            const endpoint = isRentalProperty ? 'admin_mark_as_rented_process.php' : 'admin_mark_as_sold_process.php';
             
-            fetch('admin_mark_as_sold_process.php', {
+            fetch(endpoint, {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin'
@@ -4008,7 +4195,7 @@ include 'admin_navbar.php';
                 <?php endif; ?>
                 <?php if (!$sale_status): ?>
                 <button type="button" class="btn btn-modern btn-sold w-100" data-bs-toggle="modal" data-bs-target="#markSoldModal">
-                    <i class="bi bi-check-circle me-2"></i>Mark as Sold
+                    <i class="bi bi-check-circle me-2"></i><?php echo ($property_data['Status'] === 'For Rent') ? 'Mark as Rented' : 'Mark as Sold'; ?>
                 </button>
                 <?php endif; ?>
             <?php endif; ?>

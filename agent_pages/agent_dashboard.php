@@ -186,6 +186,39 @@ $stmt->execute();
 $today_tours = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
+// -- Rental Statistics --
+$rental_stats_query = "SELECT 
+    COUNT(CASE WHEN fr.lease_status IN ('Active','Renewed') THEN 1 END) as active_leases,
+    COUNT(CASE WHEN fr.lease_status = 'Expired' THEN 1 END) as expired_leases,
+    COALESCE(SUM(CASE WHEN fr.lease_status IN ('Active','Renewed') THEN fr.monthly_rent ELSE 0 END), 0) as monthly_rental_income,
+    COUNT(CASE WHEN fr.lease_end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) AND fr.lease_status IN ('Active','Renewed') THEN 1 END) as expiring_soon
+    FROM finalized_rentals fr
+    JOIN property_log pl ON fr.property_id = pl.property_ID AND pl.action = 'CREATED'
+    WHERE pl.account_id = ?";
+$stmt = $conn->prepare($rental_stats_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$rental_stats = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+$rental_commission_query = "SELECT 
+    COALESCE(SUM(rc.commission_amount), 0) as total_rental_commission,
+    COUNT(rc.commission_id) as rental_commission_count
+    FROM rental_commissions rc
+    WHERE rc.agent_id = ?";
+$stmt = $conn->prepare($rental_commission_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$rental_commissions = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+$pending_rental_payments_query = "SELECT COUNT(*) as cnt FROM rental_payments WHERE agent_id = ? AND status = 'Pending'";
+$stmt = $conn->prepare($pending_rental_payments_query);
+$stmt->bind_param("i", $agent_account_id);
+$stmt->execute();
+$agent_pending_rental_payments = $stmt->get_result()->fetch_assoc()['cnt'] ?? 0;
+$stmt->close();
+
 $conn->close();
 
 // Helper: greeting based on time of day
@@ -1678,6 +1711,28 @@ include 'agent_navbar.php';
             <div class="kpi-value"><?php echo $tour_stats['total_tours'] ?? 0; ?></div>
             <div class="kpi-sub">
                 <?php echo ($tour_stats['pending_tours'] ?? 0); ?> pending &bull; <?php echo ($tour_stats['confirmed_tours'] ?? 0); ?> confirmed
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div class="kpi-label">Active Leases</div>
+                <div class="kpi-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(139,92,246,.15));color:#7c3aed;border:1px solid rgba(139,92,246,.2);"><i class="bi bi-house-check"></i></div>
+            </div>
+            <div class="kpi-value"><?php echo $rental_stats['active_leases'] ?? 0; ?></div>
+            <div class="kpi-sub">
+                <?php echo ($rental_stats['expiring_soon'] ?? 0); ?> expiring soon &bull; <?php echo ($rental_stats['expired_leases'] ?? 0); ?> expired
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div class="kpi-label">Rental Commission</div>
+                <div class="kpi-icon" style="background:linear-gradient(135deg,rgba(236,72,153,.08),rgba(236,72,153,.15));color:#db2777;border:1px solid rgba(236,72,153,.2);"><i class="bi bi-receipt"></i></div>
+            </div>
+            <div class="kpi-value">₱<?php echo number_format($rental_commissions['total_rental_commission'] ?? 0, 0); ?></div>
+            <div class="kpi-sub">
+                <?php echo ($agent_pending_rental_payments ?? 0); ?> payments pending review
             </div>
         </div>
     </div>

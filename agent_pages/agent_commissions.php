@@ -109,6 +109,33 @@ foreach ($rows as $r) {
     }
 }
 
+// --- Fetch rental commissions ---
+$rental_sql = "
+    SELECT rc.*, fr.property_id, fr.tenant_name, fr.monthly_rent, fr.lease_start_date, fr.lease_end_date,
+           rp.payment_amount, rp.period_start, rp.period_end, rp.payment_date,
+           p.StreetAddress, p.City, p.PropertyType
+    FROM rental_commissions rc
+    JOIN rental_payments rp ON rc.payment_id = rp.payment_id
+    JOIN finalized_rentals fr ON rc.rental_id = fr.rental_id
+    LEFT JOIN property p ON fr.property_id = p.property_ID
+    WHERE rc.agent_id = ?
+    ORDER BY rc.created_at DESC
+";
+$rstmt = $conn->prepare($rental_sql);
+$rstmt->bind_param('i', $agent_account_id);
+$rstmt->execute();
+$rental_rows = $rstmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$rstmt->close();
+
+$totalRentalCommission = 0.0;
+$rentalPaid = 0;
+$rentalCalculated = 0;
+foreach ($rental_rows as $rr) {
+    $totalRentalCommission += (float)$rr['commission_amount'];
+    if ($rr['status'] === 'paid') $rentalPaid++;
+    else $rentalCalculated++;
+}
+
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -1147,6 +1174,12 @@ $conn->close();
                 <div class="kpi-value"><?php echo number_format($avgRate, 2); ?>%</div>
                 <div class="kpi-sub">Across all sales</div>
             </div>
+            <div class="kpi-card">
+                <div class="kpi-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(139,92,246,.2));color:#7c3aed;border:1px solid rgba(139,92,246,.2);"><i class="bi bi-house-check"></i></div>
+                <div class="kpi-label">Rental Commission</div>
+                <div class="kpi-value">₱<?php echo number_format($totalRentalCommission, 2); ?></div>
+                <div class="kpi-sub"><?php echo count($rental_rows); ?> rental payment<?php echo count($rental_rows) !== 1 ? 's' : ''; ?></div>
+            </div>
         </div>
 
         <!-- EARNINGS CHART -->
@@ -1316,6 +1349,68 @@ $conn->close();
                                     <i class="fas fa-chevron-right" style="font-size:0.7rem;"></i>
                                 </button>
                             </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- RENTAL COMMISSIONS SECTION -->
+        <div class="commission-table-wrapper" style="margin-top: 2rem;">
+            <div class="table-header" style="display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid rgba(37,99,235,.15);">
+                <div>
+                    <h3 style="font-size:1.1rem;font-weight:800;margin:0;display:flex;align-items:center;gap:.5rem;">
+                        <i class="bi bi-house-check" style="color:#7c3aed;"></i> Rental Commissions
+                    </h3>
+                    <p style="font-size:.8rem;color:var(--gray-500);margin:.25rem 0 0;">Earned from confirmed rent payments (<?php echo count($rental_rows); ?> total &middot; ₱<?php echo number_format($totalRentalCommission, 2); ?>)</p>
+                </div>
+            </div>
+            <?php if (empty($rental_rows)): ?>
+            <div class="empty-state" style="text-align:center;padding:3rem;">
+                <i class="bi bi-house" style="font-size:2.5rem;color:#94a3b8;display:block;margin-bottom:.5rem;"></i>
+                <p style="color:#64748b;font-weight:600;">No rental commissions yet</p>
+                <p style="color:#94a3b8;font-size:.85rem;">Commissions will appear here when tenants' rent payments are confirmed by admin.</p>
+            </div>
+            <?php else: ?>
+            <div style="overflow-x:auto;">
+                <table class="commission-table">
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Tenant</th>
+                            <th>Rent Period</th>
+                            <th>Payment</th>
+                            <th>Rate</th>
+                            <th>Commission</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($rental_rows as $rr): ?>
+                        <tr>
+                            <td>
+                                <div style="font-weight:600;"><?php echo htmlspecialchars($rr['StreetAddress'] ?? ''); ?></div>
+                                <small style="color:var(--gray-500);"><?php echo htmlspecialchars($rr['City'] ?? ''); ?></small>
+                            </td>
+                            <td><?php echo htmlspecialchars($rr['tenant_name']); ?></td>
+                            <td><?php echo date('M d', strtotime($rr['period_start'])); ?> – <?php echo date('M d, Y', strtotime($rr['period_end'])); ?></td>
+                            <td>₱<?php echo number_format($rr['payment_amount'], 2); ?></td>
+                            <td><?php echo number_format($rr['commission_rate'], 2); ?>%</td>
+                            <td style="font-weight:700;color:var(--gold);">₱<?php echo number_format($rr['commission_amount'], 2); ?></td>
+                            <td>
+                                <?php
+                                $rc_badge = match(strtolower($rr['status'])) {
+                                    'paid' => 'badge-paid',
+                                    'calculated' => 'badge-calculated',
+                                    default => 'badge-pending'
+                                };
+                                ?>
+                                <span class="status-badge <?php echo $rc_badge; ?>"><?php echo ucfirst($rr['status']); ?></span>
+                            </td>
+                            <td><?php echo date('M j, Y', strtotime($rr['created_at'])); ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

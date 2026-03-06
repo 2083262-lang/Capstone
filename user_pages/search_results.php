@@ -70,7 +70,7 @@ if ($posted_by > 0)      $active_filter_count++;
 if ($partial === 'grid') {
 
     // ── Build WHERE clause with prepared-statement parameters ──
-    $where  = "p.approval_status = 'approved' AND p.Status NOT IN ('Sold','Pending Sold')";
+    $where  = "p.approval_status = 'approved' AND p.Status NOT IN ('Pending Sold','Pending Rented')";
     $params = [];
     $types  = '';
 
@@ -228,7 +228,12 @@ if ($partial === 'grid') {
                          decoding="async"
                          width="400"
                          height="220">
-                    <div class="property-badge<?= $prop['Status'] === 'For Rent' ? ' for-rent' : '' ?>">
+                    <div class="property-badge<?php
+                        $st = trim($prop['Status']);
+                        if ($st === 'For Rent') echo ' for-rent';
+                        elseif ($st === 'Rented') echo ' rented';
+                        elseif ($st === 'Sold') echo ' sold';
+                    ?>">
                         <?= htmlspecialchars($prop['Status']) ?>
                     </div>
                     <div class="property-stats">
@@ -316,7 +321,7 @@ $agents_result = $conn->query("
 ");
 $agents = $agents_result ? $agents_result->fetch_all(MYSQLI_ASSOC) : [];
 
-$price_range_result = $conn->query("SELECT MIN(ListingPrice) AS minp, MAX(ListingPrice) AS maxp FROM property WHERE approval_status = 'approved' AND Status NOT IN ('Sold','Pending Sold')");
+$price_range_result = $conn->query("SELECT MIN(ListingPrice) AS minp, MAX(ListingPrice) AS maxp FROM property WHERE approval_status = 'approved' AND Status NOT IN ('Pending Sold','Pending Rented')");
 $price_range = $price_range_result ? $price_range_result->fetch_assoc() : ['minp' => 0, 'maxp' => 100000000];
 $min_bound = (int)($price_range['minp'] ?? 0);
 $max_bound = (int)($price_range['maxp'] ?? 100000000);
@@ -662,6 +667,8 @@ $conn->close();
             text-transform: uppercase; letter-spacing: 0.5px; border-radius: 6px; z-index: 2;
         }
         .property-badge.for-rent { background: linear-gradient(135deg, var(--blue-dark), var(--blue)); color: var(--white); }
+        .property-badge.rented { background: linear-gradient(135deg, #7c3aed, #8b5cf6); color: var(--white); }
+        .property-badge.sold { background: linear-gradient(135deg, #475569, #64748b); color: var(--white); }
         .property-body { padding: 18px 20px 20px; }
         .property-price {
             font-size: 1.4rem; font-weight: 800;

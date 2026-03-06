@@ -9,14 +9,17 @@ $approval_status_text = htmlspecialchars(ucfirst(strtolower($property['approval_
 
 $is_sold = isset($property['Status']) && strtolower(trim($property['Status'])) === 'sold';
 $is_pending_sold = isset($property['Status']) && strtolower(trim($property['Status'])) === 'pending sold';
+$is_rented = isset($property['Status']) && strtolower(trim($property['Status'])) === 'rented';
+$is_pending_rented = isset($property['Status']) && strtolower(trim($property['Status'])) === 'pending rented';
 
 $formatted_price = '₱' . number_format($property['ListingPrice']);
 $is_for_rent = isset($property['Status']) && trim($property['Status']) === 'For Rent';
-$rent_display = $is_for_rent ? ('₱' . number_format($property['rd_monthly_rent'] ?? $property['ListingPrice'])) : null;
-$deposit_display = $is_for_rent && isset($property['rd_security_deposit']) ? ('₱' . number_format((float)$property['rd_security_deposit'])) : null;
-$lease_display = $is_for_rent && isset($property['rd_lease_term_months']) ? ((int)$property['rd_lease_term_months'] . ' mo') : null;
-$furnish_display = $is_for_rent ? htmlspecialchars($property['rd_furnishing'] ?? 'N/A') : null;
-$avail_display = $is_for_rent && !empty($property['rd_available_from']) ? date("M d, Y", strtotime($property['rd_available_from'])) : null;
+$is_rental_type = $is_for_rent || $is_rented || $is_pending_rented;
+$rent_display = $is_rental_type ? ('₱' . number_format($property['rd_monthly_rent'] ?? $property['ListingPrice'])) : null;
+$deposit_display = $is_rental_type && isset($property['rd_security_deposit']) ? ('₱' . number_format((float)$property['rd_security_deposit'])) : null;
+$lease_display = $is_rental_type && isset($property['rd_lease_term_months']) ? ((int)$property['rd_lease_term_months'] . ' mo') : null;
+$furnish_display = $is_rental_type ? htmlspecialchars($property['rd_furnishing'] ?? 'N/A') : null;
+$avail_display = $is_rental_type && !empty($property['rd_available_from']) ? date("M d, Y", strtotime($property['rd_available_from'])) : null;
 
 $full_location = htmlspecialchars(implode(', ', array_filter([$property['City'], $property['Province']])) . ' ' . $property['ZIP']);
 $listing_date = date("M d, Y", strtotime($property['ListingDate']));
@@ -28,13 +31,19 @@ $days_on_market = $interval->days;
 
 $poster_info = htmlspecialchars($property['poster_first_name'] ?? 'N/A') . ' (' . htmlspecialchars(ucfirst($property['poster_role_name'] ?? 'Unknown')) . ')';
 
-// Override for sold statuses
+// Override for sold/rented statuses
 if ($is_sold) {
     $approval_status_text = 'Sold';
     $approval_status_class = 'sold';
 } elseif ($is_pending_sold) {
     $approval_status_text = 'Pending Sold';
     $approval_status_class = 'pending-sold';
+} elseif ($is_rented) {
+    $approval_status_text = 'Rented';
+    $approval_status_class = 'rented';
+} elseif ($is_pending_rented) {
+    $approval_status_text = 'Pending Rented';
+    $approval_status_class = 'pending-rented';
 }
 
 // Badge determination
@@ -42,6 +51,8 @@ $badge_class = $approval_status_class;
 $badge_icon = 'bi-clock-fill';
 if ($is_sold) { $badge_icon = 'bi-check-all'; }
 elseif ($is_pending_sold) { $badge_icon = 'bi-hourglass-split'; }
+elseif ($is_rented) { $badge_icon = 'bi-check-all'; }
+elseif ($is_pending_rented) { $badge_icon = 'bi-hourglass-split'; }
 elseif ($approval_status_class === 'approved') { $badge_icon = 'bi-check-circle-fill'; }
 elseif ($approval_status_class === 'rejected') { $badge_icon = 'bi-x-circle-fill'; }
 
@@ -54,6 +65,9 @@ $listing_class = 'for-sale';
 $listing_icon = 'bi-tag-fill';
 if (strtolower(trim($listing_status)) === 'sold' || strtolower(trim($listing_status)) === 'pending sold') {
     $listing_class = 'is-sold';
+    $listing_icon = 'bi-check-circle-fill';
+} elseif (strtolower(trim($listing_status)) === 'rented' || strtolower(trim($listing_status)) === 'pending rented') {
+    $listing_class = 'is-rented';
     $listing_icon = 'bi-check-circle-fill';
 } elseif (trim($listing_status) === 'For Rent') {
     $listing_class = 'for-rent';
@@ -87,8 +101,8 @@ if (strtolower(trim($listing_status)) === 'sold' || strtolower(trim($listing_sta
 
         <!-- Price Overlay - Bottom Right -->
         <div class="price-overlay">
-            <span class="price"><?php echo $is_for_rent ? $rent_display : $formatted_price; ?></span>
-            <?php if ($is_for_rent): ?>
+            <span class="price"><?php echo $is_rental_type ? $rent_display : $formatted_price; ?></span>
+            <?php if ($is_rental_type): ?>
                 <span class="price-suffix"> / mo</span>
             <?php endif; ?>
         </div>
@@ -137,8 +151,8 @@ if (strtolower(trim($listing_status)) === 'sold' || strtolower(trim($listing_sta
             </div>
         </div>
 
-        <!-- Rental Details (if For Rent) -->
-        <?php if ($is_for_rent): ?>
+        <!-- Rental Details (if rental type) -->
+        <?php if ($is_rental_type): ?>
         <div class="rental-info-section">
             <span class="rental-tag"><i class="bi bi-shield-fill-check"></i> Deposit: <strong><?php echo $deposit_display ?? '—'; ?></strong></span>
             <span class="rental-tag"><i class="bi bi-calendar-range"></i> Lease: <strong><?php echo $lease_display ?? '—'; ?></strong></span>

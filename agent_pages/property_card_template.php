@@ -12,6 +12,12 @@ if ($property['Status'] === 'Pending Sold') {
 } elseif ($property['Status'] === 'Sold') {
     $badge_class = 'sold';
     $status_text = 'Sold';
+} elseif ($property['Status'] === 'Pending Rented') {
+    $badge_class = 'pending-rented';
+    $status_text = 'Pending Rented';
+} elseif ($property['Status'] === 'Rented') {
+    $badge_class = 'rented';
+    $status_text = 'Rented';
 } else {
     switch ($property['approval_status']) {
         case 'approved':
@@ -32,11 +38,12 @@ if ($property['Status'] === 'Pending Sold') {
 // --- Format data for display ---
 $formatted_price = '₱' . number_format($property['ListingPrice']);
 $is_for_rent = isset($property['Status']) && trim($property['Status']) === 'For Rent';
-$rent_display = $is_for_rent ? ('₱' . number_format($property['rd_monthly_rent'] ?? $property['ListingPrice'])) : null;
-$deposit_display = $is_for_rent && isset($property['rd_security_deposit']) ? ('₱' . number_format((float)$property['rd_security_deposit'])) : null;
-$lease_display = $is_for_rent && isset($property['rd_lease_term_months']) ? ((int)$property['rd_lease_term_months'] . ' mo') : null;
-$furnish_display = $is_for_rent ? htmlspecialchars($property['rd_furnishing'] ?? 'N/A') : null;
-$avail_display = $is_for_rent && !empty($property['rd_available_from']) ? date("M d, Y", strtotime($property['rd_available_from'])) : null;
+$is_rental_type = $is_for_rent || (isset($property['Status']) && in_array(strtolower(trim($property['Status'])), ['rented', 'pending rented']));
+$rent_display = $is_rental_type ? ('₱' . number_format($property['rd_monthly_rent'] ?? $property['ListingPrice'])) : null;
+$deposit_display = $is_rental_type && isset($property['rd_security_deposit']) ? ('₱' . number_format((float)$property['rd_security_deposit'])) : null;
+$lease_display = $is_rental_type && isset($property['rd_lease_term_months']) ? ((int)$property['rd_lease_term_months'] . ' mo') : null;
+$furnish_display = $is_rental_type ? htmlspecialchars($property['rd_furnishing'] ?? 'N/A') : null;
+$avail_display = $is_rental_type && !empty($property['rd_available_from']) ? date("M d, Y", strtotime($property['rd_available_from'])) : null;
 
 // --- Calculate Days On Market ---
 $listingDateObj = new DateTime($property['ListingDate']);
@@ -80,8 +87,8 @@ $photos = (int)($property['photo_count'] ?? 0);
             
             <!-- Price Overlay -->
             <div class="prop-price-overlay">
-                <span class="price"><?php echo $is_for_rent ? $rent_display : $formatted_price; ?></span>
-                <?php if ($is_for_rent): ?>
+                <span class="price"><?php echo $is_rental_type ? $rent_display : $formatted_price; ?></span>
+                <?php if ($is_rental_type): ?>
                     <span class="price-suffix"> / month</span>
                 <?php endif; ?>
             </div>
@@ -125,7 +132,7 @@ $photos = (int)($property['photo_count'] ?? 0);
             </div>
 
             <!-- Rental Details (if applicable) -->
-            <?php if ($is_for_rent): ?>
+            <?php if ($is_rental_type): ?>
                 <div class="rental-info">
                     <span class="rental-tag"><i class="bi bi-shield-fill-check"></i> Deposit: <strong><?php echo $deposit_display ?? '—'; ?></strong></span>
                     <span class="rental-tag"><i class="bi bi-calendar-range"></i> Lease: <strong><?php echo $lease_display ?? '—'; ?></strong></span>
@@ -141,21 +148,48 @@ $photos = (int)($property['photo_count'] ?? 0);
                 <a href="view_agent_property.php?id=<?php echo $property['property_ID']; ?>" class="btn-view">
                     <i class="bi bi-eye"></i> View Details
                 </a>
-                <?php if ($property['approval_status'] === 'approved' && $property['Status'] != 'Pending Sold' && $property['Status'] != 'Sold'): ?>
-                    <button type="button" class="btn-sold" data-bs-toggle="modal" data-bs-target="#markSoldModal" 
-                            data-property-id="<?php echo $property['property_ID']; ?>" 
-                            data-property-title="<?php echo htmlspecialchars($property['StreetAddress']); ?>">
-                        <i class="bi bi-check-circle-fill"></i> Mark Sold
-                    </button>
-                <?php elseif ($property['Status'] === 'Pending Sold'): ?>
-                    <div class="sale-badge verifying">
-                        <i class="bi bi-hourglass-split"></i> Verifying Sale
-                    </div>
-                <?php elseif ($property['Status'] === 'Sold'): ?>
-                    <div class="sale-badge completed">
-                        <i class="bi bi-check-all"></i> Sale Completed
-                    </div>
-                <?php endif; ?>
+                <?php
+                $lt = $property['listing_type'] ?? 'For Sale';
+                if ($lt === 'For Rent'):
+                    // Rental actions
+                    if ($property['approval_status'] === 'approved' && $property['Status'] === 'For Rent'): ?>
+                        <button type="button" class="btn-sold" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);border-color:#1e40af;" data-bs-toggle="modal" data-bs-target="#markAsRentedModal"
+                                data-property-id="<?php echo $property['property_ID']; ?>"
+                                data-property-title="<?php echo htmlspecialchars($property['StreetAddress']); ?>"
+                                data-property-type="<?php echo htmlspecialchars($property['PropertyType'] ?? ''); ?>"
+                                data-property-city="<?php echo htmlspecialchars($property['City'] ?? ''); ?>"
+                                data-monthly-rent="<?php echo (float)($property['rd_monthly_rent'] ?? $property['ListingPrice']); ?>"
+                                data-security-deposit="<?php echo (float)($property['rd_security_deposit'] ?? 0); ?>"
+                                data-lease-term="<?php echo (int)($property['rd_lease_term_months'] ?? 12); ?>">
+                            <i class="bi bi-key-fill"></i> Mark as Rented
+                        </button>
+                    <?php elseif ($property['Status'] === 'Pending Rented'): ?>
+                        <div class="sale-badge verifying">
+                            <i class="bi bi-hourglass-split"></i> Verifying Rental
+                        </div>
+                    <?php elseif ($property['Status'] === 'Rented'): ?>
+                        <a href="rental_payments.php?property_id=<?php echo $property['property_ID']; ?>" class="btn-sold" style="background:linear-gradient(135deg,#16a34a,#15803d);border-color:#166534;text-decoration:none;">
+                            <i class="bi bi-house-check-fill"></i> Manage Lease
+                        </a>
+                    <?php endif;
+                else:
+                    // Sale actions
+                    if ($property['approval_status'] === 'approved' && $property['Status'] != 'Pending Sold' && $property['Status'] != 'Sold'): ?>
+                        <button type="button" class="btn-sold" data-bs-toggle="modal" data-bs-target="#markSoldModal" 
+                                data-property-id="<?php echo $property['property_ID']; ?>" 
+                                data-property-title="<?php echo htmlspecialchars($property['StreetAddress']); ?>">
+                            <i class="bi bi-check-circle-fill"></i> Mark Sold
+                        </button>
+                    <?php elseif ($property['Status'] === 'Pending Sold'): ?>
+                        <div class="sale-badge verifying">
+                            <i class="bi bi-hourglass-split"></i> Verifying Sale
+                        </div>
+                    <?php elseif ($property['Status'] === 'Sold'): ?>
+                        <div class="sale-badge completed">
+                            <i class="bi bi-check-all"></i> Sale Completed
+                        </div>
+                    <?php endif;
+                endif; ?>
             </div>
         </div>
     </div>

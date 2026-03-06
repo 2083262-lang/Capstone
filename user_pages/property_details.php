@@ -39,7 +39,7 @@ if ($property_id <= 0) {
         // View count is now handled client-side via AJAX (one-time per user per property)
 
         // If rental, fetch rental details
-        if (isset($property_data['Status']) && trim($property_data['Status']) === 'For Rent') {
+        if (isset($property_data['Status']) && in_array(trim($property_data['Status']), ['For Rent', 'Pending Rented', 'Rented'])) {
             $rd_sql = "SELECT monthly_rent, security_deposit, lease_term_months, furnishing, available_from FROM rental_details WHERE property_id = ? LIMIT 1";
             $stmt = $conn->prepare($rd_sql);
             $stmt->bind_param("i", $property_id);
@@ -873,6 +873,14 @@ $conn->close();
         .status-badge.for-rent {
             background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 50%, var(--blue-dark) 100%);
             color: var(--white);
+        }
+        .status-badge.rented {
+            background: linear-gradient(135deg, #047857 0%, #10b981 50%, #047857 100%);
+            color: var(--white);
+        }
+        .status-badge.pending-rented {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #d97706 100%);
+            color: #000;
         }
 
         /* Property Stats */
@@ -1743,7 +1751,10 @@ $conn->close();
 <!-- Property Content -->
 <section class="container" style="padding: 40px 20px;">
     <div class="property-header">
-        <span class="status-badge <?php echo $property_data['Status'] === 'For Rent' ? 'for-rent' : ''; ?>">
+        <span class="status-badge <?php 
+            $st = $property_data['Status'];
+            echo $st === 'For Rent' ? 'for-rent' : ($st === 'Rented' ? 'rented' : ($st === 'Pending Rented' ? 'pending-rented' : '')); 
+        ?>">
             <?php echo htmlspecialchars($property_data['Status']); ?>
         </span>
         <h1 class="property-title"><?php echo htmlspecialchars($property_data['StreetAddress']); ?></h1>
@@ -1752,7 +1763,7 @@ $conn->close();
             <?php echo htmlspecialchars($property_data['City'] . ', ' . $property_data['Province']); ?>
         </div>
         <div class="property-meta">
-            <div class="property-price">₱<?php echo number_format($property_data['ListingPrice']); ?></div>
+            <div class="property-price">₱<?php echo number_format($property_data['ListingPrice']); ?><?php if (in_array(trim($property_data['Status']), ['For Rent', 'Pending Rented', 'Rented'])): ?><span style="font-size:0.55em;font-weight:500;opacity:0.7;margin-left:4px;">/ month</span><?php endif; ?></div>
             <div class="property-stats">
                 <div class="stat-item">
                     <i class="bi bi-eye-fill"></i>
@@ -1833,6 +1844,46 @@ $conn->close();
                 </h2>
                 <p class="description-text"><?php echo nl2br(htmlspecialchars($property_data['ListingDescription'])); ?></p>
             </div>
+
+            <!-- Rental Details -->
+            <?php if ($rental_details): ?>
+            <div class="content-card">
+                <h2 class="section-title">
+                    <i class="bi bi-key-fill"></i>
+                    Rental Information
+                </h2>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+                    <div style="padding:16px;background:rgba(37,99,235,0.06);border-radius:8px;border:1px solid rgba(37,99,235,0.12);">
+                        <div style="font-size:0.75rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Monthly Rent</div>
+                        <div style="font-size:1.25rem;font-weight:700;color:var(--blue);">₱<?php echo number_format($rental_details['monthly_rent']); ?></div>
+                    </div>
+                    <?php if (!empty($rental_details['security_deposit']) && $rental_details['security_deposit'] > 0): ?>
+                    <div style="padding:16px;background:rgba(37,99,235,0.06);border-radius:8px;border:1px solid rgba(37,99,235,0.12);">
+                        <div style="font-size:0.75rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Security Deposit</div>
+                        <div style="font-size:1.25rem;font-weight:700;color:var(--white);">₱<?php echo number_format($rental_details['security_deposit']); ?></div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($rental_details['lease_term_months'])): ?>
+                    <div style="padding:16px;background:rgba(37,99,235,0.06);border-radius:8px;border:1px solid rgba(37,99,235,0.12);">
+                        <div style="font-size:0.75rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Lease Term</div>
+                        <div style="font-size:1.25rem;font-weight:700;color:var(--white);"><?php echo (int)$rental_details['lease_term_months']; ?> months</div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($rental_details['furnishing'])): ?>
+                    <div style="padding:16px;background:rgba(37,99,235,0.06);border-radius:8px;border:1px solid rgba(37,99,235,0.12);">
+                        <div style="font-size:0.75rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Furnishing</div>
+                        <div style="font-size:1.25rem;font-weight:700;color:var(--white);"><?php echo htmlspecialchars($rental_details['furnishing']); ?></div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($rental_details['available_from'])): ?>
+                    <div style="padding:16px;background:rgba(37,99,235,0.06);border-radius:8px;border:1px solid rgba(37,99,235,0.12);">
+                        <div style="font-size:0.75rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Available From</div>
+                        <div style="font-size:1.25rem;font-weight:700;color:var(--white);"><?php echo date('M d, Y', strtotime($rental_details['available_from'])); ?></div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Amenities -->
             <?php if(!empty($property_amenities)): ?>
@@ -2011,16 +2062,29 @@ $conn->close();
             <?php endif; ?>
 
             <!-- Request Tour Card -->
+            <?php
+            $prop_status_lower = strtolower(trim($property_data['Status'] ?? ''));
+            $is_tour_disabled = in_array($prop_status_lower, ['sold', 'rented', 'pending rented', 'pending sold']);
+            ?>
             <div class="content-card">
                 <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--white); margin-bottom: 16px;">
                     <i class="bi bi-calendar-event" style="color: var(--gold);"></i> Schedule a Tour
                 </h3>
+                <?php if ($is_tour_disabled): ?>
+                <p style="font-size: 0.875rem; color: var(--gray-400); margin-bottom: 20px;">
+                    This property is no longer available for tours as it has been <strong><?= htmlspecialchars(ucfirst($prop_status_lower)) ?></strong>.
+                </p>
+                <button class="contact-btn" style="background: #475569; cursor: not-allowed; opacity: 0.6;" disabled>
+                    <i class="bi bi-lock-fill"></i> Tour Unavailable
+                </button>
+                <?php else: ?>
                 <p style="font-size: 0.875rem; color: var(--gray-400); margin-bottom: 20px;">
                     Interested in viewing this property? Request a tour and we'll contact you to confirm.
                 </p>
                 <button class="contact-btn" style="background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);" data-bs-toggle="modal" data-bs-target="#requestTourModal">
                     <i class="bi bi-calendar-check"></i> Request Tour
                 </button>
+                <?php endif; ?>
             </div>
         </aside>
     </div>

@@ -59,6 +59,30 @@ $sales_result = $conn->query($sales_sql);
 if ($sales_result) { while ($row = $sales_result->fetch_assoc()) { $sales_report[] = $row; } }
 
 // =============================================
+// RENTAL REPORT DATA
+// =============================================
+$rental_report = [];
+$rental_sql = "SELECT 
+    fr.rental_id, fr.property_id, p.StreetAddress, p.City, p.PropertyType,
+    fr.tenant_name, fr.tenant_email, fr.tenant_phone,
+    fr.monthly_rent, fr.security_deposit, fr.lease_start_date, fr.lease_end_date,
+    fr.lease_term_months, fr.commission_rate, fr.lease_status,
+    fr.renewed_at, fr.terminated_at, fr.finalized_at,
+    CONCAT(agent.first_name, ' ', agent.last_name) AS agent_name,
+    CONCAT(admin_acc.first_name, ' ', admin_acc.last_name) AS finalized_by_name,
+    (SELECT COUNT(*) FROM rental_payments rp WHERE rp.rental_id = fr.rental_id AND rp.status = 'Confirmed') AS confirmed_payments,
+    (SELECT COUNT(*) FROM rental_payments rp WHERE rp.rental_id = fr.rental_id AND rp.status = 'Pending') AS pending_payments,
+    (SELECT COALESCE(SUM(rp.payment_amount), 0) FROM rental_payments rp WHERE rp.rental_id = fr.rental_id AND rp.status = 'Confirmed') AS total_collected,
+    (SELECT COALESCE(SUM(rc.commission_amount), 0) FROM rental_commissions rc WHERE rc.rental_id = fr.rental_id) AS total_commission
+FROM finalized_rentals fr
+JOIN property p ON fr.property_id = p.property_ID
+JOIN accounts agent ON fr.agent_id = agent.account_id
+LEFT JOIN accounts admin_acc ON fr.finalized_by = admin_acc.account_id
+ORDER BY fr.finalized_at DESC";
+$rental_result = $conn->query($rental_sql);
+if ($rental_result) { while ($row = $rental_result->fetch_assoc()) { $rental_report[] = $row; } }
+
+// =============================================
 // AGENT PERFORMANCE DATA
 // =============================================
 $agent_report = [];
@@ -152,6 +176,22 @@ $total_sales = $sales_data['total_sales'] ?? 0;
 $total_revenue = $sales_data['total_revenue'] ?? 0;
 $commission_data = $conn->query("SELECT COALESCE(SUM(commission_amount), 0) as total_commission FROM agent_commissions")->fetch_assoc();
 $total_commission = $commission_data['total_commission'] ?? 0;
+
+// Rental KPIs
+$rented_count = $conn->query("SELECT COUNT(*) as c FROM property WHERE Status = 'Rented'")->fetch_assoc()['c'] ?? 0;
+$pending_rented = $conn->query("SELECT COUNT(*) as c FROM property WHERE Status = 'Pending Rented'")->fetch_assoc()['c'] ?? 0;
+$active_leases = $conn->query("SELECT COUNT(*) as c FROM finalized_rentals WHERE lease_status IN ('Active','Renewed')")->fetch_assoc()['c'] ?? 0;
+$rental_kpi = $conn->query("SELECT COUNT(*) as total_payments, COALESCE(SUM(CASE WHEN status='Confirmed' THEN payment_amount ELSE 0 END),0) as rental_revenue, COALESCE(SUM(CASE WHEN status='Pending' THEN 1 ELSE 0 END),0) as pending_payments FROM rental_payments")->fetch_assoc();
+$total_rental_payments = $rental_kpi['total_payments'] ?? 0;
+$rental_revenue = $rental_kpi['rental_revenue'] ?? 0;
+$pending_rental_payments = $rental_kpi['pending_payments'] ?? 0;
+$rental_commission_data = $conn->query("SELECT COALESCE(SUM(commission_amount), 0) as total FROM rental_commissions")->fetch_assoc();
+$total_rental_commission = $rental_commission_data['total'] ?? 0;
+
+// Rental chart: payments by month
+$rental_by_month = [];
+$rbm_q = $conn->query("SELECT DATE_FORMAT(payment_date, '%Y-%m') AS month_key, DATE_FORMAT(payment_date, '%b %Y') AS month_label, COUNT(*) AS cnt, SUM(CASE WHEN status='Confirmed' THEN payment_amount ELSE 0 END) AS revenue FROM rental_payments GROUP BY month_key ORDER BY month_key ASC");
+if ($rbm_q) { while ($r = $rbm_q->fetch_assoc()) { $rental_by_month[] = $r; } }
 
 $total_tours = $conn->query("SELECT COUNT(*) as c FROM tour_requests")->fetch_assoc()['c'] ?? 0;
 $pending_tours = $conn->query("SELECT COUNT(*) as c FROM tour_requests WHERE request_status = 'Pending'")->fetch_assoc()['c'] ?? 0;
@@ -277,7 +317,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         .page-header .header-badge { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 0.3rem 0.85rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* ===== KPI STAT CARDS ===== */
-        .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
         .kpi-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 1.25rem; position: relative; overflow: hidden; transition: all 0.3s ease; }
         .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--blue), transparent); opacity: 0; transition: opacity 0.3s ease; }
         .kpi-card:hover { border-color: rgba(37,99,235,0.25); box-shadow: 0 8px 32px rgba(37,99,235,0.08); transform: translateY(-3px); }
@@ -287,6 +327,8 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         .kpi-icon.blue { background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(37,99,235,0.12)); color: var(--blue); border: 1px solid rgba(37,99,235,0.15); }
         .kpi-icon.green { background: linear-gradient(135deg, rgba(34,197,94,0.06), rgba(34,197,94,0.12)); color: #16a34a; border: 1px solid rgba(34,197,94,0.15); }
         .kpi-icon.red { background: linear-gradient(135deg, rgba(239,68,68,0.06), rgba(239,68,68,0.12)); color: #dc2626; border: 1px solid rgba(239,68,68,0.15); }
+        .kpi-icon.purple { background: linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0.12)); color: #7c3aed; border: 1px solid rgba(139,92,246,0.15); }
+        .kpi-icon.teal { background: linear-gradient(135deg, rgba(20,184,166,0.06), rgba(20,184,166,0.12)); color: #0d9488; border: 1px solid rgba(20,184,166,0.15); }
         .kpi-icon.amber { background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.12)); color: #d97706; border: 1px solid rgba(245,158,11,0.15); }
         .kpi-icon.cyan { background: linear-gradient(135deg, rgba(6,182,212,0.06), rgba(6,182,212,0.12)); color: #0891b2; border: 1px solid rgba(6,182,212,0.15); }
         .kpi-card .kpi-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 0.25rem; }
@@ -325,6 +367,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         .badge-blue { background: rgba(37,99,235,0.1); color: #2563eb; border: 1px solid rgba(37,99,235,0.15); }
         .badge-green { background: rgba(34,197,94,0.1); color: #16a34a; border: 1px solid rgba(34,197,94,0.15); }
         .badge-cyan { background: rgba(6,182,212,0.1); color: #0891b2; border: 1px solid rgba(6,182,212,0.15); }
+        .badge-purple { background: rgba(124,58,237,0.1); color: #7c3aed; border: 1px solid rgba(124,58,237,0.15); }
         .badge-amber { background: rgba(245,158,11,0.1); color: #d97706; border: 1px solid rgba(245,158,11,0.15); }
         .tab-content { padding: 1.5rem; }
 
@@ -600,7 +643,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         #page-content { display: none; }
 
         .sk-page-header { background:#fff; border-radius:4px; padding:1.25rem 1.75rem; margin-bottom:1.5rem; border:1px solid rgba(37,99,235,0.08); position:relative; overflow:hidden; }
-        .sk-kpi-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:1rem; margin-bottom:1.5rem; }
+        .sk-kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.5rem; }
         .sk-kpi-card { background:#fff; border-radius:4px; border:1px solid rgba(37,99,235,0.08); padding:1.25rem; display:flex; flex-direction:column; gap:0.6rem; }
         .sk-kpi-icon { width:40px; height:40px; border-radius:4px; flex-shrink:0; }
         .sk-chart-row { display:grid; gap:1.5rem; margin-bottom:1.5rem; }
@@ -844,6 +887,18 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
                 <div class="kpi-value"><?php echo number_format($total_views); ?></div>
                 <div class="kpi-sub"><?php echo number_format($total_likes); ?> likes</div>
             </div>
+            <div class="kpi-card">
+                <div class="kpi-icon purple"><i class="bi bi-house-check"></i></div>
+                <div class="kpi-label">Active Leases</div>
+                <div class="kpi-value"><?php echo $active_leases; ?></div>
+                <div class="kpi-sub"><?php echo $rented_count; ?> rented &middot; <?php echo $pending_rented; ?> pending</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon teal"><i class="bi bi-receipt"></i></div>
+                <div class="kpi-label">Rental Revenue</div>
+                <div class="kpi-value" style="font-size:1.15rem;">&#8369;<?php echo number_format($rental_revenue, 0); ?></div>
+                <div class="kpi-sub">&#8369;<?php echo number_format($total_rental_commission, 0); ?> rental commissions</div>
+            </div>
         </div>
 
         <!-- ==================== CHARTS SECTION ==================== -->
@@ -1024,6 +1079,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
                 <li class="nav-item"><button class="nav-link active" id="tab-properties" data-bs-toggle="tab" data-bs-target="#content-properties" type="button" role="tab"><i class="bi bi-building me-1"></i> Properties <span class="tab-badge badge-gold" id="badge-properties"><?php echo count($property_report); ?></span></button></li>
                 <li class="nav-item"><button class="nav-link" id="tab-sales" data-bs-toggle="tab" data-bs-target="#content-sales" type="button" role="tab"><i class="bi bi-cash-coin me-1"></i> Sales <span class="tab-badge badge-green" id="badge-sales"><?php echo count($sales_report); ?></span></button></li>
                 <li class="nav-item"><button class="nav-link" id="tab-agents" data-bs-toggle="tab" data-bs-target="#content-agents" type="button" role="tab"><i class="bi bi-people me-1"></i> Agent Performance <span class="tab-badge badge-blue" id="badge-agents"><?php echo count($agent_report); ?></span></button></li>
+                <li class="nav-item"><button class="nav-link" id="tab-rentals" data-bs-toggle="tab" data-bs-target="#content-rentals" type="button" role="tab"><i class="bi bi-house-check me-1"></i> Rentals <span class="tab-badge badge-purple" id="badge-rentals"><?php echo count($rental_report); ?></span></button></li>
                 <li class="nav-item"><button class="nav-link" id="tab-tours" data-bs-toggle="tab" data-bs-target="#content-tours" type="button" role="tab"><i class="bi bi-calendar-check me-1"></i> Tour Requests <span class="tab-badge badge-cyan" id="badge-tours"><?php echo count($tour_report); ?></span></button></li>
                 <li class="nav-item"><button class="nav-link" id="tab-activity" data-bs-toggle="tab" data-bs-target="#content-activity" type="button" role="tab"><i class="bi bi-activity me-1"></i> System Activity <span class="tab-badge badge-amber" id="badge-activity"><?php echo count($activity_report) + count($status_logs) + count($property_logs); ?></span></button></li>
             </ul>
@@ -1048,6 +1104,13 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
                         <table class="report-table" id="tableAgents"><thead><tr><th>#</th><th>Agent</th><th>Email</th><th>Phone</th><th>License</th><th>Exp.</th><th>Specializations</th><th>Active</th><th>Total</th><th>Sales</th><th>Revenue</th><th>Commission</th><th>Tours</th><th>Completed</th><th>Status</th><th>Registered</th></tr></thead><tbody id="tbodyAgents"></tbody></table>
                     </div>
                     <div class="report-pagination" id="paginationAgents"></div>
+                </div>
+                <!-- Rentals -->
+                <div class="tab-pane fade" id="content-rentals" role="tabpanel">
+                    <div class="report-table-wrapper" style="max-height:600px;overflow-y:auto;">
+                        <table class="report-table" id="tableRentals"><thead><tr><th>#</th><th>Property</th><th>City</th><th>Type</th><th>Tenant</th><th>Monthly Rent</th><th>Deposit</th><th>Lease Start</th><th>Lease End</th><th>Term</th><th>Comm %</th><th>Collected</th><th>Commission</th><th>Payments</th><th>Status</th><th>Agent</th><th>Finalized</th></tr></thead><tbody id="tbodyRentals"></tbody></table>
+                    </div>
+                    <div class="report-pagination" id="paginationRentals"></div>
                 </div>
                 <!-- Tours -->
                 <div class="tab-pane fade" id="content-tours" role="tabpanel">
@@ -1196,6 +1259,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
 const DATA = {
     properties: <?php echo json_encode($property_report); ?>,
     sales: <?php echo json_encode($sales_report); ?>,
+    rentals: <?php echo json_encode($rental_report); ?>,
     agents: <?php echo json_encode($agent_report); ?>,
     tours: <?php echo json_encode($tour_report); ?>,
     adminLogs: <?php echo json_encode($activity_report); ?>,
@@ -1204,12 +1268,12 @@ const DATA = {
 };
 
 let FILTERED = {
-    properties: [...DATA.properties], sales: [...DATA.sales], agents: [...DATA.agents],
+    properties: [...DATA.properties], sales: [...DATA.sales], rentals: [...DATA.rentals], agents: [...DATA.agents],
     tours: [...DATA.tours], adminLogs: [...DATA.adminLogs], statusLogs: [...DATA.statusLogs], propertyLogs: [...DATA.propertyLogs]
 };
 
 const ROWS_PER_PAGE = 25;
-let currentPages = { properties: 1, sales: 1, agents: 1, tours: 1 };
+let currentPages = { properties: 1, sales: 1, rentals: 1, agents: 1, tours: 1 };
 
 // =============================================
 // CHART.JS GLOBAL DEFAULTS
@@ -1448,6 +1512,15 @@ function renderAgentsTable(page) {
     pageData.forEach(function(r, i) { h += '<tr><td>'+(start+i+1)+'</td><td><strong>'+esc(r.first_name)+' '+esc(r.last_name)+'</strong></td><td>'+esc(r.email)+'</td><td>'+esc(r.phone_number)+'</td><td>'+esc(r.license_number)+'</td><td>'+(r.years_experience!=null?r.years_experience+' yr'+(r.years_experience>1?'s':''):'&mdash;')+'</td><td>'+(r.specializations?esc(r.specializations):'&mdash;')+'</td><td>'+r.active_listings+'</td><td>'+r.total_listings+'</td><td><strong>'+r.total_sales+'</strong></td><td class="price-text">'+formatPrice(r.total_revenue)+'</td><td class="price-text">'+formatPrice(r.total_commission)+'</td><td>'+r.total_tours+'</td><td>'+r.completed_tours+'</td><td>'+statusPill(r.is_approved==1?'approved':'pending')+'</td><td>'+formatDate(r.date_registered)+'</td></tr>'; });
     tbody.innerHTML = h; renderPagination('paginationAgents', data.length, page, 'agents');
 }
+function renderRentalsTable(page) {
+    page = page || 1; currentPages.rentals = page;
+    var data = FILTERED.rentals, start = (page-1)*ROWS_PER_PAGE, pageData = data.slice(start, start+ROWS_PER_PAGE);
+    var tbody = document.getElementById('tbodyRentals');
+    if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="17"><div class="empty-state"><i class="bi bi-house-check"></i><h4>No Rental Records</h4><p>Adjust your filters</p></div></td></tr>'; document.getElementById('paginationRentals').innerHTML = ''; return; }
+    var h = '';
+    pageData.forEach(function(r, i) { h += '<tr><td>'+(start+i+1)+'</td><td>'+esc(r.StreetAddress)+'</td><td>'+esc(r.City)+'</td><td>'+esc(r.PropertyType)+'</td><td>'+esc(r.tenant_name)+'</td><td class="price-text">'+formatPrice(r.monthly_rent)+'</td><td class="price-text">'+formatPrice(r.security_deposit)+'</td><td>'+formatDate(r.lease_start_date)+'</td><td>'+formatDate(r.lease_end_date)+'</td><td>'+(r.lease_term_months?r.lease_term_months+' mo':'&mdash;')+'</td><td>'+(r.commission_rate?r.commission_rate+'%':'&mdash;')+'</td><td class="price-text">'+formatPrice(r.total_collected)+'</td><td class="price-text">'+formatPrice(r.total_commission)+'</td><td>'+(r.confirmed_payments||0)+'/'+(parseInt(r.confirmed_payments||0)+parseInt(r.pending_payments||0))+'</td><td>'+statusPill(r.lease_status||'active')+'</td><td>'+esc(r.agent_name)+'</td><td>'+formatDateTime(r.finalized_at)+'</td></tr>'; });
+    tbody.innerHTML = h; renderPagination('paginationRentals', data.length, page, 'rentals');
+}
 function renderToursTable(page) {
     page = page || 1; currentPages.tours = page;
     var data = FILTERED.tours, start = (page-1)*ROWS_PER_PAGE, pageData = data.slice(start, start+ROWS_PER_PAGE);
@@ -1486,7 +1559,7 @@ function renderPagination(cid, total, cur, key) {
     h += '<button class="page-btn" onclick="goToPage(\''+key+'\','+(cur+1)+')" '+(cur>=tp?'disabled':'')+'><i class="bi bi-chevron-right"></i></button></div>';
     c.innerHTML = h;
 }
-function goToPage(k, p) { switch(k){case 'properties':renderPropertiesTable(p);break;case 'sales':renderSalesTable(p);break;case 'agents':renderAgentsTable(p);break;case 'tours':renderToursTable(p);break;} }
+function goToPage(k, p) { switch(k){case 'properties':renderPropertiesTable(p);break;case 'sales':renderSalesTable(p);break;case 'rentals':renderRentalsTable(p);break;case 'agents':renderAgentsTable(p);break;case 'tours':renderToursTable(p);break;} }
 
 // =============================================
 // FILTER LOGIC
@@ -1516,12 +1589,18 @@ function applyFilters() {
         if(city&&r.City!==city) return false; if(agent&&r.agent_name!==agent) return false;
         if(cts.length>0&&cts.indexOf(r.request_status)===-1) return false; return true;
     });
+    FILTERED.rentals = DATA.rentals.filter(function(r) {
+        if(df&&r.lease_start_date&&r.lease_start_date<df) return false; if(dt&&r.lease_start_date&&r.lease_start_date>dt) return false;
+        if(city&&r.City!==city) return false; if(ct.length>0&&ct.indexOf(r.PropertyType)===-1) return false;
+        if(agent&&r.agent_name!==agent) return false; return true;
+    });
     FILTERED.adminLogs = DATA.adminLogs.filter(function(r) { if(df&&r.log_timestamp&&r.log_timestamp.substring(0,10)<df) return false; if(dt&&r.log_timestamp&&r.log_timestamp.substring(0,10)>dt) return false; return true; });
     FILTERED.statusLogs = DATA.statusLogs.filter(function(r) { if(df&&r.log_timestamp&&r.log_timestamp.substring(0,10)<df) return false; if(dt&&r.log_timestamp&&r.log_timestamp.substring(0,10)>dt) return false; return true; });
     FILTERED.propertyLogs = DATA.propertyLogs.filter(function(r) { if(df&&r.log_timestamp&&r.log_timestamp.substring(0,10)<df) return false; if(dt&&r.log_timestamp&&r.log_timestamp.substring(0,10)>dt) return false; return true; });
 
     document.getElementById('badge-properties').textContent=FILTERED.properties.length;
     document.getElementById('badge-sales').textContent=FILTERED.sales.length;
+    document.getElementById('badge-rentals').textContent=FILTERED.rentals.length;
     document.getElementById('badge-agents').textContent=FILTERED.agents.length;
     document.getElementById('badge-tours').textContent=FILTERED.tours.length;
     document.getElementById('badge-activity').textContent=FILTERED.adminLogs.length+FILTERED.statusLogs.length+FILTERED.propertyLogs.length;
@@ -1536,10 +1615,10 @@ function applyFilters() {
     if(fc>0){b.textContent=fc;b.style.display='inline-flex';}else{b.style.display='none';}
     document.getElementById('filteredCount').textContent=getActiveFilteredCount();
 
-    renderPropertiesTable(1); renderSalesTable(1); renderAgentsTable(1); renderToursTable(1); renderActivityTables();
+    renderPropertiesTable(1); renderSalesTable(1); renderRentalsTable(1); renderAgentsTable(1); renderToursTable(1); renderActivityTables();
 }
 
-function getActiveTabKey() { var at=document.querySelector('#reportTabs .nav-link.active'); if(!at)return'properties'; var id=at.id; if(id.indexOf('properties')!==-1)return'properties'; if(id.indexOf('sales')!==-1)return'sales'; if(id.indexOf('agents')!==-1)return'agents'; if(id.indexOf('tours')!==-1)return'tours'; if(id.indexOf('activity')!==-1)return'activity'; return'properties'; }
+function getActiveTabKey() { var at=document.querySelector('#reportTabs .nav-link.active'); if(!at)return'properties'; var id=at.id; if(id.indexOf('properties')!==-1)return'properties'; if(id.indexOf('sales')!==-1)return'sales'; if(id.indexOf('rentals')!==-1)return'rentals'; if(id.indexOf('agents')!==-1)return'agents'; if(id.indexOf('tours')!==-1)return'tours'; if(id.indexOf('activity')!==-1)return'activity'; return'properties'; }
 function getActiveFilteredCount() { var k=getActiveTabKey(); if(k==='activity')return FILTERED.adminLogs.length+FILTERED.statusLogs.length+FILTERED.propertyLogs.length; return FILTERED[k]?FILTERED[k].length:0; }
 function resetAllFilters() { document.getElementById('filterDateFrom').value=''; document.getElementById('filterDateTo').value=''; document.getElementById('filterCity').value=''; document.getElementById('filterAgent').value=''; document.querySelectorAll('.filter-prop-type,.filter-status,.filter-approval,.filter-tour-status').forEach(function(c){c.checked=true;}); applyFilters(); }
 
@@ -1565,6 +1644,8 @@ function getExportData() {
             rows=FILTERED.sales.map(function(r,i){return[i+1,r.StreetAddress||'',r.City||'',r.PropertyType||'',r.buyer_name||'',r.buyer_email||'',r.final_sale_price?formatPriceText(r.final_sale_price):'',r.sale_date||'',r.agent_name||'',r.commission_amount?formatPriceText(r.commission_amount):'',r.commission_percentage?r.commission_percentage+'%':'',r.commission_status||'',r.finalized_by_name||'',r.finalized_at||''];}); break;
         case 'agents': title='Agent Performance Report'; headers=['#','Agent','Email','Phone','License','Exp.','Specializations','Active','Total','Sales','Revenue','Commission','Tours','Completed','Status','Registered'];
             rows=FILTERED.agents.map(function(r,i){return[i+1,(r.first_name||'')+' '+(r.last_name||''),r.email||'',r.phone_number||'',r.license_number||'',(r.years_experience!=null?r.years_experience:'')+' yrs',r.specializations||'',r.active_listings,r.total_listings,r.total_sales,r.total_revenue?formatPriceText(r.total_revenue):formatPriceText(0),r.total_commission?formatPriceText(r.total_commission):formatPriceText(0),r.total_tours,r.completed_tours,r.is_approved==1?'Approved':'Pending',r.date_registered||''];}); break;
+        case 'rentals': title='Rental Report'; headers=['#','Property','City','Type','Tenant','Monthly Rent','Deposit','Lease Start','Lease End','Term','Comm %','Collected','Commission','Payments','Status','Agent','Finalized'];
+            rows=FILTERED.rentals.map(function(r,i){return[i+1,r.StreetAddress||'',r.City||'',r.PropertyType||'',r.tenant_name||'',r.monthly_rent?formatPriceText(r.monthly_rent):'',r.security_deposit?formatPriceText(r.security_deposit):'',r.lease_start_date||'',r.lease_end_date||'',r.lease_term_months?r.lease_term_months+' mo':'',r.commission_rate?r.commission_rate+'%':'',r.total_collected?formatPriceText(r.total_collected):'',r.total_commission?formatPriceText(r.total_commission):'',((r.confirmed_payments||0)+'/'+(parseInt(r.confirmed_payments||0)+parseInt(r.pending_payments||0))),r.lease_status||'Active',r.agent_name||'',r.finalized_at||''];}); break;
         case 'tours': title='Tour Requests Report'; headers=['#','Visitor','Email','Phone','Property','City','Tour Date','Time','Type','Status','Agent','Requested','Confirmed','Completed'];
             rows=FILTERED.tours.map(function(r,i){return[i+1,r.user_name||'',r.user_email||'',r.user_phone||'',r.StreetAddress||'',r.City||'',r.tour_date||'',r.tour_time||'',r.tour_type||'',r.request_status||'',r.agent_name||'',r.requested_at||'',r.confirmed_at||'',r.completed_at||''];}); break;
         case 'activity': title='System Activity Report'; headers=['#','Source','Action','Item','Details','By','Timestamp']; rows=[];

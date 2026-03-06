@@ -113,6 +113,16 @@ $pending_properties_list = $pending_properties_list ? $pending_properties_list->
 
 $pending_approvals_total = count($pending_sales_list) + count($pending_agents_list) + count($pending_properties_list);
 
+// --- Rental Metrics ---
+$pending_rentals = $conn->query("SELECT COUNT(*) as count FROM rental_verifications WHERE status = 'Pending'")->fetch_assoc()['count'] ?? 0;
+$active_leases = $conn->query("SELECT COUNT(*) as count FROM finalized_rentals WHERE lease_status IN ('Active','Renewed')")->fetch_assoc()['count'] ?? 0;
+$pending_rental_payments = $conn->query("SELECT COUNT(*) as count FROM rental_payments WHERE status = 'Pending'")->fetch_assoc()['count'] ?? 0;
+$total_rental_revenue = $conn->query("SELECT COALESCE(SUM(payment_amount),0) as total FROM rental_payments WHERE status = 'Confirmed'")->fetch_assoc()['total'] ?? 0;
+$rented_properties = $conn->query("SELECT COUNT(*) as count FROM property WHERE Status = 'Rented'")->fetch_assoc()['count'] ?? 0;
+
+// Run lease expiry check (lightweight, dashboard-triggered)
+include_once __DIR__ . '/cron_lease_expiry_check.php';
+
 // --- Recent Activity (from status_log + property_log) ---
 $recent_activity_sql = "
     (
@@ -1548,6 +1558,18 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
                 <div class="kpi-value" title="<?php echo formatCurrencyFull($total_property_value); ?>"><?php echo formatCurrency($total_property_value); ?></div>
                 <div class="kpi-sub">Avg <?php echo formatCurrency($avg_property_value); ?></div>
             </div>
+            <div class="kpi-card">
+                <div class="kpi-icon blue"><i class="bi bi-house-check"></i></div>
+                <div class="kpi-label">Active Leases</div>
+                <div class="kpi-value"><?php echo number_format($active_leases); ?></div>
+                <div class="kpi-sub"><?php echo $rented_properties; ?> rented &middot; <?php echo $pending_rentals; ?> pending</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon cyan"><i class="bi bi-receipt"></i></div>
+                <div class="kpi-label">Rental Revenue</div>
+                <div class="kpi-value" title="<?php echo formatCurrencyFull($total_rental_revenue); ?>"><?php echo formatCurrency($total_rental_revenue); ?></div>
+                <div class="kpi-sub"><?php echo $pending_rental_payments; ?> payments pending</div>
+            </div>
         </div>
 
         <!-- ===== QUICK ACTIONS ===== -->
@@ -1598,6 +1620,30 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
                 <div class="qa-content">
                     <div class="qa-title">Tour Requests</div>
                     <div class="qa-desc"><?php echo $pending_tours; ?> pending tour requests</div>
+                </div>
+            </a>
+            <a href="admin_rental_approvals.php" class="quick-action-item">
+                <div class="qa-icon" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.15)); color: #7c3aed; border: 1px solid rgba(139, 92, 246, 0.2);">
+                    <i class="bi bi-house-check-fill"></i>
+                    <?php if($pending_rentals > 0): ?>
+                    <span class="qa-badge"><?php echo $pending_rentals; ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="qa-content">
+                    <div class="qa-title">Rental Approvals</div>
+                    <div class="qa-desc"><?php echo $pending_rentals; ?> rentals need verification</div>
+                </div>
+            </a>
+            <a href="admin_rental_payments.php" class="quick-action-item">
+                <div class="qa-icon" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.08), rgba(236, 72, 153, 0.15)); color: #db2777; border: 1px solid rgba(236, 72, 153, 0.2);">
+                    <i class="bi bi-cash-stack"></i>
+                    <?php if($pending_rental_payments > 0): ?>
+                    <span class="qa-badge"><?php echo $pending_rental_payments; ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="qa-content">
+                    <div class="qa-title">Rental Payments</div>
+                    <div class="qa-desc"><?php echo $pending_rental_payments; ?> payments pending review</div>
                 </div>
             </a>
         </div>
