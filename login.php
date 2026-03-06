@@ -117,6 +117,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
     <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= ASSETS_CSS ?>fontawesome-all.min.css">
+    <link rel="stylesheet" href="<?= ASSETS_CSS ?>bootstrap-icons.min.css">
     <style>
         :root {
             /* Primary Brand Colors */
@@ -549,6 +550,56 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .login-submitting .login-wrapper {
             animation: fadeOutScale 0.4s cubic-bezier(0.4, 0, 1, 1) forwards;
         }
+
+        /* ===== TOAST NOTIFICATIONS — Dark Theme ===== */
+        #toastContainer {
+            position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999;
+            display: flex; flex-direction: column; gap: 0.6rem; pointer-events: none;
+        }
+        .app-toast {
+            display: flex; align-items: flex-start; gap: 0.85rem;
+            background: linear-gradient(135deg, rgba(26,26,26,0.97) 0%, rgba(10,10,10,0.98) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 12px; padding: 0.9rem 1.1rem;
+            min-width: 300px; max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+            pointer-events: all; position: relative; overflow: hidden;
+            animation: toast-in .35s cubic-bezier(.34,1.56,.64,1) forwards;
+            backdrop-filter: blur(12px);
+        }
+        @keyframes toast-in  { from { opacity:0; transform: translateX(60px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+        .app-toast.toast-out { animation: toast-out .3s ease forwards; }
+        @keyframes toast-out { to { opacity:0; transform: translateX(60px) scale(.9); max-height:0; padding:0; margin:0; } }
+        .app-toast::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+        }
+        .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+        .app-toast-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0;
+        }
+        .toast-success .app-toast-icon { background: rgba(212,175,55,0.15); color: #d4af37; }
+        .toast-error   .app-toast-icon { background: rgba(239,68,68,0.12);  color: #ef4444; }
+        .toast-info    .app-toast-icon { background: rgba(37,99,235,0.12);  color: #3b82f6; }
+        .app-toast-body { flex: 1; min-width: 0; }
+        .app-toast-title { font-size: 0.82rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.2rem; }
+        .app-toast-msg   { font-size: 0.78rem; color: #9ca4ab; line-height: 1.4; word-break: break-word; }
+        .app-toast-close {
+            background: none; border: none; cursor: pointer;
+            color: #5d6d7d; font-size: 0.8rem; padding: 0; line-height: 1; flex-shrink: 0;
+            transition: color .2s;
+        }
+        .app-toast-close:hover { color: #f1f5f9; }
+        .app-toast-progress {
+            position: absolute; bottom: 0; left: 0; height: 2px; border-radius: 0 0 0 12px;
+        }
+        .toast-success .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
     </style>
 </head>
 <body>
@@ -561,7 +612,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="flex-grow-1">
                 <strong>Almost there!</strong> <?php echo $registration_notice; ?>
             </div>
-            <button type="button" class="btn-close ms-2" onclick="dismissToast('registrationToast')" aria-label="Close"></button>
+            <button type="button" class="btn-close ms-2" onclick="dismissCustomToast('registrationToast')" aria-label="Close"></button>
         </div>
         <div class="toast-progress"></div>
     </div>
@@ -576,7 +627,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="flex-grow-1">
                 <strong>Profile Submitted!</strong> <?php echo $profile_notice; ?>
             </div>
-            <button type="button" class="btn-close ms-2" onclick="dismissToast('profileToast')" aria-label="Close"></button>
+            <button type="button" class="btn-close ms-2" onclick="dismissCustomToast('profileToast')" aria-label="Close"></button>
         </div>
         <div class="toast-progress"></div>
     </div>
@@ -591,7 +642,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="flex-grow-1">
                 <strong>Session Expired</strong> <?php echo htmlspecialchars($timeout_notice); ?>
             </div>
-            <button type="button" class="btn-close ms-2" onclick="dismissToast('timeoutToast')" aria-label="Close"></button>
+            <button type="button" class="btn-close ms-2" onclick="dismissCustomToast('timeoutToast')" aria-label="Close"></button>
         </div>
         <div class="toast-progress"></div>
     </div>
@@ -617,20 +668,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <h1>Sign In</h1>
                 <p class="mb-4">Enter your credentials to access your account.</p>
 
-            <?php if ($error_message): ?>
-                <div class="alert alert-danger" role="alert">
-                    <?php echo $error_message; ?>
-                </div>
-            <?php endif; ?>
-
             <form action="login.php" method="POST">
                 <div class="mb-3">
                     <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
+                    <input type="text" class="form-control" id="username" name="username">
                 </div>
                 <div class="mb-3">
                     <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+                    <input type="password" class="form-control" id="password" name="password">
                 </div>
                 <div class="d-flex justify-content-end mb-4">
                     <a href="#" class="small">Forgot password?</a>
@@ -647,10 +692,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div><!-- end form-section -->
 </div><!-- end main-container -->
 
+<div id="toastContainer"></div>
 <script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 <script>
-    // Toast notification auto-dismiss (supports multiple toasts by ID)
-    function dismissToast(toastId) {
+    // ===== APP TOAST =====
+    function showToast(type, title, message, duration) {
+        duration = duration || 4500;
+        var container = document.getElementById('toastContainer');
+        var icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+        var toast = document.createElement('div');
+        toast.className = 'app-toast toast-' + type;
+        toast.innerHTML =
+            '<div class="app-toast-icon"><i class="bi ' + (icons[type] || icons.info) + '"></i></div>' +
+            '<div class="app-toast-body">' +
+                '<div class="app-toast-title">' + title + '</div>' +
+                '<div class="app-toast-msg">' + message + '</div>' +
+            '</div>' +
+            '<button class="app-toast-close" onclick="dismissToast(this.closest(\'.app-toast\'))">&times;</button>' +
+            '<div class="app-toast-progress" style="animation: toast-progress ' + duration + 'ms linear forwards;"></div>';
+        container.appendChild(toast);
+        var timer = setTimeout(function() { dismissToast(toast); }, duration);
+        toast._timer = timer;
+    }
+    function dismissToast(toast) {
+        if (!toast || toast._dismissed) return;
+        toast._dismissed = true;
+        clearTimeout(toast._timer);
+        toast.classList.add('toast-out');
+        setTimeout(function() { toast.remove(); }, 320);
+    }
+
+    <?php if ($error_message): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        showToast('error', 'Login Failed', '<?= addslashes(htmlspecialchars($error_message)) ?>', 6000);
+    });
+    <?php endif; ?>
+
+    // Legacy dismiss for registration / profile / timeout toasts
+    function dismissCustomToast(toastId) {
         var toast = document.getElementById(toastId);
         if (toast) {
             toast.classList.add('toast-hiding');
@@ -661,13 +740,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    // Auto-dismiss all toasts after 7 seconds
+    // Auto-dismiss legacy toasts after 7 seconds
     (function() {
         ['registrationToast', 'profileToast', 'timeoutToast'].forEach(function(id) {
-            var toast = document.getElementById(id);
-            if (toast) {
-                setTimeout(function() { dismissToast(id); }, 7000);
-            }
+            var el = document.getElementById(id);
+            if (el) { setTimeout(function() { dismissCustomToast(id); }, 7000); }
         });
     })();
 
