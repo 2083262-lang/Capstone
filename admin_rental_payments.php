@@ -11,7 +11,38 @@ if (!isset($_SESSION['account_id']) || $_SESSION['user_role'] !== 'admin') {
 
 $admin_id = (int) $_SESSION['account_id'];
 
-// Fetch all rental payments with property + agent + commission info + property image
+// ── Fetch all rented properties with lease details ──
+$rented_sql = "
+    SELECT p.property_ID, p.StreetAddress, p.City, p.Barangay, p.Province, p.PropertyType,
+           p.ListingPrice, p.Bedrooms, p.Bathrooms, p.SquareFootage, p.Status,
+           fr.rental_id, fr.tenant_name, fr.tenant_email, fr.tenant_phone,
+           fr.monthly_rent, fr.security_deposit, fr.lease_start_date, fr.lease_end_date,
+           fr.lease_term_months, fr.commission_rate, fr.lease_status, fr.finalized_at,
+           a.first_name AS agent_first, a.last_name AS agent_last, a.account_id AS agent_id,
+           (SELECT pi.PhotoURL FROM property_images pi WHERE pi.property_ID = p.property_ID ORDER BY pi.SortOrder ASC LIMIT 1) AS property_image,
+           (SELECT COUNT(*) FROM rental_payments rp2 WHERE rp2.rental_id = fr.rental_id AND rp2.status = 'Confirmed') AS confirmed_payments,
+           (SELECT COUNT(*) FROM rental_payments rp3 WHERE rp3.rental_id = fr.rental_id AND rp3.status = 'Pending') AS pending_payments,
+           (SELECT SUM(rp4.payment_amount) FROM rental_payments rp4 WHERE rp4.rental_id = fr.rental_id AND rp4.status = 'Confirmed') AS total_revenue
+    FROM finalized_rentals fr
+    JOIN property p ON fr.property_id = p.property_ID
+    JOIN accounts a ON fr.agent_id = a.account_id
+    WHERE fr.lease_status IN ('Active','Renewed','Expired')
+    ORDER BY fr.lease_status ASC, fr.finalized_at DESC
+";
+$rented_result = $conn->query($rented_sql);
+$rented_properties = [];
+while ($row = $rented_result->fetch_assoc()) $rented_properties[] = $row;
+
+// Pagination for rented properties
+$rp_per_page = 6;
+$rp_current_page = max(1, (int)($_GET['rp_page'] ?? 1));
+$rp_total = count($rented_properties);
+$rp_total_pages = max(1, ceil($rp_total / $rp_per_page));
+$rp_current_page = min($rp_current_page, $rp_total_pages);
+$rp_offset = ($rp_current_page - 1) * $rp_per_page;
+$rp_display = array_slice($rented_properties, $rp_offset, $rp_per_page);
+
+// ── Fetch all rental payments ──
 $sql = "
     SELECT rp.*, 
            fr.tenant_name, fr.monthly_rent AS lease_rent, fr.commission_rate,
@@ -482,6 +513,172 @@ if (isset($_GET['error'])) {
             .payment-tabs .nav-link { padding: 0.6rem 0.7rem; font-size: 0.75rem; }
             .sk-kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
         }
+
+        /* ================================================================
+           RENTED PROPERTIES SECTION (RP- scoped)
+           ================================================================ */
+        .rp-section { margin-bottom: 1.5rem; }
+        .rp-section-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; overflow: hidden; position: relative; }
+        .rp-section-header { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 1.1rem 1.5rem; position: relative; overflow: hidden; flex-shrink: 0; }
+        .rp-section-header::before { content: ''; position: absolute; top: 0; left: -100%; width: 200%; height: 100%; background: linear-gradient(90deg, transparent, rgba(212,175,55,0.06), transparent); animation: rp-sweep 4s ease-in-out infinite; pointer-events: none; }
+        @keyframes rp-sweep { 0% { left: -100%; } 100% { left: 100%; } }
+        .rp-section-header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
+        .rp-section-header h3 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.92); margin: 0; display: flex; align-items: center; gap: 0.55rem; position: relative; z-index: 1; }
+        .rp-section-header h3 i { color: var(--gold); font-size: 1rem; }
+        .rp-section-header .rp-header-badge { position: relative; z-index: 1; font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.6rem; border-radius: 10px; background: rgba(139,92,246,0.2); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+        .rp-section-body { padding: 1.5rem; }
+
+        /* Rented Properties Grid */
+        .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem; }
+
+        /* Rented Property Card */
+        .rp-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; overflow: hidden; transition: all 0.3s ease; display: flex; flex-direction: column; position: relative; }
+        .rp-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, rgba(139,92,246,0.6), var(--blue)); opacity: 0; transition: opacity 0.3s ease; z-index: 5; }
+        .rp-card:hover { border-color: rgba(139,92,246,0.3); box-shadow: 0 8px 32px rgba(139,92,246,0.08); transform: translateY(-3px); }
+        .rp-card:hover::before { opacity: 1; }
+
+        .rp-card .rp-img-wrap { position: relative; height: 170px; background: #f1f5f9; overflow: hidden; }
+        .rp-card .rp-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+        .rp-card:hover .rp-img-wrap img { transform: scale(1.05); }
+        .rp-card .rp-img-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%); pointer-events: none; }
+        .rp-card .rp-lease-badge { position: absolute; top: 10px; right: 10px; display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; border-radius: 2px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; z-index: 3; }
+        .rp-lease-badge.active { background: rgba(34,197,94,0.9); color: #fff; }
+        .rp-lease-badge.renewed { background: rgba(37,99,235,0.9); color: #fff; }
+        .rp-lease-badge.expired { background: rgba(245,158,11,0.9); color: #fff; }
+        .rp-card .rp-type-badge { position: absolute; bottom: 10px; left: 12px; padding: 0.18rem 0.55rem; border-radius: 2px; font-size: 0.63rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; z-index: 3; background: rgba(0,0,0,0.7); color: #e2e8f0; backdrop-filter: blur(4px); display: inline-flex; align-items: center; gap: 0.25rem; }
+        .rp-card .rp-rent-overlay { position: absolute; bottom: 10px; right: 12px; z-index: 3; }
+        .rp-card .rp-rent-overlay .rp-rent { font-size: 1.2rem; font-weight: 800; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+        .rp-card .rp-rent-overlay .rp-rent-suffix { font-size: 0.72rem; font-weight: 600; -webkit-text-fill-color: rgba(255,255,255,0.7); }
+
+        .rp-card .rp-body { padding: 1rem 1.15rem; flex: 1; display: flex; flex-direction: column; }
+        .rp-card .rp-address { font-size: 0.92rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+        .rp-card .rp-location { font-size: 0.78rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.25rem; margin-bottom: 0.65rem; }
+        .rp-card .rp-location i { color: var(--blue); font-size: 0.72rem; }
+
+        .rp-card .rp-info-tags { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem; }
+        .rp-info-row { display: flex; gap: 0.4rem; }
+        .rp-info-tag { display: inline-flex; align-items: center; gap: 0.22rem; background: #f8fafc; padding: 0.18rem 0.5rem; border-radius: 2px; border: 1px solid #e2e8f0; font-size: 0.72rem; font-weight: 500; color: var(--text-secondary); min-width: 0; }
+        .rp-info-tag i { font-size: 0.65rem; flex-shrink: 0; }
+        .rp-info-tag.tenant-tag, .rp-info-tag.agent-tag { flex: 1; }
+        .rp-info-tag.tenant-tag .tag-text, .rp-info-tag.agent-tag .tag-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; }
+        .rp-info-tag.tenant-tag i { color: var(--gold-dark); }
+        .rp-info-tag.agent-tag i { color: var(--blue); }
+        .rp-info-tag.term-tag i { color: #0d9488; }
+        .rp-info-tag.payments-tag i { color: #16a34a; }
+        .rp-info-tag.pending-tag i { color: #d97706; }
+
+        .rp-card .rp-progress-mini { margin-bottom: 0.75rem; }
+        .rp-progress-mini-label { display: flex; justify-content: space-between; font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .rp-progress-mini-track { background: #e2e8f0; border-radius: 3px; height: 5px; overflow: hidden; }
+        .rp-progress-mini-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--blue-dark), var(--blue-light)); transition: width 0.6s ease; }
+        .rp-progress-mini-fill.warn { background: linear-gradient(90deg, #d97706, #f59e0b); }
+        .rp-progress-mini-fill.expired { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+
+        .rp-card .rp-footer { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid #e2e8f0; display: flex; gap: 0.5rem; }
+        .rp-card .rp-btn-details { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%); color: #fff; border: none; padding: 0.55rem; font-size: 0.78rem; font-weight: 700; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(37,99,235,0.18); text-decoration: none; }
+        .rp-card .rp-btn-details:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.28); transform: translateY(-1px); color: #fff; }
+        .rp-card .rp-btn-manage { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%); color: #0a0a0a; border: none; padding: 0.55rem; font-size: 0.78rem; font-weight: 700; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(212,175,55,0.18); text-decoration: none; }
+        .rp-card .rp-btn-manage:hover { box-shadow: 0 4px 16px rgba(212,175,55,0.3); transform: translateY(-1px); color: #0a0a0a; }
+
+        /* Pagination */
+        .rp-pagination { display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 1.25rem 1.5rem 0; }
+        .rp-pagination .rp-pg-info { font-size: 0.78rem; color: var(--text-secondary); margin-right: auto; }
+        .rp-pagination a, .rp-pagination span { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+        .rp-pagination a { background: #fff; color: var(--text-secondary); border: 1px solid #e2e8f0; }
+        .rp-pagination a:hover { border-color: var(--blue); color: var(--blue); background: rgba(37,99,235,0.03); }
+        .rp-pagination .rp-pg-active { background: linear-gradient(135deg, var(--blue-dark), var(--blue)); color: #fff; border: 1px solid var(--blue); }
+        .rp-pagination .rp-pg-disabled { opacity: 0.4; pointer-events: none; }
+        .rp-pagination .rp-pg-dots { border: none; background: transparent; color: var(--text-secondary); }
+
+        /* ================================================================
+           PROPERTY DETAIL MODAL (RPM- scoped)
+           ================================================================ */
+        .rpm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; z-index: 1060; opacity: 0; transition: opacity 0.32s ease; backdrop-filter: blur(2px); }
+        .rpm-overlay.show { display: flex; opacity: 1; align-items: flex-start; justify-content: center; padding: 2vh 1rem; overflow-y: auto; }
+        .rpm-container { background: var(--card-bg); border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); max-width: 960px; width: 100%; transform: scale(0.94) translateY(14px); opacity: 0; transition: opacity 0.34s cubic-bezier(0.16,1,0.3,1), transform 0.34s cubic-bezier(0.16,1,0.3,1); border: 1px solid rgba(37,99,235,0.12); margin: auto; }
+        .rpm-overlay.show .rpm-container { opacity: 1; transform: scale(1) translateY(0); }
+        @keyframes rpm-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes rpm-container-out { from { opacity: 1; transform: scale(1) translateY(0); } to { opacity: 0; transform: scale(0.93) translateY(10px); } }
+        .rpm-overlay.is-closing { animation: rpm-overlay-out 0.28s ease forwards; pointer-events: none; }
+        .rpm-overlay.is-closing .rpm-container { animation: rpm-container-out 0.2s cubic-bezier(0.55,0,0.85,0.35) forwards; }
+
+        .rpm-header { display: flex; align-items: center; gap: .9rem; padding: 1.25rem 1.5rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); position: relative; overflow: hidden; border-radius: 6px 6px 0 0; }
+        .rpm-header::before { content: ''; position: absolute; top: 0; left: -100%; width: 200%; height: 100%; background: linear-gradient(90deg, transparent, rgba(212,175,55,.06), transparent); animation: rp-sweep 3.5s ease-in-out infinite; pointer-events: none; }
+        .rpm-header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), var(--blue)); }
+        .rpm-header-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0; background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.14); color: var(--gold); }
+        .rpm-header-text { flex: 1; min-width: 0; }
+        .rpm-header-title { font-size: 1.02rem; font-weight: 800; color: #fff; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rpm-header-sub { font-size: .77rem; color: rgba(255,255,255,.5); margin: 0; }
+        .rpm-close { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); color: rgba(255,255,255,.8); width: 34px; height: 34px; border-radius: 4px; font-size: .85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; flex-shrink: 0; }
+        .rpm-close:hover { background: rgba(239,68,68,.35); border-color: rgba(239,68,68,.55); color: #fff; }
+
+        .rpm-body { padding: 1.5rem; background: #f8fafc; max-height: 70vh; overflow-y: auto; }
+        .rpm-body::-webkit-scrollbar { width: 5px; }
+        .rpm-body::-webkit-scrollbar-thumb { background: rgba(212,175,55,.3); border-radius: 4px; }
+
+        .rpm-photo-banner { position: relative; height: 200px; overflow: hidden; border-radius: 6px; margin-bottom: 1.25rem; background: #e2e8f0; }
+        .rpm-photo-banner img { width: 100%; height: 100%; object-fit: cover; }
+        .rpm-photo-banner-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.1) 55%, transparent 100%); }
+        .rpm-photo-banner-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem 1.25rem; z-index: 2; display: flex; justify-content: space-between; align-items: flex-end; }
+        .rpm-photo-banner-info .rpm-price { font-size: 1.4rem; font-weight: 900; background: linear-gradient(135deg, var(--gold), var(--gold-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .rpm-photo-banner-info .rpm-addr { font-size: 0.8rem; color: rgba(255,255,255,0.65); margin-top: 0.1rem; }
+        .rpm-photo-badge { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.7); color: #e2e8f0; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; padding: 0.2rem 0.55rem; border-radius: 2px; backdrop-filter: blur(4px); z-index: 2; }
+        .rpm-lease-status-badge { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.22rem 0.6rem; border-radius: 2px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; z-index: 2; }
+        .rpm-lease-status-badge.active { background: rgba(34,197,94,0.9); color: #fff; }
+        .rpm-lease-status-badge.renewed { background: rgba(37,99,235,0.9); color: #fff; }
+        .rpm-lease-status-badge.expired { background: rgba(245,158,11,0.9); color: #fff; }
+
+        .rpm-info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 0.65rem; margin-bottom: 1.25rem; }
+        .rpm-info-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.65rem 0.85rem; transition: border-color 0.2s; }
+        .rpm-info-item:hover { border-color: rgba(37,99,235,0.2); }
+        .rpm-info-item .rpm-lbl { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-secondary); margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem; }
+        .rpm-info-item .rpm-lbl i { color: var(--gold-dark); font-size: 0.65rem; }
+        .rpm-info-item .rpm-val { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+        .rpm-info-item .rpm-val.gold { color: var(--gold-dark); }
+        .rpm-info-item .rpm-val.green { color: #16a34a; }
+        .rpm-info-item .rpm-val.blue { color: var(--blue); }
+
+        .rpm-section-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; margin-bottom: 0.85rem; }
+        .rpm-section-title i { color: var(--gold-dark); font-size: 0.85rem; }
+
+        .rpm-progress-bar-wrap { margin-bottom: 1.25rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; }
+        .rpm-progress-labels { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; }
+        .rpm-progress-track { background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden; margin-bottom: 0.3rem; }
+        .rpm-progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--blue-dark), var(--blue-light)); transition: width 0.8s ease; }
+        .rpm-progress-fill.warn { background: linear-gradient(90deg, #d97706, #f59e0b); }
+        .rpm-progress-fill.expired { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+        .rpm-progress-pct { font-size: 0.72rem; font-weight: 700; text-align: right; }
+        .rpm-progress-pct.blue { color: var(--blue); }
+        .rpm-progress-pct.warn { color: #d97706; }
+        .rpm-progress-pct.expired { color: #dc2626; }
+
+        /* Modal action buttons */
+        .rpm-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 1rem 1.5rem; background: #fff; border-top: 1px solid #e2e8f0; border-radius: 0 0 6px 6px; }
+        .rpm-actions .rpm-act-btn { flex: 1; min-width: 140px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.6rem 1rem; border: none; border-radius: 4px; font-size: 0.82rem; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.3s; position: relative; overflow: hidden; text-decoration: none; }
+        .rpm-act-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); transition: left 0.45s ease; }
+        .rpm-act-btn:hover::before { left: 100%; }
+        .rpm-act-btn.gold { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: #0a0a0a; }
+        .rpm-act-btn.gold:hover { box-shadow: 0 4px 16px rgba(212,175,55,0.35); transform: translateY(-1px); }
+        .rpm-act-btn.blue { background: linear-gradient(135deg, var(--blue-dark), var(--blue)); color: #fff; }
+        .rpm-act-btn.blue:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.3); transform: translateY(-1px); }
+        .rpm-act-btn.green { background: linear-gradient(135deg, #15803d, #16a34a); color: #fff; }
+        .rpm-act-btn.green:hover { box-shadow: 0 4px 16px rgba(22,163,74,0.3); transform: translateY(-1px); }
+        .rpm-act-btn.red { background: linear-gradient(135deg, #b91c1c, #dc2626); color: #fff; }
+        .rpm-act-btn.red:hover { box-shadow: 0 4px 16px rgba(220,38,38,0.3); transform: translateY(-1px); }
+
+        /* Revenue stat inside modal */
+        .rpm-revenue-strip { background: linear-gradient(135deg, rgba(212,175,55,0.05), rgba(212,175,55,0.1)); border: 1px solid rgba(212,175,55,0.2); border-radius: 6px; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+        .rpm-revenue-strip .rev-lbl { font-size: 0.63rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--gold-dark); margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem; }
+        .rpm-revenue-strip .rev-val { font-size: 1.2rem; font-weight: 900; color: var(--gold-dark); }
+        .rpm-revenue-strip i.rev-icon { font-size: 1.5rem; color: rgba(212,175,55,0.25); }
+
+        @media (max-width: 768px) {
+            .rp-grid { grid-template-columns: 1fr; }
+            .rpm-container { max-width: 98%; }
+            .rpm-info-grid { grid-template-columns: repeat(2, 1fr); }
+            .rpm-actions { flex-direction: column; }
+            .rpm-actions .rpm-act-btn { min-width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -582,6 +779,129 @@ if (isset($_GET['error'])) {
             <div class="kpi-card">
                 <div class="kpi-icon blue"><i class="fas fa-peso-sign"></i></div>
                 <div><div class="kpi-label">Confirmed Revenue</div><div class="kpi-value">&#8369;<?= number_format($total_confirmed_revenue, 0) ?></div></div>
+            </div>
+        </div>
+
+        <!-- ===== Rented Properties Section ===== -->
+        <div class="rp-section">
+            <div class="rp-section-card">
+                <div class="rp-section-header">
+                    <h3><i class="bi bi-buildings"></i> Rented Properties</h3>
+                    <span class="rp-header-badge"><?= $rp_total ?> Active Lease<?= $rp_total !== 1 ? 's' : '' ?></span>
+                </div>
+                <div class="rp-section-body">
+                    <?php if (empty($rp_display)): ?>
+                        <div class="empty-state">
+                            <i class="bi bi-house-slash"></i>
+                            <h4>No Rented Properties</h4>
+                            <p>There are currently no properties with active leases.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="rp-grid">
+                            <?php foreach ($rp_display as $rp): 
+                                $ls_start = strtotime($rp['lease_start_date']);
+                                $ls_end = strtotime($rp['lease_end_date']);
+                                $ls_now = time();
+                                $ls_total = max(1, (int)(($ls_end - $ls_start) / 86400));
+                                $ls_elapsed = max(0, min($ls_total, (int)(($ls_now - $ls_start) / 86400)));
+                                $ls_pct = round($ls_elapsed / $ls_total * 100);
+                                $ls_remaining = max(0, $ls_total - $ls_elapsed);
+                                $ls_prog_cls = $ls_pct >= 100 ? 'expired' : ($ls_pct >= 80 ? 'warn' : '');
+                                $ls_badge_cls = strtolower($rp['lease_status']);
+                            ?>
+                            <div class="rp-card">
+                                <div class="rp-img-wrap">
+                                    <?php if (!empty($rp['property_image'])): ?>
+                                        <img src="<?= htmlspecialchars($rp['property_image']) ?>" alt="<?= htmlspecialchars($rp['StreetAddress']) ?>" loading="lazy" onerror="this.src='uploads/default-property.jpg'">
+                                    <?php else: ?>
+                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#adb5bd;background:#f1f5f9;"><i class="bi bi-image" style="font-size:2.5rem;"></i></div>
+                                    <?php endif; ?>
+                                    <div class="rp-img-overlay"></div>
+                                    <span class="rp-lease-badge <?= $ls_badge_cls ?>">
+                                        <i class="bi bi-circle-fill" style="font-size:0.3rem;"></i> <?= htmlspecialchars($rp['lease_status']) ?>
+                                    </span>
+                                    <span class="rp-type-badge"><i class="bi bi-building"></i> <?= htmlspecialchars($rp['PropertyType'] ?? 'Property') ?></span>
+                                    <div class="rp-rent-overlay">
+                                        <span class="rp-rent">&#8369;<?= number_format($rp['monthly_rent'], 0) ?></span><span class="rp-rent-suffix">/mo</span>
+                                    </div>
+                                </div>
+                                <div class="rp-body">
+                                    <h4 class="rp-address" title="<?= htmlspecialchars($rp['StreetAddress']) ?>"><?= htmlspecialchars($rp['StreetAddress']) ?></h4>
+                                    <div class="rp-location"><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($rp['City'] . ', ' . ($rp['Province'] ?? '')) ?></div>
+                                    <div class="rp-info-tags">
+                                        <div class="rp-info-row">
+                                            <span class="rp-info-tag tenant-tag"><i class="bi bi-person-fill"></i><span class="tag-text"><?= htmlspecialchars($rp['tenant_name']) ?></span></span>
+                                            <span class="rp-info-tag agent-tag"><i class="bi bi-person-badge"></i><span class="tag-text"><?= htmlspecialchars($rp['agent_first'] . ' ' . $rp['agent_last']) ?></span></span>
+                                        </div>
+                                        <div class="rp-info-row">
+                                            <span class="rp-info-tag term-tag"><i class="bi bi-calendar-range"></i> <?= (int)$rp['lease_term_months'] ?>mo</span>
+                                            <?php if ($rp['confirmed_payments'] > 0): ?>
+                                                <span class="rp-info-tag payments-tag"><i class="bi bi-check-circle"></i> <?= $rp['confirmed_payments'] ?> paid</span>
+                                            <?php endif; ?>
+                                            <?php if ($rp['pending_payments'] > 0): ?>
+                                                <span class="rp-info-tag pending-tag"><i class="bi bi-clock"></i> <?= $rp['pending_payments'] ?> pending</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="rp-progress-mini">
+                                        <div class="rp-progress-mini-label">
+                                            <span>Lease Progress</span>
+                                            <span><?= $ls_remaining ?> day<?= $ls_remaining !== 1 ? 's' : '' ?> left</span>
+                                        </div>
+                                        <div class="rp-progress-mini-track">
+                                            <div class="rp-progress-mini-fill <?= $ls_prog_cls ?>" style="width:<?= $ls_pct ?>%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="rp-footer">
+                                        <button class="rp-btn-details" 
+                                                onclick="openRpDetailModal(<?= htmlspecialchars(json_encode($rp, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES) ?>)">
+                                            <i class="bi bi-eye"></i> View Details
+                                        </button>
+                                        <a href="admin_lease_management.php?rental_id=<?= $rp['rental_id'] ?>" class="rp-btn-manage">
+                                            <i class="bi bi-gear"></i> Manage
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <?php if ($rp_total_pages > 1): ?>
+                        <div class="rp-pagination">
+                            <span class="rp-pg-info">Showing <?= $rp_offset + 1 ?>–<?= min($rp_offset + $rp_per_page, $rp_total) ?> of <?= $rp_total ?></span>
+                            <?php 
+                            $qs_base = $_GET;
+                            unset($qs_base['rp_page']);
+                            $qs_str = http_build_query($qs_base);
+                            $qs_prefix = $qs_str ? $qs_str . '&' : '';
+                            ?>
+                            <a href="?<?= $qs_prefix ?>rp_page=1" class="<?= $rp_current_page <= 1 ? 'rp-pg-disabled' : '' ?>"><i class="bi bi-chevron-double-left"></i></a>
+                            <a href="?<?= $qs_prefix ?>rp_page=<?= max(1, $rp_current_page - 1) ?>" class="<?= $rp_current_page <= 1 ? 'rp-pg-disabled' : '' ?>"><i class="bi bi-chevron-left"></i></a>
+                            <?php
+                            $range = 2;
+                            $pg_start = max(1, $rp_current_page - $range);
+                            $pg_end = min($rp_total_pages, $rp_current_page + $range);
+                            if ($pg_start > 1): ?>
+                                <a href="?<?= $qs_prefix ?>rp_page=1">1</a>
+                                <?php if ($pg_start > 2): ?><span class="rp-pg-dots">&hellip;</span><?php endif; ?>
+                            <?php endif; ?>
+                            <?php for ($pg = $pg_start; $pg <= $pg_end; $pg++): ?>
+                                <?php if ($pg == $rp_current_page): ?>
+                                    <span class="rp-pg-active"><?= $pg ?></span>
+                                <?php else: ?>
+                                    <a href="?<?= $qs_prefix ?>rp_page=<?= $pg ?>"><?= $pg ?></a>
+                                <?php endif; ?>
+                            <?php endfor; ?>
+                            <?php if ($pg_end < $rp_total_pages): ?>
+                                <?php if ($pg_end < $rp_total_pages - 1): ?><span class="rp-pg-dots">&hellip;</span><?php endif; ?>
+                                <a href="?<?= $qs_prefix ?>rp_page=<?= $rp_total_pages ?>"><?= $rp_total_pages ?></a>
+                            <?php endif; ?>
+                            <a href="?<?= $qs_prefix ?>rp_page=<?= min($rp_total_pages, $rp_current_page + 1) ?>" class="<?= $rp_current_page >= $rp_total_pages ? 'rp-pg-disabled' : '' ?>"><i class="bi bi-chevron-right"></i></a>
+                            <a href="?<?= $qs_prefix ?>rp_page=<?= $rp_total_pages ?>" class="<?= $rp_current_page >= $rp_total_pages ? 'rp-pg-disabled' : '' ?>"><i class="bi bi-chevron-double-right"></i></a>
+                        </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
 
@@ -790,6 +1110,26 @@ if (isset($_GET['error'])) {
             <div class="pm-footer">
                 <button type="button" class="pm-btn pm-btn-cancel" onclick="closeModal('rejectModal')"><i class="bi bi-x-lg"></i> Cancel</button>
                 <button type="button" class="pm-btn pm-btn-reject" id="submitRejectBtn"><i class="bi bi-x-octagon"></i> Reject Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Rented Property Detail Modal ===== -->
+    <div class="rpm-overlay" id="rpDetailModal">
+        <div class="rpm-container">
+            <div class="rpm-header">
+                <div class="rpm-header-icon"><i class="bi bi-building"></i></div>
+                <div class="rpm-header-text">
+                    <div class="rpm-header-title" id="rpmTitle">Property Details</div>
+                    <div class="rpm-header-sub" id="rpmSubtitle">Lease &amp; rental information</div>
+                </div>
+                <button class="rpm-close" onclick="closeRpDetailModal()"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="rpm-body" id="rpmBody">
+                <!-- Populated by JS -->
+            </div>
+            <div class="rpm-actions" id="rpmActions">
+                <!-- Populated by JS -->
             </div>
         </div>
     </div>
@@ -1332,6 +1672,141 @@ if (isset($_GET['error'])) {
 
     // Initial preview
     sfPreview();
+
+    /* ===== RENTED PROPERTY DETAIL MODAL ===== */
+    var _rpmTimer = null;
+    function openRpDetailModal(data) {
+        var modal = document.getElementById('rpDetailModal');
+        clearTimeout(_rpmTimer);
+        modal.classList.remove('is-closing');
+
+        // Header
+        document.getElementById('rpmTitle').textContent = data.StreetAddress || 'Property Details';
+        document.getElementById('rpmSubtitle').textContent = (data.City || '') + ', ' + (data.Province || '') + ' \u2022 ' + (data.PropertyType || 'Property');
+
+        // Lease progress calculation
+        var startTs = new Date(data.lease_start_date + 'T00:00:00').getTime();
+        var endTs = new Date(data.lease_end_date + 'T00:00:00').getTime();
+        var nowTs = Date.now();
+        var totalDays = Math.max(1, Math.round((endTs - startTs) / 86400000));
+        var elapsedDays = Math.max(0, Math.min(totalDays, Math.round((nowTs - startTs) / 86400000)));
+        var pct = Math.round(elapsedDays / totalDays * 100);
+        var remaining = Math.max(0, totalDays - elapsedDays);
+        var progCls = pct >= 100 ? 'expired' : (pct >= 80 ? 'warn' : '');
+        var pctCls = pct >= 100 ? 'expired' : (pct >= 80 ? 'warn' : 'blue');
+
+        // Lease status badge class
+        var lsBadge = (data.lease_status || 'active').toLowerCase();
+
+        // Format date
+        function fmtD(d) {
+            if (!d) return '\u2014';
+            var dt = new Date(d + 'T00:00:00');
+            return dt.toLocaleDateString('en-PH', { month: 'short', day: '2-digit', year: 'numeric' });
+        }
+        function fmtN(n) { return '\u20B1' + parseFloat(n || 0).toLocaleString('en-PH', {minimumFractionDigits: 0, maximumFractionDigits: 0}); }
+        function fmtN2(n) { return '\u20B1' + parseFloat(n || 0).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+
+        var imgSrc = data.property_image || 'uploads/default-property.jpg';
+        var totalRevenue = parseFloat(data.total_revenue || 0);
+
+        var bodyHtml = '' +
+            '<div class="rpm-photo-banner">' +
+                '<img src="' + escHtml(imgSrc) + '" alt="' + escHtml(data.StreetAddress) + '" onerror="this.src=\'uploads/default-property.jpg\'">' +
+                '<div class="rpm-photo-banner-overlay"></div>' +
+                '<span class="rpm-photo-badge"><i class="bi bi-building"></i> ' + escHtml(data.PropertyType || 'Property') + '</span>' +
+                '<span class="rpm-lease-status-badge ' + lsBadge + '"><i class="bi bi-circle-fill" style="font-size:0.3rem;"></i> ' + escHtml(data.lease_status) + '</span>' +
+                '<div class="rpm-photo-banner-info">' +
+                    '<div><div class="rpm-price">' + fmtN(data.monthly_rent) + '<span style="font-size:.8rem;font-weight:600;-webkit-text-fill-color:rgba(255,255,255,.7);">/mo</span></div>' +
+                    '<div class="rpm-addr"><i class="bi bi-geo-alt-fill" style="font-size:.7rem;"></i> ' + escHtml(data.City + ', ' + (data.Barangay || '') + ', ' + data.Province) + '</div></div>' +
+                '</div>' +
+            '</div>';
+
+        // Property & Lease Info Grid
+        bodyHtml += '<div class="rpm-section-title"><i class="bi bi-file-text-fill"></i> Lease Information</div>';
+        bodyHtml += '<div class="rpm-info-grid">' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-person-fill"></i> Tenant</div><div class="rpm-val">' + escHtml(data.tenant_name) + '</div></div>' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-cash-coin"></i> Monthly Rent</div><div class="rpm-val gold">' + fmtN2(data.monthly_rent) + '</div></div>' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-shield-fill"></i> Security Deposit</div><div class="rpm-val">' + fmtN2(data.security_deposit) + '</div></div>' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-calendar-check"></i> Lease Start</div><div class="rpm-val">' + fmtD(data.lease_start_date) + '</div></div>' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-calendar-x"></i> Lease End</div><div class="rpm-val">' + fmtD(data.lease_end_date) + '</div></div>' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-hourglass-split"></i> Term</div><div class="rpm-val blue">' + (data.lease_term_months || 0) + ' months</div></div>' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-percent"></i> Commission Rate</div><div class="rpm-val green">' + (data.commission_rate || 0) + '%</div></div>' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-person-badge"></i> Agent</div><div class="rpm-val">' + escHtml((data.agent_first || '') + ' ' + (data.agent_last || '')) + '</div></div>' +
+        '</div>';
+
+        // Lease progress bar
+        bodyHtml += '<div class="rpm-section-title"><i class="bi bi-hourglass-split"></i> Lease Progress</div>';
+        bodyHtml += '<div class="rpm-progress-bar-wrap">' +
+            '<div class="rpm-progress-labels"><span>' + fmtD(data.lease_start_date) + '</span><span>' + fmtD(data.lease_end_date) + '</span></div>' +
+            '<div class="rpm-progress-track"><div class="rpm-progress-fill ' + progCls + '" style="width:' + pct + '%;"></div></div>' +
+            '<div class="rpm-progress-pct ' + pctCls + '">' + pct + '% elapsed &mdash; ' + remaining + ' day' + (remaining !== 1 ? 's' : '') + ' remaining</div>' +
+        '</div>';
+
+        // Revenue strip
+        bodyHtml += '<div class="rpm-revenue-strip">' +
+            '<div><div class="rev-lbl"><i class="bi bi-cash-stack"></i> Total Revenue Collected</div><div class="rev-val">' + fmtN2(totalRevenue) + '</div></div>' +
+            '<i class="bi bi-coin rev-icon"></i>' +
+        '</div>';
+
+        // Payment stats
+        bodyHtml += '<div class="rpm-section-title"><i class="bi bi-bar-chart-fill"></i> Payment Summary</div>';
+        bodyHtml += '<div class="rpm-info-grid">' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-check-circle"></i> Confirmed</div><div class="rpm-val green">' + (data.confirmed_payments || 0) + '</div></div>' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-clock"></i> Pending</div><div class="rpm-val" style="color:#d97706;">' + (data.pending_payments || 0) + '</div></div>' +
+            '<div class="rpm-info-item"><div class="rpm-lbl"><i class="bi bi-percent"></i> Est. Commission/mo</div><div class="rpm-val green">' + fmtN2(data.monthly_rent * data.commission_rate / 100) + '</div></div>' +
+        '</div>';
+
+        document.getElementById('rpmBody').innerHTML = bodyHtml;
+
+        // Action buttons
+        var isActive = data.lease_status === 'Active' || data.lease_status === 'Renewed';
+        var isExpired = data.lease_status === 'Expired';
+        var actionsHtml = '<a href="admin_lease_management.php?rental_id=' + data.rental_id + '" class="rpm-act-btn blue"><i class="bi bi-journal-text"></i> Manage Lease &amp; Payments</a>';
+        if (isActive || isExpired) {
+            actionsHtml += '<a href="admin_lease_management.php?rental_id=' + data.rental_id + '#renewLeaseModal" class="rpm-act-btn green"><i class="bi bi-arrow-repeat"></i> Renew Lease</a>';
+        }
+        if (isActive || isExpired) {
+            actionsHtml += '<a href="admin_lease_management.php?rental_id=' + data.rental_id + '#terminateLeaseModal" class="rpm-act-btn red"><i class="bi bi-x-circle"></i> Terminate</a>';
+        }
+        document.getElementById('rpmActions').innerHTML = actionsHtml;
+
+        // Show
+        modal.style.display = 'flex';
+        requestAnimationFrame(function() { modal.classList.add('show'); });
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeRpDetailModal() {
+        var modal = document.getElementById('rpDetailModal');
+        if (!modal || !modal.classList.contains('show')) return;
+        modal.classList.remove('show');
+        modal.classList.add('is-closing');
+        clearTimeout(_rpmTimer);
+        _rpmTimer = setTimeout(function() {
+            modal.style.display = 'none';
+            modal.classList.remove('is-closing');
+            if (!document.querySelector('.modal-overlay.show, .rpm-overlay.show')) {
+                document.body.style.overflow = '';
+            }
+        }, 300);
+    }
+
+    // Close on overlay click
+    document.getElementById('rpDetailModal').addEventListener('click', function(e) {
+        if (e.target === this) closeRpDetailModal();
+    });
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('rpDetailModal').classList.contains('show')) closeRpDetailModal();
+    });
+
+    function escHtml(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
     </script>
 
     <!-- SKELETON HYDRATION — Progressive Content Reveal -->

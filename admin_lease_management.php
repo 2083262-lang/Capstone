@@ -116,38 +116,59 @@ $agent_name = trim($lease['agent_first'] . ' ' . $lease['agent_last']);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-light); color: var(--text-primary); line-height: 1.6; }
-        .admin-content { margin-left: 290px; padding: 2rem; min-height: 100vh; max-width: 1800px; }
-        @media (max-width: 1200px) { .admin-content { margin-left: 0 !important; padding: 1.5rem; } }
+        .admin-content { margin-left: 290px; padding: 0; min-height: 100vh; max-width: 1800px; }
+        .lm-body-content { padding: 0 2rem 2rem; }
+        @media (max-width: 1200px) { .admin-content { margin-left: 0 !important; } .lm-body-content { padding: 0 1.5rem 1.5rem; } }
 
         /* ===== SCROLLBAR ===== */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.35); border-radius: 3px; }
 
-        /* ===== PAGE HEADER ===== */
-        .page-header { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 2rem 2.5rem; margin-bottom: 1.5rem; position: relative; overflow: hidden; }
-        .page-header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at top right, rgba(37,99,235,0.04) 0%, transparent 50%), radial-gradient(ellipse at bottom left, rgba(212,175,55,0.03) 0%, transparent 50%); pointer-events: none; }
-        .page-header::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
-        .page-header-inner { position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.25rem; }
-        .page-header .back-link { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--text-secondary); text-decoration: none; margin-bottom: 0.6rem; transition: color 0.2s; }
-        .page-header .back-link:hover { color: var(--gold-dark); }
-        .page-header h1 { font-size: 1.55rem; font-weight: 800; color: var(--text-primary); margin: 0 0 0.25rem; line-height: 1.25; }
-        .page-header .address-sub { font-size: 0.88rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.65rem; }
-        .page-header .address-sub i { color: var(--blue); font-size: 0.78rem; }
-        /* Meta badge row */
-        .lm-meta-row { display: flex; flex-wrap: wrap; gap: 0.45rem; }
-        .lm-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; border-radius: 3px; font-size: 0.72rem; font-weight: 600; }
-        .lm-badge i { font-size: 0.68rem; }
-        .lm-badge.blue  { background: rgba(37,99,235,0.08); color: var(--blue); border: 1px solid rgba(37,99,235,0.15); }
-        .lm-badge.gold  { background: rgba(212,175,55,0.08); color: var(--gold-dark); border: 1px solid rgba(212,175,55,0.2); }
-        .lm-badge.teal  { background: rgba(20,184,166,0.08); color: #0d9488; border: 1px solid rgba(20,184,166,0.2); }
-        /* Property thumb in header */
-        .lm-header-thumb { width: 64px; height: 64px; border-radius: 6px; object-fit: cover; border: 2px solid rgba(212,175,55,0.3); flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-        .lm-header-left { display: flex; align-items: flex-start; gap: 1.1rem; }
+        /* ===== HERO BANNER ===== */
+        .lm-hero { position: relative; height: 280px; overflow: hidden; background: #1e293b; margin-bottom: 1.5rem; }
+        .lm-hero-bg { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; display: block; }
+        .lm-hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0.35) 0%, rgba(15,23,42,0.55) 40%, rgba(15,23,42,0.92) 100%); }
+        .lm-hero-top-line { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); z-index: 3; }
+        .lm-hero-back { position: absolute; top: 1.25rem; left: 2rem; z-index: 5; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.7); text-decoration: none; background: rgba(0,0,0,0.3); padding: 0.35rem 0.85rem; border-radius: 4px; backdrop-filter: blur(6px); transition: all 0.2s; }
+        .lm-hero-back:hover { color: #fff; background: rgba(0,0,0,0.5); }
+        .lm-hero-type-badge { position: absolute; top: 1.25rem; right: 2rem; z-index: 5; background: rgba(0,0,0,0.55); color: #e2e8f0; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; padding: 0.28rem 0.7rem; border-radius: 3px; backdrop-filter: blur(6px); }
+        .lm-hero-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 0 2rem 1.5rem; z-index: 4; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; }
+        .lm-hero-info { flex: 1; min-width: 280px; }
+        .lm-hero-title { font-size: 1.65rem; font-weight: 800; color: #fff; margin: 0 0 0.2rem; line-height: 1.25; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .lm-hero-addr { font-size: 0.82rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.65rem; }
+        .lm-hero-addr i { font-size: 0.72rem; color: var(--gold); }
+        .lm-hero-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .lm-hero-price-block { text-align: right; flex-shrink: 0; }
+        .lm-hero-rent { font-size: 1.75rem; font-weight: 900; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)); line-height: 1.2; }
+        .lm-hero-rent span { font-size: 0.82rem; font-weight: 600; opacity: 0.8; }
+        .lm-hero-rent-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(255,255,255,0.45); margin-top: 0.1rem; }
 
-        /* Header action buttons */
-        .header-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: flex-start; padding-top: 0.25rem; }
-        .btn-action { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; border: none; border-radius: 4px; font-size: 0.82rem; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.3s; position: relative; overflow: hidden; }
+        /* Lease status badge */
+        .lease-status-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.22rem 0.65rem; border-radius: 3px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .lease-status-badge.active     { background: rgba(34,197,94,0.15);  color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+        .lease-status-badge.renewed    { background: rgba(37,99,235,0.15);  color: #93c5fd; border: 1px solid rgba(37,99,235,0.3); }
+        .lease-status-badge.terminated { background: rgba(239,68,68,0.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+        .lease-status-badge.expired    { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+
+        /* Meta badges */
+        .lm-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; border-radius: 3px; font-size: 0.72rem; font-weight: 600; backdrop-filter: blur(4px); }
+        .lm-badge i { font-size: 0.68rem; }
+        .lm-badge.blue  { background: rgba(37,99,235,0.15); color: #93c5fd; border: 1px solid rgba(37,99,235,0.25); }
+        .lm-badge.gold  { background: rgba(212,175,55,0.15); color: var(--gold-light); border: 1px solid rgba(212,175,55,0.25); }
+        .lm-badge.teal  { background: rgba(20,184,166,0.15); color: #5eead4; border: 1px solid rgba(20,184,166,0.25); }
+
+        /* ===== ACTION BAR (below hero) ===== */
+        .lm-action-bar { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 0.85rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; position: relative; overflow: hidden; }
+        .lm-action-bar::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
+        .lm-action-bar-left { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+        .lm-action-bar-right { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .lm-ab-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.65rem; border-radius: 3px; font-size: 0.72rem; font-weight: 600; }
+        .lm-ab-badge i { font-size: 0.68rem; }
+        .lm-ab-badge.blue  { background: rgba(37,99,235,0.08); color: var(--blue); border: 1px solid rgba(37,99,235,0.15); }
+        .lm-ab-badge.gold  { background: rgba(212,175,55,0.08); color: var(--gold-dark); border: 1px solid rgba(212,175,55,0.2); }
+        .lm-ab-badge.teal  { background: rgba(20,184,166,0.08); color: #0d9488; border: 1px solid rgba(20,184,166,0.2); }
+        .btn-action { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border: none; border-radius: 4px; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.04em; transition: all 0.3s; position: relative; overflow: hidden; }
         .btn-action::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent); transition: left 0.45s ease; }
         .btn-action:hover::before { left: 100%; }
         .btn-action.gold  { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: #0a0a0a; }
@@ -157,54 +178,37 @@ $agent_name = trim($lease['agent_first'] . ' ' . $lease['agent_last']);
         .btn-action.red   { background: linear-gradient(135deg, #b91c1c, #dc2626); color: #fff; }
         .btn-action.red:hover { box-shadow: 0 4px 16px rgba(220,38,38,0.3); transform: translateY(-1px); }
 
-        /* Lease status badge */
-        .lease-status-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.22rem 0.65rem; border-radius: 3px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        .lease-status-badge.active     { background: rgba(34,197,94,0.1);  color: #16a34a; border: 1px solid rgba(34,197,94,0.2); }
-        .lease-status-badge.renewed    { background: rgba(37,99,235,0.1);  color: var(--blue); border: 1px solid rgba(37,99,235,0.2); }
-        .lease-status-badge.terminated { background: rgba(239,68,68,0.1);  color: #dc2626; border: 1px solid rgba(239,68,68,0.2); }
-        .lease-status-badge.expired    { background: rgba(245,158,11,0.1); color: #d97706; border: 1px solid rgba(245,158,11,0.2); }
-
-        /* ===== KPI GRID — Vertical, property.php style ===== */
+        /* ===== KPI GRID ===== */
         .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
-        .kpi-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 1.25rem; display: flex; flex-direction: column; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .kpi-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; padding: 1.15rem; display: flex; flex-direction: column; transition: all 0.3s ease; position: relative; overflow: hidden; }
         .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--blue), transparent); opacity: 0; transition: opacity 0.3s ease; }
         .kpi-card:hover { border-color: rgba(37,99,235,0.25); box-shadow: 0 8px 32px rgba(37,99,235,0.08); transform: translateY(-3px); }
         .kpi-card:hover::before { opacity: 1; }
-        .kpi-icon { width: 40px; height: 40px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; margin-bottom: 0.75rem; flex-shrink: 0; }
+        .kpi-icon { width: 38px; height: 38px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 0.65rem; flex-shrink: 0; }
         .kpi-icon.green { background: linear-gradient(135deg, rgba(34,197,94,0.06), rgba(34,197,94,0.12));  color: #16a34a; border: 1px solid rgba(34,197,94,0.15); }
         .kpi-icon.amber { background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.12)); color: #d97706; border: 1px solid rgba(245,158,11,0.15); }
         .kpi-icon.red   { background: linear-gradient(135deg, rgba(239,68,68,0.06), rgba(239,68,68,0.12));   color: #dc2626; border: 1px solid rgba(239,68,68,0.15); }
         .kpi-icon.blue  { background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(37,99,235,0.12));   color: var(--blue); border: 1px solid rgba(37,99,235,0.15); }
         .kpi-icon.gold  { background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.15)); color: var(--gold-dark); border: 1px solid rgba(212,175,55,0.2); }
-        .kpi-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 0.2rem; }
-        .kpi-value { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
-        .kpi-value.kpi-currency { font-size: 1.2rem; }
+        .kpi-label { font-size: 0.66rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 0.2rem; }
+        .kpi-value { font-size: 1.45rem; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
+        .kpi-value.kpi-currency { font-size: 1.15rem; }
 
-        /* ===== SECTION CARD — dark gradient header ===== */
+        /* ===== SECTION CARD ===== */
         .section-card { background: var(--card-bg); border: 1px solid rgba(37,99,235,0.1); border-radius: 4px; margin-bottom: 1.5rem; position: relative; overflow: hidden; }
-        .section-card-header { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 1rem 1.5rem; position: relative; overflow: hidden; flex-shrink: 0; }
+        .section-card-header { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 0.85rem 1.5rem; position: relative; overflow: hidden; flex-shrink: 0; }
         .section-card-header::before { content: ''; position: absolute; top: 0; left: -100%; width: 200%; height: 100%; background: linear-gradient(90deg, transparent, rgba(212,175,55,0.06), transparent); animation: lm-sweep 4s ease-in-out infinite; pointer-events: none; }
         @keyframes lm-sweep { 0% { left: -100%; } 100% { left: 100%; } }
         .section-card-header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), var(--blue), transparent); }
-        .section-card-header h6 { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.9); margin: 0; display: flex; align-items: center; gap: 0.5rem; position: relative; z-index: 1; }
+        .section-card-header h6 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.9); margin: 0; display: flex; align-items: center; gap: 0.5rem; position: relative; z-index: 1; }
         .section-card-header h6 i { color: var(--gold); }
         .section-card-header .sc-header-right { position: relative; z-index: 1; display: flex; align-items: center; gap: 0.5rem; }
         .section-card-body { padding: 1.5rem; }
 
-        /* ===== PROPERTY PHOTO BANNER ===== */
-        .lm-photo-banner { position: relative; height: 185px; overflow: hidden; background: #e2e8f0; }
-        .lm-photo-banner img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-        .lm-photo-banner:hover img { transform: scale(1.04); }
-        .lm-photo-banner-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,23,42,0.88) 0%, rgba(15,23,42,0.1) 55%, transparent 100%); }
-        .lm-photo-banner-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem 1.5rem; z-index: 2; }
-        .lm-photo-banner-price { font-size: 1.45rem; font-weight: 900; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); }
-        .lm-photo-banner-addr { font-size: 0.78rem; color: rgba(255,255,255,0.65); margin-top: 0.15rem; display: flex; align-items: center; gap: 0.3rem; }
-        .lm-photo-banner-type { position: absolute; top: 12px; left: 14px; background: rgba(0,0,0,0.7); color: #e2e8f0; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.2rem 0.6rem; border-radius: 2px; backdrop-filter: blur(4px); z-index: 2; }
-
-        /* ===== LEASE INFO GRID — card-style items ===== */
+        /* ===== LEASE INFO GRID ===== */
         .lease-info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 0.75rem; }
-        .lease-info-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; transition: border-color 0.2s; }
-        .lease-info-item:hover { border-color: rgba(37,99,235,0.2); }
+        .lease-info-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; transition: all 0.2s; }
+        .lease-info-item:hover { border-color: rgba(37,99,235,0.2); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
         .lease-info-item .label { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-secondary); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.3rem; }
         .lease-info-item .label i { color: var(--gold-dark); font-size: 0.7rem; }
         .lease-info-item .value { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); }
@@ -219,17 +223,18 @@ $agent_name = trim($lease['agent_first'] . ' ' . $lease['agent_last']);
         /* ===== LEASE PROGRESS CARD ===== */
         .lm-progress-wrap { margin-bottom: 1.1rem; }
         .lm-progress-label { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.45rem; }
-        .lm-progress-track { background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden; }
-        .lm-progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--blue-dark), var(--blue-light)); transition: width 0.8s cubic-bezier(0.16,1,0.3,1); }
+        .lm-progress-track { background: #e2e8f0; border-radius: 6px; height: 10px; overflow: hidden; position: relative; }
+        .lm-progress-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--blue-dark), var(--blue-light)); transition: width 0.8s cubic-bezier(0.16,1,0.3,1); position: relative; }
+        .lm-progress-fill::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 30px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25)); border-radius: 0 6px 6px 0; }
         .lm-progress-fill.warn    { background: linear-gradient(90deg, #d97706, #f59e0b); }
         .lm-progress-fill.expired { background: linear-gradient(90deg, #b91c1c, #ef4444); }
-        .lm-progress-pct { font-size: 0.72rem; font-weight: 700; margin-top: 0.3rem; text-align: right; }
+        .lm-progress-pct { font-size: 0.72rem; font-weight: 700; margin-top: 0.35rem; text-align: right; }
         .lm-progress-pct.blue    { color: var(--blue); }
         .lm-progress-pct.warn    { color: #d97706; }
         .lm-progress-pct.expired { color: #dc2626; }
 
-        /* Stat rows inside right panel */
-        .lm-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.82rem; }
+        /* Stat rows */
+        .lm-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.82rem; }
         .lm-stat-row:last-child { border-bottom: none; }
         .lm-stat-row .s-lbl { color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; }
         .lm-stat-row .s-lbl i { font-size: 0.72rem; color: var(--gold-dark); }
@@ -245,17 +250,26 @@ $agent_name = trim($lease['agent_first'] . ' ' . $lease['agent_last']);
         .lm-revenue-strip .rev-val { font-size: 1.3rem; font-weight: 900; color: var(--gold-dark); }
         .lm-revenue-strip i.rev-icon { font-size: 1.6rem; color: rgba(212,175,55,0.25); }
 
+        /* ===== PAYMENT FILTER TABS ===== */
+        .pay-filter-tabs { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+        .pay-filter-tab { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.7rem; border-radius: 3px; font-size: 0.68rem; font-weight: 600; cursor: pointer; border: none; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); transition: all 0.2s; position: relative; z-index: 1; }
+        .pay-filter-tab:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+        .pay-filter-tab.active { background: rgba(212,175,55,0.2); color: var(--gold-light); border: 1px solid rgba(212,175,55,0.3); }
+        .pay-filter-tab .tab-count { background: rgba(255,255,255,0.1); padding: 0.05rem 0.35rem; border-radius: 2px; font-size: 0.62rem; }
+        .pay-filter-tab.active .tab-count { background: rgba(212,175,55,0.3); }
+
         /* ===== PAYMENT TABLE ===== */
         .table-responsive { overflow-x: auto; }
         .payment-table { width: 100%; margin: 0; border-collapse: collapse; }
         .payment-table thead tr { background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-bottom: 2px solid #e2e8f0; }
         .payment-table th { padding: 0.75rem 1.25rem; font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); white-space: nowrap; }
-        .payment-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+        .payment-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: all 0.15s; }
         .payment-table tbody tr:last-child { border-bottom: none; }
         .payment-table tbody tr:hover { background: rgba(37,99,235,0.025); }
+        .payment-table tbody tr.pay-hidden { display: none; }
         .payment-table td { padding: 0.9rem 1.25rem; font-size: 0.875rem; color: var(--text-primary); vertical-align: middle; }
         .payment-table td.muted { color: var(--text-secondary); font-size: 0.82rem; }
-        .pay-idx { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); }
+        .pay-idx { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: linear-gradient(135deg, #f1f5f9, #e9edf2); border: 1px solid #e2e8f0; border-radius: 5px; font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); }
         .pay-amount-val { font-weight: 800; background: linear-gradient(135deg, var(--gold-dark), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 0.95rem; }
         .pay-comm-val { color: #16a34a; font-weight: 700; font-size: 0.875rem; display: flex; align-items: center; gap: 0.3rem; }
         .pay-comm-dot { width: 6px; height: 6px; background: #16a34a; border-radius: 50%; flex-shrink: 0; }
@@ -414,12 +428,16 @@ $agent_name = trim($lease['agent_first'] . ' ' . $lease['agent_last']);
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
-            .admin-content { padding: 1rem; }
-            .page-header { padding: 1.25rem; }
-            .page-header h1 { font-size: 1.2rem; }
+            .admin-content { padding: 0; }
+            .lm-body-content { padding: 0 1rem 1rem; }
+            .lm-hero { height: 220px; }
+            .lm-hero-title { font-size: 1.2rem; }
+            .lm-hero-content { padding: 0 1rem 1rem; }
+            .lm-hero-back { left: 1rem; }
+            .lm-hero-type-badge { right: 1rem; }
+            .lm-action-bar { padding: 0.75rem 1rem; }
             .kpi-grid { grid-template-columns: repeat(2, 1fr); }
             .lease-info-grid { grid-template-columns: repeat(2, 1fr); }
-            .header-actions { width: 100%; }
         }
     </style>
 </head>
@@ -437,45 +455,63 @@ include __DIR__ . '/admin_navbar.php';
 
 <!-- SKELETON SCREEN -->
 <div id="sk-screen" class="admin-content" role="presentation" aria-hidden="true">
-    <!-- Skeleton: Header -->
-    <div style="background:#fff;border:1px solid rgba(37,99,235,0.1);border-radius:4px;padding:2rem 2.5rem;margin-bottom:1.5rem;position:relative;overflow:hidden;">
-        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#e8e3d0,#d4e0f7,transparent);"></div>
-        <div class="sk-shimmer" style="width:120px;height:12px;margin-bottom:10px;"></div>
-        <div class="sk-shimmer" style="width:290px;height:22px;margin-bottom:8px;"></div>
-        <div class="sk-shimmer" style="width:180px;height:13px;"></div>
-    </div>
-    <!-- Skeleton: KPI Grid -->
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1.5rem;">
-        <?php for ($i = 0; $i < 5; $i++): ?>
-        <div style="background:#fff;border:1px solid rgba(37,99,235,0.1);border-radius:4px;padding:1.25rem;display:flex;align-items:center;gap:1rem;">
-            <div class="sk-shimmer" style="width:48px;height:48px;border-radius:4px;flex-shrink:0;"></div>
-            <div style="flex:1;"><div class="sk-shimmer" style="width:70%;height:10px;margin-bottom:6px;"></div><div class="sk-shimmer" style="width:45%;height:18px;"></div></div>
-        </div>
-        <?php endfor; ?>
-    </div>
-    <!-- Skeleton: Lease Summary -->
-    <div style="background:#fff;border:1px solid rgba(37,99,235,0.1);border-radius:4px;margin-bottom:1.5rem;">
-        <div style="padding:1rem 1.5rem;border-bottom:1px solid #e2e8f0;"><div class="sk-shimmer" style="width:140px;height:12px;"></div></div>
-        <div style="padding:1.5rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:1.25rem;">
-            <?php for ($i = 0; $i < 8; $i++): ?>
-            <div><div class="sk-shimmer" style="width:70px;height:10px;margin-bottom:8px;"></div><div class="sk-shimmer" style="width:110px;height:16px;"></div></div>
-            <?php endfor; ?>
+    <!-- Skeleton: Hero Banner -->
+    <div style="height:280px;background:#1e293b;position:relative;overflow:hidden;margin-bottom:1.5rem;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#e8e3d0,#d4e0f7,transparent);"></div>
+        <div style="position:absolute;bottom:1.5rem;left:2rem;">
+            <div class="sk-shimmer" style="width:300px;height:24px;margin-bottom:8px;background:linear-gradient(90deg,rgba(255,255,255,0.05) 25%,rgba(255,255,255,0.1) 50%,rgba(255,255,255,0.05) 75%);background-size:1600px 100%;"></div>
+            <div class="sk-shimmer" style="width:180px;height:14px;background:linear-gradient(90deg,rgba(255,255,255,0.05) 25%,rgba(255,255,255,0.1) 50%,rgba(255,255,255,0.05) 75%);background-size:1600px 100%;"></div>
         </div>
     </div>
-    <!-- Skeleton: Table -->
-    <div style="background:#fff;border:1px solid rgba(37,99,235,0.1);border-radius:4px;overflow:hidden;">
-        <div style="padding:1rem 1.5rem;border-bottom:1px solid #e2e8f0;"><div class="sk-shimmer" style="width:160px;height:14px;"></div></div>
-        <div style="padding:1.25rem;display:flex;flex-direction:column;gap:0.85rem;">
-            <?php for ($i = 0; $i < 4; $i++): ?>
-            <div style="display:flex;gap:1rem;align-items:center;">
-                <div class="sk-shimmer" style="width:30px;height:13px;"></div>
-                <div class="sk-shimmer" style="width:90px;height:13px;"></div>
-                <div class="sk-shimmer" style="width:130px;height:13px;"></div>
-                <div class="sk-shimmer" style="width:80px;height:13px;"></div>
-                <div class="sk-shimmer" style="width:65px;height:20px;"></div>
-                <div class="sk-shimmer" style="width:80px;height:13px;"></div>
+    <div style="padding:0 2rem;">
+        <!-- Skeleton: Action Bar -->
+        <div style="background:#fff;border:1px solid rgba(37,99,235,0.1);border-radius:4px;padding:0.85rem 1.5rem;margin-bottom:1.5rem;display:flex;gap:0.6rem;">
+            <div class="sk-shimmer" style="width:100px;height:28px;border-radius:3px;"></div>
+            <div class="sk-shimmer" style="width:100px;height:28px;border-radius:3px;"></div>
+            <div class="sk-shimmer" style="width:100px;height:28px;border-radius:3px;"></div>
+        </div>
+        <!-- Skeleton: KPI Grid -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1.5rem;">
+            <?php for ($i = 0; $i < 5; $i++): ?>
+            <div style="background:#fff;border:1px solid rgba(37,99,235,0.1);border-radius:4px;padding:1.15rem;">
+                <div class="sk-shimmer" style="width:38px;height:38px;border-radius:4px;margin-bottom:0.65rem;"></div>
+                <div class="sk-shimmer" style="width:70%;height:10px;margin-bottom:6px;"></div>
+                <div class="sk-shimmer" style="width:45%;height:20px;"></div>
             </div>
             <?php endfor; ?>
+        </div>
+        <!-- Skeleton: 2-Column -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+            <div style="background:#fff;border:1px solid rgba(37,99,235,0.1);border-radius:4px;">
+                <div style="background:#1e293b;padding:0.85rem 1.5rem;border-radius:4px 4px 0 0;"><div class="sk-shimmer" style="width:140px;height:12px;background:linear-gradient(90deg,rgba(255,255,255,0.05) 25%,rgba(255,255,255,0.1) 50%,rgba(255,255,255,0.05) 75%);background-size:1600px 100%;"></div></div>
+                <div style="padding:1.5rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:0.75rem;">
+                    <?php for ($i = 0; $i < 8; $i++): ?>
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.75rem 1rem;"><div class="sk-shimmer" style="width:60px;height:9px;margin-bottom:8px;"></div><div class="sk-shimmer" style="width:90px;height:15px;"></div></div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+            <div>
+                <div style="background:#fff;border:1px solid rgba(37,99,235,0.1);border-radius:4px;">
+                    <div style="background:#1e293b;padding:0.85rem 1.5rem;border-radius:4px 4px 0 0;"><div class="sk-shimmer" style="width:120px;height:12px;background:linear-gradient(90deg,rgba(255,255,255,0.05) 25%,rgba(255,255,255,0.1) 50%,rgba(255,255,255,0.05) 75%);background-size:1600px 100%;"></div></div>
+                    <div style="padding:1.5rem;"><div class="sk-shimmer" style="width:100%;height:10px;border-radius:6px;margin-bottom:1rem;"></div><div class="sk-shimmer" style="width:100%;height:12px;margin-bottom:0.5rem;"></div><div class="sk-shimmer" style="width:100%;height:12px;margin-bottom:0.5rem;"></div><div class="sk-shimmer" style="width:100%;height:12px;"></div></div>
+                </div>
+            </div>
+        </div>
+        <!-- Skeleton: Table -->
+        <div style="background:#fff;border:1px solid rgba(37,99,235,0.1);border-radius:4px;overflow:hidden;">
+            <div style="background:#1e293b;padding:0.85rem 1.5rem;"><div class="sk-shimmer" style="width:160px;height:12px;background:linear-gradient(90deg,rgba(255,255,255,0.05) 25%,rgba(255,255,255,0.1) 50%,rgba(255,255,255,0.05) 75%);background-size:1600px 100%;"></div></div>
+            <div style="padding:1.25rem;display:flex;flex-direction:column;gap:0.85rem;">
+                <?php for ($i = 0; $i < 4; $i++): ?>
+                <div style="display:flex;gap:1rem;align-items:center;">
+                    <div class="sk-shimmer" style="width:26px;height:26px;border-radius:5px;"></div>
+                    <div class="sk-shimmer" style="width:90px;height:13px;"></div>
+                    <div class="sk-shimmer" style="width:130px;height:13px;"></div>
+                    <div class="sk-shimmer" style="width:80px;height:13px;"></div>
+                    <div class="sk-shimmer" style="width:65px;height:20px;"></div>
+                    <div class="sk-shimmer" style="width:80px;height:13px;"></div>
+                </div>
+                <?php endfor; ?>
+            </div>
         </div>
     </div>
 </div>
@@ -484,65 +520,80 @@ include __DIR__ . '/admin_navbar.php';
 <div id="page-content">
 <div class="admin-content">
 
-    <!-- ===== Page Header ===== -->
-    <div class="page-header">
-        <div class="page-header-inner">
-            <div class="lm-header-left">
-                <?php if (!empty($lease['thumb'])): ?>
-                <img src="<?= htmlspecialchars($lease['thumb']) ?>" alt="Property" class="lm-header-thumb">
-                <?php endif; ?>
-                <div>
-                    <a href="admin_rental_payments.php" class="back-link">
-                        <i class="bi bi-arrow-left"></i> Back to Rental Payments
-                    </a>
-                    <div style="display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:.25rem;">
-                        <h1><?= htmlspecialchars($lease['StreetAddress']) ?></h1>
-                        <?php
-                        $statusClass = match($lease['lease_status']) {
-                            'Active'     => 'active',
-                            'Renewed'    => 'renewed',
-                            'Terminated' => 'terminated',
-                            'Expired'    => 'expired',
-                            default      => 'active'
-                        };
-                        ?>
-                        <span class="lease-status-badge <?= $statusClass ?>">
-                            <i class="bi bi-circle-fill" style="font-size:.35rem;"></i>
-                            <?= htmlspecialchars($lease['lease_status']) ?>
-                        </span>
-                    </div>
-                    <div class="address-sub"><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($lease['City'] . ', ' . $lease['Province']) ?></div>
-                    <div class="lm-meta-row">
-                        <span class="lm-badge gold"><i class="bi bi-building"></i> <?= htmlspecialchars($lease['PropertyType'] ?? 'Property') ?></span>
-                        <span class="lm-badge blue"><i class="bi bi-person-badge"></i> <?= htmlspecialchars($agent_name) ?></span>
-                        <span class="lm-badge teal"><i class="bi bi-person-fill"></i> <?= htmlspecialchars($lease['tenant_name']) ?></span>
-                    </div>
+    <?php
+    $statusClass = match($lease['lease_status']) {
+        'Active'     => 'active',
+        'Renewed'    => 'renewed',
+        'Terminated' => 'terminated',
+        'Expired'    => 'expired',
+        default      => 'active'
+    };
+    ?>
+
+    <!-- ===== Hero Banner ===== -->
+    <div class="lm-hero">
+        <div class="lm-hero-top-line"></div>
+        <?php if (!empty($lease['thumb'])): ?>
+        <img src="<?= htmlspecialchars($lease['thumb']) ?>" alt="<?= htmlspecialchars($lease['StreetAddress']) ?>" class="lm-hero-bg">
+        <?php endif; ?>
+        <div class="lm-hero-overlay"></div>
+        <a href="admin_rental_payments.php" class="lm-hero-back">
+            <i class="bi bi-arrow-left"></i> Back to Rental Payments
+        </a>
+        <span class="lm-hero-type-badge"><?= htmlspecialchars($lease['PropertyType'] ?? 'Property') ?></span>
+        <div class="lm-hero-content">
+            <div class="lm-hero-info">
+                <h1 class="lm-hero-title"><?= htmlspecialchars($lease['StreetAddress']) ?></h1>
+                <div class="lm-hero-addr"><i class="bi bi-geo-alt-fill"></i> <?= htmlspecialchars($lease['City'] . ', ' . $lease['Province']) ?></div>
+                <div class="lm-hero-badges">
+                    <span class="lease-status-badge <?= $statusClass ?>">
+                        <i class="bi bi-circle-fill" style="font-size:.35rem;"></i>
+                        <?= htmlspecialchars($lease['lease_status']) ?>
+                    </span>
+                    <span class="lm-badge gold"><i class="bi bi-building"></i> <?= htmlspecialchars($lease['PropertyType'] ?? 'Property') ?></span>
+                    <span class="lm-badge blue"><i class="bi bi-person-badge"></i> <?= htmlspecialchars($agent_name) ?></span>
+                    <span class="lm-badge teal"><i class="bi bi-person-fill"></i> <?= htmlspecialchars($lease['tenant_name']) ?></span>
                 </div>
             </div>
-            <div class="header-actions">
-                <?php if ($is_active): ?>
-                    <button class="btn-action gold" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
-                        <i class="bi bi-plus-circle"></i> Record Payment
-                    </button>
-                    <button class="btn-action green" data-bs-toggle="modal" data-bs-target="#renewLeaseModal">
-                        <i class="bi bi-arrow-repeat"></i> Renew
-                    </button>
-                    <button class="btn-action red" data-bs-toggle="modal" data-bs-target="#terminateLeaseModal">
-                        <i class="bi bi-x-circle"></i> Terminate
-                    </button>
-                <?php elseif ($lease['lease_status'] === 'Expired'): ?>
-                    <button class="btn-action green" data-bs-toggle="modal" data-bs-target="#renewLeaseModal">
-                        <i class="bi bi-arrow-repeat"></i> Renew Lease
-                    </button>
-                    <button class="btn-action red" data-bs-toggle="modal" data-bs-target="#terminateLeaseModal">
-                        <i class="bi bi-x-circle"></i> End Lease
-                    </button>
-                <?php endif; ?>
+            <div class="lm-hero-price-block">
+                <div class="lm-hero-rent">&#8369;<?= number_format($lease['monthly_rent'], 0) ?><span>/mo</span></div>
+                <div class="lm-hero-rent-label">Monthly Rent</div>
             </div>
         </div>
     </div>
 
-    <!-- ===== KPI Grid — Vertical, property.php style ===== -->
+    <div class="lm-body-content">
+
+    <!-- ===== Action Bar ===== -->
+    <div class="lm-action-bar">
+        <div class="lm-action-bar-left">
+            <span class="lm-ab-badge gold"><i class="bi bi-building"></i> <?= htmlspecialchars($lease['PropertyType'] ?? 'Property') ?></span>
+            <span class="lm-ab-badge blue"><i class="bi bi-person-badge"></i> <?= htmlspecialchars($agent_name) ?></span>
+            <span class="lm-ab-badge teal"><i class="bi bi-person-fill"></i> <?= htmlspecialchars($lease['tenant_name']) ?></span>
+        </div>
+        <div class="lm-action-bar-right">
+            <?php if ($is_active): ?>
+                <button class="btn-action gold" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
+                    <i class="bi bi-plus-circle"></i> Record Payment
+                </button>
+                <button class="btn-action green" data-bs-toggle="modal" data-bs-target="#renewLeaseModal">
+                    <i class="bi bi-arrow-repeat"></i> Renew
+                </button>
+                <button class="btn-action red" data-bs-toggle="modal" data-bs-target="#terminateLeaseModal">
+                    <i class="bi bi-x-circle"></i> Terminate
+                </button>
+            <?php elseif ($lease['lease_status'] === 'Expired'): ?>
+                <button class="btn-action green" data-bs-toggle="modal" data-bs-target="#renewLeaseModal">
+                    <i class="bi bi-arrow-repeat"></i> Renew Lease
+                </button>
+                <button class="btn-action red" data-bs-toggle="modal" data-bs-target="#terminateLeaseModal">
+                    <i class="bi bi-x-circle"></i> End Lease
+                </button>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- ===== KPI Grid ===== -->
     <div class="kpi-grid">
         <div class="kpi-card">
             <div class="kpi-icon green"><i class="bi bi-check-circle-fill"></i></div>
@@ -574,28 +625,17 @@ include __DIR__ . '/admin_navbar.php';
     <!-- ===== 2-Column: Lease Summary | Progress ===== -->
     <div class="lm-main-grid">
 
-        <!-- LEFT: Lease Summary with property photo banner -->
+        <!-- LEFT: Lease Summary -->
         <div class="section-card" style="margin-bottom:0;">
             <div class="section-card-header">
                 <h6><i class="bi bi-file-text-fill"></i> Lease Summary</h6>
                 <div class="sc-header-right">
-                    <span class="lease-status-badge <?= $statusClass ?>">
+                    <span class="lease-status-badge <?= $statusClass ?>" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);">
                         <i class="bi bi-circle-fill" style="font-size:.35rem;"></i>
                         <?= htmlspecialchars($lease['lease_status']) ?>
                     </span>
                 </div>
             </div>
-            <?php if (!empty($lease['thumb'])): ?>
-            <div class="lm-photo-banner">
-                <img src="<?= htmlspecialchars($lease['thumb']) ?>" alt="<?= htmlspecialchars($lease['StreetAddress']) ?>">
-                <div class="lm-photo-banner-overlay"></div>
-                <div class="lm-photo-banner-type"><?= htmlspecialchars($lease['PropertyType'] ?? 'Property') ?></div>
-                <div class="lm-photo-banner-info">
-                    <div class="lm-photo-banner-price">&#8369;<?= number_format($lease['monthly_rent'], 0) ?><span style="font-size:.88rem;font-weight:600;opacity:.7;">/mo</span></div>
-                    <div class="lm-photo-banner-addr"><i class="bi bi-geo-alt-fill" style="font-size:.7rem;"></i> <?= htmlspecialchars($lease['City'] . ', ' . ($lease['Barangay'] ?? '') . ', ' . $lease['Province']) ?></div>
-                </div>
-            </div>
-            <?php endif; ?>
             <div class="section-card-body">
                 <div class="lease-info-grid">
                     <div class="lease-info-item">
@@ -732,8 +772,13 @@ include __DIR__ . '/admin_navbar.php';
     <div class="section-card">
         <div class="section-card-header">
             <h6><i class="bi bi-clock-history"></i> Payment History</h6>
-            <div class="sc-header-right">
-                <span style="font-size:.7rem;font-weight:600;color:rgba(255,255,255,.4);position:relative;z-index:1;"><?= count($payments) ?> record<?= count($payments) !== 1 ? 's' : '' ?></span>
+            <div class="sc-header-right" style="gap:0.75rem;">
+                <div class="pay-filter-tabs" id="payFilterTabs">
+                    <button class="pay-filter-tab active" data-filter="all">All <span class="tab-count"><?= count($payments) ?></span></button>
+                    <button class="pay-filter-tab" data-filter="confirmed">Confirmed <span class="tab-count"><?= $confirmed_count ?></span></button>
+                    <button class="pay-filter-tab" data-filter="pending">Pending <span class="tab-count"><?= $pending_count ?></span></button>
+                    <button class="pay-filter-tab" data-filter="rejected">Rejected <span class="tab-count"><?= $rejected_count ?></span></button>
+                </div>
             </div>
         </div>
         <?php if (empty($payments)): ?>
@@ -757,9 +802,9 @@ include __DIR__ . '/admin_navbar.php';
                         <th>Submitted</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="payTableBody">
                     <?php $idx = count($payments); foreach ($payments as $p): ?>
-                    <tr>
+                    <tr data-pay-status="<?= strtolower($p['status']) ?>">
                         <td><span class="pay-idx"><?= $idx-- ?></span></td>
                         <td style="font-weight:600;"><?= date('M d, Y', strtotime($p['payment_date'])) ?></td>
                         <td class="muted">
@@ -793,6 +838,8 @@ include __DIR__ . '/admin_navbar.php';
         </div>
         <?php endif; ?>
     </div>
+
+    </div><!-- /.lm-body-content -->
 
 </div>
 </div><!-- /#page-content -->
@@ -1045,6 +1092,28 @@ include __DIR__ . '/admin_navbar.php';
 
 <script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 <script>
+// ===== PAYMENT FILTER TABS =====
+(function () {
+    var tabsWrap = document.getElementById('payFilterTabs');
+    var tbody    = document.getElementById('payTableBody');
+    if (!tabsWrap || !tbody) return;
+
+    tabsWrap.addEventListener('click', function (e) {
+        var btn = e.target.closest('.pay-filter-tab');
+        if (!btn) return;
+        tabsWrap.querySelectorAll('.pay-filter-tab').forEach(function (t) { t.classList.remove('active'); });
+        btn.classList.add('active');
+        var filter = btn.dataset.filter;
+        tbody.querySelectorAll('tr[data-pay-status]').forEach(function (row) {
+            if (filter === 'all' || row.dataset.payStatus === filter) {
+                row.classList.remove('pay-hidden');
+            } else {
+                row.classList.add('pay-hidden');
+            }
+        });
+    });
+}());
+
 // ===== TOAST =====
 function showToast(type, title, message, duration) {
     duration = duration || 4500;
