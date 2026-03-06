@@ -345,7 +345,7 @@ switch ($active_status) {
     /* ===== KPI CARDS ===== */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
@@ -1506,7 +1506,7 @@ switch ($active_status) {
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 1200px) {
-      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 768px) {
       .admin-content { padding: 1rem !important; }
@@ -1648,7 +1648,7 @@ switch ($active_status) {
 
     .sk-kpi-grid {
         display: grid;
-        grid-template-columns: repeat(6, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 1rem;
         margin-bottom: 1.5rem;
     }
@@ -1703,7 +1703,7 @@ switch ($active_status) {
     .sk-line { display: block; border-radius: 4px; }
 
     /* Responsive */
-    @media (max-width: 1400px) { .sk-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 1400px) { .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 992px)  {
         .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
         .sk-status-tabs { height: auto; flex-wrap: wrap; padding: 0.5rem; }

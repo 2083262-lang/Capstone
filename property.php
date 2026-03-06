@@ -240,7 +240,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         /* ===== KPI STAT CARDS ===== */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -887,7 +887,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 1400px) {
-            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         @media (max-width: 992px) {
@@ -1574,10 +1574,10 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
             background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
         }
 
-        /* 6-column KPI grid — matches .kpi-grid on this page */
+        /* 4-column KPI grid — matches .kpi-grid on this page */
         .sk-kpi-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -1655,7 +1655,7 @@ if ($listers_result) { while ($lr = $listers_result->fetch_assoc()) { $listers_d
         .sk-card-footer { padding: 0 1.25rem 1.25rem; }
         .sk-line        { display: block; border-radius: 4px; }
 
-        @media (max-width: 1400px) { .sk-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 1400px) { .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 992px)  {
             .sk-kpi-grid { grid-template-columns: repeat(2, 1fr); }
             .sk-prop-grid { grid-template-columns: 1fr; }

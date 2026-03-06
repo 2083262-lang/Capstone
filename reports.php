@@ -519,14 +519,9 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
 
         /* ===== RESPONSIVE ===== */
 
-        /* 1600px — large desktops */
-        @media (max-width: 1600px) {
-            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
-        }
-
         /* 1400px — medium desktops */
         @media (max-width: 1400px) {
-            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
             .chart-grid-3 { grid-template-columns: 1fr 1fr; }
             .chart-grid-overview { grid-template-columns: 1fr 1fr; }
         }

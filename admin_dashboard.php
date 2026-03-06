@@ -421,7 +421,7 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
         /* ===== KPI STAT CARDS ===== */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -598,7 +598,7 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
         /* ===== QUICK ACTIONS ===== */
         .quick-actions-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -1079,7 +1079,7 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 1400px) {
-            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
             .quick-actions-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
@@ -1235,10 +1235,10 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
             background: linear-gradient(90deg, transparent, #e8e3d0, #d4e0f7, transparent);
         }
 
-        /* 6-column KPI grid for dashboard */
+        /* 4-column KPI grid for dashboard */
         .sk-kpi-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -1250,10 +1250,10 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
         }
         .sk-kpi-icon { width: 40px; height: 40px; border-radius: 4px; margin-bottom: 0.75rem; }
 
-        /* Quick actions 4-column */
+        /* Quick actions 3-column */
         .sk-quick-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -1292,7 +1292,7 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
         .sk-line { display: block; border-radius: 4px; }
 
         @media (max-width: 1400px) {
-            .sk-kpi-grid  { grid-template-columns: repeat(3, 1fr); }
+            .sk-kpi-grid  { grid-template-columns: repeat(2, 1fr); }
             .sk-quick-grid { grid-template-columns: repeat(2, 1fr); }
         }
         @media (max-width: 992px)  {
@@ -1353,9 +1353,9 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
                 <?php endfor; ?>
             </div>
 
-            <!-- Quick Actions (4-column) -->
+            <!-- Quick Actions (3-column) -->
             <div class="sk-quick-grid">
-                <?php for ($sk_i = 0; $sk_i < 4; $sk_i++): ?>
+                <?php for ($sk_i = 0; $sk_i < 3; $sk_i++): ?>
                 <div class="sk-quick-item">
                     <div class="sk-shimmer" style="width:48px;height:48px;border-radius:4px;flex-shrink:0;"></div>
                     <div style="flex:1;">
