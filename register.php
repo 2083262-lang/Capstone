@@ -396,21 +396,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .register-wrapper .form-control {
-            height: 42px;
-            border-radius: 2px;
-            border: 1px solid rgba(37, 99, 235, 0.3);
-            background: rgba(10, 10, 10, 0.6);
+            height: 48px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
             color: var(--white);
-            font-size: 0.88rem;
-            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            padding: 10px 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .register-wrapper .form-control:focus {
-            border-color: var(--blue);
-            background: rgba(10, 10, 10, 0.8);
-            box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.15),
-                        0 4px 16px rgba(37, 99, 235, 0.2);
+            border-color: var(--gold);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15),
+                        0 8px 24px rgba(0, 0, 0, 0.2);
             color: var(--white);
+            transform: translateY(-2px);
         }
 
         .register-wrapper .form-control::placeholder {
@@ -479,27 +481,77 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             left: 100%;
         }
 
-        .alert-danger {
-            background: rgba(220, 53, 69, 0.15);
-            border: 1px solid rgba(220, 53, 69, 0.3);
-            border-radius: 2px;
-            color: #ff6b6b;
-            padding: 12px 16px;
-            margin-bottom: 24px;
+        /* ===== TOAST NOTIFICATIONS — Persistent Validation (Dark Theme) ===== */
+        #toastContainer {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            pointer-events: none;
         }
-
-        .alert-success {
-            background: rgba(25, 135, 84, 0.15);
-            border: 1px solid rgba(25, 135, 84, 0.3);
-            border-radius: 2px;
-            color: #69db7c;
-            padding: 12px 16px;
-            margin-bottom: 24px;
+        .app-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            background: linear-gradient(135deg, rgba(26,26,26,0.97) 0%, rgba(10,10,10,0.98) 100%);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 12px;
+            padding: 0.9rem 1.1rem;
+            min-width: 300px;
+            max-width: 380px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+            animation: toast-in .35s cubic-bezier(.34,1.56,.64,1) forwards;
+            backdrop-filter: blur(12px);
         }
-
-        .alert-success a {
-            color: var(--gold);
+        @keyframes toast-in  { from { opacity:0; transform: translateX(60px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+        .app-toast.toast-out { animation: toast-out .3s ease forwards; }
+        @keyframes toast-out { to { opacity:0; transform: translateX(60px) scale(.9); max-height:0; padding:0; margin:0; } }
+        .app-toast::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
         }
+        .app-toast.toast-success::before { background: linear-gradient(180deg, #d4af37, #b8941f); }
+        .app-toast.toast-error::before   { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .app-toast.toast-info::before    { background: linear-gradient(180deg, #2563eb, #1e40af); }
+        .app-toast-icon {
+            width: 34px; height: 34px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+        .toast-success .app-toast-icon { background: rgba(212,175,55,0.15); color: #d4af37; }
+        .toast-error   .app-toast-icon { background: rgba(239,68,68,0.12);  color: #ef4444; }
+        .toast-info    .app-toast-icon { background: rgba(37,99,235,0.12);  color: #3b82f6; }
+        .app-toast-body      { flex: 1; min-width: 0; }
+        .app-toast-title     { font-size: 0.82rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.2rem; }
+        .app-toast-msg       { font-size: 0.78rem; color: #9ca4ab; line-height: 1.4; word-break: break-word; }
+        .app-toast-close {
+            background: none; border: none; cursor: pointer;
+            color: #5d6d7d; font-size: 0.85rem;
+            padding: 0 2px; line-height: 1;
+            flex-shrink: 0;
+            transition: color .2s;
+        }
+        .app-toast-close:hover { color: #f1f5f9; }
+        .app-toast-progress {
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 2px;
+            border-radius: 0 0 0 12px;
+        }
+        .toast-success .app-toast-progress { background: linear-gradient(90deg, #d4af37, #b8941f); }
+        .toast-error   .app-toast-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .toast-info    .app-toast-progress { background: linear-gradient(90deg, #2563eb, #1e40af); }
+        @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
 
         .image-section { display: none; }
 
@@ -590,8 +642,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             gap: 4px;
         }
 
-        /* Enhanced Alerts */
-        .alert { border-radius: 12px; }
+
 
         /* Entrance Animation — slide in from right */
         @keyframes slideInRight {
@@ -640,12 +691,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <h1>Create an Account</h1>
                 <p>Join our team of professional real estate agents.</p>
 
-                <?php if ($error_message): ?>
-                    <div class="alert alert-danger"><?php echo $error_message; ?></div>
-                <?php endif; ?>
-                <?php if ($success_message): ?>
-                    <div class="alert alert-success"><?php echo $success_message; ?></div>
-                <?php endif; ?>
+
 
                 <form action="register.php" method="POST">
                     <div class="row g-2">
@@ -686,13 +732,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
                     <div class="col-md-6">
                         <label class="form-label required">Password</label>
-                        <input type="password" name="password" id="password" class="form-control">
+                        <div class="position-relative" style="position: relative;">
+                            <input type="password" name="password" id="password" class="form-control" placeholder="••••••••">
+                            <i class="fas fa-eye toggle-password" id="togglePassword" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--gray-400); transition: color 0.3s; z-index: 10;"></i>
+                        </div>
                         <div class="form-text">At least 8 characters, include letters and numbers.</div>
                         <div class="invalid-feedback" id="passwordError"></div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label required">Confirm Password</label>
-                        <input type="password" name="password_confirm" id="password_confirm" class="form-control">
+                        <div class="position-relative" style="position: relative;">
+                            <input type="password" name="password_confirm" id="password_confirm" class="form-control" placeholder="••••••••">
+                            <i class="fas fa-eye toggle-password" id="togglePasswordConfirm" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--gray-400); transition: color 0.3s; z-index: 10;"></i>
+                        </div>
                         <div class="invalid-feedback" id="passwordConfirmError"></div>
                     </div>
                 </div>
@@ -710,6 +762,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div><!-- end form-section -->
 </div><!-- end main-container -->
 
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
 <script src="<?= ASSETS_JS ?>bootstrap.bundle.min.js"></script>
 <script>
     // Smooth page transition on Sign in link click
@@ -723,7 +778,70 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     });
 </script>
 <script>
-    // Real-time client-side validation
+    // ===== PERSISTENT VALIDATION TOASTS =====
+    // These toasts stay visible until the user corrects the specific field.
+    var _validationToasts = {};
+
+    function showValidationToast(key, title, message) {
+        if (_validationToasts[key] && !_validationToasts[key]._dismissed) {
+            // Update in-place instead of recreating
+            _validationToasts[key].querySelector('.app-toast-title').textContent = title;
+            _validationToasts[key].querySelector('.app-toast-msg').textContent = message;
+            return;
+        }
+        var container = document.getElementById('toastContainer');
+        var toast = document.createElement('div');
+        toast.className = 'app-toast toast-error';
+        toast.dataset.validationKey = key;
+        toast.innerHTML =
+            '<div class="app-toast-icon"><i class="fas fa-exclamation-circle"></i></div>' +
+            '<div class="app-toast-body">' +
+                '<div class="app-toast-title">' + title + '</div>' +
+                '<div class="app-toast-msg">' + message + '</div>' +
+            '</div>' +
+            '<button class="app-toast-close" aria-label="Dismiss">&times;</button>';
+        container.appendChild(toast);
+        toast.querySelector('.app-toast-close').addEventListener('click', function() {
+            dismissValidationToast(key);
+        });
+        _validationToasts[key] = toast;
+    }
+
+    function dismissValidationToast(key) {
+        var toast = _validationToasts[key];
+        if (!toast || toast._dismissed) return;
+        toast._dismissed = true;
+        toast.classList.add('toast-out');
+        setTimeout(function() { if (toast.parentNode) toast.remove(); delete _validationToasts[key]; }, 320);
+    }
+
+    // Standard auto-dismiss toast (for non-validation use)
+    function showToast(type, title, message, duration) {
+        duration = duration || 4500;
+        var container = document.getElementById('toastContainer');
+        var icons = { success: 'fa-check-circle', error: 'fa-times-circle', info: 'fa-info-circle' };
+        var toast = document.createElement('div');
+        toast.className = 'app-toast toast-' + type;
+        toast.innerHTML =
+            '<div class="app-toast-icon"><i class="fas ' + (icons[type] || icons.info) + '"></i></div>' +
+            '<div class="app-toast-body">' +
+                '<div class="app-toast-title">' + title + '</div>' +
+                '<div class="app-toast-msg">' + message + '</div>' +
+            '</div>' +
+            '<button class="app-toast-close" onclick="dismissToast(this.closest(\'.app-toast\'))">&times;</button>' +
+            '<div class="app-toast-progress" style="animation: toast-progress ' + duration + 'ms linear forwards;"></div>';
+        container.appendChild(toast);
+        toast._timer = setTimeout(function() { dismissToast(toast); }, duration);
+    }
+    function dismissToast(toast) {
+        if (!toast || toast._dismissed) return;
+        toast._dismissed = true;
+        clearTimeout(toast._timer);
+        toast.classList.add('toast-out');
+        setTimeout(function() { if (toast.parentNode) toast.remove(); }, 320);
+    }
+
+    // ===== FIELD VALIDATION =====
     const usernameEl = document.getElementById('username');
     const emailEl = document.getElementById('email');
     const phoneLocalEl = document.getElementById('phone_local');
@@ -733,19 +851,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     function showError(el, id, message) {
         el.classList.add('is-invalid');
-        const feedback = document.getElementById(id);
-        if (feedback) {
-            feedback.textContent = message;
-            feedback.style.display = 'block';
-        }
+        showValidationToast(id, 'Check your input', message);
     }
     function clearError(el, id) {
         el.classList.remove('is-invalid');
-        const feedback = document.getElementById(id);
-        if (feedback) {
-            feedback.textContent = '';
-            feedback.style.display = 'none';
-        }
+        dismissValidationToast(id);
     }
 
     function validateEmail() {
@@ -845,6 +955,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     passwordEl && passwordEl.addEventListener('input', () => { validatePassword(); validatePasswordConfirm(); });
     passwordConfirmEl && passwordConfirmEl.addEventListener('input', validatePasswordConfirm);
 
+    // Password Visibility Toggle
+    function attachPasswordToggle(iconId, inputId) {
+        const iconEl = document.getElementById(iconId);
+        const inputEl = document.getElementById(inputId);
+        if (iconEl && inputEl) {
+            iconEl.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isPassword = inputEl.getAttribute('type') === 'password';
+                inputEl.setAttribute('type', isPassword ? 'text' : 'password');
+                this.classList.toggle('fa-eye', !isPassword);
+                this.classList.toggle('fa-eye-slash', isPassword);
+                this.style.color = isPassword ? 'var(--gold)' : 'var(--gray-400)';
+            });
+        }
+    }
+    attachPasswordToggle('togglePassword', 'password');
+    attachPasswordToggle('togglePasswordConfirm', 'password_confirm');
+
     // Prevent form submit if invalid
     document.querySelector('form').addEventListener('submit', function(e){
         let ok = true;
@@ -860,6 +988,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             e.preventDefault();
             e.stopPropagation();
         }
+    });
+
+    // Server-side errors — fire as persistent toasts on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php if ($error_message): ?>
+        showValidationToast('server_error', 'Registration Failed', '<?= addslashes(htmlspecialchars($error_message)) ?>');
+        <?php endif; ?>
     });
 </script>
 </body>

@@ -466,3 +466,118 @@ showToast('info', 'Get Started',
 *Reference implementations:*
 - Admin (light): `admin_property_sale_approvals.php`
 - Agent (dark): `agent_pages/agent_dashboard.php`
+
+---
+
+## 10 — Persistent Validation Toasts
+
+A **different variant** of the toast system designed for form validation. Unlike standard toasts, these **do not auto-dismiss** — they stay visible until the user corrects the specific field that caused the error.
+
+Used on: `register.php` (agent registration form).
+
+---
+
+### JS Functions
+
+Add these **before** any field validation logic in the `<script>` block.
+
+```js
+// Persistent per-field validation toasts — stay until the field is corrected
+var _validationToasts = {};
+
+function showValidationToast(key, title, message) {
+    if (_validationToasts[key] && !_validationToasts[key]._dismissed) {
+        // Update in-place instead of recreating
+        _validationToasts[key].querySelector('.app-toast-title').textContent = title;
+        _validationToasts[key].querySelector('.app-toast-msg').textContent = message;
+        return;
+    }
+    var container = document.getElementById('toastContainer');
+    var toast = document.createElement('div');
+    toast.className = 'app-toast toast-error';
+    toast.dataset.validationKey = key;
+    toast.innerHTML =
+        '<div class="app-toast-icon"><i class="fas fa-exclamation-circle"></i></div>' +
+        '<div class="app-toast-body">' +
+            '<div class="app-toast-title">' + title + '</div>' +
+            '<div class="app-toast-msg">' + message + '</div>' +
+        '</div>' +
+        '<button class="app-toast-close" aria-label="Dismiss">&times;</button>';
+    container.appendChild(toast);
+    toast.querySelector('.app-toast-close').addEventListener('click', function() {
+        dismissValidationToast(key);
+    });
+    _validationToasts[key] = toast;
+}
+
+function dismissValidationToast(key) {
+    var toast = _validationToasts[key];
+    if (!toast || toast._dismissed) return;
+    toast._dismissed = true;
+    toast.classList.add('toast-out');
+    setTimeout(function() { if (toast.parentNode) toast.remove(); delete _validationToasts[key]; }, 320);
+}
+```
+
+> **Note:** Uses Font Awesome icons (`fas fa-exclamation-circle`), not Bootstrap Icons. Use the **1B dark CSS** from this doc — no changes to the CSS needed.
+
+---
+
+### Wiring to `showError` / `clearError`
+
+Replace the standard inline-feedback pattern with toast calls:
+
+```js
+function showError(el, id, message) {
+    el.classList.add('is-invalid');          // red border stays
+    showValidationToast(id, 'Check your input', message);
+}
+function clearError(el, id) {
+    el.classList.remove('is-invalid');
+    dismissValidationToast(id);              // toast dismissed when field is valid
+}
+```
+
+The field element `id` (e.g. `'emailError'`, `'passwordError'`) is used as the toast `key` so each field maps to exactly one toast.
+
+---
+
+### Firing PHP Server-Side Errors on Page Load
+
+When the page reloads after a failed POST (e.g. duplicate username), fire the error as a persistent toast:
+
+```js
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if ($error_message): ?>
+    showValidationToast('server_error', 'Registration Failed', '<?= addslashes(htmlspecialchars($error_message)) ?>');
+    <?php endif; ?>
+});
+```
+
+---
+
+### Key Differences from Standard `showToast`
+
+| Feature | `showToast` | `showValidationToast` |
+|---|---|---|
+| Auto-dismiss | Yes (default 4500ms) | **No — persistent** |
+| Progress bar | Yes | No |
+| Keyed by field | No | **Yes** — one toast per field |
+| Update in-place | No | **Yes** — re-fires update existing toast |
+| Dismisses when | Timer or user clicks ✕ | **User corrects the field** or clicks ✕ |
+| Icon | Varies by type | Always `fa-exclamation-circle` (error) |
+
+---
+
+### Checklist
+
+- [ ] Dark theme toast CSS (1B) added to `<style>`
+- [ ] `<div id="toastContainer"></div>` placed before `</body>`
+- [ ] `showValidationToast` + `dismissValidationToast` defined **before** any validation logic
+- [ ] `showError` / `clearError` wired to use `showValidationToast` / `dismissValidationToast`
+- [ ] PHP `$error_message` fired as persistent toast via `DOMContentLoaded`
+- [ ] Old `<div class="alert alert-danger">` / `alert-success` HTML blocks **removed**
+- [ ] Old `.alert-danger` / `.alert-success` CSS blocks **removed**
+- [ ] Font Awesome loaded (uses `fas fa-exclamation-circle`)
+
+*Reference implementation: `register.php`*
