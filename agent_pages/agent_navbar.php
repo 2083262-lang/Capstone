@@ -51,10 +51,20 @@ if (!empty($raw_profile)) {
 
 // Determine the display name for the agent
 $navbar_display_name = '';
-if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
-    $navbar_display_name = $agent_info['first_name'];
-    if (isset($agent_info['last_name']) && !empty($agent_info['last_name'])) {
-        $navbar_display_name .= ' ' . substr($agent_info['last_name'], 0, 1) . '.';
+if (isset($navbar_agent_info) && isset($navbar_agent_info['first_name']) && !empty($navbar_agent_info['first_name'])) {
+    $temp_info = $navbar_agent_info;
+} else if (isset($agent_info) && isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
+    $temp_info = $agent_info;
+} else if (isset($agent) && isset($agent['first_name']) && !empty($agent['first_name'])) {
+    $temp_info = $agent;
+} else {
+    $temp_info = [];
+}
+
+if (!empty($temp_info['first_name'])) {
+    $navbar_display_name = $temp_info['first_name'];
+    if (!empty($temp_info['last_name'])) {
+        $navbar_display_name .= ' ' . substr($temp_info['last_name'], 0, 1) . '.';
     }
 } else {
     $navbar_display_name = $agent_username ?? 'Agent';
@@ -136,13 +146,10 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
 
     /* Center Navigation Links */
     .agent-navbar .navbar-center {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
         display: flex;
         gap: 0.25rem;
         list-style: none;
-        margin: 0;
+        margin: 0 auto;
         padding: 0;
     }
 
@@ -630,7 +637,7 @@ if (isset($agent_info['first_name']) && !empty($agent_info['first_name'])) {
 
 <!-- Agent Navigation -->
 <nav class="navbar navbar-expand-lg agent-navbar">
-    <div class="container">
+    <div class="container-fluid px-4 px-lg-5">
         <!-- Logo & Brand -->
         <a class="navbar-brand" href="agent_dashboard.php">
             <img src="../images/Logo.png" alt="HomeEstate Realty Logo" class="navbar-logo">

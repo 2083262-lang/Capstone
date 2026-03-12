@@ -135,8 +135,6 @@ foreach ($rental_rows as $rr) {
     if ($rr['status'] === 'paid') $rentalPaid++;
     else $rentalCalculated++;
 }
-
-$conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1400,7 +1398,7 @@ $conn->close();
                             <td><?php echo htmlspecialchars($rr['tenant_name']); ?></td>
                             <td><?php echo date('M d', strtotime($rr['period_start'])); ?> – <?php echo date('M d, Y', strtotime($rr['period_end'])); ?></td>
                             <td>₱<?php echo number_format($rr['payment_amount'], 2); ?></td>
-                            <td><?php echo number_format($rr['commission_rate'], 2); ?>%</td>
+                            <td><?php echo number_format($rr['commission_percentage'] ?? 0, 2); ?>%</td>
                             <td style="font-weight:700;color:var(--gold);">₱<?php echo number_format($rr['commission_amount'], 2); ?></td>
                             <td>
                                 <?php

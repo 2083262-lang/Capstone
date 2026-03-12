@@ -68,8 +68,6 @@ $stmt_r->bind_param('i', $agent_account_id);
 $stmt_r->execute();
 $active_rentals = $stmt_r->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt_r->close();
-
-$conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -97,9 +95,15 @@ $conn->close();
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--black); color: var(--white); line-height: 1.6; overflow-x: hidden; }
 
         /* ===== SCROLLBAR ===== */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--black); }
-        ::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 3px; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(26, 26, 26, 0.4); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--gold-light), var(--gold));
+        }
 
         /* ===== MAIN CONTENT ===== */
         .rental-content { max-width: 1400px; margin: 0 auto; padding: 2rem 2rem 4rem; }
