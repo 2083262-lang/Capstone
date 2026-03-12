@@ -779,78 +779,115 @@ foreach ($rental_rows as $rr) {
             margin: 0 auto;
         }
 
-        /* ===== DETAIL MODAL ===== */
+        /* ===== DETAIL MODAL (BENTO STYLE) ===== */
         .modal-content {
             background: var(--black-light);
             border: 1px solid var(--card-border);
-            border-radius: 8px;
+            border-radius: 12px;
             color: var(--white);
+            box-shadow: 0 30px 60px -15px rgba(0,0,0,0.7);
         }
         .modal-header {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+            padding: 1.5rem 2rem;
+            background: linear-gradient(180deg, rgba(26,26,26,0.9) 0%, rgba(17,17,17,1) 100%);
+            border-radius: 12px 12px 0 0;
         }
         .modal-header .modal-title {
-            font-weight: 700;
-            font-size: 1.1rem;
+            font-weight: 800;
+            font-size: 1.25rem;
             color: var(--white);
-        }
-        .modal-header .btn-close {
-            filter: invert(1) grayscale(100%) brightness(200%);
-            opacity: 0.5;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
         }
         .modal-body {
             padding: 1.5rem;
+            background: var(--black);
+            border-radius: 0 0 12px 12px;
         }
-        .detail-row {
+        
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        @media (max-width: 768px) {
+            .bento-grid { grid-template-columns: 1fr; }
+        }
+        .bento-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            transition: border-color 0.3s;
+        }
+        .bento-card:hover { border-color: rgba(255, 255, 255, 0.12); }
+        .bento-card.full-width { grid-column: 1 / -1; }
+        
+        .bento-highlight {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(37, 99, 235, 0.05) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.02);
+        }
+        .bento-highlight:hover { border-color: rgba(212, 175, 55, 0.4); }
+
+        .bento-title {
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+        
+        .bento-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.06);
+            margin: 0.75rem -1.25rem 1rem; /* negative margin to span full width of card minus padding */
+        }
+        
+        .bento-row {
             display: flex;
             justify-content: space-between;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            align-items: center;
+            font-size: 0.85rem;
+            padding: 0.35rem 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.04);
         }
-        .detail-row:last-child { border-bottom: none; }
-        .detail-label {
-            font-size: 0.8rem;
-            color: var(--gray-400);
-            font-weight: 500;
-        }
-        .detail-value {
-            font-size: 0.9rem;
-            color: var(--white);
-            font-weight: 600;
-            text-align: right;
-        }
-        .detail-section-title {
-            font-size: 0.72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--gold);
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-            padding-bottom: 0.35rem;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.15);
-        }
-        .detail-section-title:first-child { margin-top: 0; }
-
-        /* Commission highlight in modal */
-        .commission-highlight {
-            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.03));
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: 6px;
-            padding: 1rem;
-            text-align: center;
-            margin-top: 1rem;
-        }
-        .commission-highlight .big-amount {
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: var(--gold);
-        }
-        .commission-highlight .big-label {
+        .bento-row:last-child { border-bottom: none; }
+        
+        .bento-label { color: var(--gray-400); font-weight: 500; }
+        .bento-val { color: var(--white); font-weight: 600; text-align: right; max-width: 65%; word-wrap: break-word; }
+        
+        .bento-badge {
+            background: rgba(255,255,255,0.05);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
             font-size: 0.75rem;
-            color: var(--gray-400);
-            margin-top: 0.25rem;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .bento-link {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            background: rgba(37,99,235,0.1); color: var(--blue-light);
+            padding: 0.2rem 0.5rem; border-radius: 4px; text-decoration: none;
+            transition: background 0.2s;
+        }
+        .bento-link:hover { background: rgba(37,99,235,0.2); color: #60a5fa; }
+        
+        .payment-ref {
+            background: rgba(255,255,255,0.06);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            letter-spacing: 1px;
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         /* ===== RESPONSIVE ===== */
@@ -1425,13 +1462,13 @@ foreach ($rental_rows as $rr) {
 
     <!-- DETAIL MODAL -->
     <div class="modal fade" id="detailModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-file-invoice-dollar me-2" style="color:var(--gold);"></i>Commission Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="background:var(--black); border:1px solid var(--card-border); box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(212,175,55,0.15); padding: 1.5rem 2rem;">
+                    <h5 class="modal-title" style="font-weight: 800; display:flex; align-items:center; gap:0.5rem;"><i class="fas fa-file-invoice-dollar" style="color:var(--gold);"></i> Commission Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="opacity:0.8;"></button>
                 </div>
-                <div class="modal-body" id="detailModalBody">
+                <div class="modal-body" id="detailModalBody" style="padding: 2rem;">
                 </div>
             </div>
         </div>
@@ -1469,63 +1506,91 @@ foreach ($rental_rows as $rr) {
         ];
     }, $rows)); ?>;
 
+    function bentoRow(label, value) {
+        if(!value) return '';
+        return `<div class="bento-row"><span class="bento-label">${label}</span><span class="bento-val">${value}</span></div>`;
+    }
+
     function showDetail(index) {
         const c = commissions[index];
         if (!c) return;
 
-        let html = '';
+        let statusBadge = '';
+        if(c.status === 'Paid') statusBadge = '<span style="background:rgba(34,197,94,0.15);color:var(--success);padding:0.25rem 0.6rem;border-radius:4px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;border:1px solid rgba(34,197,94,0.3);"><i class="fas fa-check-circle me-1"></i>PAID</span>';
+        else if(c.status === 'Calculated') statusBadge = '<span style="background:rgba(59,130,246,0.15);color:var(--blue-light);padding:0.25rem 0.6rem;border-radius:4px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;border:1px solid rgba(59,130,246,0.3);"><i class="fas fa-calculator me-1"></i>CALCULATED</span>';
+        else statusBadge = '<span style="background:rgba(245,158,11,0.15);color:var(--warning);padding:0.25rem 0.6rem;border-radius:4px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;border:1px solid rgba(245,158,11,0.3);"><i class="fas fa-clock me-1"></i>PENDING</span>';
 
-        // Property section
-        html += `<div class="detail-section-title"><i class="fas fa-home me-1"></i> Property Information</div>`;
-        html += detailRow('Address', c.property + (c.state ? ', ' + c.state : ''));
-        html += detailRow('Type', c.type);
-        if (c.beds || c.baths) html += detailRow('Bed / Bath', (c.beds || '—') + ' bd / ' + (c.baths || '—') + ' ba');
-        if (c.sqft) html += detailRow('Square Footage', Number(c.sqft).toLocaleString() + ' sqft');
-        if (c.listPrice) html += detailRow('Listing Price', '₱' + Number(c.listPrice).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}));
+        let html = '<div class="bento-grid">';
+        
+        // --- Bento 1: Property Info ---
+        html += `<div class="bento-card">
+            <div class="bento-title"><i class="fas fa-home"></i> Property Information</div>
+            ${bentoRow('Address', c.property + (c.state ? ', ' + c.state : ''))}
+            ${bentoRow('Type', `<span class="bento-badge">${c.type}</span>`)}
+            ${(c.beds || c.baths) ? bentoRow('Bed / Bath', `<span class="bento-badge">${c.beds || '0'} bd / ${c.baths || '0'} ba</span>`) : ''}
+            ${c.sqft ? bentoRow('Square Footage', Number(c.sqft).toLocaleString() + ' sqft') : ''}
+            ${c.listPrice ? bentoRow('Listing Price', '₱' + Number(c.listPrice).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})) : ''}
+        </div>`;
 
-        // Sale section
-        html += `<div class="detail-section-title"><i class="fas fa-handshake me-1"></i> Sale Details</div>`;
-        html += detailRow('Sale Price', '₱' + Number(c.salePrice).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}));
-        html += detailRow('Sale Date', c.saleDate);
+        // --- Bento 2: Sale & Buyer Combined ---
+        let priceVsListing = '';
         if (c.listPrice && c.salePrice) {
             const diff = c.salePrice - c.listPrice;
             const pct = c.listPrice > 0 ? ((diff / c.listPrice) * 100).toFixed(1) : 0;
-            const arrow = diff >= 0 ? '↑' : '↓';
+            const arrow = diff >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
             const color = diff >= 0 ? 'var(--success)' : 'var(--danger)';
-            html += detailRow('Price vs Listing', `<span style="color:${color}">${arrow} ₱${Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} (${Math.abs(pct)}%)</span>`);
+            priceVsListing = bentoRow('Vs Listing', `<span style="color:${color};background:${color}20;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;display:inline-flex;align-items:center;gap:0.3rem;border:1px solid ${color}40;">${arrow} ₱${Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} (${Math.abs(pct)}%)</span>`);
         }
 
-        // Buyer section
-        html += `<div class="detail-section-title"><i class="fas fa-user me-1"></i> Buyer Information</div>`;
-        html += detailRow('Name', c.buyer);
-        if (c.buyerEmail) html += detailRow('Email', `<a href="mailto:${c.buyerEmail}" style="color:var(--blue-light);text-decoration:none;">${c.buyerEmail}</a>`);
-
-        // Commission section
-        html += `<div class="detail-section-title"><i class="fas fa-coins me-1"></i> Commission Details</div>`;
-        html += detailRow('Commission Rate', c.rate + '%');
-        html += detailRow('Status', c.status);
-        html += detailRow('Calculated At', c.calculatedAt);
-        if (c.paidAt) html += detailRow('Paid At', `<span style="color:var(--success);font-weight:600;">${c.paidAt}</span>`);
-        if (c.paymentMethod) html += detailRow('Payment Method', c.paymentMethod);
-        if (c.reference) html += detailRow('Transaction Reference', `<span class="payment-ref">${c.reference}</span>`);
-        if (c.paidBy) html += detailRow('Paid By', c.paidBy);
-        if (c.hasProof) html += detailRow('Payment Proof', `<a href="../download_commission_proof.php?id=${c.commissionId}" style="color:var(--blue-light);text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-download" style="font-size:0.75rem;"></i> Download Proof</a>`);
-        if (c.paymentNotes) html += detailRow('Payment Notes', c.paymentNotes);
-        if (c.notes) html += detailRow('Sale Notes', c.notes);
-
-        // Commission highlight
-        html += `<div class="commission-highlight">
-            <div class="big-amount">₱${Number(c.amount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-            <div class="big-label">Commission Earned at ${c.rate}% Rate</div>
+        html += `<div class="bento-card">
+            <div class="bento-title"><i class="fas fa-handshake"></i> Sale Details</div>
+            ${bentoRow('Sale Date', c.saleDate)}
+            ${bentoRow('Sale Price', `<span style="color:var(--gold);font-weight:800;font-size:1.05rem;">₱${Number(c.salePrice).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`)}
+            ${priceVsListing}
+            
+            <div class="bento-divider"></div>
+            
+            <div class="bento-title" style="margin-top:0;"><i class="fas fa-user"></i> Buyer</div>
+            ${bentoRow('Name', c.buyer)}
+            ${c.buyerEmail ? bentoRow('Email', `<a href="mailto:${c.buyerEmail}" class="bento-link"><i class="fas fa-envelope"></i> ${c.buyerEmail}</a>`) : ''}
         </div>`;
+
+        // --- Bento 3: Full Width Highlight ---
+        html += `<div class="bento-card full-width bento-highlight" style="position:relative;overflow:hidden;">
+            <div style="position:absolute;right:-15px;bottom:-35px;opacity:0.04;font-size:9rem;pointer-events:none;color:var(--gold);"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div style="position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem;">
+                <div>
+                    <div style="font-size:0.8rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:0.2rem;">Total Commission Earned</div>
+                    <div style="font-size:2.2rem;font-weight:800;color:var(--gold);line-height:1;margin-bottom:0.6rem;text-shadow:0 2px 10px rgba(212,175,55,0.2);">₱${Number(c.amount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <span style="background:rgba(255,255,255,0.06);padding:0.25rem 0.6rem;border-radius:4px;font-weight:700;font-size:0.75rem;border:1px solid rgba(255,255,255,0.1);"><i class="fas fa-percentage me-1" style="color:var(--gray-400);"></i>${c.rate}% Rate</span>
+                        ${statusBadge}
+                    </div>
+                </div>
+                ${c.hasProof ? `<a href="../download_commission_proof.php?id=${c.commissionId}" class="btn btn-sm" style="background:rgba(212,175,55,0.15);color:var(--gold);border:1px solid rgba(212,175,55,0.5);font-weight:700;padding:0.7rem 1.25rem;display:inline-flex;align-items:center;gap:0.5rem;transition:all 0.2s;border-radius:6px;box-shadow:0 4px 12px rgba(212,175,55,0.1);"><i class="fas fa-download"></i> Download Receipt</a>` : ''}
+            </div>
+        </div>`;
+
+        // --- Bento 4: Transaction & Execution Info ---
+        html += `<div class="bento-card full-width">
+            <div class="bento-title"><i class="fas fa-file-alt"></i> Transaction Record</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px,1fr));gap:0.2rem 2rem;">
+                ${bentoRow('Calculated At', c.calculatedAt)}
+                ${c.paidAt ? bentoRow('Paid At', `<span style="color:var(--success);font-weight:700;"><i class="fas fa-calendar-check me-1"></i> ${c.paidAt}</span>`) : ''}
+                ${c.paymentMethod ? bentoRow('Payment Method', `<span style="text-transform:capitalize;color:var(--blue-light);font-weight:700;">${c.paymentMethod}</span>`) : ''}
+                ${c.reference ? bentoRow('Transaction Ref', `<span class="payment-ref">${c.reference}</span>`) : ''}
+                ${c.paidBy ? bentoRow('Processed By', c.paidBy) : ''}
+            </div>
+            ${c.paymentNotes ? `<div style="margin-top:0.8rem;background:var(--black-light);padding:0.85rem 1rem;border-radius:6px;border-left:3px solid var(--blue-light);font-size:0.85rem;color:var(--gray-300);"><strong><i class="fas fa-comment-dots me-1"></i>Admin Notes:</strong> <span style="font-style:italic;">"${c.paymentNotes}"</span></div>` : ''}
+            ${c.notes ? `<div style="margin-top:0.5rem;background:var(--black-light);padding:0.85rem 1rem;border-radius:6px;border-left:3px solid var(--gray-500);font-size:0.85rem;color:var(--gray-400);"><strong><i class="fas fa-comment me-1"></i>Sale Notes:</strong> ${c.notes}</div>` : ''}
+        </div>`;
+
+        html += '</div>'; // End Grid
 
         document.getElementById('detailModalBody').innerHTML = html;
         new bootstrap.Modal(document.getElementById('detailModal')).show();
     }
 
-    function detailRow(label, value) {
-        return `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${value}</span></div>`;
-    }
 
     // ===== REAL-TIME SEARCH & FILTER =====
     const searchInput = document.getElementById('commissionSearch');
