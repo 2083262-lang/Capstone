@@ -359,6 +359,8 @@ $active_status = isset($_GET['status']) && array_key_exists($_GET['status'], $st
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="images/Logo.png" type="image/png">
+    <link rel="shortcut icon" href="images/Logo.png" type="image/png">
     <title>Property Sale Approvals - Admin Panel</title>
     <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
     <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">

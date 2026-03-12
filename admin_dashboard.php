@@ -270,6 +270,8 @@ $tour_success_rate = $total_tours > 0 ? round(($completed_tours / $total_tours) 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/Logo.png" type="image/png">
+    <link rel="shortcut icon" href="images/Logo.png" type="image/png">
     <title>Admin Dashboard - Real Estate System</title>
     <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
     <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">

@@ -104,6 +104,8 @@ if (isset($_SESSION['message'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../images/Logo.png" type="image/png">
+    <link rel="shortcut icon" href="../images/Logo.png" type="image/png">
     <title>Lease Management - <?= htmlspecialchars($lease['StreetAddress']) ?></title>
     <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
     <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">

@@ -226,6 +226,8 @@ function notif_time_ago($datetime) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/Logo.png" type="image/png">
+    <link rel="shortcut icon" href="images/Logo.png" type="image/png">
     <title>Notifications - Admin Panel</title>
     <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
     <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
