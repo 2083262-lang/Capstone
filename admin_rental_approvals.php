@@ -298,10 +298,16 @@ if (isset($_GET['error'])) {
 
         /* ===== MODAL OVERLAY & CONTAINER ===== */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; z-index: 1050; opacity: 0; transition: opacity 0.25s ease; backdrop-filter: blur(2px); }
-        .modal-overlay.show { display: flex; opacity: 1; align-items: center; justify-content: center; }
-        .modal-container { background: var(--card-bg); border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); max-width: 820px; width: 92%; max-height: 92vh; overflow-y: auto; transform: scale(0.96) translateY(8px); opacity: 0; transition: all 0.25s cubic-bezier(0.16,1,0.3,1); border: 1px solid rgba(37,99,235,0.12); }
+        .modal-overlay.show, .modal-overlay.is-closing { display: flex; align-items: center; justify-content: center; }
+        .modal-overlay.show { opacity: 1; }
+        .modal-container { background: var(--card-bg); border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); max-width: 820px; width: 92%; max-height: 92vh; overflow-y: auto; transform: scale(0.96) translateY(8px); opacity: 0; transition: opacity 0.25s cubic-bezier(0.16,1,0.3,1), transform 0.25s cubic-bezier(0.16,1,0.3,1); border: 1px solid rgba(37,99,235,0.12); }
         .modal-large { max-width: 1100px; width: 96%; }
         .modal-overlay.show .modal-container { opacity: 1; transform: scale(1) translateY(0); }
+        /* --- Smooth close keyframes --- */
+        @keyframes modal-overlay-out   { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes modal-container-out { from { opacity: 1; transform: scale(1) translateY(0); } to { opacity: 0; transform: scale(0.96) translateY(8px); } }
+        .modal-overlay.is-closing                     { animation: modal-overlay-out 0.25s ease forwards; pointer-events: none; }
+        .modal-overlay.is-closing .modal-container    { animation: modal-container-out 0.2s cubic-bezier(0.55,0,0.85,0.35) forwards; }
         .modal-container::-webkit-scrollbar { width: 5px; }
         .modal-container::-webkit-scrollbar-track { background: #f1f1f1; }
         .modal-container::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.4); border-radius: 4px; }
@@ -1084,16 +1090,29 @@ if (isset($_GET['error'])) {
     }
 
     /* ===== MODAL HELPERS ===== */
+    var _modalTimers = {};
     function openModal(id) {
         var el = document.getElementById(id);
+        clearTimeout(_modalTimers[id]);
+        delete _modalTimers[id];
+        el.classList.remove('is-closing');
         el.style.display = 'flex';
         requestAnimationFrame(function() { el.classList.add('show'); });
         document.body.style.overflow = 'hidden';
     }
     function closeModal(id) {
         var el = document.getElementById(id);
+        if (!el || !el.classList.contains('show')) return;
         el.classList.remove('show');
-        setTimeout(function() { el.style.display = 'none'; document.body.style.overflow = ''; }, 250);
+        el.classList.add('is-closing');
+        clearTimeout(_modalTimers[id]);
+        _modalTimers[id] = setTimeout(function() {
+            el.style.display = 'none';
+            el.classList.remove('is-closing');
+            if (!document.querySelector('.modal-overlay.show')) {
+                document.body.style.overflow = '';
+            }
+        }, 250);
     }
     document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
         overlay.addEventListener('click', function(e) {

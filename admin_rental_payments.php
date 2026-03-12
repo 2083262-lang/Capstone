@@ -293,7 +293,8 @@ if (isset($_GET['error'])) {
 
         /* ===== MODAL OVERLAY & CONTAINER ===== */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; z-index: 1050; opacity: 0; transition: opacity 0.32s ease; backdrop-filter: blur(2px); }
-        .modal-overlay.show { display: flex; opacity: 1; align-items: center; justify-content: center; }
+        .modal-overlay.show, .modal-overlay.is-closing { display: flex; align-items: center; justify-content: center; }
+        .modal-overlay.show { opacity: 1; }
         .modal-container { background: var(--card-bg); border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); max-width: 820px; width: 92%; max-height: 92vh; overflow-y: auto; transform: scale(0.94) translateY(14px); opacity: 0; transition: opacity 0.34s cubic-bezier(0.16,1,0.3,1), transform 0.34s cubic-bezier(0.16,1,0.3,1); border: 1px solid rgba(37,99,235,0.12); }
         .modal-large { max-width: 900px; width: 96%; }
         .modal-overlay.show .modal-container { opacity: 1; transform: scale(1) translateY(0); }
@@ -596,7 +597,8 @@ if (isset($_GET['error'])) {
            PROPERTY DETAIL MODAL (RPM- scoped)
            ================================================================ */
         .rpm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; z-index: 1060; opacity: 0; transition: opacity 0.32s ease; backdrop-filter: blur(2px); }
-        .rpm-overlay.show { display: flex; opacity: 1; align-items: flex-start; justify-content: center; padding: 2vh 1rem; overflow-y: auto; }
+        .rpm-overlay.show, .rpm-overlay.is-closing { display: flex; align-items: flex-start; justify-content: center; padding: 2vh 1rem; overflow-y: auto; }
+        .rpm-overlay.show { opacity: 1; }
         .rpm-container { background: var(--card-bg); border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); max-width: 960px; width: 100%; transform: scale(0.94) translateY(14px); opacity: 0; transition: opacity 0.34s cubic-bezier(0.16,1,0.3,1), transform 0.34s cubic-bezier(0.16,1,0.3,1); border: 1px solid rgba(37,99,235,0.12); margin: auto; }
         .rpm-overlay.show .rpm-container { opacity: 1; transform: scale(1) translateY(0); }
         @keyframes rpm-overlay-out { from { opacity: 1; } to { opacity: 0; } }
