@@ -1182,6 +1182,30 @@ $page_title = isset($page_titles[$current_page]) ? $page_titles[$current_page] :
                 link.classList.add('active');
             }
         });
+
+        // Profile dropdown toggle (fallback to ensure dropdown opens)
+        const userToggle = document.querySelector('.user-info.dropdown-toggle');
+        const profileMenu = document.querySelector('.profile-dropdown-menu');
+        const userDropdownWrapper = document.querySelector('.user-dropdown');
+        let profileOpen = false;
+        if (userToggle && profileMenu) {
+            userToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                profileOpen = !profileOpen;
+                profileMenu.classList.toggle('show', profileOpen);
+                userToggle.setAttribute('aria-expanded', profileOpen);
+            });
+
+            // Close profile dropdown on outside click
+            document.addEventListener('click', function(e) {
+                if (profileOpen && userDropdownWrapper && !userDropdownWrapper.contains(e.target)) {
+                    profileOpen = false;
+                    profileMenu.classList.remove('show');
+                    userToggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
     });
 
     // Function to update user status or other real-time elements
