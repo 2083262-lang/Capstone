@@ -1303,44 +1303,44 @@ $days_on_market = $interval->days;
     
     <!-- ===== Modal Styles (Agent Dark Theme) ===== -->
     <style>
-        #markSoldModal .modal-content {
+        .custom-transaction-modal .modal-content {
             background: #0f1117;
             border: 1px solid rgba(212, 175, 55, 0.15);
             border-radius: 6px;
             overflow: hidden;
         }
-        #markSoldModal .modal-header {
+        .custom-transaction-modal .modal-header {
             background: linear-gradient(135deg, #0a0a0a 0%, #111827 100%);
             border-bottom: none;
             padding: 1.4rem 1.75rem;
             position: relative;
         }
-        #markSoldModal .modal-header::after {
+        .custom-transaction-modal .modal-header::after {
             content: '';
             position: absolute;
             bottom: 0; left: 0; right: 0;
             height: 2px;
             background: linear-gradient(90deg, #b8941f, #2563eb);
         }
-        #markSoldModal .modal-title {
+        .custom-transaction-modal .modal-title {
             font-size: 1rem;
             font-weight: 700;
             color: #f1f5f9;
             text-transform: uppercase;
             letter-spacing: 0.06em;
         }
-        #markSoldModal .modal-title i { color: #d4af37; }
-        #markSoldModal .modal-body {
+        .custom-transaction-modal .modal-title i { color: #d4af37; }
+        .custom-transaction-modal .modal-body {
             background: #0f1117;
             padding: 1.5rem 1.75rem 0.75rem;
         }
-        #markSoldModal .modal-footer {
+        .custom-transaction-modal .modal-footer {
             background: #0a0d12;
             border-top: 1px solid rgba(255,255,255,0.06);
             padding: 1rem 1.75rem;
         }
-        #markSoldModal .rental-confirm-card,
-        #markSoldModal .property-confirm-card {
+        .custom-transaction-modal .rental-confirm-card,
+        .custom-transaction-modal .property-confirm-card {
             background: rgba(212, 175, 55, 0.04);
             border: 1px solid rgba(212, 175, 55, 0.15);
             border-left: 3px solid #d4af37;
@@ -1351,39 +1351,39 @@ $days_on_market = $interval->days;
             align-items: center;
             gap: 1rem;
         }
-        #markSoldModal .rental-confirm-icon,
-        #markSoldModal .property-confirm-icon {
+        .custom-transaction-modal .rental-confirm-icon,
+        .custom-transaction-modal .property-confirm-icon {
             font-size: 1.75rem;
             color: #d4af37;
             flex-shrink: 0;
             line-height: 1;
         }
-        #markSoldModal .rental-confirm-title,
-        #markSoldModal .property-confirm-title {
+        .custom-transaction-modal .rental-confirm-title,
+        .custom-transaction-modal .property-confirm-title {
             font-weight: 700;
             font-size: 0.95rem;
             color: #f1f5f9;
         }
-        #markSoldModal .rental-confirm-address,
-        #markSoldModal .property-confirm-address {
+        .custom-transaction-modal .rental-confirm-address,
+        .custom-transaction-modal .property-confirm-address {
             font-size: 0.8rem;
             color: #94a3b8;
             margin-top: 0.2rem;
         }
-        #markSoldModal .rental-confirm-rent-label,
-        #markSoldModal .property-confirm-price-label {
+        .custom-transaction-modal .rental-confirm-rent-label,
+        .custom-transaction-modal .property-confirm-price-label {
             font-size: 0.7rem;
             color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        #markSoldModal .rental-confirm-rent-value,
-        #markSoldModal .property-confirm-price-value {
+        .custom-transaction-modal .rental-confirm-rent-value,
+        .custom-transaction-modal .property-confirm-price-value {
             font-size: 1.1rem;
             font-weight: 800;
             color: #d4af37;
         }
-        #markSoldModal .form-section-label {
+        .custom-transaction-modal .form-section-label {
             font-size: 0.68rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -1393,8 +1393,8 @@ $days_on_market = $interval->days;
             margin-bottom: 0.85rem;
             border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        #markSoldModal .form-section-label i { color: #d4af37; }
-        #markSoldModal .form-label {
+        .custom-transaction-modal .form-section-label i { color: #d4af37; }
+        .custom-transaction-modal .form-label {
             font-weight: 600;
             font-size: 0.8rem;
             color: #cbd5e1;
@@ -1402,37 +1402,37 @@ $days_on_market = $interval->days;
             letter-spacing: 0.5px;
             margin-bottom: 0.4rem;
         }
-        #markSoldModal .form-label .req { color: #ef4444; }
-        #markSoldModal .form-text {
+        .custom-transaction-modal .form-label .req { color: #ef4444; }
+        .custom-transaction-modal .form-text {
             font-size: 0.73rem;
             color: #6b7280;
             margin-top: 0.35rem;
         }
-        #markSoldModal .form-control,
-        #markSoldModal .input-group-text {
+        .custom-transaction-modal .form-control,
+        .custom-transaction-modal .input-group-text {
             background: rgba(255,255,255,0.03);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 4px;
             font-size: 0.88rem;
             color: #f1f5f9;
         }
-        #markSoldModal .input-group-text {
+        .custom-transaction-modal .input-group-text {
             background: rgba(212, 175, 55, 0.06);
             color: #d4af37;
             font-weight: 700;
             border-right: none;
         }
-        #markSoldModal .input-group .form-control { border-left: none; }
-        #markSoldModal .form-control::placeholder { color: #4b5563; }
-        #markSoldModal .form-control:focus {
+        .custom-transaction-modal .input-group .form-control { border-left: none; }
+        .custom-transaction-modal .form-control::placeholder { color: #4b5563; }
+        .custom-transaction-modal .form-control:focus {
             background: rgba(255,255,255,0.05);
             border-color: #d4af37;
             color: #f1f5f9;
             box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.15);
         }
-        #markSoldModal .form-control[type="date"] { color-scheme: dark; }
-        #markSoldModal .form-control[type="file"] { background: rgba(255,255,255,0.03); }
-        #markSoldModal .form-control[type="file"]::-webkit-file-upload-button {
+        .custom-transaction-modal .form-control[type="date"] { color-scheme: dark; }
+        .custom-transaction-modal .form-control[type="file"] { background: rgba(255,255,255,0.03); }
+        .custom-transaction-modal .form-control[type="file"]::-webkit-file-upload-button {
             background: rgba(212, 175, 55, 0.1);
             border: none;
             border-right: 1px solid rgba(255,255,255,0.1);
@@ -1442,7 +1442,7 @@ $days_on_market = $interval->days;
             font-size: 0.8rem;
             cursor: pointer;
         }
-        #markSoldModal .btn-submit-action {
+        .custom-transaction-modal .btn-submit-action {
             background: linear-gradient(135deg, #b8941f 0%, #d4af37 50%, #b8941f 100%);
             color: #ffffff;
             font-weight: 700;
@@ -1455,18 +1455,18 @@ $days_on_market = $interval->days;
             transition: all 0.3s ease;
             box-shadow: 0 4px 12px rgba(184, 148, 31, 0.25);
         }
-        #markSoldModal .btn-submit-action:hover {
+        .custom-transaction-modal .btn-submit-action:hover {
             box-shadow: 0 6px 20px rgba(184, 148, 31, 0.4);
             transform: translateY(-1px);
             color: #ffffff;
         }
-        #markSoldModal .btn-submit-action:disabled {
+        .custom-transaction-modal .btn-submit-action:disabled {
             opacity: 0.55;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
-        #markSoldModal .btn-cancel-action {
+        .custom-transaction-modal .btn-cancel-action {
             background: transparent;
             border: 1px solid rgba(255,255,255,0.1);
             color: #94a3b8;
@@ -1478,12 +1478,12 @@ $days_on_market = $interval->days;
             letter-spacing: 0.05em;
             transition: all 0.2s;
         }
-        #markSoldModal .btn-cancel-action:hover {
+        .custom-transaction-modal .btn-cancel-action:hover {
             border-color: #ef4444;
             color: #ef4444;
             background: rgba(239, 68, 68, 0.05);
         }
-        #markSoldModal .submission-notice {
+        .custom-transaction-modal .submission-notice {
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -1491,8 +1491,8 @@ $days_on_market = $interval->days;
             color: #6b7280;
             flex: 1;
         }
-        #markSoldModal .submission-notice i { color: #d4af37; }
-        #markSoldModal .rental-alert {
+        .custom-transaction-modal .submission-notice i { color: #d4af37; }
+        .custom-transaction-modal .rental-alert {
             padding: 0.65rem 1rem;
             border-radius: 4px;
             font-size: 0.82rem;
@@ -1501,12 +1501,12 @@ $days_on_market = $interval->days;
             align-items: center;
             gap: 0.5rem;
         }
-        #markSoldModal .rental-alert-danger {
+        .custom-transaction-modal .rental-alert-danger {
             background: rgba(239, 68, 68, 0.08);
             border: 1px solid rgba(239, 68, 68, 0.2);
             color: #fca5a5;
         }
-        #markSoldModal .rental-alert-success {
+        .custom-transaction-modal .rental-alert-success {
             background: rgba(34, 197, 94, 0.08);
             border: 1px solid rgba(34, 197, 94, 0.2);
             color: #86efac;
@@ -1514,6 +1514,7 @@ $days_on_market = $interval->days;
     </style>
 
     <?php if ($is_rental_property): ?>
+    <div class="modal fade custom-transaction-modal" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <!-- Header -->
@@ -1719,7 +1720,7 @@ $days_on_market = $interval->days;
 
     <?php else: ?>
     <!-- ===== Sale Modal (non-rental properties) ===== -->
-    <div class="modal fade" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
+    <div class="modal fade custom-transaction-modal" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <!-- Header -->
