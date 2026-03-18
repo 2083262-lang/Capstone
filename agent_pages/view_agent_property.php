@@ -1300,8 +1300,8 @@ $days_on_market = $interval->days;
 
     <!-- Mark as Sold / Rented Modal -->
     <?php $is_rental_property = ($property_data['Status'] === 'For Rent'); ?>
-    <?php if ($is_rental_property): ?>
-    <!-- ===== Improved Rental Modal (matches admin design, agent dark theme) ===== -->
+    
+    <!-- ===== Modal Styles (Agent Dark Theme) ===== -->
     <style>
         #markSoldModal .modal-content {
             background: #0f1117;
@@ -1339,7 +1339,8 @@ $days_on_market = $interval->days;
             border-top: 1px solid rgba(255,255,255,0.06);
             padding: 1rem 1.75rem;
         }
-        #markSoldModal .rental-confirm-card {
+        #markSoldModal .rental-confirm-card,
+        #markSoldModal .property-confirm-card {
             background: rgba(212, 175, 55, 0.04);
             border: 1px solid rgba(212, 175, 55, 0.15);
             border-left: 3px solid #d4af37;
@@ -1350,29 +1351,34 @@ $days_on_market = $interval->days;
             align-items: center;
             gap: 1rem;
         }
-        #markSoldModal .rental-confirm-icon {
+        #markSoldModal .rental-confirm-icon,
+        #markSoldModal .property-confirm-icon {
             font-size: 1.75rem;
             color: #d4af37;
             flex-shrink: 0;
             line-height: 1;
         }
-        #markSoldModal .rental-confirm-title {
+        #markSoldModal .rental-confirm-title,
+        #markSoldModal .property-confirm-title {
             font-weight: 700;
             font-size: 0.95rem;
             color: #f1f5f9;
         }
-        #markSoldModal .rental-confirm-address {
+        #markSoldModal .rental-confirm-address,
+        #markSoldModal .property-confirm-address {
             font-size: 0.8rem;
             color: #94a3b8;
             margin-top: 0.2rem;
         }
-        #markSoldModal .rental-confirm-rent-label {
+        #markSoldModal .rental-confirm-rent-label,
+        #markSoldModal .property-confirm-price-label {
             font-size: 0.7rem;
             color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        #markSoldModal .rental-confirm-rent-value {
+        #markSoldModal .rental-confirm-rent-value,
+        #markSoldModal .property-confirm-price-value {
             font-size: 1.1rem;
             font-weight: 800;
             color: #d4af37;
@@ -1436,7 +1442,7 @@ $days_on_market = $interval->days;
             font-size: 0.8rem;
             cursor: pointer;
         }
-        #markSoldModal .btn-submit-rental {
+        #markSoldModal .btn-submit-action {
             background: linear-gradient(135deg, #b8941f 0%, #d4af37 50%, #b8941f 100%);
             color: #ffffff;
             font-weight: 700;
@@ -1449,18 +1455,18 @@ $days_on_market = $interval->days;
             transition: all 0.3s ease;
             box-shadow: 0 4px 12px rgba(184, 148, 31, 0.25);
         }
-        #markSoldModal .btn-submit-rental:hover {
+        #markSoldModal .btn-submit-action:hover {
             box-shadow: 0 6px 20px rgba(184, 148, 31, 0.4);
             transform: translateY(-1px);
             color: #ffffff;
         }
-        #markSoldModal .btn-submit-rental:disabled {
+        #markSoldModal .btn-submit-action:disabled {
             opacity: 0.55;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
-        #markSoldModal .btn-cancel-rental {
+        #markSoldModal .btn-cancel-action {
             background: transparent;
             border: 1px solid rgba(255,255,255,0.1);
             color: #94a3b8;
@@ -1472,7 +1478,7 @@ $days_on_market = $interval->days;
             letter-spacing: 0.05em;
             transition: all 0.2s;
         }
-        #markSoldModal .btn-cancel-rental:hover {
+        #markSoldModal .btn-cancel-action:hover {
             border-color: #ef4444;
             color: #ef4444;
             background: rgba(239, 68, 68, 0.05);
@@ -1507,7 +1513,7 @@ $days_on_market = $interval->days;
         }
     </style>
 
-    <div class="modal fade" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
+    <?php if ($is_rental_property): ?>
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <!-- Header -->
@@ -1621,8 +1627,8 @@ $days_on_market = $interval->days;
                         <i class="bi bi-shield-check"></i> Submission will be logged and reviewed.
                     </div>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn-cancel-rental" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" form="markSoldForm" class="btn-submit-rental">
+                        <button type="button" class="btn-cancel-action" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" form="markSoldForm" class="btn-submit-action">
                             <i class="bi bi-key-fill me-1"></i>Submit Verification
                         </button>
                     </div>
@@ -1666,7 +1672,7 @@ $days_on_market = $interval->days;
             e.preventDefault();
             alertBox.innerHTML = '';
 
-            const submitBtn = document.querySelector('button[form="markSoldForm"].btn-submit-rental');
+            const submitBtn = document.querySelector('button[form="markSoldForm"].btn-submit-action');
             const origText  = submitBtn ? submitBtn.innerHTML : '';
             if (submitBtn) {
                 submitBtn.disabled = true;
@@ -1713,50 +1719,101 @@ $days_on_market = $interval->days;
 
     <?php else: ?>
     <!-- ===== Sale Modal (non-rental properties) ===== -->
-    <div class="modal fade modal-dark" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+    <div class="modal fade" id="markSoldModal" tabindex="-1" aria-labelledby="markSoldModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
+                <!-- Header -->
                 <div class="modal-header">
-                    <h5 class="modal-title" id="markSoldModalLabel"><i class="bi bi-check-circle"></i> Mark Property as Sold</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="markSoldModalLabel">
+                        <i class="bi bi-check-circle-fill me-2"></i>Mark Property as Sold
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+
+                <!-- Body -->
                 <div class="modal-body">
                     <form action="mark_as_sold_process.php" method="POST" enctype="multipart/form-data" id="markSoldForm">
                         <input type="hidden" name="property_id" value="<?php echo $property_id; ?>">
-                        <div class="mb-3">
-                            <p style="color: var(--gray-400);">You are about to mark the following property as sold:</p>
-                            <p style="font-weight: 700; color: var(--white);"><?php echo htmlspecialchars($property_data['StreetAddress']); ?></p>
+
+                        <!-- Property Confirmation Banner -->
+                        <div class="property-confirm-card">
+                            <div class="property-confirm-icon"><i class="bi bi-house-check-fill"></i></div>
+                            <div>
+                                <div class="property-confirm-title"><?php echo htmlspecialchars($property_data['PropertyType'] ?? 'Property'); ?></div>
+                                <div class="property-confirm-address">
+                                    <i class="bi bi-geo-alt me-1"></i><?php echo htmlspecialchars($property_data['StreetAddress'] . ', ' . ($property_data['City'] ?? '')); ?>
+                                </div>
+                            </div>
+                            <div class="ms-auto text-end" style="flex-shrink:0;">
+                                <div class="property-confirm-price-label">Listing Price</div>
+                                <div class="property-confirm-price-value">₱<?php echo number_format($property_data['ListingPrice'], 2); ?></div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="sale_price" class="form-label">Sale Price (₱)</label>
-                            <input type="number" step="0.01" class="form-control" id="sale_price" name="sale_price" placeholder="Final sale price" required>
+
+                        <!-- Alert container -->
+                        <div id="saleAlertContainer"></div>
+
+                        <!-- Section 1: Sale Details -->
+                        <div class="form-section-label"><i class="bi bi-currency-exchange me-1"></i>Sale Details</div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Sale Price (₱) <span class="req">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₱</span>
+                                    <input type="number" step="0.01" min="1" class="form-control" name="sale_price" id="sale_price"
+                                           value="<?php echo htmlspecialchars($property_data['ListingPrice'] ?? ''); ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Sale Date <span class="req">*</span></label>
+                                <input type="date" class="form-control" name="sale_date" id="sale_date" max="<?php echo date('Y-m-d'); ?>" required>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="sale_date" class="form-label">Sale Date</label>
-                            <input type="date" class="form-control" id="sale_date" name="sale_date" max="<?php echo date('Y-m-d'); ?>" required style="color-scheme: dark;">
+
+                        <!-- Section 2: Buyer Information -->
+                        <div class="form-section-label"><i class="bi bi-person-fill me-1"></i>Buyer Information</div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Buyer's Name <span class="req">*</span></label>
+                                <input type="text" class="form-control" name="buyer_name" id="buyer_name" placeholder="Buyer's full name" required maxlength="255">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Buyer's Email</label>
+                                <input type="email" class="form-control" name="buyer_email" id="buyer_email" placeholder="buyer@email.com" maxlength="255">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="buyer_name" class="form-label">Buyer's Name</label>
-                            <input type="text" class="form-control" id="buyer_name" name="buyer_name" placeholder="Buyer's full name" required>
+
+                        <!-- Section 3: Documentation -->
+                        <div class="form-section-label"><i class="bi bi-file-earmark-text-fill me-1"></i>Documentation</div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <label class="form-label">Sale Documents <span class="req">*</span></label>
+                                <input type="file" class="form-control" name="sale_documents[]" id="sale_documents" multiple required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                <div class="form-text"><i class="bi bi-info-circle me-1"></i>Upload proof of sale (contract, deed, receipt). Max 120MB per file. Multiple files allowed.</div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="buyer_email" class="form-label">Buyer's Email</label>
-                            <input type="email" class="form-control" id="buyer_email" name="buyer_email" placeholder="buyer@email.com">
+
+                        <!-- Additional Notes -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <label class="form-label">Additional Notes</label>
+                                <textarea class="form-control" name="additional_notes" id="additional_notes" rows="2" maxlength="2000" placeholder="Optional notes..."></textarea>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="sale_documents" class="form-label">Sale Documents</label>
-                            <input type="file" class="form-control" id="sale_documents" name="sale_documents[]" multiple required>
-                            <div class="form-text">Upload proof of sale (contract, deed, receipt). Multiple files allowed.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="additional_notes" class="form-label">Additional Notes</label>
-                            <textarea class="form-control" id="additional_notes" name="additional_notes" rows="2" placeholder="Optional notes..."></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-gold w-100" id="soldSubmitBtn"><i class="bi bi-send-fill me-1"></i> Submit for Verification</button>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-dark-outline" data-bs-dismiss="modal">Cancel</button>
+
+                <!-- Footer -->
+                <div class="modal-footer" style="justify-content:space-between;">
+                    <div class="submission-notice">
+                        <i class="bi bi-shield-check"></i> Submission will be logged and reviewed.
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn-cancel-action" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" form="markSoldForm" class="btn-submit-action" id="soldSubmitBtn">
+                            <i class="bi bi-send-fill me-1"></i>Submit Verification
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1766,9 +1823,19 @@ $days_on_market = $interval->days;
     (function() {
         var form  = document.getElementById('markSoldForm');
         var modal = document.getElementById('markSoldModal');
+        var alertBox = document.getElementById('saleAlertContainer');
         if (!form) return;
+        
+        function showSaleAlert(msg, type) {
+            alertBox.innerHTML =
+                '<div class="rental-alert rental-alert-' + type + '">' +
+                '<i class="bi bi-' + (type === 'danger' ? 'exclamation-triangle-fill' : 'check-circle-fill') + '"></i> ' +
+                msg + '</div>';
+        }
+
         form.addEventListener('submit', function(e) {
             e.preventDefault();
+            alertBox.innerHTML = '';
             var btn  = document.getElementById('soldSubmitBtn');
             var orig = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i>Submitting...'; }
@@ -1783,16 +1850,25 @@ $days_on_market = $interval->days;
                         window.location.reload();
                     }, 1600);
                 } else {
+                    showSaleAlert(data.message || 'Submission failed.', 'danger');
                     showToast('error', 'Submission Failed', data.message || 'Please check the form and try again.', 6000);
                 }
             })
             .catch(function() {
+                showSaleAlert('A network error occurred. Please try again.', 'danger');
                 showToast('error', 'Connection Error', 'An error occurred. Please try again.', 6000);
             })
             .finally(function() {
                 if (btn) { btn.disabled = false; btn.innerHTML = orig; }
             });
         });
+        
+        if (modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                alertBox.innerHTML = '';
+                form.reset();
+            });
+        }
     })();
     </script>
     <?php endif; ?>
