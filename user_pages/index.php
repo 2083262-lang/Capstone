@@ -273,69 +273,80 @@ $conn->close();
 
         /* Search Bar in Hero */
         .hero-search-bar {
-            max-width: 700px;
+            max-width: 820px;
             margin: 0 auto 36px;
-            background: rgba(17, 17, 17, 0.85);
-            border: 1px solid rgba(37, 99, 235, 0.2);
+            background: #151515;
+            border: 1px solid rgba(255, 255, 255, 0.08); /* subtle dark border */
             border-radius: 6px;
-            padding: 8px;
-            display: flex;
-            gap: 8px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr) auto;
+            gap: 10px;
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             transition: border-color 0.4s ease, box-shadow 0.4s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
         }
 
         .hero-search-bar:focus-within {
-            border-color: rgba(37, 99, 235, 0.45);
-            box-shadow: 0 4px 24px rgba(37, 99, 235, 0.12);
+            border-color: rgba(212, 175, 55, 0.3); /* shifted from blue to gold */
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(212, 175, 55, 0.2);
         }
 
-        .hero-search-bar select,
-        .hero-search-bar input[type="text"] {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 2px;
-            color: var(--white);
-            font-size: 0.9375rem;
+        .hero-search-bar select {
+            background: #212121;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            color: #f1f5f9;
+            font-size: 0.95rem;
+            font-weight: 500;
             font-family: inherit;
-            padding: 12px 16px;
-            flex: 1;
-            min-width: 0;
-            transition: border-color 0.2s ease;
+            padding: 14px 18px;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            /* custom chevron arrow */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
         }
 
-        .hero-search-bar select:focus,
-        .hero-search-bar input[type="text"]:focus {
+        .hero-search-bar select:focus {
             outline: none;
-            border-color: rgba(37, 99, 235, 0.4);
+            border-color: var(--gold-dark);
+            background: #262626;
         }
 
         .hero-search-bar select option {
-            background: var(--black-light);
+            background: #1a1a1a;
             color: var(--white);
+            padding: 10px;
         }
 
         .hero-search-btn {
-            background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
-            color: var(--black);
+            background: linear-gradient(135deg, #cba328 0%, #e6ca54 50%, #cba328 100%);
+            color: #111;
             border: none;
-            padding: 12px 28px;
-            font-size: 15px;
+            padding: 0 32px;
+            font-size: 1rem;
             font-weight: 700;
-            border-radius: 2px;
+            border-radius: 4px;
             cursor: pointer;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.25);
             transition: all 0.3s ease;
             white-space: nowrap;
         }
 
         .hero-search-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+            background: linear-gradient(135deg, #e6ca54 0%, #fff0a8 50%, #e6ca54 100%);
+            box-shadow: 0 4px 15px rgba(203, 163, 40, 0.3);
         }
 
         .hero-quick-links {
@@ -1208,14 +1219,14 @@ $conn->close();
             .hero-welcome-subtitle { font-size: 1rem; }
 
             .hero-search-bar {
-                flex-direction: column;
+                grid-template-columns: 1fr;
             }
 
             .hero-search-bar select,
-            .hero-search-bar input[type="text"],
             .hero-search-btn {
                 width: 100%;
                 justify-content: center;
+                padding: 16px;
             }
 
             .section-title { font-size: 2rem; }
