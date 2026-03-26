@@ -132,29 +132,159 @@ $tour_result = $conn->query($tour_sql);
 if ($tour_result) { while ($row = $tour_result->fetch_assoc()) { $tour_report[] = $row; } }
 
 // =============================================
-// SYSTEM ACTIVITY LOG
+// CLOSED TRANSACTION PERFORMANCE DATA
 // =============================================
-$activity_report = [];
-$activity_sql = "SELECT al.log_id, al.action, al.action_type, al.description, al.log_timestamp,
-    CONCAT(a.first_name, ' ', a.last_name) AS admin_name, 'admin_log' AS log_source
-FROM admin_logs al JOIN accounts a ON al.admin_account_id = a.account_id ORDER BY al.log_timestamp DESC";
-$activity_result = $conn->query($activity_sql);
-if ($activity_result) { while ($row = $activity_result->fetch_assoc()) { $activity_report[] = $row; } }
+$performance_events = [];
+$performance_sql = "SELECT
+    'Sold' AS transaction_type,
+    fs.sale_id AS record_id,
+    DATE(fs.finalized_at) AS event_date,
+    fs.final_sale_price AS transaction_value,
+    p.property_ID,
+    p.PropertyType,
+    p.City,
+    p.StreetAddress,
+    fs.agent_id,
+    CONCAT(agent.first_name, ' ', agent.last_name) AS agent_name
+FROM finalized_sales fs
+JOIN property p ON fs.property_id = p.property_ID
+JOIN accounts agent ON fs.agent_id = agent.account_id
+UNION ALL
+SELECT
+    'Rented' AS transaction_type,
+    fr.rental_id AS record_id,
+    DATE(fr.finalized_at) AS event_date,
+    fr.monthly_rent AS transaction_value,
+    p.property_ID,
+    p.PropertyType,
+    p.City,
+    p.StreetAddress,
+    fr.agent_id,
+    CONCAT(agent.first_name, ' ', agent.last_name) AS agent_name
+FROM finalized_rentals fr
+JOIN property p ON fr.property_id = p.property_ID
+JOIN accounts agent ON fr.agent_id = agent.account_id
+ORDER BY event_date DESC";
+$performance_result = $conn->query($performance_sql);
+if ($performance_result) { while ($row = $performance_result->fetch_assoc()) { $performance_events[] = $row; } }
 
-$status_logs = [];
-$status_sql = "SELECT sl.log_id, sl.item_id, sl.item_type, sl.action, sl.reason_message, sl.log_timestamp,
-    CONCAT(a.first_name, ' ', a.last_name) AS action_by
-FROM status_log sl LEFT JOIN accounts a ON sl.action_by_account_id = a.account_id ORDER BY sl.log_timestamp DESC";
-$status_result = $conn->query($status_sql);
-if ($status_result) { while ($row = $status_result->fetch_assoc()) { $status_logs[] = $row; } }
+$init_insight_bucket = function (string $label): array {
+    return [
+        'label' => $label,
+        'sold_count' => 0,
+        'rented_count' => 0,
+        'closed_count' => 0,
+        'sold_value' => 0,
+        'rented_value' => 0,
+        'total_value' => 0,
+    ];
+};
 
-$property_logs = [];
-$proplog_sql = "SELECT pl.log_id, pl.property_id, pl.action, pl.log_timestamp, pl.reason_message,
-    p.StreetAddress, p.City, CONCAT(a.first_name, ' ', a.last_name) AS action_by
-FROM property_log pl JOIN property p ON pl.property_id = p.property_ID
-JOIN accounts a ON pl.account_id = a.account_id ORDER BY pl.log_timestamp DESC";
-$proplog_result = $conn->query($proplog_sql);
-if ($proplog_result) { while ($row = $proplog_result->fetch_assoc()) { $property_logs[] = $row; } }
+$property_type_insights_map = [];
+$location_insights_map = [];
+$agent_insights_map = [];
+$total_closed_deals = 0;
+$total_sold_deals = 0;
+$total_rented_deals = 0;
+$total_sold_value = 0;
+$total_rented_value = 0;
+
+foreach ($performance_events as $event) {
+    $transaction_type = $event['transaction_type'] ?? '';
+    $transaction_value = (float)($event['transaction_value'] ?? 0);
+    $property_type = trim((string)($event['PropertyType'] ?? '')) ?: 'Unknown';
+    $city = trim((string)($event['City'] ?? '')) ?: 'Unknown';
+    $agent_name = trim((string)($event['agent_name'] ?? '')) ?: 'Unknown';
+
+    if (!isset($property_type_insights_map[$property_type])) { $property_type_insights_map[$property_type] = $init_insight_bucket($property_type); }
+    if (!isset($location_insights_map[$city])) { $location_insights_map[$city] = $init_insight_bucket($city); }
+    if (!isset($agent_insights_map[$agent_name])) { $agent_insights_map[$agent_name] = $init_insight_bucket($agent_name); }
+
+    $targets = [&$property_type_insights_map[$property_type], &$location_insights_map[$city], &$agent_insights_map[$agent_name]];
+    foreach ($targets as &$bucket) {
+        $bucket['closed_count']++;
+        $bucket['total_value'] += $transaction_value;
+        if ($transaction_type === 'Sold') {
+            $bucket['sold_count']++;
+            $bucket['sold_value'] += $transaction_value;
+        } else {
+            $bucket['rented_count']++;
+            $bucket['rented_value'] += $transaction_value;
+        }
+    }
+    unset($bucket);
+
+    $total_closed_deals++;
+    if ($transaction_type === 'Sold') {
+        $total_sold_deals++;
+        $total_sold_value += $transaction_value;
+    } else {
+        $total_rented_deals++;
+        $total_rented_value += $transaction_value;
+    }
+}
+
+$sort_insights = function (array &$items): void {
+    uasort($items, function ($left, $right) {
+        if ($left['closed_count'] === $right['closed_count']) {
+            return $right['total_value'] <=> $left['total_value'];
+        }
+        return $right['closed_count'] <=> $left['closed_count'];
+    });
+};
+
+$sort_insights($property_type_insights_map);
+$sort_insights($location_insights_map);
+$sort_insights($agent_insights_map);
+
+$property_type_insights = array_slice(array_values($property_type_insights_map), 0, 8);
+$location_insights = array_slice(array_values($location_insights_map), 0, 8);
+$agent_insights = array_slice(array_values($agent_insights_map), 0, 8);
+
+$top_property_type = $property_type_insights[0]['label'] ?? 'N/A';
+$top_location = $location_insights[0]['label'] ?? 'N/A';
+$top_agent = $agent_insights[0]['label'] ?? 'N/A';
+
+$insight_table_rows = [];
+foreach ($property_type_insights as $index => $row) {
+    $insight_table_rows[] = [
+        'section' => 'Property Type',
+        'rank' => $index + 1,
+        'label' => $row['label'],
+        'sold_count' => $row['sold_count'],
+        'rented_count' => $row['rented_count'],
+        'closed_count' => $row['closed_count'],
+        'sold_value' => $row['sold_value'],
+        'rented_value' => $row['rented_value'],
+        'total_value' => $row['total_value'],
+    ];
+}
+foreach ($location_insights as $index => $row) {
+    $insight_table_rows[] = [
+        'section' => 'Location',
+        'rank' => $index + 1,
+        'label' => $row['label'],
+        'sold_count' => $row['sold_count'],
+        'rented_count' => $row['rented_count'],
+        'closed_count' => $row['closed_count'],
+        'sold_value' => $row['sold_value'],
+        'rented_value' => $row['rented_value'],
+        'total_value' => $row['total_value'],
+    ];
+}
+foreach ($agent_insights as $index => $row) {
+    $insight_table_rows[] = [
+        'section' => 'Agent',
+        'rank' => $index + 1,
+        'label' => $row['label'],
+        'sold_count' => $row['sold_count'],
+        'rented_count' => $row['rented_count'],
+        'closed_count' => $row['closed_count'],
+        'sold_value' => $row['sold_value'],
+        'rented_value' => $row['rented_value'],
+        'total_value' => $row['total_value'],
+    ];
+}
 
 // =============================================
 // KPI SUMMARY DATA
@@ -407,6 +537,146 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
         .chart-kpi-val.red { color: #dc2626; }
         .chart-kpi-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-top: 0.15rem; }
 
+        .chart-summary-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .chart-summary-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.7rem;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 999px;
+            background: #f8fafc;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .chart-summary-pill .swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            flex-shrink: 0;
+        }
+
+        .trend-filter-bar {
+            background: #f8fafc;
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .trend-filter-group {
+            display: inline-flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .trend-filter-group label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .trend-filter-group .filter-select {
+            height: 38px;
+            padding: 0 0.75rem;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            min-width: 160px;
+            background: #fff;
+        }
+        
+        .trend-filter-actions {
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .trend-filter-actions .btn-admin, .trend-filter-actions .btn-outline-admin {
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+        
+        .trend-filter-note {
+            margin-left: auto;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            max-width: 350px;
+            text-align: right;
+            line-height: 1.4;
+            padding-bottom: 0.2rem;
+        }
+
+        .insight-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .insight-summary-card {
+            background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+            border: 1px solid rgba(37,99,235,0.1);
+            border-radius: 4px;
+            padding: 1rem 1.1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .insight-summary-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(212,175,55,0.05), transparent 50%);
+            pointer-events: none;
+        }
+
+        .insight-summary-card .label {
+            position: relative;
+            z-index: 1;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+        }
+
+        .insight-summary-card .value {
+            position: relative;
+            z-index: 1;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .insight-summary-card .note {
+            position: relative;
+            z-index: 1;
+            font-size: 0.74rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
         /* ===== DATA TABLES ===== */
         .report-table-wrapper { overflow-x: auto; border-radius: 6px; border: 1px solid rgba(37,99,235,0.1); box-shadow: 0 1px 4px rgba(0,0,0,0.04); background: #fff; }
         .report-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.82rem; }
@@ -524,6 +794,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
             .kpi-grid { grid-template-columns: repeat(2, 1fr); }
             .chart-grid-3 { grid-template-columns: 1fr 1fr; }
             .chart-grid-overview { grid-template-columns: 1fr 1fr; }
+            .insight-summary-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         /* 1100px — small desktops / large tablets */
@@ -543,6 +814,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
             .page-header { padding: 1.5rem 1.75rem; }
             .chart-card { padding: 1.25rem; }
             .tab-content { padding: 1.25rem; }
+            .insight-summary-grid { grid-template-columns: 1fr 1fr; }
         }
 
         /* 768px — large phones / small tablets */
@@ -553,6 +825,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
             .page-header .subtitle { font-size: 0.85rem; }
             .page-header-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
             .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+            .insight-summary-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
             .kpi-card { padding: 1rem; }
             .kpi-card .kpi-value { font-size: 1.25rem; }
             .section-bar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
@@ -563,6 +836,11 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
             .tab-content { padding: 1rem; }
             .chart-card { padding: 1rem; }
             .chart-card-header { flex-wrap: wrap; gap: 0.5rem; }
+            .trend-filter-bar { padding: 1rem; flex-direction: column; align-items: stretch; gap: 0.75rem; }
+            .trend-filter-note { margin-left: 0; text-align: left; max-width: none; padding-bottom: 0; }
+            .trend-filter-group .filter-select { min-width: 0; width: 100%; }
+            .trend-filter-actions { width: 100%; }
+            .trend-filter-actions .btn-admin, .trend-filter-actions .btn-outline-admin { width: 100%; }
             .chart-container.h-250 { height: 200px; }
             .chart-container.h-280 { height: 210px; }
             .chart-container.h-300 { height: 220px; }
@@ -586,6 +864,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
             .page-header { padding: 1rem; }
             .page-header h1 { font-size: 1.15rem; }
             .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+            .insight-summary-grid { grid-template-columns: 1fr; gap: 0.5rem; }
             .kpi-card { padding: 0.85rem; }
             .kpi-card .kpi-value { font-size: 1.1rem; }
             .kpi-card .kpi-label { font-size: 0.65rem; }
@@ -1022,31 +1301,105 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
             </div>
         </div>
 
-        <!-- Row 4: Agent Performance (horizontal bar) + Admin Activity Timeline (line area) -->
+        <!-- Row 4: Agent Performance (horizontal bar) + Closed Transaction Insights -->
         <div class="chart-grid chart-grid-2">
             <div class="chart-card">
                 <div class="chart-card-header">
                     <div>
-                        <div class="chart-card-title"><i class="bi bi-people"></i> AGENT PERFORMANCE</div>
-                        <div class="chart-card-subtitle">Listings, sales, and tours per agent</div>
+                        <div class="chart-card-title"><i class="bi bi-house-gear"></i> PROPERTY TYPE PERFORMANCE</div>
+                        <div class="chart-card-subtitle">Top property types by sold and rented closings</div>
                     </div>
-                    <span class="chart-card-badge badge-amber">Agents</span>
+                    <span class="chart-card-badge badge-gold">Closed Deals</span>
+                </div>
+                <div class="chart-summary-strip">
+                    <div class="chart-summary-pill"><span class="swatch" style="background: var(--gold);"></span>Sold = closed sales</div>
+                    <div class="chart-summary-pill"><span class="swatch" style="background: var(--blue);"></span>Rented = closed rentals</div>
                 </div>
                 <div class="chart-container h-320">
-                    <canvas id="chartAgentPerformance"></canvas>
+                    <canvas id="chartPropertyTypePerformance"></canvas>
                 </div>
             </div>
             <div class="chart-card">
                 <div class="chart-card-header">
                     <div>
-                        <div class="chart-card-title"><i class="bi bi-activity"></i> ADMIN ACTIVITY</div>
-                        <div class="chart-card-subtitle">Login activity &mdash; last 30 days</div>
+                        <div class="chart-card-title"><i class="bi bi-geo-alt"></i> LOCATION PERFORMANCE</div>
+                        <div class="chart-card-subtitle">Cities with the highest closed sales and rentals</div>
                     </div>
-                    <span class="chart-card-badge badge-blue">30 Days</span>
+                    <span class="chart-card-badge badge-blue">Top Locations</span>
+                </div>
+                <div class="chart-summary-strip">
+                    <div class="chart-summary-pill"><span class="swatch" style="background: var(--green);"></span>Sold = sales by city</div>
+                    <div class="chart-summary-pill"><span class="swatch" style="background: var(--cyan);"></span>Rented = rentals by city</div>
                 </div>
                 <div class="chart-container h-320">
-                    <canvas id="chartAdminActivity"></canvas>
+                    <canvas id="chartLocationPerformance"></canvas>
                 </div>
+            </div>
+        </div>
+
+        <!-- ==================== TIME-BASED PERFORMANCE SECTION ==================== -->
+        <div class="chart-card" style="margin-bottom:1.5rem;">
+            <div class="chart-card-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 1rem;">
+                <div>
+                    <div class="chart-card-title"><i class="bi bi-graph-up-arrow"></i> PERFORMANCE TRENDS</div>
+                    <div class="chart-card-subtitle">Analyze closed property performance over time</div>
+                </div>
+            </div>
+            
+            <div class="trend-filter-bar">
+                <div class="trend-filter-group">
+                    <label>Time Period</label>
+                    <select id="trendPeriod" class="filter-select">
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly" selected>Monthly</option>
+                        <option value="yearly">Yearly</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                
+                <div class="trend-filter-group" id="trendDateFromGroup" style="display: none;">
+                    <label>From Date</label>
+                    <input type="date" id="trendDateFrom" class="filter-select">
+                </div>
+                
+                <div class="trend-filter-group" id="trendDateToGroup" style="display: none;">
+                    <label>To Date</label>
+                    <input type="date" id="trendDateTo" class="filter-select">
+                </div>
+                
+                <div class="trend-filter-actions">
+                    <button type="button" class="btn-outline-admin" id="applyTrendBtn"><i class="bi bi-funnel"></i> Update Trend</button>
+                </div>
+                
+                <div class="trend-filter-note" id="trendNote">
+                    Monthly view of finalized sales and rentals. Use the cards below for total deals and value.
+                </div>
+            </div>
+
+            <div class="insight-summary-grid">
+                <div class="insight-summary-card">
+                    <div class="label">Sold Deals</div>
+                    <div class="value" id="trendSoldDealsCard"><?php echo $total_sold_deals; ?></div>
+                    <div class="note">Closed sales in the selected range</div>
+                </div>
+                <div class="insight-summary-card">
+                    <div class="label">Rented Deals</div>
+                    <div class="value" id="trendRentedDealsCard"><?php echo $total_rented_deals; ?></div>
+                    <div class="note">Closed rentals in the selected range</div>
+                </div>
+                <div class="insight-summary-card">
+                    <div class="label">Sale Value</div>
+                    <div class="value" id="trendSoldValueCard">&#8369;<?php echo number_format($total_sold_value, 0); ?></div>
+                    <div class="note">Aggregate sale value for the range</div>
+                </div>
+                <div class="insight-summary-card">
+                    <div class="label">Rental Value</div>
+                    <div class="value" id="trendRentedValueCard">&#8369;<?php echo number_format($total_rented_value, 0); ?></div>
+                    <div class="note">Aggregate rental value for the range</div>
+                </div>
+            </div>
+            <div class="chart-container h-320">
+                <canvas id="chartPerformanceTrend"></canvas>
             </div>
         </div>
 
@@ -1076,7 +1429,7 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
                 <li class="nav-item"><button class="nav-link" id="tab-agents" data-bs-toggle="tab" data-bs-target="#content-agents" type="button" role="tab"><i class="bi bi-people me-1"></i> Agent Performance <span class="tab-badge badge-blue" id="badge-agents"><?php echo count($agent_report); ?></span></button></li>
                 <li class="nav-item"><button class="nav-link" id="tab-rentals" data-bs-toggle="tab" data-bs-target="#content-rentals" type="button" role="tab"><i class="bi bi-house-check me-1"></i> Rentals <span class="tab-badge badge-purple" id="badge-rentals"><?php echo count($rental_report); ?></span></button></li>
                 <li class="nav-item"><button class="nav-link" id="tab-tours" data-bs-toggle="tab" data-bs-target="#content-tours" type="button" role="tab"><i class="bi bi-calendar-check me-1"></i> Tour Requests <span class="tab-badge badge-cyan" id="badge-tours"><?php echo count($tour_report); ?></span></button></li>
-                <li class="nav-item"><button class="nav-link" id="tab-activity" data-bs-toggle="tab" data-bs-target="#content-activity" type="button" role="tab"><i class="bi bi-activity me-1"></i> System Activity <span class="tab-badge badge-amber" id="badge-activity"><?php echo count($activity_report) + count($status_logs) + count($property_logs); ?></span></button></li>
+                <li class="nav-item"><button class="nav-link" id="tab-insights" data-bs-toggle="tab" data-bs-target="#content-insights" type="button" role="tab"><i class="bi bi-bar-chart-line me-1"></i> Performance Insights <span class="tab-badge badge-amber" id="badge-insights"><?php echo count($insight_table_rows); ?></span></button></li>
             </ul>
             <div class="tab-content" id="reportTabsContent">
                 <!-- Properties -->
@@ -1114,19 +1467,114 @@ if ($agents_list_result) { while ($row = $agents_list_result->fetch_assoc()) { $
                     </div>
                     <div class="report-pagination" id="paginationTours"></div>
                 </div>
-                <!-- System Activity -->
-                <div class="tab-pane fade" id="content-activity" role="tabpanel">
-                    <h6 style="font-weight:700;color:#334155;margin-bottom:1rem;"><i class="bi bi-shield-lock me-2" style="color:var(--gold-dark);"></i>Admin Login Activity</h6>
-                    <div class="report-table-wrapper" style="max-height:350px;overflow-y:auto;margin-bottom:2rem;">
-                        <table class="report-table"><thead><tr><th>#</th><th>Admin</th><th>Action</th><th>Timestamp</th></tr></thead><tbody id="tbodyAdminLogs"></tbody></table>
+                <!-- Performance Insights -->
+                <div class="tab-pane fade" id="content-insights" role="tabpanel">
+                    <div class="insight-summary-grid">
+                        <div class="insight-summary-card">
+                            <div class="label">Closed Deals</div>
+                            <div class="value" id="insightClosedDealsCard"><?php echo $total_closed_deals; ?></div>
+                            <div class="note">All finalized sales and rentals</div>
+                        </div>
+                        <div class="insight-summary-card">
+                            <div class="label">Top Property Type</div>
+                            <div class="value" id="insightTopPropertyTypeCard"><?php echo htmlspecialchars($top_property_type); ?></div>
+                            <div class="note">Highest number of closed transactions</div>
+                        </div>
+                        <div class="insight-summary-card">
+                            <div class="label">Top Location</div>
+                            <div class="value" id="insightTopLocationCard"><?php echo htmlspecialchars($top_location); ?></div>
+                            <div class="note">City with the most closed transactions</div>
+                        </div>
+                        <div class="insight-summary-card">
+                            <div class="label">Top Agent</div>
+                            <div class="value" id="insightTopAgentCard"><?php echo htmlspecialchars($top_agent); ?></div>
+                            <div class="note">Agent with the highest deal volume</div>
+                        </div>
                     </div>
-                    <h6 style="font-weight:700;color:#334155;margin-bottom:1rem;"><i class="bi bi-arrow-left-right me-2" style="color:var(--gold-dark);"></i>Status Changes</h6>
-                    <div class="report-table-wrapper" style="max-height:350px;overflow-y:auto;margin-bottom:2rem;">
-                        <table class="report-table"><thead><tr><th>#</th><th>Type</th><th>ID</th><th>Action</th><th>Reason</th><th>By</th><th>Timestamp</th></tr></thead><tbody id="tbodyStatusLogs"></tbody></table>
+
+                    <div class="chart-grid chart-grid-2" style="margin-bottom:1.5rem;">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div>
+                                    <div class="chart-card-title"><i class="bi bi-house-door"></i> TOP PROPERTY TYPES</div>
+                                    <div class="chart-card-subtitle">Ranked by closed sales and rentals</div>
+                                </div>
+                            </div>
+                            <div class="report-table-wrapper" style="max-height:360px;overflow-y:auto;">
+                                <table class="report-table">
+                                    <thead><tr><th>#</th><th>Property Type</th><th>Sold</th><th>Rented</th><th>Closed</th><th>Sold Value</th><th>Rental Value</th><th>Total Value</th></tr></thead>
+                                    <tbody id="tbodyInsightPropertyTypes">
+                                        <?php foreach ($property_type_insights as $index => $row): ?>
+                                            <tr>
+                                                <td><?php echo $index + 1; ?></td>
+                                                <td><?php echo htmlspecialchars($row['label']); ?></td>
+                                                <td><?php echo (int)$row['sold_count']; ?></td>
+                                                <td><?php echo (int)$row['rented_count']; ?></td>
+                                                <td><?php echo (int)$row['closed_count']; ?></td>
+                                                <td class="price-text">&#8369;<?php echo number_format($row['sold_value'], 0); ?></td>
+                                                <td class="price-text">&#8369;<?php echo number_format($row['rented_value'], 0); ?></td>
+                                                <td class="price-text">&#8369;<?php echo number_format($row['total_value'], 0); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div>
+                                    <div class="chart-card-title"><i class="bi bi-geo-alt"></i> TOP LOCATIONS</div>
+                                    <div class="chart-card-subtitle">Cities generating the most closed deals</div>
+                                </div>
+                            </div>
+                            <div class="report-table-wrapper" style="max-height:360px;overflow-y:auto;">
+                                <table class="report-table">
+                                    <thead><tr><th>#</th><th>City</th><th>Sold</th><th>Rented</th><th>Closed</th><th>Sold Value</th><th>Rental Value</th><th>Total Value</th></tr></thead>
+                                    <tbody id="tbodyInsightLocations">
+                                        <?php foreach ($location_insights as $index => $row): ?>
+                                            <tr>
+                                                <td><?php echo $index + 1; ?></td>
+                                                <td><?php echo htmlspecialchars($row['label']); ?></td>
+                                                <td><?php echo (int)$row['sold_count']; ?></td>
+                                                <td><?php echo (int)$row['rented_count']; ?></td>
+                                                <td><?php echo (int)$row['closed_count']; ?></td>
+                                                <td class="price-text">&#8369;<?php echo number_format($row['sold_value'], 0); ?></td>
+                                                <td class="price-text">&#8369;<?php echo number_format($row['rented_value'], 0); ?></td>
+                                                <td class="price-text">&#8369;<?php echo number_format($row['total_value'], 0); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <h6 style="font-weight:700;color:#334155;margin-bottom:1rem;"><i class="bi bi-journal-text me-2" style="color:var(--gold-dark);"></i>Property Action Log</h6>
-                    <div class="report-table-wrapper" style="max-height:350px;overflow-y:auto;">
-                        <table class="report-table"><thead><tr><th>#</th><th>Property</th><th>City</th><th>Action</th><th>Reason</th><th>By</th><th>Timestamp</th></tr></thead><tbody id="tbodyPropertyLogs"></tbody></table>
+
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <div>
+                                <div class="chart-card-title"><i class="bi bi-people"></i> TOP AGENTS</div>
+                                <div class="chart-card-subtitle">Ranked by total closed sales and rentals</div>
+                            </div>
+                        </div>
+                        <div class="report-table-wrapper" style="max-height:420px;overflow-y:auto;">
+                            <table class="report-table">
+                                <thead><tr><th>#</th><th>Agent</th><th>Sold</th><th>Rented</th><th>Closed</th><th>Sold Value</th><th>Rental Value</th><th>Total Value</th></tr></thead>
+                                <tbody id="tbodyInsightAgents">
+                                    <?php foreach ($agent_insights as $index => $row): ?>
+                                        <tr>
+                                            <td><?php echo $index + 1; ?></td>
+                                            <td><?php echo htmlspecialchars($row['label']); ?></td>
+                                            <td><?php echo (int)$row['sold_count']; ?></td>
+                                            <td><?php echo (int)$row['rented_count']; ?></td>
+                                            <td><?php echo (int)$row['closed_count']; ?></td>
+                                            <td class="price-text">&#8369;<?php echo number_format($row['sold_value'], 0); ?></td>
+                                            <td class="price-text">&#8369;<?php echo number_format($row['rented_value'], 0); ?></td>
+                                            <td class="price-text">&#8369;<?php echo number_format($row['total_value'], 0); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1257,14 +1705,16 @@ var DATA = {
     rentals: <?php echo json_encode($rental_report); ?>,
     agents: <?php echo json_encode($agent_report); ?>,
     tours: <?php echo json_encode($tour_report); ?>,
-    adminLogs: <?php echo json_encode($activity_report); ?>,
-    statusLogs: <?php echo json_encode($status_logs); ?>,
-    propertyLogs: <?php echo json_encode($property_logs); ?>
+    insights: <?php echo json_encode($insight_table_rows); ?>,
+    performanceEvents: <?php echo json_encode($performance_events); ?>,
+    propertyTypeInsights: <?php echo json_encode($property_type_insights); ?>,
+    locationInsights: <?php echo json_encode($location_insights); ?>,
+    agentInsights: <?php echo json_encode($agent_insights); ?>
 };
 
 var FILTERED = {
     properties: [...DATA.properties], sales: [...DATA.sales], rentals: [...DATA.rentals], agents: [...DATA.agents],
-    tours: [...DATA.tours], adminLogs: [...DATA.adminLogs], statusLogs: [...DATA.statusLogs], propertyLogs: [...DATA.propertyLogs]
+    tours: [...DATA.tours], insights: [...DATA.insights]
 };
 
 var ROWS_PER_PAGE = 25;
@@ -1295,6 +1745,147 @@ var COLORS = {
     slate: '#64748b', slateLight: 'rgba(100,116,139,0.12)',
     palette: ['#2563eb', '#d4af37', '#16a34a', '#dc2626', '#0891b2', '#7c3aed', '#d97706', '#ec4899', '#64748b', '#059669']
 };
+
+var performanceTrendChart = null;
+
+function toNumber(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+function formatTrendDateLabel(date) { return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }); }
+function getWeekStart(date) {
+    var d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    var day = d.getDay();
+    var diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+function formatMoneyPHP(value) {
+    return '&#8369;' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function getTrendRange() {
+    var period = document.getElementById('trendPeriod').value || 'monthly';
+    var from = document.getElementById('trendDateFrom').value;
+    var to = document.getElementById('trendDateTo').value;
+    return { period: period, from: from, to: to };
+}
+function buildPerformanceTrendData(period, fromDate, toDate) {
+    var events = DATA.performanceEvents.filter(function(event) {
+        if (!event.event_date) return false;
+        if (fromDate && event.event_date < fromDate) return false;
+        if (toDate && event.event_date > toDate) return false;
+        return true;
+    });
+
+    var buckets = {};
+    events.forEach(function(event) {
+        var date = new Date(event.event_date + 'T00:00:00');
+        if (isNaN(date.getTime())) return;
+
+        var key = '';
+        var label = '';
+        if (period === 'weekly') {
+            var weekStart = getWeekStart(date);
+            key = weekStart.toISOString().slice(0, 10);
+            label = 'Week of ' + formatTrendDateLabel(weekStart);
+        } else if (period === 'yearly') {
+            key = String(date.getFullYear());
+            label = String(date.getFullYear());
+        } else if (period === 'custom') {
+            key = event.event_date;
+            label = formatTrendDateLabel(date);
+        } else {
+            key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+            label = date.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' });
+        }
+
+        if (!buckets[key]) {
+            buckets[key] = { label: label, sold: 0, rented: 0 };
+        }
+
+        if ((event.transaction_type || '') === 'Sold') {
+            buckets[key].sold++;
+        } else {
+            buckets[key].rented++;
+        }
+    });
+
+    var keys = Object.keys(buckets).sort();
+    return {
+        labels: keys.map(function(key) { return buckets[key].label; }),
+        sold: keys.map(function(key) { return buckets[key].sold; }),
+        rented: keys.map(function(key) { return buckets[key].rented; }),
+        totalDeals: events.length,
+        soldDeals: events.filter(function(event) { return (event.transaction_type || '') === 'Sold'; }).length,
+        rentedDeals: events.filter(function(event) { return (event.transaction_type || '') === 'Rented'; }).length,
+        soldValue: events.filter(function(event) { return (event.transaction_type || '') === 'Sold'; }).reduce(function(sum, event) { return sum + toNumber(event.transaction_value); }, 0),
+        rentedValue: events.filter(function(event) { return (event.transaction_type || '') === 'Rented'; }).reduce(function(sum, event) { return sum + toNumber(event.transaction_value); }, 0)
+    };
+}
+function renderPerformanceTrendChart() {
+    var range = getTrendRange();
+    var trend = buildPerformanceTrendData(range.period, range.from, range.to);
+    var trendLabel = 'Monthly view of finalized sales and rentals.';
+
+    if (range.period === 'weekly') {
+        trendLabel = 'Weekly view of finalized sales and rentals.';
+    } else if (range.period === 'yearly') {
+        trendLabel = 'Yearly view of finalized sales and rentals.';
+    } else if (range.period === 'custom' && range.from && range.to) {
+        trendLabel = 'Custom range: ' + range.from + ' to ' + range.to + '.';
+    } else if (range.period === 'custom') {
+        trendLabel = 'Custom range selected. Pick both dates to compare finalized sales and rentals.';
+    }
+
+    var trendNote = document.getElementById('trendNote');
+    if (trendNote) { trendNote.textContent = trendLabel + ' Use the cards below for total deals and value.'; }
+
+    document.getElementById('trendSoldDealsCard').textContent = trend.soldDeals;
+    document.getElementById('trendRentedDealsCard').textContent = trend.rentedDeals;
+    document.getElementById('trendSoldValueCard').innerHTML = formatMoneyPHP(trend.soldValue);
+    document.getElementById('trendRentedValueCard').innerHTML = formatMoneyPHP(trend.rentedValue);
+
+    var ctx = document.getElementById('chartPerformanceTrend');
+    if (performanceTrendChart) { performanceTrendChart.destroy(); }
+    performanceTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trend.labels.length ? trend.labels : ['No data'],
+            datasets: [
+                {
+                    label: 'Sold Deals',
+                    data: trend.labels.length ? trend.sold : [0],
+                    borderColor: COLORS.gold,
+                    backgroundColor: 'rgba(212,175,55,0.12)',
+                    fill: true,
+                    pointBackgroundColor: COLORS.gold,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 2.5
+                },
+                {
+                    label: 'Rented Deals',
+                    data: trend.labels.length ? trend.rented : [0],
+                    borderColor: COLORS.blue,
+                    backgroundColor: 'rgba(37,99,235,0.12)',
+                    fill: true,
+                    pointBackgroundColor: COLORS.blue,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 2.5
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            scales: {
+                x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 1 } }
+            },
+            plugins: { legend: { position: 'top', align: 'end' } }
+        }
+    });
+}
 
 // =============================================
 // CHART: CONTENT OVERVIEW (Multi-line)
@@ -1433,39 +2024,66 @@ var COLORS = {
     });
 })();
 
-// =============================================
-// CHART: AGENT PERFORMANCE (Grouped Bar)
+// CHART: PROPERTY TYPE PERFORMANCE
 // =============================================
 (function() {
-    var data = <?php echo json_encode($agent_report); ?>;
-    var labels = data.map(function(r) { return (r.first_name || '') + ' ' + (r.last_name || '').charAt(0) + '.'; });
-    var listings = data.map(function(r) { return parseInt(r.total_listings) || 0; });
-    var sales = data.map(function(r) { return parseInt(r.total_sales) || 0; });
-    var tours = data.map(function(r) { return parseInt(r.total_tours) || 0; });
-    new Chart(document.getElementById('chartAgentPerformance'), {
+    var data = <?php echo json_encode($property_type_insights); ?>;
+    var labels = data.map(function(r) { return r.label && r.label.length > 24 ? r.label.substring(0, 24) + '...' : r.label; });
+    var sold = data.map(function(r) { return parseInt(r.sold_count) || 0; });
+    var rented = data.map(function(r) { return parseInt(r.rented_count) || 0; });
+    new Chart(document.getElementById('chartPropertyTypePerformance'), {
         type: 'bar',
-        data: { labels: labels, datasets: [
-            { label: 'Listings', data: listings, backgroundColor: COLORS.goldLight, borderColor: COLORS.gold, borderWidth: 1.5 },
-            { label: 'Sales', data: sales, backgroundColor: COLORS.greenLight, borderColor: COLORS.green, borderWidth: 1.5 },
-            { label: 'Tours', data: tours, backgroundColor: COLORS.blueLight, borderColor: COLORS.blue, borderWidth: 1.5 }
-        ] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'top', align: 'end' } } }
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Sold', data: sold, backgroundColor: COLORS.goldLight, borderColor: COLORS.gold, borderWidth: 1.5, barThickness: 18, borderRadius: 8 },
+                { label: 'Rented', data: rented, backgroundColor: COLORS.blueLight, borderColor: COLORS.blue, borderWidth: 1.5, barThickness: 18, borderRadius: 8 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 1 } },
+                y: { grid: { display: false } }
+            },
+            plugins: { legend: { position: 'top', align: 'end' } }
+        }
     });
 })();
 
 // =============================================
-// CHART: ADMIN ACTIVITY (Area Line)
+// CHART: LOCATION PERFORMANCE
 // =============================================
 (function() {
-    var data = <?php echo json_encode($admin_activity_daily); ?>;
-    var labels = data.map(function(r) { var d = new Date(r.day); return d.toLocaleDateString('en-PH', {month:'short',day:'numeric'}); });
-    var values = data.map(function(r) { return parseInt(r.cnt); });
-    new Chart(document.getElementById('chartAdminActivity'), {
-        type: 'line',
-        data: { labels: labels, datasets: [{ label: 'Admin Logins', data: values, borderColor: COLORS.blue, backgroundColor: 'rgba(37,99,235,0.08)', fill: true, pointBackgroundColor: COLORS.blue, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2.5 }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+    var data = <?php echo json_encode($location_insights); ?>;
+    var labels = data.map(function(r) { return r.label && r.label.length > 24 ? r.label.substring(0, 24) + '...' : r.label; });
+    var sold = data.map(function(r) { return parseInt(r.sold_count) || 0; });
+    var rented = data.map(function(r) { return parseInt(r.rented_count) || 0; });
+    new Chart(document.getElementById('chartLocationPerformance'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Sold', data: sold, backgroundColor: COLORS.greenLight, borderColor: COLORS.green, borderWidth: 1.5, barThickness: 18, borderRadius: 8 },
+                { label: 'Rented', data: rented, backgroundColor: COLORS.cyanLight, borderColor: COLORS.cyan, borderWidth: 1.5, barThickness: 18, borderRadius: 8 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 1 } },
+                y: { grid: { display: false } }
+            },
+            plugins: { legend: { position: 'top', align: 'end' } }
+        }
     });
 })();
+
+renderPerformanceTrendChart();
 
 // =============================================
 // UTILITY FUNCTIONS
@@ -1525,16 +2143,131 @@ function renderToursTable(page) {
     pageData.forEach(function(r, i) { h += '<tr><td>'+(start+i+1)+'</td><td>'+esc(r.user_name)+'</td><td>'+esc(r.user_email)+'</td><td>'+esc(r.user_phone)+'</td><td>'+esc(r.StreetAddress)+'</td><td>'+esc(r.City)+'</td><td>'+formatDate(r.tour_date)+'</td><td>'+esc(r.tour_time)+'</td><td>'+statusPill(r.tour_type)+'</td><td>'+statusPill(r.request_status)+'</td><td>'+esc(r.agent_name)+'</td><td>'+formatDateTime(r.requested_at)+'</td><td>'+formatDateTime(r.confirmed_at)+'</td><td>'+formatDateTime(r.completed_at)+'</td></tr>'; });
     tbody.innerHTML = h; renderPagination('paginationTours', data.length, page, 'tours');
 }
-function renderActivityTables() {
-    var ab = document.getElementById('tbodyAdminLogs');
-    if (FILTERED.adminLogs.length === 0) { ab.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>No admin logs</p></div></td></tr>'; }
-    else { var h=''; FILTERED.adminLogs.forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+esc(r.admin_name)+'</td><td>'+statusPill(r.action)+'</td><td>'+formatDateTime(r.log_timestamp)+'</td></tr>';}); ab.innerHTML=h; }
-    var sb = document.getElementById('tbodyStatusLogs');
-    if (FILTERED.statusLogs.length === 0) { sb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No status logs</p></div></td></tr>'; }
-    else { var h2=''; FILTERED.statusLogs.forEach(function(r,i){h2+='<tr><td>'+(i+1)+'</td><td>'+statusPill(r.item_type)+'</td><td>'+r.item_id+'</td><td>'+statusPill(r.action)+'</td><td>'+esc(r.reason_message)+'</td><td>'+esc(r.action_by)+'</td><td>'+formatDateTime(r.log_timestamp)+'</td></tr>';}); sb.innerHTML=h2; }
-    var pb = document.getElementById('tbodyPropertyLogs');
-    if (FILTERED.propertyLogs.length === 0) { pb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>No property logs</p></div></td></tr>'; }
-    else { var h3=''; FILTERED.propertyLogs.forEach(function(r,i){h3+='<tr><td>'+(i+1)+'</td><td>'+esc(r.StreetAddress)+'</td><td>'+esc(r.City)+'</td><td>'+statusPill(r.action)+'</td><td>'+esc(r.reason_message)+'</td><td>'+esc(r.action_by)+'</td><td>'+formatDateTime(r.log_timestamp)+'</td></tr>';}); pb.innerHTML=h3; }
+
+function buildInsightBucket(label) {
+    return {
+        label: label,
+        sold_count: 0,
+        rented_count: 0,
+        closed_count: 0,
+        sold_value: 0,
+        rented_value: 0,
+        total_value: 0
+    };
+}
+
+function buildInsightsFromEvents(events) {
+    var propertyTypes = {}, locations = {}, agents = {};
+    var totals = {
+        closedDeals: 0,
+        soldDeals: 0,
+        rentedDeals: 0,
+        soldValue: 0,
+        rentedValue: 0
+    };
+
+    events.forEach(function(event) {
+        var transactionType = event.transaction_type || '';
+        var transactionValue = toNumber(event.transaction_value);
+        var propertyType = String(event.PropertyType || '').trim() || 'Unknown';
+        var city = String(event.City || '').trim() || 'Unknown';
+        var agentName = String(event.agent_name || '').trim() || 'Unknown';
+
+        if (!propertyTypes[propertyType]) { propertyTypes[propertyType] = buildInsightBucket(propertyType); }
+        if (!locations[city]) { locations[city] = buildInsightBucket(city); }
+        if (!agents[agentName]) { agents[agentName] = buildInsightBucket(agentName); }
+
+        [propertyTypes[propertyType], locations[city], agents[agentName]].forEach(function(bucket) {
+            bucket.closed_count++;
+            bucket.total_value += transactionValue;
+            if (transactionType === 'Sold') {
+                bucket.sold_count++;
+                bucket.sold_value += transactionValue;
+            } else {
+                bucket.rented_count++;
+                bucket.rented_value += transactionValue;
+            }
+        });
+
+        totals.closedDeals++;
+        if (transactionType === 'Sold') {
+            totals.soldDeals++;
+            totals.soldValue += transactionValue;
+        } else {
+            totals.rentedDeals++;
+            totals.rentedValue += transactionValue;
+        }
+    });
+
+    function sortBuckets(map) {
+        return Object.values(map).sort(function(left, right) {
+            if (left.closed_count === right.closed_count) {
+                return right.total_value - left.total_value;
+            }
+            return right.closed_count - left.closed_count;
+        }).slice(0, 8);
+    }
+
+    return {
+        propertyTypes: sortBuckets(propertyTypes),
+        locations: sortBuckets(locations),
+        agents: sortBuckets(agents),
+        totals: totals
+    };
+}
+
+function renderInsightTableBody(tbody, rows, labelKey) {
+    if (!tbody) { return; }
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="bi bi-bar-chart-line"></i><h4>No Insight Data</h4><p>Adjust your filters</p></div></td></tr>';
+        return;
+    }
+
+    var html = '';
+    rows.forEach(function(row, index) {
+        html += '<tr>' +
+            '<td>' + (index + 1) + '</td>' +
+            '<td>' + esc(row.label) + '</td>' +
+            '<td>' + (row.sold_count || 0) + '</td>' +
+            '<td>' + (row.rented_count || 0) + '</td>' +
+            '<td>' + (row.closed_count || 0) + '</td>' +
+            '<td class="price-text">' + formatPrice(row.sold_value) + '</td>' +
+            '<td class="price-text">' + formatPrice(row.rented_value) + '</td>' +
+            '<td class="price-text">' + formatPrice(row.total_value) + '</td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+function renderInsightsSection() {
+    var insights = buildInsightsFromEvents(FILTERED.performanceEvents || []);
+    FILTERED.insights = [];
+
+    insights.propertyTypes.forEach(function(row, index) {
+        FILTERED.insights.push({ section: 'Property Type', rank: index + 1, label: row.label, sold_count: row.sold_count, rented_count: row.rented_count, closed_count: row.closed_count, sold_value: row.sold_value, rented_value: row.rented_value, total_value: row.total_value });
+    });
+    insights.locations.forEach(function(row, index) {
+        FILTERED.insights.push({ section: 'Location', rank: index + 1, label: row.label, sold_count: row.sold_count, rented_count: row.rented_count, closed_count: row.closed_count, sold_value: row.sold_value, rented_value: row.rented_value, total_value: row.total_value });
+    });
+    insights.agents.forEach(function(row, index) {
+        FILTERED.insights.push({ section: 'Agent', rank: index + 1, label: row.label, sold_count: row.sold_count, rented_count: row.rented_count, closed_count: row.closed_count, sold_value: row.sold_value, rented_value: row.rented_value, total_value: row.total_value });
+    });
+
+    var closedDealsCard = document.getElementById('insightClosedDealsCard');
+    var topPropertyTypeCard = document.getElementById('insightTopPropertyTypeCard');
+    var topLocationCard = document.getElementById('insightTopLocationCard');
+    var topAgentCard = document.getElementById('insightTopAgentCard');
+
+    if (closedDealsCard) { closedDealsCard.textContent = insights.totals.closedDeals; }
+    if (topPropertyTypeCard) { topPropertyTypeCard.textContent = insights.propertyTypes.length ? insights.propertyTypes[0].label : 'N/A'; }
+    if (topLocationCard) { topLocationCard.textContent = insights.locations.length ? insights.locations[0].label : 'N/A'; }
+    if (topAgentCard) { topAgentCard.textContent = insights.agents.length ? insights.agents[0].label : 'N/A'; }
+
+    renderInsightTableBody(document.getElementById('tbodyInsightPropertyTypes'), insights.propertyTypes);
+    renderInsightTableBody(document.getElementById('tbodyInsightLocations'), insights.locations);
+    renderInsightTableBody(document.getElementById('tbodyInsightAgents'), insights.agents);
+
+    document.getElementById('badge-insights').textContent = FILTERED.insights.length;
 }
 
 // =============================================
@@ -1589,16 +2322,19 @@ function applyFilters() {
         if(city&&r.City!==city) return false; if(ct.length>0&&ct.indexOf(r.PropertyType)===-1) return false;
         if(agent&&r.agent_name!==agent) return false; return true;
     });
-    FILTERED.adminLogs = DATA.adminLogs.filter(function(r) { if(df&&r.log_timestamp&&r.log_timestamp.substring(0,10)<df) return false; if(dt&&r.log_timestamp&&r.log_timestamp.substring(0,10)>dt) return false; return true; });
-    FILTERED.statusLogs = DATA.statusLogs.filter(function(r) { if(df&&r.log_timestamp&&r.log_timestamp.substring(0,10)<df) return false; if(dt&&r.log_timestamp&&r.log_timestamp.substring(0,10)>dt) return false; return true; });
-    FILTERED.propertyLogs = DATA.propertyLogs.filter(function(r) { if(df&&r.log_timestamp&&r.log_timestamp.substring(0,10)<df) return false; if(dt&&r.log_timestamp&&r.log_timestamp.substring(0,10)>dt) return false; return true; });
-
+    FILTERED.performanceEvents = DATA.performanceEvents.filter(function(event) {
+        if (df && event.event_date && event.event_date < df) return false;
+        if (dt && event.event_date && event.event_date > dt) return false;
+        if (city && event.City !== city) return false;
+        if (ct.length > 0 && ct.indexOf(event.PropertyType) === -1) return false;
+        if (agent && event.agent_name !== agent) return false;
+        return true;
+    });
     document.getElementById('badge-properties').textContent=FILTERED.properties.length;
     document.getElementById('badge-sales').textContent=FILTERED.sales.length;
     document.getElementById('badge-rentals').textContent=FILTERED.rentals.length;
     document.getElementById('badge-agents').textContent=FILTERED.agents.length;
     document.getElementById('badge-tours').textContent=FILTERED.tours.length;
-    document.getElementById('badge-activity').textContent=FILTERED.adminLogs.length+FILTERED.statusLogs.length+FILTERED.propertyLogs.length;
 
     var fc=0;
     if(df||dt) fc++; if(city) fc++; if(agent) fc++;
@@ -1608,13 +2344,14 @@ function applyFilters() {
     if(cts.length<document.querySelectorAll('.filter-tour-status').length) fc++;
     var b=document.getElementById('filterCountBadge');
     if(fc>0){b.textContent=fc;b.style.display='inline-flex';}else{b.style.display='none';}
+    renderInsightsSection();
     document.getElementById('filteredCount').textContent=getActiveFilteredCount();
 
-    renderPropertiesTable(1); renderSalesTable(1); renderRentalsTable(1); renderAgentsTable(1); renderToursTable(1); renderActivityTables();
+    renderPropertiesTable(1); renderSalesTable(1); renderRentalsTable(1); renderAgentsTable(1); renderToursTable(1);
 }
 
-function getActiveTabKey() { var at=document.querySelector('#reportTabs .nav-link.active'); if(!at)return'properties'; var id=at.id; if(id.indexOf('properties')!==-1)return'properties'; if(id.indexOf('sales')!==-1)return'sales'; if(id.indexOf('rentals')!==-1)return'rentals'; if(id.indexOf('agents')!==-1)return'agents'; if(id.indexOf('tours')!==-1)return'tours'; if(id.indexOf('activity')!==-1)return'activity'; return'properties'; }
-function getActiveFilteredCount() { var k=getActiveTabKey(); if(k==='activity')return FILTERED.adminLogs.length+FILTERED.statusLogs.length+FILTERED.propertyLogs.length; return FILTERED[k]?FILTERED[k].length:0; }
+function getActiveTabKey() { var at=document.querySelector('#reportTabs .nav-link.active'); if(!at)return'properties'; var id=at.id; if(id.indexOf('properties')!==-1)return'properties'; if(id.indexOf('sales')!==-1)return'sales'; if(id.indexOf('rentals')!==-1)return'rentals'; if(id.indexOf('agents')!==-1)return'agents'; if(id.indexOf('tours')!==-1)return'tours'; if(id.indexOf('insights')!==-1)return'insights'; return'properties'; }
+function getActiveFilteredCount() { var k=getActiveTabKey(); return FILTERED[k]?FILTERED[k].length:0; }
 function resetAllFilters() { document.getElementById('filterDateFrom').value=''; document.getElementById('filterDateTo').value=''; document.getElementById('filterCity').value=''; document.getElementById('filterAgent').value=''; document.querySelectorAll('.filter-prop-type,.filter-status,.filter-approval,.filter-tour-status').forEach(function(c){c.checked=true;}); applyFilters(); }
 
 // Filter sidebar controls
@@ -1643,10 +2380,8 @@ function getExportData() {
             rows=FILTERED.rentals.map(function(r,i){return[i+1,r.StreetAddress||'',r.City||'',r.PropertyType||'',r.tenant_name||'',r.monthly_rent?formatPriceText(r.monthly_rent):'',r.security_deposit?formatPriceText(r.security_deposit):'',r.lease_start_date||'',r.lease_end_date||'',r.lease_term_months?r.lease_term_months+' mo':'',r.commission_rate?r.commission_rate+'%':'',r.total_collected?formatPriceText(r.total_collected):'',r.total_commission?formatPriceText(r.total_commission):'',((r.confirmed_payments||0)+'/'+(parseInt(r.confirmed_payments||0)+parseInt(r.pending_payments||0))),r.lease_status||'Active',r.agent_name||'',r.finalized_at||''];}); break;
         case 'tours': title='Tour Requests Report'; headers=['#','Visitor','Email','Phone','Property','City','Tour Date','Time','Type','Status','Agent','Requested','Confirmed','Completed'];
             rows=FILTERED.tours.map(function(r,i){return[i+1,r.user_name||'',r.user_email||'',r.user_phone||'',r.StreetAddress||'',r.City||'',r.tour_date||'',r.tour_time||'',r.tour_type||'',r.request_status||'',r.agent_name||'',r.requested_at||'',r.confirmed_at||'',r.completed_at||''];}); break;
-        case 'activity': title='System Activity Report'; headers=['#','Source','Action','Item','Details','By','Timestamp']; rows=[];
-            FILTERED.adminLogs.forEach(function(r){rows.push([rows.length+1,'Admin Log',r.action||'','\u2014',r.description||'',r.admin_name||'',r.log_timestamp||'']);});
-            FILTERED.statusLogs.forEach(function(r){rows.push([rows.length+1,'Status Change',r.action||'',r.item_type+' #'+r.item_id,r.reason_message||'',r.action_by||'',r.log_timestamp||'']);});
-            FILTERED.propertyLogs.forEach(function(r){rows.push([rows.length+1,'Property Log',r.action||'',r.StreetAddress||'',r.reason_message||'',r.action_by||'',r.log_timestamp||'']);}); break;
+        case 'insights': title='Performance Insights Report'; headers=['#','Section','Entity','Sold','Rented','Closed','Sold Value','Rental Value','Total Value'];
+            rows=FILTERED.insights.map(function(r,i){return[i+1,r.section||'',r.label||'',r.sold_count||0,r.rented_count||0,r.closed_count||0,formatPriceText(r.sold_value||0),formatPriceText(r.rented_value||0),formatPriceText(r.total_value||0)];}); break;
     }
     return {title:title,headers:headers,rows:rows,key:key};
 }
@@ -1755,7 +2490,30 @@ document.getElementById('confirmExportExcel').addEventListener('click', function
 // =============================================
 // INIT
 // =============================================
-document.addEventListener('DOMContentLoaded', function() { applyFilters(); });
+document.getElementById('applyTrendBtn').addEventListener('click', renderPerformanceTrendChart);
+document.getElementById('trendPeriod').addEventListener('change', function() {
+    var period = this.value;
+    var fromGrp = document.getElementById('trendDateFromGroup');
+    var toGrp = document.getElementById('trendDateToGroup');
+    
+    if (period === 'custom') {
+        fromGrp.style.display = 'inline-flex';
+        toGrp.style.display = 'inline-flex';
+    } else {
+        fromGrp.style.display = 'none';
+        toGrp.style.display = 'none';
+    }
+    renderPerformanceTrendChart();
+});
+document.getElementById('trendDateFrom').addEventListener('change', function() { if (document.getElementById('trendPeriod').value === 'custom') { renderPerformanceTrendChart(); } });
+document.getElementById('trendDateTo').addEventListener('change', function() { if (document.getElementById('trendPeriod').value === 'custom') { renderPerformanceTrendChart(); } });
+
+document.addEventListener('DOMContentLoaded', function() { 
+    applyFilters(); 
+    // Trigger change to set initial date display state
+    var evt = new Event('change');
+    document.getElementById('trendPeriod').dispatchEvent(evt);
+});
 </script>
 
     <!-- ══════════════════════════════════════════════════════
