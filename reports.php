@@ -2091,6 +2091,7 @@ renderPerformanceTrendChart();
 function esc(str) { if (str === null || str === undefined || str === '') return '<span style="color:#94a3b8;">&mdash;</span>'; var d = document.createElement('div'); d.textContent = String(str); return d.innerHTML; }
 function formatPrice(v) { if (!v || v == 0) return '<span style="color:#94a3b8;">&mdash;</span>'; var n = parseFloat(v); var parts = n.toFixed(2).split('.'); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ','); return '&#8369; ' + parts[0] + '.' + parts[1]; }
 function formatPriceText(v) { if (!v || v == 0) return '\u2014'; var n = parseFloat(v); var parts = n.toFixed(2).split('.'); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ','); return '\u20B1 ' + parts[0] + '.' + parts[1]; }
+function formatPriceExport(v) { if (!v || v == 0) return '--'; var n = parseFloat(v); var parts = n.toFixed(2).split('.'); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ','); return 'PHP ' + parts[0] + '.' + parts[1]; }
 function formatDate(d) { if (!d) return '<span style="color:#94a3b8;">&mdash;</span>'; var dt = new Date(d); if (isNaN(dt)) return esc(d); return dt.toLocaleDateString('en-PH', {year:'numeric',month:'short',day:'numeric'}); }
 function formatDateTime(d) { if (!d) return '<span style="color:#94a3b8;">&mdash;</span>'; var dt = new Date(d); if (isNaN(dt)) return esc(d); return dt.toLocaleDateString('en-PH', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
 function statusPill(s) { if (!s) return '<span style="color:#94a3b8;">&mdash;</span>'; var c = s.toLowerCase().replace(/\s+/g,'-'); var d = document.createElement('div'); d.textContent = s; return '<span class="status-pill '+c+'">'+d.innerHTML+'</span>'; }
@@ -2371,17 +2372,43 @@ function getExportData() {
     var key = getActiveTabKey(), headers = [], rows = [], title = '';
     switch(key) {
         case 'properties': title='Property Report'; headers=['#','Address','City','Province','Type','Beds','Baths','Sq Ft','Listing Price','Status','Approval','Views','Likes','Listed Date','Posted By'];
-            rows=FILTERED.properties.map(function(r,i){return[i+1,r.StreetAddress||'',r.City||'',r.Province||'',r.PropertyType||'',r.Bedrooms!=null?r.Bedrooms:'',r.Bathrooms!=null?r.Bathrooms:'',r.SquareFootage||'',r.ListingPrice?formatPriceText(r.ListingPrice):'',r.Status||'',r.approval_status||'',r.ViewsCount!=null?r.ViewsCount:0,r.Likes!=null?r.Likes:0,r.ListingDate||'',r.posted_by||''];}); break;
+            rows=FILTERED.properties.map(function(r,i){return[i+1,r.StreetAddress||'',r.City||'',r.Province||'',r.PropertyType||'',r.Bedrooms!=null?r.Bedrooms:'',r.Bathrooms!=null?r.Bathrooms:'',r.SquareFootage||'',r.ListingPrice?formatPriceExport(r.ListingPrice):'',r.Status||'',r.approval_status||'',r.ViewsCount!=null?r.ViewsCount:0,r.Likes!=null?r.Likes:0,r.ListingDate||'',r.posted_by||''];}); break;
         case 'sales': title='Sales Report'; headers=['#','Property','City','Type','Buyer','Email','Sale Price','Sale Date','Agent','Commission','%','Status','Finalized By','Finalized At'];
-            rows=FILTERED.sales.map(function(r,i){return[i+1,r.StreetAddress||'',r.City||'',r.PropertyType||'',r.buyer_name||'',r.buyer_email||'',r.final_sale_price?formatPriceText(r.final_sale_price):'',r.sale_date||'',r.agent_name||'',r.commission_amount?formatPriceText(r.commission_amount):'',r.commission_percentage?r.commission_percentage+'%':'',r.commission_status||'',r.finalized_by_name||'',r.finalized_at||''];}); break;
+            rows=FILTERED.sales.map(function(r,i){return[i+1,r.StreetAddress||'',r.City||'',r.PropertyType||'',r.buyer_name||'',r.buyer_email||'',r.final_sale_price?formatPriceExport(r.final_sale_price):'',r.sale_date||'',r.agent_name||'',r.commission_amount?formatPriceExport(r.commission_amount):'',r.commission_percentage?r.commission_percentage+'%':'',r.commission_status||'',r.finalized_by_name||'',r.finalized_at||''];}); break;
         case 'agents': title='Agent Performance Report'; headers=['#','Agent','Email','Phone','License','Exp.','Specializations','Active','Total','Sales','Revenue','Commission','Tours','Completed','Status','Registered'];
-            rows=FILTERED.agents.map(function(r,i){return[i+1,(r.first_name||'')+' '+(r.last_name||''),r.email||'',r.phone_number||'',r.license_number||'',(r.years_experience!=null?r.years_experience:'')+' yrs',r.specializations||'',r.active_listings,r.total_listings,r.total_sales,r.total_revenue?formatPriceText(r.total_revenue):formatPriceText(0),r.total_commission?formatPriceText(r.total_commission):formatPriceText(0),r.total_tours,r.completed_tours,r.is_approved==1?'Approved':'Pending',r.date_registered||''];}); break;
+            rows=FILTERED.agents.map(function(r,i){return[i+1,(r.first_name||'')+' '+(r.last_name||''),r.email||'',r.phone_number||'',r.license_number||'',(r.years_experience!=null?r.years_experience:'')+' yrs',r.specializations||'',r.active_listings,r.total_listings,r.total_sales,r.total_revenue?formatPriceExport(r.total_revenue):formatPriceExport(0),r.total_commission?formatPriceExport(r.total_commission):formatPriceExport(0),r.total_tours,r.completed_tours,r.is_approved==1?'Approved':'Pending',r.date_registered||''];}); break;
         case 'rentals': title='Rental Report'; headers=['#','Property','City','Type','Tenant','Monthly Rent','Deposit','Lease Start','Lease End','Term','Comm %','Collected','Commission','Payments','Status','Agent','Finalized'];
-            rows=FILTERED.rentals.map(function(r,i){return[i+1,r.StreetAddress||'',r.City||'',r.PropertyType||'',r.tenant_name||'',r.monthly_rent?formatPriceText(r.monthly_rent):'',r.security_deposit?formatPriceText(r.security_deposit):'',r.lease_start_date||'',r.lease_end_date||'',r.lease_term_months?r.lease_term_months+' mo':'',r.commission_rate?r.commission_rate+'%':'',r.total_collected?formatPriceText(r.total_collected):'',r.total_commission?formatPriceText(r.total_commission):'',((r.confirmed_payments||0)+'/'+(parseInt(r.confirmed_payments||0)+parseInt(r.pending_payments||0))),r.lease_status||'Active',r.agent_name||'',r.finalized_at||''];}); break;
+            rows=FILTERED.rentals.map(function(r,i){return[i+1,r.StreetAddress||'',r.City||'',r.PropertyType||'',r.tenant_name||'',r.monthly_rent?formatPriceExport(r.monthly_rent):'',r.security_deposit?formatPriceExport(r.security_deposit):'',r.lease_start_date||'',r.lease_end_date||'',r.lease_term_months?r.lease_term_months+' mo':'',r.commission_rate?r.commission_rate+'%':'',r.total_collected?formatPriceExport(r.total_collected):'',r.total_commission?formatPriceExport(r.total_commission):'',((r.confirmed_payments||0)+'/'+(parseInt(r.confirmed_payments||0)+parseInt(r.pending_payments||0))),r.lease_status||'Active',r.agent_name||'',r.finalized_at||''];}); break;
         case 'tours': title='Tour Requests Report'; headers=['#','Visitor','Email','Phone','Property','City','Tour Date','Time','Type','Status','Agent','Requested','Confirmed','Completed'];
             rows=FILTERED.tours.map(function(r,i){return[i+1,r.user_name||'',r.user_email||'',r.user_phone||'',r.StreetAddress||'',r.City||'',r.tour_date||'',r.tour_time||'',r.tour_type||'',r.request_status||'',r.agent_name||'',r.requested_at||'',r.confirmed_at||'',r.completed_at||''];}); break;
-        case 'insights': title='Performance Insights Report'; headers=['#','Section','Entity','Sold','Rented','Closed','Sold Value','Rental Value','Total Value'];
-            rows=FILTERED.insights.map(function(r,i){return[i+1,r.section||'',r.label||'',r.sold_count||0,r.rented_count||0,r.closed_count||0,formatPriceText(r.sold_value||0),formatPriceText(r.rented_value||0),formatPriceText(r.total_value||0)];}); break;
+        case 'insights': title='Performance Insights Report'; headers=[]; rows=[];
+            var _insights = buildInsightsFromEvents(FILTERED.performanceEvents || []);
+            var insightSections = [];
+            // Section 1: Top Property Types
+            insightSections.push({
+                name: 'Top Property Types',
+                headers: ['#','Property Type','Sold','Rented','Closed','Sold Value','Rental Value','Total Value'],
+                rows: _insights.propertyTypes.map(function(r, i) {
+                    return [i+1, r.label||'', r.sold_count||0, r.rented_count||0, r.closed_count||0, formatPriceExport(r.sold_value), formatPriceExport(r.rented_value), formatPriceExport(r.total_value)];
+                })
+            });
+            // Section 2: Top Locations
+            insightSections.push({
+                name: 'Top Locations',
+                headers: ['#','City','Sold','Rented','Closed','Sold Value','Rental Value','Total Value'],
+                rows: _insights.locations.map(function(r, i) {
+                    return [i+1, r.label||'', r.sold_count||0, r.rented_count||0, r.closed_count||0, formatPriceExport(r.sold_value), formatPriceExport(r.rented_value), formatPriceExport(r.total_value)];
+                })
+            });
+            // Section 3: Top Agents
+            insightSections.push({
+                name: 'Top Agents',
+                headers: ['#','Agent','Sold','Rented','Closed','Sold Value','Rental Value','Total Value'],
+                rows: _insights.agents.map(function(r, i) {
+                    return [i+1, r.label||'', r.sold_count||0, r.rented_count||0, r.closed_count||0, formatPriceExport(r.sold_value), formatPriceExport(r.rented_value), formatPriceExport(r.total_value)];
+                })
+            });
+            return { title: title, sections: insightSections, key: key, totalRows: insightSections.reduce(function(s, sec) { return s + sec.rows.length; }, 0) };
     }
     return {title:title,headers:headers,rows:rows,key:key};
 }
@@ -2394,14 +2421,30 @@ function openExportPreview(type) {
     pendingExportType = type;
     var ed = getExportData();
     document.getElementById('exportModalTitle').textContent = ed.title + ' \u2014 Preview';
-    document.getElementById('exportRowCount').textContent = ed.rows.length;
     document.getElementById('exportTabName').textContent = ed.title;
-    var h = '<table class="export-preview-table"><thead><tr>';
-    ed.headers.forEach(function(hd) { h += '<th>'+hd+'</th>'; }); h += '</tr></thead><tbody>';
-    var preview = ed.rows.slice(0, 100);
-    preview.forEach(function(row) { h += '<tr>'; row.forEach(function(cell) { h += '<td>'+(cell!=null&&cell!=undefined?cell:'\u2014')+'</td>'; }); h += '</tr>'; });
-    if (ed.rows.length > 100) h += '<tr><td colspan="'+ed.headers.length+'" style="text-align:center;color:#94a3b8;padding:1rem;font-style:italic;">&hellip; and '+(ed.rows.length-100)+' more records</td></tr>';
-    h += '</tbody></table>';
+    var h = '';
+    if (ed.sections) {
+        var totalRows = ed.totalRows || 0;
+        document.getElementById('exportRowCount').textContent = totalRows;
+        ed.sections.forEach(function(section) {
+            h += '<div style="margin-bottom:1.25rem;"><div style="font-weight:700;color:#d4af37;font-size:0.85rem;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.5px;">'+esc(section.name)+' <span style="color:#94a3b8;font-weight:400;font-size:0.78rem;text-transform:none;">('+section.rows.length+' records)</span></div>';
+            h += '<table class="export-preview-table"><thead><tr>';
+            section.headers.forEach(function(hd) { h += '<th>'+hd+'</th>'; });
+            h += '</tr></thead><tbody>';
+            var preview = section.rows.slice(0, 50);
+            preview.forEach(function(row) { h += '<tr>'; row.forEach(function(cell) { h += '<td>'+(cell!=null&&cell!=undefined?cell:'\u2014')+'</td>'; }); h += '</tr>'; });
+            if (section.rows.length > 50) h += '<tr><td colspan="'+section.headers.length+'" style="text-align:center;color:#94a3b8;padding:0.75rem;font-style:italic;">&hellip; and '+(section.rows.length-50)+' more records</td></tr>';
+            h += '</tbody></table></div>';
+        });
+    } else {
+        document.getElementById('exportRowCount').textContent = ed.rows.length;
+        h = '<table class="export-preview-table"><thead><tr>';
+        ed.headers.forEach(function(hd) { h += '<th>'+hd+'</th>'; }); h += '</tr></thead><tbody>';
+        var preview = ed.rows.slice(0, 100);
+        preview.forEach(function(row) { h += '<tr>'; row.forEach(function(cell) { h += '<td>'+(cell!=null&&cell!=undefined?cell:'\u2014')+'</td>'; }); h += '</tr>'; });
+        if (ed.rows.length > 100) h += '<tr><td colspan="'+ed.headers.length+'" style="text-align:center;color:#94a3b8;padding:1rem;font-style:italic;">&hellip; and '+(ed.rows.length-100)+' more records</td></tr>';
+        h += '</tbody></table>';
+    }
     document.getElementById('exportPreviewBody').innerHTML = h;
     document.getElementById('confirmExportPDF').style.display = type==='pdf'?'inline-flex':'none';
     document.getElementById('confirmExportExcel').style.display = type==='excel'?'inline-flex':'none';
@@ -2431,24 +2474,19 @@ var pdfLogoBase64 = null;
 document.getElementById('confirmExportPDF').addEventListener('click', function() {
     var ed=getExportData(), jsPDFLib=window.jspdf, doc=new jsPDFLib.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
     var pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+    var pdfTotalRecords = ed.sections ? ed.totalRows : ed.rows.length;
 
     function drawHeader(pageNum, totalPages) {
-        // Dark header bar
         doc.setFillColor(22, 18, 9); doc.rect(0, 0, pw, 24, 'F');
-        // Gold accent line
         doc.setFillColor(212, 175, 55); doc.rect(0, 24, pw, 1.2, 'F');
-        // Logo
-        var logoX = 10, textStartX = 10;
+        var textStartX = 10;
         if (pdfLogoBase64) { try { doc.addImage(pdfLogoBase64, 'PNG', 10, 3, 18, 18); textStartX = 31; } catch(e) {} }
-        // Brand name
         doc.setTextColor(212, 175, 55); doc.setFontSize(15); doc.setFont('helvetica', 'bold');
         doc.text('HomeEstate Realty', textStartX, 11);
-        // Subtitle
         doc.setTextColor(200, 200, 200); doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
         doc.text(ed.title + '  |  Generated: ' + new Date().toLocaleDateString('en-PH', {year:'numeric', month:'long', day:'numeric'}), textStartX, 17);
-        // Record count & date badge
         doc.setFontSize(8); doc.setTextColor(148, 163, 184);
-        doc.text('Total Records: ' + ed.rows.length, pw - 14, 11, {align: 'right'});
+        doc.text('Total Records: ' + pdfTotalRecords, pw - 14, 11, {align: 'right'});
         doc.setFontSize(7); doc.text('Page ' + pageNum + ' of ' + totalPages, pw - 14, 17, {align: 'right'});
     }
 
@@ -2458,18 +2496,38 @@ document.getElementById('confirmExportPDF').addEventListener('click', function()
         doc.text('HomeEstate Realty  \u2022  Admin Reports  \u2022  Confidential', pw / 2, ph - 7, {align: 'center'});
     }
 
-    // Table
-    doc.autoTable({ head: [ed.headers], body: ed.rows, startY: 30, theme: 'grid',
+    var autoTableOpts = {
+        theme: 'grid',
         styles: { fontSize: 7, cellPadding: 2.5, overflow: 'linebreak', lineColor: [226, 232, 240], lineWidth: 0.2, textColor: [51, 65, 85] },
         headStyles: { fillColor: [15, 23, 42], textColor: [212, 175, 55], fontStyle: 'bold', fontSize: 6.5, cellPadding: 3, lineColor: [212, 175, 55], lineWidth: 0.4 },
         alternateRowStyles: { fillColor: [248, 250, 252] },
         margin: { top: 30, left: 10, right: 10, bottom: 16 },
-        didDrawPage: function(data) {
-            drawHeader(data.pageNumber, doc.internal.getNumberOfPages());
-            drawFooter();
-        }
-    });
-    // Fix total pages on all pages
+        didDrawPage: function(data) { drawHeader(data.pageNumber, doc.internal.getNumberOfPages()); drawFooter(); }
+    };
+
+    if (ed.sections) {
+        var startY = 30;
+        ed.sections.forEach(function(section) {
+            if (section.rows.length === 0) return;
+            if (startY > ph - 40) { doc.addPage(); startY = 30; }
+            doc.setFillColor(15, 23, 42); doc.rect(10, startY, pw - 20, 7, 'F');
+            doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(212, 175, 55);
+            doc.text(section.name + '  (' + section.rows.length + ' records)', 14, startY + 4.8);
+            startY += 9;
+            doc.autoTable(Object.assign({}, autoTableOpts, {
+                head: [section.headers],
+                body: section.rows,
+                startY: startY,
+                didDrawPage: function(data) { drawHeader(data.pageNumber, doc.internal.getNumberOfPages()); drawFooter(); }
+            }));
+            startY = doc.lastAutoTable.finalY + 10;
+        });
+    } else {
+        doc.autoTable(Object.assign({}, autoTableOpts, {
+            head: [ed.headers], body: ed.rows, startY: 30
+        }));
+    }
+
     var totalPages = doc.internal.getNumberOfPages();
     for (var i = 1; i <= totalPages; i++) { doc.setPage(i); drawHeader(i, totalPages); drawFooter(); }
 
@@ -2479,10 +2537,22 @@ document.getElementById('confirmExportPDF').addEventListener('click', function()
 
 // Excel Export
 document.getElementById('confirmExportExcel').addEventListener('click', function() {
-    var ed=getExportData(), wsData=[ed.headers].concat(ed.rows), ws=XLSX.utils.aoa_to_sheet(wsData);
-    var colW=ed.headers.map(function(h,i){var m=h.length;ed.rows.forEach(function(r){var s=String(r[i]!=null?r[i]:'');if(s.length>m)m=s.length;});return{wch:Math.min(Math.max(m+2,10),40)};});
-    ws['!cols']=colW;
-    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,ed.title.substring(0,31));
+    var ed=getExportData(), wb=XLSX.utils.book_new();
+    if (ed.sections) {
+        ed.sections.forEach(function(section) {
+            var wsData = [section.headers].concat(section.rows);
+            var ws = XLSX.utils.aoa_to_sheet(wsData);
+            var colW = section.headers.map(function(h,i){ var m=h.length; section.rows.forEach(function(r){ var s=String(r[i]!=null?r[i]:''); if(s.length>m) m=s.length; }); return {wch:Math.min(Math.max(m+2,10),40)}; });
+            ws['!cols'] = colW;
+            var sheetName = section.name.substring(0,31);
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        });
+    } else {
+        var wsData=[ed.headers].concat(ed.rows), ws=XLSX.utils.aoa_to_sheet(wsData);
+        var colW=ed.headers.map(function(h,i){var m=h.length;ed.rows.forEach(function(r){var s=String(r[i]!=null?r[i]:'');if(s.length>m)m=s.length;});return{wch:Math.min(Math.max(m+2,10),40)};});
+        ws['!cols']=colW;
+        XLSX.utils.book_append_sheet(wb,ws,ed.title.substring(0,31));
+    }
     XLSX.writeFile(wb,ed.title.toLowerCase().replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
     closeExportPreview();
 });

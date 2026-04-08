@@ -681,6 +681,11 @@ if (!empty($temp_info['first_name'])) {
                         <i class="bi bi-receipt me-1 d-lg-none"></i>Rental Payments
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'agent_reports.php' || (isset($active_page) && $active_page == 'agent_reports.php') ? 'active' : ''; ?>" href="agent_reports.php">
+                        <i class="bi bi-graph-up-arrow me-1 d-lg-none"></i>Reports
+                    </a>
+                </li>
             </ul>
 
             <!-- Right Side Actions -->
