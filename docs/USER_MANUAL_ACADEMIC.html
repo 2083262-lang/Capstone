@@ -2109,7 +2109,7 @@
 
     <h3>8.2 Browsing Properties</h3>
 
-    <p class="indent">Access the Property Search by clicking <strong>"Browse Properties"</strong> in the navigation bar or using the home page search bar. This navigates to <code>user_pages/search_results.php</code>.</p>
+    <p class="indent">Access the Property Search by clicking <strong>"Browse Properties"</strong> in the navigation bar or using the home page search bar. This navigates to <code>user_pages/search_results.php</code>. The page features a comprehensive filter sidebar and a live-updating results grid.</p>
 
     <!-- FIGURE: Search Results -->
     <div class="figure-container">
@@ -2120,6 +2120,47 @@
         </div>
         <div class="figure-caption"><strong>Figure 8.3:</strong> Property Search Results with Filter Sidebar and Grid View</div>
         <div class="figure-description">The search results page features a left sidebar (25% width) with comprehensive filters: City dropdown, Property Type multi-select, Status radio buttons, Price Range inputs, Bedrooms/Bathrooms sliders, Category dropdown, Agent filter, and Sort By options. The main area (75% width) displays property cards in a grid layout (24 per page) with thumbnail images, status badges, addresses, property details, prices, and view/like counts. AJAX-driven updates provide seamless filtering and pagination.</div>
+    </div>
+
+    <h4>Available Filter Options:</h4>
+    <table>
+        <thead>
+            <tr><th>Filter</th><th>Options / Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>City</strong></td><td>Dropdown list of cities where properties are located</td></tr>
+            <tr><td><strong>Property Type</strong></td><td>House, Condominium, Townhouse, Lot, Apartment, Commercial, or other configured types</td></tr>
+            <tr><td><strong>Status</strong></td><td>For Sale, For Rent (radio button selection)</td></tr>
+            <tr><td><strong>Price Range</strong></td><td>Minimum and maximum price input fields (Philippine Peso)</td></tr>
+            <tr><td><strong>Bedrooms</strong></td><td>Minimum number of bedrooms (slider or dropdown)</td></tr>
+            <tr><td><strong>Bathrooms</strong></td><td>Minimum number of bathrooms (slider or dropdown)</td></tr>
+            <tr><td><strong>Agent</strong></td><td>Filter results to properties listed by a specific agent</td></tr>
+            <tr><td><strong>Sort By</strong></td><td>Newest First, Oldest First, Price: Low to High, Price: High to Low, Most Viewed</td></tr>
+        </tbody>
+    </table>
+
+    <h4>Filtering Properties:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Click <strong>"Browse Properties"</strong> in the navigation bar or use the search bar on the home page to open <code>user_pages/search_results.php</code>.</li>
+            <li>The filter sidebar is displayed on the left side of the page. By default, all approved properties are shown.</li>
+            <li>Select a <strong>City</strong> from the dropdown to limit results to a specific location.</li>
+            <li>Choose a <strong>Property Type</strong> (e.g., Condominium, House, Townhouse) to filter by category of property.</li>
+            <li>Select a listing <strong>Status</strong> — choose <strong>"For Sale"</strong> to view properties available for purchase, or <strong>"For Rent"</strong> to view rental listings.</li>
+            <li>Enter a <strong>Minimum Price</strong> and <strong>Maximum Price</strong> to define your budget range.</li>
+            <li>Set the minimum number of <strong>Bedrooms</strong> and <strong>Bathrooms</strong> required.</li>
+            <li>Optionally, select a specific <strong>Agent</strong> to browse only their listed properties.</li>
+            <li>Choose a <strong>Sort By</strong> option to control the display order of results (e.g., Newest First or Price: Low to High).</li>
+            <li>Results update automatically as filters are applied. Browse the property cards in the main grid area.</li>
+            <li>Click <strong>"View Details"</strong> on any property card to open the full property detail page.</li>
+            <li>To reset all filters and view all available properties, click the <strong>"Clear Filters"</strong> or <strong>"Reset"</strong> button at the top of the filter sidebar.</li>
+        </ol>
+    </div>
+
+    <div class="callout callout-info">
+        <span class="callout-label">Tip:</span>
+        Multiple filters can be applied simultaneously to narrow your search. The results grid updates in real time without requiring a page reload. The total number of matching properties is displayed above the grid.
     </div>
 
     <div class="page-footer">
