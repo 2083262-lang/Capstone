@@ -39,6 +39,7 @@ $stmt_fetch_agent->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Review Agent - <?php echo htmlspecialchars($agent_data['first_name'] ?? ''); ?> - Admin Panel</title>
+    <link rel="shortcut icon" href="images/Logo.png" type="image/png">
     <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
     <link href="<?= ASSETS_CSS ?>inter-font.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= ASSETS_CSS ?>fontawesome-all.min.css">

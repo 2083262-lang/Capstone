@@ -7,6 +7,7 @@
     <title>Admin Profile Modal Preview</title>
     <link href="<?= ASSETS_CSS ?>bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= ASSETS_CSS ?>fontawesome-all.min.css">
+    <link rel="shortcut icon" href="images/Logo.png" type="image/png">
 </head>
 <body>
     <div class="container mt-5">

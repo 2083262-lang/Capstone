@@ -1,0 +1,2503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeEstate Realty — User Manual (Academic Format)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&family=Roboto:wght@400;500;700&family=Playfair+Display:wght@700;800&display=swap');
+
+        :root {
+            --primary: #8B1A1A;
+            --primary-dark: #5C0E0E;
+            --accent-gold: #C9A84C;
+            --dark: #1A1A1A;
+            --text-body: #333333;
+            --text-secondary: #555555;
+            --border: #CCCCCC;
+            --light-bg: #F8F8F8;
+            --white: #FFFFFF;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @page {
+            size: A4;
+            margin: 25mm 20mm 25mm 25mm;
+        }
+
+        body {
+            font-family: 'Times New Roman', Georgia, serif;
+            color: var(--text-body);
+            line-height: 1.8;
+            font-size: 12pt;
+            background: #E0E0E0;
+        }
+
+        /* ============================================
+           PAGE CONTAINER
+        ============================================ */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            background: var(--white);
+            padding: 25mm 20mm 25mm 25mm;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            page-break-after: always;
+            position: relative;
+        }
+
+        .page:last-child {
+            page-break-after: avoid;
+        }
+
+        /* ============================================
+           COVER PAGE
+        ============================================ */
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 297mm;
+            padding: 40mm 25mm;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, #A52525 100%);
+            color: var(--white);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover-page::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            pointer-events: none;
+        }
+
+        .cover-logo {
+            width: 120px;
+            height: 120px;
+            border: 3px solid var(--accent-gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-logo img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        .cover-logo-text {
+            font-size: 40pt;
+            font-weight: bold;
+            color: var(--accent-gold);
+        }
+
+        .cover-system-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 28pt;
+            font-weight: 800;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            color: var(--white);
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-subtitle {
+            font-size: 14pt;
+            font-weight: 400;
+            color: var(--accent-gold);
+            letter-spacing: 1px;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-divider {
+            width: 200px;
+            height: 3px;
+            background: var(--accent-gold);
+            margin: 0 auto 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-doc-type {
+            font-size: 22pt;
+            font-weight: 700;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            margin-bottom: 50px;
+            color: var(--white);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-info {
+            font-size: 11pt;
+            line-height: 2;
+            color: rgba(255,255,255,0.85);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-info strong {
+            color: var(--accent-gold);
+        }
+
+        .cover-footer {
+            position: absolute;
+            bottom: 30mm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10pt;
+            color: rgba(255,255,255,0.6);
+            z-index: 1;
+        }
+
+        /* ============================================
+           TABLE OF CONTENTS
+        ============================================ */
+        .toc-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 22pt;
+            font-weight: 700;
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .toc-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 6px 0;
+            border-bottom: 1px dotted var(--border);
+            font-size: 11pt;
+        }
+
+        .toc-list li.toc-main {
+            font-weight: 700;
+            font-size: 12pt;
+            padding-top: 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--primary);
+        }
+
+        .toc-list li.toc-sub {
+            padding-left: 25px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            font-size: 10.5pt;
+        }
+
+        .toc-page {
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        /* ============================================
+           SECTION HEADINGS
+        ============================================ */
+        .section-heading {
+            font-family: 'Playfair Display', serif;
+            font-size: 20pt;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 5px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .section-number {
+            color: var(--accent-gold);
+            margin-right: 10px;
+        }
+
+        h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 15pt;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-top: 25px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1.5px solid var(--accent-gold);
+        }
+
+        h4 {
+            font-size: 12pt;
+            font-weight: 700;
+            color: var(--text-body);
+            margin-top: 18px;
+            margin-bottom: 8px;
+        }
+
+        /* ============================================
+           BODY TEXT
+        ============================================ */
+        p {
+            text-align: justify;
+            margin-bottom: 12px;
+            text-indent: 0;
+        }
+
+        .indent {
+            text-indent: 40px;
+        }
+
+        ul, ol {
+            margin: 10px 0 15px 30px;
+        }
+
+        ul li, ol li {
+            margin-bottom: 5px;
+        }
+
+        strong {
+            color: var(--dark);
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 10.5pt;
+            background: var(--light-bg);
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #DDD;
+            color: var(--primary);
+        }
+
+        /* ============================================
+           TABLES
+        ============================================ */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0 20px;
+            font-size: 10.5pt;
+        }
+
+        table thead th {
+            background: var(--primary);
+            color: var(--white);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        table tbody td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #E0E0E0;
+            vertical-align: top;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: var(--light-bg);
+        }
+
+        table tbody tr:hover {
+            background: #F0EDE4;
+        }
+
+        /* ============================================
+           FIGURE / SCREENSHOT PLACEHOLDERS
+        ============================================ */
+        .figure-container {
+            margin: 25px 0 30px;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+
+        .screenshot-placeholder {
+            width: 100%;
+            min-height: 280px;
+            background: linear-gradient(135deg, #F5F5F5 0%, #E8E8E8 100%);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 11pt;
+            margin-bottom: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screenshot-placeholder::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: linear-gradient(135deg, #DDD 0%, #CCC 100%);
+            border-radius: 6px 6px 0 0;
+        }
+
+        .screenshot-placeholder::after {
+            content: '⬤ ⬤ ⬤';
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            font-size: 8pt;
+            color: #BBB;
+            letter-spacing: 3px;
+        }
+
+        .screenshot-placeholder .icon {
+            font-size: 36pt;
+            margin-bottom: 10px;
+            color: #CCC;
+            margin-top: 20px;
+        }
+
+        .screenshot-placeholder .label {
+            font-size: 10pt;
+            color: #AAA;
+            font-style: italic;
+        }
+
+        .screenshot-placeholder .sublabel {
+            font-size: 9pt;
+            color: #BBB;
+            margin-top: 3px;
+        }
+
+        .figure-caption {
+            font-size: 10pt;
+            font-style: italic;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .figure-caption strong {
+            font-style: normal;
+            color: var(--primary);
+        }
+
+        .figure-description {
+            font-size: 10.5pt;
+            color: var(--text-secondary);
+            text-align: justify;
+            margin-top: 8px;
+            padding: 10px 15px;
+            background: var(--light-bg);
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* ============================================
+           CALLOUT BOXES
+        ============================================ */
+        .callout {
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 10.5pt;
+        }
+
+        .callout-note {
+            background: #FFF8E1;
+            border-left: 4px solid var(--accent-gold);
+        }
+
+        .callout-important {
+            background: #FFF0F0;
+            border-left: 4px solid var(--primary);
+        }
+
+        .callout-info {
+            background: #F0F4FF;
+            border-left: 4px solid #4A70B5;
+        }
+
+        .callout-label {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* ============================================
+           STEP-BY-STEP PROCEDURES
+        ============================================ */
+        .procedure {
+            margin: 15px 0;
+            padding: 15px 20px;
+            background: var(--light-bg);
+            border-radius: 6px;
+            border: 1px solid #E5E5E5;
+        }
+
+        .procedure-title {
+            font-weight: 700;
+            font-size: 11pt;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .procedure ol {
+            margin-left: 20px;
+        }
+
+        .procedure ol li {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+
+        /* ============================================
+           PAGE HEADER / FOOTER
+        ============================================ */
+        .page-header {
+            position: absolute;
+            top: 12mm;
+            left: 25mm;
+            right: 20mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 8.5pt;
+            color: var(--text-secondary);
+        }
+
+        .page-header-left {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .page-header-right {
+            font-style: italic;
+        }
+
+        .page-footer {
+            position: absolute;
+            bottom: 12mm;
+            left: 25mm;
+            right: 20mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            font-size: 8.5pt;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           PRINT STYLES
+        ============================================ */
+        @media print {
+            body {
+                background: white;
+            }
+            .page {
+                margin: 0;
+                box-shadow: none;
+                width: 100%;
+                padding: 20mm 18mm 20mm 22mm;
+            }
+            .cover-page {
+                padding: 30mm 20mm;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        /* ============================================
+           MISC
+        ============================================ */
+        .spacer { height: 20px; }
+        .spacer-lg { height: 40px; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 9pt;
+            font-weight: 600;
+            color: white;
+        }
+
+        .badge-green { background: #28A745; }
+        .badge-yellow { background: #E6A817; }
+        .badge-red { background: #DC3545; }
+        .badge-blue { background: #007BFF; }
+        .badge-gray { background: #6C757D; }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 15px 0;
+        }
+
+        .list-table td:first-child {
+            font-weight: 600;
+            white-space: nowrap;
+            width: 180px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ================================================================
+     COVER PAGE
+================================================================ -->
+<div class="page cover-page">
+    <div class="cover-logo">
+        <span class="cover-logo-text">🏠</span>
+    </div>
+    <div class="cover-system-name">HomeEstate Realty</div>
+    <div class="cover-subtitle">Real Estate Property Management System</div>
+    <div class="cover-divider"></div>
+    <div class="cover-doc-type">User Manual</div>
+    <div class="cover-info">
+        <strong>Document Type:</strong> Capstone Project User Manual<br>
+        <strong>Version:</strong> 1.0<br>
+        <strong>Date:</strong> April 2026<br><br>
+        <strong>Prepared for:</strong> Capstone Documentation<br>
+    </div>
+    <div class="cover-footer">
+        HomeEstate Realty &mdash; Real Estate Property Management System &bull; Capstone Project 2026
+    </div>
+</div>
+
+<!-- ================================================================
+     TABLE OF CONTENTS
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Table of Contents</span>
+    </div>
+
+    <div class="toc-title">Table of Contents</div>
+
+    <ul class="toc-list">
+        <li class="toc-main"><span>1. Introduction</span></li>
+        <li class="toc-sub"><span>1.1 Overview of the System</span></li>
+        <li class="toc-sub"><span>1.2 Purpose of the Manual</span></li>
+        <li class="toc-sub"><span>1.3 Scope and Intended Users</span></li>
+
+        <li class="toc-main"><span>2. System Overview</span></li>
+        <li class="toc-sub"><span>2.1 General Description</span></li>
+        <li class="toc-sub"><span>2.2 System Modules</span></li>
+
+        <li class="toc-main"><span>3. System Requirements</span></li>
+        <li class="toc-sub"><span>3.1 Hardware Requirements</span></li>
+        <li class="toc-sub"><span>3.2 Software Requirements</span></li>
+
+        <li class="toc-main"><span>4. User Roles and Access Levels</span></li>
+        <li class="toc-sub"><span>4.1 Administrator</span></li>
+        <li class="toc-sub"><span>4.2 Real Estate Agent</span></li>
+        <li class="toc-sub"><span>4.3 Public User / Client</span></li>
+
+        <li class="toc-main"><span>5. Getting Started</span></li>
+        <li class="toc-sub"><span>5.1 Accessing the System</span></li>
+        <li class="toc-sub"><span>5.2 Agent Registration</span></li>
+        <li class="toc-sub"><span>5.3 Logging In</span></li>
+        <li class="toc-sub"><span>5.4 Two-Factor Authentication (2FA)</span></li>
+        <li class="toc-sub"><span>5.5 Logging Out</span></li>
+
+        <li class="toc-main"><span>6. Administrator Guide</span></li>
+        <li class="toc-sub"><span>6.1 Admin Dashboard</span></li>
+        <li class="toc-sub"><span>6.2 Navigation and Layout</span></li>
+        <li class="toc-sub"><span>6.3 Property Management</span></li>
+        <li class="toc-sub"><span>6.4 Agent Management</span></li>
+        <li class="toc-sub"><span>6.5 Tour Request Management</span></li>
+        <li class="toc-sub"><span>6.6 Sale Approvals</span></li>
+        <li class="toc-sub"><span>6.7 Rental Approvals</span></li>
+        <li class="toc-sub"><span>6.8 Rental Payment Management</span></li>
+        <li class="toc-sub"><span>6.9 Lease Management</span></li>
+        <li class="toc-sub"><span>6.10 Commission Processing</span></li>
+        <li class="toc-sub"><span>6.11 Reports</span></li>
+        <li class="toc-sub"><span>6.12 Notifications</span></li>
+        <li class="toc-sub"><span>6.13 System Settings</span></li>
+        <li class="toc-sub"><span>6.14 Admin Profile</span></li>
+
+        <li class="toc-main"><span>7. Real Estate Agent Guide</span></li>
+        <li class="toc-sub"><span>7.1 Agent Dashboard</span></li>
+        <li class="toc-sub"><span>7.2 Completing Your Agent Profile</span></li>
+        <li class="toc-sub"><span>7.3 Property Management</span></li>
+        <li class="toc-sub"><span>7.4 Tour Request Management</span></li>
+        <li class="toc-sub"><span>7.5 Marking a Property as Sold</span></li>
+        <li class="toc-sub"><span>7.6 Marking a Property as Rented</span></li>
+        <li class="toc-sub"><span>7.7 Rental Payment Recording</span></li>
+        <li class="toc-sub"><span>7.8 Lease Management</span></li>
+        <li class="toc-sub"><span>7.9 Commission Tracking</span></li>
+        <li class="toc-sub"><span>7.10 Agent Notifications</span></li>
+
+        <li class="toc-main"><span>8. Public User / Client Guide</span></li>
+        <li class="toc-sub"><span>8.1 Home Page</span></li>
+        <li class="toc-sub"><span>8.2 Browsing Properties</span></li>
+        <li class="toc-sub"><span>8.3 Viewing Property Details</span></li>
+        <li class="toc-sub"><span>8.4 Requesting a Property Tour</span></li>
+        <li class="toc-sub"><span>8.5 Browsing Agents</span></li>
+        <li class="toc-sub"><span>8.6 Viewing an Agent Profile</span></li>
+        <li class="toc-sub"><span>8.7 Liking a Property</span></li>
+        <li class="toc-sub"><span>8.8 About Page</span></li>
+
+        <li class="toc-main"><span>9. Screens and Features Explanation</span></li>
+        <li class="toc-sub"><span>9.1 Common Interface Elements</span></li>
+        <li class="toc-sub"><span>9.2 Status Badges and Indicators</span></li>
+        <li class="toc-sub"><span>9.3 Notification System</span></li>
+        <li class="toc-sub"><span>9.4 File Upload Components</span></li>
+        <li class="toc-sub"><span>9.5 Email Notifications</span></li>
+
+        <li class="toc-main"><span>10. Error Handling and Troubleshooting</span></li>
+        <li class="toc-sub"><span>10.1 Login Issues</span></li>
+        <li class="toc-sub"><span>10.2 Two-Factor Authentication Issues</span></li>
+        <li class="toc-sub"><span>10.3 Session Timeout</span></li>
+        <li class="toc-sub"><span>10.4 File Upload Errors</span></li>
+        <li class="toc-sub"><span>10.5 Form Validation Errors</span></li>
+        <li class="toc-sub"><span>10.6 Tour Request Conflicts</span></li>
+        <li class="toc-sub"><span>10.7 General Troubleshooting</span></li>
+
+        <li class="toc-main"><span>11. Best Practices and Usage Tips</span></li>
+        <li class="toc-sub"><span>11.1 For Administrators</span></li>
+        <li class="toc-sub"><span>11.2 For Agents</span></li>
+        <li class="toc-sub"><span>11.3 For Public Users</span></li>
+        <li class="toc-sub"><span>11.4 Security Recommendations</span></li>
+
+        <li class="toc-main"><span>12. Glossary of Terms</span></li>
+    </ul>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>ii</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 1: INTRODUCTION
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 1: Introduction</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">1.</span> Introduction</h2>
+
+    <h3>1.1 Overview of the System</h3>
+
+    <p class="indent">HomeEstate Realty is a web-based real estate property management system designed to streamline the processes of listing, marketing, selling, and renting real estate properties. The system serves as a centralized platform that connects property administrators, licensed real estate agents, and prospective clients (buyers and tenants) in a unified digital environment.</p>
+
+    <p class="indent">The platform supports the complete property lifecycle &mdash; from initial listing creation by agents or administrators, through administrative approval, to the finalization of sales and rental agreements. It incorporates comprehensive features including property search and filtering, image gallery management, tour scheduling, rental payment tracking, agent commission processing, and automated email notifications.</p>
+
+    <p class="indent">HomeEstate Realty is developed using PHP and MySQL, and is deployed on an Apache web server environment (XAMPP). The system implements session-based authentication with two-factor authentication (2FA) via email-delivered one-time passwords (OTP), ensuring secure access for authorized personnel.</p>
+
+    <h3>1.2 Purpose of the Manual</h3>
+
+    <p class="indent">This User Manual serves as a comprehensive reference guide for all users of the HomeEstate Realty system. Its primary objectives are:</p>
+
+    <ul>
+        <li>To provide clear, step-by-step instructions for performing all system operations.</li>
+        <li>To describe the functionality of each module, page, and interface component.</li>
+        <li>To assist new users in understanding system workflows and navigation.</li>
+        <li>To serve as a troubleshooting reference for common issues encountered during system use.</li>
+        <li>To document the system in a format suitable for inclusion in capstone project documentation.</li>
+    </ul>
+
+    <h3>1.3 Scope and Intended Users</h3>
+
+    <p class="indent">This manual covers all features and functionalities of the HomeEstate Realty system as deployed in version 1.0. The document is intended for three categories of users:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>User Role</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Administrator</strong></td>
+                <td>The system administrator who manages the entire platform, including property approvals, agent management, sale and rental finalization, commission processing, and system configuration.</td>
+            </tr>
+            <tr>
+                <td><strong>Real Estate Agent</strong></td>
+                <td>Licensed real estate professionals who list properties, manage tours, process sales and rentals, record payments, and track commissions.</td>
+            </tr>
+            <tr>
+                <td><strong>Public User / Client</strong></td>
+                <td>Prospective buyers, tenants, or general visitors who browse property listings, view agent profiles, and request property tours without requiring authentication.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>1</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 2: SYSTEM OVERVIEW
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 2: System Overview</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">2.</span> System Overview</h2>
+
+    <h3>2.1 General Description</h3>
+
+    <p class="indent">HomeEstate Realty operates as a three-tier web application consisting of a public-facing portal for property browsing, an agent portal for property management, and an administrative portal for oversight and approvals. The system enforces a structured approval workflow ensuring that all property listings, sales, and rental transactions are verified by the administrator before finalization.</p>
+
+    <p>Key architectural characteristics include:</p>
+
+    <ul>
+        <li><strong>Role-Based Access Control (RBAC):</strong> Three distinct user roles (Admin, Agent, Public) with granular permission enforcement.</li>
+        <li><strong>Approval-Based Workflow:</strong> Properties submitted by agents require administrative approval before public visibility. Sale and rental transactions similarly require administrative review and finalization.</li>
+        <li><strong>Two-Factor Authentication (2FA):</strong> Mandatory for admin and agent logins to enhance security.</li>
+        <li><strong>Email Notification System:</strong> Automated notifications via PHPMailer for account events, approval statuses, tour confirmations, payment updates, and lease expiry alerts.</li>
+        <li><strong>Session Security:</strong> 30-minute inactivity timeout, secure cookie flags, session regeneration after authentication, and IP/User-Agent logging.</li>
+    </ul>
+
+    <h3>2.2 System Modules</h3>
+
+    <p class="indent">The HomeEstate Realty system is organized into the following functional modules:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Module</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Authentication</strong></td>
+                <td>Handles user login, registration, two-factor authentication, session management, and logout.</td>
+            </tr>
+            <tr>
+                <td><strong>Property Management</strong></td>
+                <td>Supports property listing creation, editing, approval, image and floor plan management, and status tracking (For Sale, For Rent, Sold, Rented).</td>
+            </tr>
+            <tr>
+                <td><strong>Agent Management</strong></td>
+                <td>Manages agent registration, profile completion, administrative approval/rejection, and agent specialization tracking.</td>
+            </tr>
+            <tr>
+                <td><strong>Tour Request</strong></td>
+                <td>Enables public users to schedule property tours; agents and administrators to accept, reject, complete, or cancel tour requests with conflict detection.</td>
+            </tr>
+            <tr>
+                <td><strong>Sales Processing</strong></td>
+                <td>Handles agent submission of sale verifications, administrative approval, finalization of sales, and recording of sale details.</td>
+            </tr>
+            <tr>
+                <td><strong>Rental Processing</strong></td>
+                <td>Manages rental verification submissions, administrative approval, lease creation, lease renewal, and lease termination.</td>
+            </tr>
+            <tr>
+                <td><strong>Rental Payment</strong></td>
+                <td>Tracks monthly rental payments submitted by agents with supporting documents, administrative confirmation/rejection, and commission calculation.</td>
+            </tr>
+            <tr>
+                <td><strong>Commission</strong></td>
+                <td>Calculates and tracks agent commissions from finalized sales and confirmed rental payments, supports payment processing with proof of payment uploads.</td>
+            </tr>
+            <tr>
+                <td><strong>Notification</strong></td>
+                <td>Dual notification system &mdash; admin-facing notifications for platform events and agent-facing notifications for property, tour, and commission updates.</td>
+            </tr>
+            <tr>
+                <td><strong>Reporting</strong></td>
+                <td>Comprehensive reporting dashboard with property, sales, rental, agent performance, and tour request reports with export capabilities.</td>
+            </tr>
+            <tr>
+                <td><strong>System Settings</strong></td>
+                <td>Administrative configuration of property types, amenities, and agent specializations.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>2</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 3: SYSTEM REQUIREMENTS
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 3: System Requirements</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">3.</span> System Requirements</h2>
+
+    <h3>3.1 Hardware Requirements</h3>
+
+    <p class="indent">The following minimum hardware specifications are recommended for users accessing the HomeEstate Realty system.</p>
+
+    <h4>For End Users (Client Access):</h4>
+    <table>
+        <thead>
+            <tr><th>Component</th><th>Minimum Requirement</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Processor</td><td>Intel Core i3 or equivalent</td></tr>
+            <tr><td>RAM</td><td>4 GB</td></tr>
+            <tr><td>Storage</td><td>500 MB free disk space (for browser cache)</td></tr>
+            <tr><td>Display</td><td>1366 × 768 resolution or higher</td></tr>
+            <tr><td>Network</td><td>Stable internet connection (minimum 5 Mbps)</td></tr>
+        </tbody>
+    </table>
+
+    <h4>For Server Deployment:</h4>
+    <table>
+        <thead>
+            <tr><th>Component</th><th>Minimum Requirement</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Processor</td><td>Intel Core i5 or equivalent</td></tr>
+            <tr><td>RAM</td><td>8 GB</td></tr>
+            <tr><td>Storage</td><td>50 GB (for application files, uploads, and database)</td></tr>
+            <tr><td>Network</td><td>Dedicated IP address with stable broadband connection</td></tr>
+        </tbody>
+    </table>
+
+    <h3>3.2 Software Requirements</h3>
+
+    <h4>For End Users:</h4>
+    <table>
+        <thead>
+            <tr><th>Software</th><th>Requirement</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Web Browser</td><td>Google Chrome (v100+), Mozilla Firefox (v100+), Microsoft Edge (v100+), or Safari (v15+)</td></tr>
+            <tr><td>JavaScript</td><td>Enabled</td></tr>
+            <tr><td>Cookies</td><td>Enabled</td></tr>
+        </tbody>
+    </table>
+
+    <h4>For Server Environment:</h4>
+    <table>
+        <thead>
+            <tr><th>Software</th><th>Requirement</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Operating System</td><td>Windows 10/11 or Linux (Ubuntu 20.04+)</td></tr>
+            <tr><td>Web Server</td><td>Apache 2.4+ (XAMPP recommended for development)</td></tr>
+            <tr><td>PHP</td><td>Version 8.2 or higher</td></tr>
+            <tr><td>Database</td><td>MariaDB 10.4+ or MySQL 8.0+</td></tr>
+            <tr><td>Mail Server</td><td>SMTP-compatible email service (Gmail, Outlook, or dedicated SMTP)</td></tr>
+            <tr><td>Additional Libraries</td><td>PHPMailer (included in system)</td></tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>3</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 4: USER ROLES AND ACCESS LEVELS
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 4: User Roles and Access Levels</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">4.</span> User Roles and Access Levels</h2>
+
+    <h3>4.1 Administrator</h3>
+
+    <p class="indent">The Administrator is the highest-level system user with full control over all platform operations. Administrator access is granted through the <code>accounts</code> table with <code>role_id = 1</code>.</p>
+
+    <h4>Permissions and Capabilities:</h4>
+    <ul>
+        <li>View and manage all property listings across all statuses</li>
+        <li>Approve or reject agent-submitted property listings</li>
+        <li>Approve or reject registered agents</li>
+        <li>Add new properties and agents directly</li>
+        <li>Manage tour requests for admin-listed properties</li>
+        <li>Review, approve, or reject sale verifications</li>
+        <li>Review, approve, or reject rental verifications</li>
+        <li>Confirm or reject rental payment submissions</li>
+        <li>Process and record commission payments to agents</li>
+        <li>Manage active leases (view payment history)</li>
+        <li>Access comprehensive reporting dashboard</li>
+        <li>Configure system settings (property types, amenities, specializations)</li>
+        <li>View and manage platform notifications</li>
+        <li>View admin profile and account information</li>
+    </ul>
+
+    <h3>4.2 Real Estate Agent</h3>
+
+    <p class="indent">Agents are licensed real estate professionals who register through the system and, upon administrative approval, gain access to the agent portal. Agent access is granted through the <code>accounts</code> table with <code>role_id = 2</code>.</p>
+
+    <h4>Permissions and Capabilities:</h4>
+    <ul>
+        <li>Complete and maintain agent profile (license, specializations, bio, photo)</li>
+        <li>Create, edit, and manage property listings (subject to admin approval)</li>
+        <li>Upload, reorder, and delete property images and floor plans</li>
+        <li>Respond to tour requests (accept, reject, complete, cancel)</li>
+        <li>Submit sale verifications for completed property sales</li>
+        <li>Submit rental verifications for rented properties</li>
+        <li>Record and submit monthly rental payments with supporting documents</li>
+        <li>Manage active leases (renew or terminate)</li>
+        <li>View earned commissions and download payment proof</li>
+        <li>Receive and manage notifications</li>
+    </ul>
+
+    <h3>4.3 Public User / Client</h3>
+
+    <p class="indent">Public users are visitors to the HomeEstate Realty platform who access the system without authentication. No registration is required for browsing.</p>
+
+    <h4>Permissions and Capabilities:</h4>
+    <ul>
+        <li>Browse the home page with featured properties and statistics</li>
+        <li>Search and filter properties by city, type, price range, bedrooms, bathrooms, and other criteria</li>
+        <li>View detailed property information, image galleries, floor plans, and amenities</li>
+        <li>Request property tours by submitting a tour request form</li>
+        <li>Browse and view profiles of approved agents</li>
+        <li>Like properties (tracked via browser session/local storage)</li>
+        <li>View the About page for company information</li>
+    </ul>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>4</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 5: GETTING STARTED
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 5: Getting Started</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">5.</span> Getting Started</h2>
+
+    <h3>5.1 Accessing the System</h3>
+
+    <p class="indent">To access the HomeEstate Realty system, open a supported web browser and navigate to the system URL. The default local development URL is:</p>
+
+    <p style="text-align:center; margin: 15px 0;"><code>http://localhost/capstoneSystem/user_pages/index.php</code></p>
+
+    <ul>
+        <li><strong>Public users</strong> are immediately presented with the home page and do not require login.</li>
+        <li><strong>Administrators</strong> and <strong>agents</strong> must navigate to the login page to authenticate.</li>
+    </ul>
+
+    <p>The login page is accessible at: <code>http://localhost/capstoneSystem/login.php</code></p>
+
+    <!-- FIGURE: Login Page -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🔐</div>
+            <div class="label">Screenshot: Login Page</div>
+            <div class="sublabel">Insert screenshot of the login page (login.php)</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 5.1:</strong> Login Page of HomeEstate Realty System</div>
+        <div class="figure-description">The login page displays the HomeEstate Realty branding on the left side with a background image, and the login form on the right side containing fields for Username and Password. A "Register as an agent" link is located below the login form for new agent registration. The eye icon beside the password field toggles password visibility.</div>
+    </div>
+
+    <h3>5.2 Agent Registration</h3>
+
+    <p class="indent">New real estate agents can create an account through the self-service registration process.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the login page (<code>login.php</code>).</li>
+            <li>Click the <strong>"Register as an agent"</strong> link located below the login form.</li>
+            <li>The registration form is displayed. Complete all required fields:
+                <ul>
+                    <li><strong>First Name</strong> &mdash; Enter your legal first name.</li>
+                    <li><strong>Middle Name</strong> &mdash; (Optional) Enter your middle name.</li>
+                    <li><strong>Last Name</strong> &mdash; Enter your legal last name.</li>
+                    <li><strong>Email Address</strong> &mdash; Enter a valid email address for 2FA and notifications.</li>
+                    <li><strong>Phone Number</strong> &mdash; Enter a Philippine mobile number (<code>09XXXXXXXXX</code>).</li>
+                    <li><strong>Username</strong> &mdash; Choose a unique username.</li>
+                    <li><strong>Password</strong> &mdash; Minimum 8 characters, letters and numbers.</li>
+                    <li><strong>Confirm Password</strong> &mdash; Re-enter the password to confirm.</li>
+                </ul>
+            </li>
+            <li>Click the <strong>"Register"</strong> button to submit the form.</li>
+            <li>Upon success, you are redirected to the login page with a confirmation message.</li>
+        </ol>
+    </div>
+
+    <!-- FIGURE: Registration Page -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📝</div>
+            <div class="label">Screenshot: Agent Registration Page</div>
+            <div class="sublabel">Insert screenshot of the registration form (register.php)</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 5.2:</strong> Agent Registration Form</div>
+        <div class="figure-description">The registration page presents a form with input fields for First Name, Middle Name, Last Name, Email Address, Phone Number, Username, Password, and Confirm Password. All required fields are marked with an asterisk (*). The form includes real-time validation indicators and a "Register" button at the bottom.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>5</span>
+    </div>
+</div>
+
+<!-- CHAPTER 5 CONTINUED -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 5: Getting Started</span>
+    </div>
+
+    <h3>5.3 Logging In</h3>
+
+    <p class="indent">Administrators and agents use the same login page to access the system.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to <code>login.php</code>.</li>
+            <li>Enter your <strong>Username</strong> in the username field.</li>
+            <li>Enter your <strong>Password</strong> in the password field. Use the eye icon to toggle visibility.</li>
+            <li>Click the <strong>"Login"</strong> button.</li>
+            <li>The system verifies your credentials:
+                <ul>
+                    <li>If correct, you are redirected to the Two-Factor Authentication (2FA) page.</li>
+                    <li>If incorrect, an error message appears: <em>"Invalid username or password."</em></li>
+                    <li>If profile incomplete: <em>"Please complete your profile first."</em></li>
+                    <li>If pending approval: <em>"Your account is pending admin approval."</em></li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <h3>5.4 Two-Factor Authentication (2FA)</h3>
+
+    <p class="indent">After successful credential verification, the system requires a one-time password (OTP) for additional security.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Upon successful login, you are redirected to the 2FA page (<code>two_factor.php</code>).</li>
+            <li>The system automatically sends a 6-digit OTP code to your email.</li>
+            <li>A masked version of your email is displayed (e.g., <code>k***@***.com</code>).</li>
+            <li>Open your email inbox and locate the OTP email from HomeEstate Realty.</li>
+            <li>Enter the 6-digit code in the input field.</li>
+            <li>Click the <strong>"Verify"</strong> button.</li>
+            <li>Upon successful verification, you are redirected to your respective dashboard.</li>
+        </ol>
+    </div>
+
+    <!-- FIGURE: 2FA Page -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🔑</div>
+            <div class="label">Screenshot: Two-Factor Authentication Page</div>
+            <div class="sublabel">Insert screenshot of the 2FA verification page (two_factor.php)</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 5.3:</strong> Two-Factor Authentication (2FA) Verification Page</div>
+        <div class="figure-description">The 2FA page displays a clean interface with the HomeEstate Realty logo, a masked email address showing the recipient, a 6-digit code input field, a "Verify" button, and a "Resend Code" link with a countdown timer. The OTP expires after 10 minutes, and users have a maximum of 3 attempts per code.</div>
+    </div>
+
+    <div class="callout callout-important">
+        <span class="callout-label">Important Notes:</span>
+        The OTP code expires after <strong>10 minutes</strong>. You are allowed a maximum of <strong>3 attempts</strong> per OTP code. A countdown timer displays the remaining time before a resend is available. If the pending login session exceeds 10 minutes of inactivity, you are redirected to the login page.
+    </div>
+
+    <h3>5.5 Logging Out</h3>
+
+    <p class="indent"><strong>For Administrators and Agents:</strong> Click your profile name or avatar in the top-right corner of the navigation bar, then click <strong>"Logout"</strong> from the dropdown menu. A confirmation modal appears asking: <em>"Are you sure you want to sign out?"</em> Click <strong>"Confirm"</strong> to log out.</p>
+
+    <p class="indent"><strong>Automatic Session Timeout:</strong> The system automatically logs out users after <strong>30 minutes</strong> of inactivity. A notification is displayed upon next access. Background notification polling does not reset the inactivity timer.</p>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>6</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 6: ADMINISTRATOR GUIDE
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 6: Administrator Guide</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">6.</span> Administrator Guide</h2>
+
+    <h3>6.1 Admin Dashboard</h3>
+
+    <p class="indent">The Admin Dashboard serves as the primary landing page after administrator login. It provides a comprehensive overview of platform activity and key performance metrics. Navigate to <code>admin_dashboard.php</code> or click <strong>"Dashboard"</strong> in the sidebar navigation.</p>
+
+    <!-- FIGURE: Admin Dashboard -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📊</div>
+            <div class="label">Screenshot: Admin Dashboard</div>
+            <div class="sublabel">Insert screenshot of admin_dashboard.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.1:</strong> Administrator Dashboard Overview</div>
+        <div class="figure-description">The Admin Dashboard displays a personalized welcome banner at the top, followed by a grid of Key Performance Indicator (KPI) cards showing property counts, agent statistics, tour request metrics, and financial summaries. Below the KPIs are four interactive charts: 30-Day Listings Trend, 30-Day Tour Requests Trend, Property Type Distribution, and Property Status Distribution.</div>
+    </div>
+
+    <h4>Dashboard Sections:</h4>
+    <ol>
+        <li><strong>Welcome Banner</strong> &mdash; Displays a personalized greeting: <em>"Welcome Back, [First Name]."</em> A profile completion alert appears if the admin profile is incomplete.</li>
+        <li><strong>KPI Cards</strong> &mdash; Statistics grid showing Total Properties, Approved, Pending, Rejected counts; Sold, Pending Sold, For Rent, For Sale counts; Agent counts; Tour Request counts; and Financial Metrics.</li>
+        <li><strong>Property Highlights</strong> &mdash; Cards showing the highest-priced property, most-viewed property, and aggregate totals.</li>
+        <li><strong>Dashboard Charts</strong> &mdash; Four interactive charts for listings trend, tour requests trend, property type distribution, and property status distribution.</li>
+        <li><strong>Recent Activity Timeline</strong> &mdash; Displays the 8 most recent platform actions with timestamps.</li>
+        <li><strong>Pending Approvals Preview</strong> &mdash; Up to 5 items each for pending sale verifications, agent approvals, and property listings.</li>
+        <li><strong>Top Agents by Sales</strong> &mdash; Ranked card showing top 5 agents by completed sales and revenue.</li>
+        <li><strong>Upcoming Tours</strong> &mdash; Next 6 confirmed tour appointments.</li>
+        <li><strong>Rental Metrics</strong> &mdash; Summary indicators for rentals, leases, payments, and revenue.</li>
+    </ol>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>7</span>
+    </div>
+</div>
+
+<!-- 6.2 Navigation and Layout -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 6: Administrator Guide</span>
+    </div>
+
+    <h3>6.2 Navigation and Layout</h3>
+
+    <p class="indent">The administrator interface consists of three navigation components: the Sidebar Navigation, Top Navigation Bar, and Notification Bell Dropdown.</p>
+
+    <!-- FIGURE: Admin Navigation -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🧭</div>
+            <div class="label">Screenshot: Admin Navigation Layout</div>
+            <div class="sublabel">Insert screenshot showing sidebar, top navbar, and notification dropdown</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.2:</strong> Administrator Navigation and Layout Components</div>
+        <div class="figure-description">The administrator interface features a fixed left sidebar (290px width) with a dark gradient background containing navigation menu items. The active page is highlighted with a gold accent. A sticky top navigation bar shows the HomeEstate Realty branding on the left and notification bell icon with profile dropdown on the right.</div>
+    </div>
+
+    <h4>Sidebar Navigation Menu Items:</h4>
+    <table>
+        <thead>
+            <tr><th>Menu Item</th><th>Destination</th><th>Icon</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Dashboard</td><td><code>admin_dashboard.php</code></td><td>Dashboard monitor</td></tr>
+            <tr><td>Properties</td><td><code>property.php</code></td><td>Apartment</td></tr>
+            <tr><td>Agents</td><td><code>agent.php</code></td><td>Employees</td></tr>
+            <tr><td>Tour Requests</td><td><code>tour_requests.php</code></td><td>Map marker</td></tr>
+            <tr><td>Sale Approvals</td><td><code>admin_property_sale_approvals.php</code></td><td>Sold house</td></tr>
+            <tr><td>Rental Approvals</td><td><code>admin_rental_approvals.php</code></td><td>House with checkmark</td></tr>
+            <tr><td>Rental Payments</td><td><code>admin_rental_payments.php</code></td><td>Cash stack</td></tr>
+            <tr><td>Notifications</td><td><code>admin_notifications.php</code></td><td>Bell</td></tr>
+            <tr><td>Reports</td><td><code>reports.php</code></td><td>Chart/pie</td></tr>
+        </tbody>
+    </table>
+
+    <h3>6.3 Property Management</h3>
+
+    <p class="indent">Access Property Management by clicking <strong>"Properties"</strong> in the sidebar or navigating to <code>property.php</code>. The page organizes all property listings into tabbed categories.</p>
+
+    <!-- FIGURE: Property Management -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🏘️</div>
+            <div class="label">Screenshot: Property Management Page</div>
+            <div class="sublabel">Insert screenshot of property.php showing tabbed property listings</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.3:</strong> Admin Property Management Page with Tabbed Categories</div>
+        <div class="figure-description">The Property Management page displays tabbed navigation at the top with categories: Pending Properties, Approved Properties, Rejected Properties, Pending Sold, Sold Properties, and Rented Properties. Each tab shows a count badge. Below the tabs is a collapsible filter drawer with Property Type, Posted By, and Price Range options. Properties are displayed as cards with thumbnail images, type badges, addresses, prices, and action buttons.</div>
+    </div>
+
+    <h4>Property Tabs:</h4>
+    <table>
+        <thead>
+            <tr><th>Tab</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Pending Properties</td><td>Properties awaiting admin approval</td></tr>
+            <tr><td>Approved Properties</td><td>Properties that are live and visible to the public</td></tr>
+            <tr><td>Rejected Properties</td><td>Properties that were rejected during review</td></tr>
+            <tr><td>Pending Sold</td><td>Properties with submitted sale verifications awaiting finalization</td></tr>
+            <tr><td>Sold Properties</td><td>Properties with finalized sale records</td></tr>
+            <tr><td>Rented Properties</td><td>Properties with active rental agreements</td></tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>8</span>
+    </div>
+</div>
+
+<!-- 6.3 Property Management continued + Approving/Rejecting -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 6: Administrator Guide</span>
+    </div>
+
+    <h4>Approving a Property:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the <strong>Pending Properties</strong> tab.</li>
+            <li>Locate the property to review.</li>
+            <li>Click <strong>"View Details"</strong> to review the property information, images, and amenities.</li>
+            <li>Click the <strong>"Approve"</strong> button.</li>
+            <li>The property status changes to "Approved" and becomes visible to public users.</li>
+            <li>The posting agent receives an email and in-system notification confirming the approval.</li>
+        </ol>
+    </div>
+
+    <!-- FIGURE: Approve Property -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">✅</div>
+            <div class="label">Screenshot: Property Approval Action</div>
+            <div class="sublabel">Insert screenshot showing the Approve button on a pending property card</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.4:</strong> Approving a Pending Property Listing</div>
+        <div class="figure-description">The screenshot shows a pending property card with the property thumbnail, address, price, and poster details. The "View Details" and "Approve" buttons are prominently displayed. Upon clicking "Approve," the property is moved to the Approved tab, and the listing becomes publicly visible.</div>
+    </div>
+
+    <h4>Rejecting a Property:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the <strong>Pending Properties</strong> tab.</li>
+            <li>Click the <strong>"Reject"</strong> button on the target property card.</li>
+            <li>A modal dialog appears requesting a rejection reason.</li>
+            <li>Enter the reason for rejection in the text field.</li>
+            <li>Click <strong>"Confirm Rejection."</strong></li>
+            <li>The property is moved to the Rejected Properties tab, and the agent is notified.</li>
+        </ol>
+    </div>
+
+    <!-- FIGURE: Reject Property Modal -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">❌</div>
+            <div class="label">Screenshot: Rejection Modal Dialog</div>
+            <div class="sublabel">Insert screenshot of the rejection reason modal</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.5:</strong> Property Rejection Modal with Reason Input</div>
+        <div class="figure-description">The rejection modal overlays the current page, presenting a text area for the administrator to enter the reason for rejection. The modal includes "Confirm Rejection" and "Cancel" buttons. The rejection reason is sent to the agent via email notification.</div>
+    </div>
+
+    <h4>Adding a New Property (Admin Direct Listing):</h4>
+
+    <p class="indent">Click the <strong>"Add New Property"</strong> button at the top of the page to access the property creation form. The form contains sections for Basic Information (address, city, barangay, province, ZIP code), Property Details (type, year built, square footage, bedrooms, bathrooms, parking), Listing Configuration (status, price, date), Rental-Specific Fields (displayed when status is "For Rent"), Amenities (checklist), Media Upload (images and floor plans), and Description.</p>
+
+    <!-- FIGURE: Add Property Form -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">➕</div>
+            <div class="label">Screenshot: Add New Property Form</div>
+            <div class="sublabel">Insert screenshot of the add property form (add_property.php)</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.6:</strong> Add New Property Form &mdash; Admin Direct Listing</div>
+        <div class="figure-description">The Add New Property form is divided into organized sections. The Basic Information section includes fields for street address, city, barangay, province, and ZIP code. Property Details contains dropdowns and inputs for property type, year built, dimensions, and room counts. The Media Upload section features a drag-and-drop image upload area with thumbnail previews and reorder capability.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>9</span>
+    </div>
+</div>
+
+<!-- 6.4 Agent Management -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 6: Administrator Guide</span>
+    </div>
+
+    <h3>6.4 Agent Management</h3>
+
+    <p class="indent">Access Agent Management by clicking <strong>"Agents"</strong> in the sidebar or navigating to <code>agent.php</code>. Agent records are organized into tabs: Pending Approval, Approved Agents, Needs Profile Completion, and Rejected Agents.</p>
+
+    <!-- FIGURE: Agent Management -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">👥</div>
+            <div class="label">Screenshot: Agent Management Page</div>
+            <div class="sublabel">Insert screenshot of agent.php showing agent cards and tabs</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.7:</strong> Agent Management Page with Status Tabs</div>
+        <div class="figure-description">The Agent Management page displays agents in card format with tabs for Pending Approval, Approved Agents, Needs Profile Completion, and Rejected Agents. Each agent card shows the profile picture, full name, email, phone number, license number, specializations as colored tags, years of experience, registration date, and an approval status badge. Filter options include specialization and license number search.</div>
+    </div>
+
+    <h4>Approving an Agent:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the <strong>Pending Approval</strong> tab.</li>
+            <li>Click <strong>"View Profile"</strong> on the agent card to review the agent's details.</li>
+            <li>The Agent Review page displays full profile information, profile picture, and contact information.</li>
+            <li>Click <strong>"Approve"</strong> to activate the agent's account.</li>
+            <li>The agent receives an approval notification via email and in-system notification.</li>
+        </ol>
+    </div>
+
+    <!-- FIGURE: Agent Review -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🔍</div>
+            <div class="label">Screenshot: Agent Review Details Page</div>
+            <div class="sublabel">Insert screenshot of review_agent_details.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.8:</strong> Agent Profile Review Page with Approve/Reject Actions</div>
+        <div class="figure-description">The Agent Review page presents the agent's complete profile including professional headshot, full name, license number, specializations, years of experience, biography, and contact information. Two action buttons are displayed: "Approve" (green) and "Reject" (red). The review page provides all necessary details for the administrator to make an informed decision.</div>
+    </div>
+
+    <h3>6.5 Tour Request Management</h3>
+
+    <p class="indent">Access Tour Requests by clicking <strong>"Tour Requests"</strong> in the sidebar or navigating to <code>tour_requests.php</code>. This page manages tour requests for properties listed by the administrator.</p>
+
+    <!-- FIGURE: Tour Requests -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📅</div>
+            <div class="label">Screenshot: Tour Request Management Page</div>
+            <div class="sublabel">Insert screenshot of tour_requests.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.9:</strong> Tour Request Management with Status Tabs</div>
+        <div class="figure-description">The Tour Request Management page displays requests organized by status tabs: All, Pending, Confirmed, Completed, Cancelled, Rejected, and Expired. Each tour request card shows the visitor's name, email, phone, message, tour date and time, tour type badge (Public/Private), property address with a link, and the current status badge with timestamps. Action buttons for Accept, Complete, Reject, and Cancel are displayed based on the tour status.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>10</span>
+    </div>
+</div>
+
+<!-- 6.5 Tour continued + 6.6 Sale Approvals -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 6: Administrator Guide</span>
+    </div>
+
+    <h4>Tour Request Management Actions:</h4>
+    <table>
+        <thead>
+            <tr><th>Action</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Accept</strong></td><td>Confirms the tour. The system performs an automatic conflict check (exact time conflicts and 30-minute travel buffer). Visitor receives confirmation email.</td></tr>
+            <tr><td><strong>Complete</strong></td><td>Marks a confirmed tour as conducted. Status changes to "Completed" with a timestamp.</td></tr>
+            <tr><td><strong>Reject</strong></td><td>Rejects a pending tour request. Requires a reason. Visitor is notified.</td></tr>
+            <tr><td><strong>Cancel</strong></td><td>Cancels a confirmed tour. Requires a reason. Visitor is notified.</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout callout-note">
+        <span class="callout-label">Auto-Expiration:</span>
+        Tour requests that remain in "Pending" status past the scheduled tour date and time are automatically marked as "Expired" when the page loads. The visitor receives an expiration notification email.
+    </div>
+
+    <h3>6.6 Sale Approvals</h3>
+
+    <p class="indent">Access Sale Approvals by clicking <strong>"Sale Approvals"</strong> in the sidebar or navigating to <code>admin_property_sale_approvals.php</code>. Sale verifications submitted by agents are organized by status: All, Pending, Approved, and Rejected.</p>
+
+    <!-- FIGURE: Sale Approvals -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">💰</div>
+            <div class="label">Screenshot: Sale Approvals Page</div>
+            <div class="sublabel">Insert screenshot of admin_property_sale_approvals.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.10:</strong> Sale Verification Approvals with KPI Cards</div>
+        <div class="figure-description">The Sale Approvals page shows KPI cards at the top displaying the count of pending sales and total pending sale value. Below, sale verification cards are organized by status tabs. Each card displays the property image thumbnail, address, agent name and contact, sale price, buyer name and email, sale date, verification status badge, submission timestamp, and supporting documents with download links.</div>
+    </div>
+
+    <h4>Approving a Sale:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the <strong>Pending</strong> tab.</li>
+            <li>Review the sale verification details and supporting documents.</li>
+            <li>Click the <strong>"Approve"</strong> button and confirm in the modal dialog.</li>
+            <li>The system updates the verification status, marks the property as "Sold," creates a finalized sale record, records the price history, and sends email notifications to the agent and buyer.</li>
+        </ol>
+    </div>
+
+    <h3>6.7 Rental Approvals</h3>
+
+    <p class="indent">Access Rental Approvals by clicking <strong>"Rental Approvals"</strong> in the sidebar or navigating to <code>admin_rental_approvals.php</code>. Rental verifications are organized by status tabs (All, Pending, Approved, Rejected).</p>
+
+    <!-- FIGURE: Rental Approvals -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📋</div>
+            <div class="label">Screenshot: Rental Approvals Page</div>
+            <div class="sublabel">Insert screenshot of admin_rental_approvals.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.11:</strong> Rental Verification Approvals Page</div>
+        <div class="figure-description">The Rental Approvals page displays rental verification cards organized by status. Each card shows the property image and address, agent information, monthly rent, security deposit, lease term, tenant name and contact, verification status badge, and supporting document download links. The approval modal includes fields for reviewing lease details and entering the commission rate percentage.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>11</span>
+    </div>
+</div>
+
+<!-- 6.8 Rental Payments + 6.9 Lease Management -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 6: Administrator Guide</span>
+    </div>
+
+    <h3>6.8 Rental Payment Management</h3>
+
+    <p class="indent">Access Rental Payments by clicking <strong>"Rental Payments"</strong> in the sidebar or navigating to <code>admin_rental_payments.php</code>. The page is divided into two main sections: Active Rental Leases and Recent Payment Submissions.</p>
+
+    <!-- FIGURE: Rental Payments -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">💳</div>
+            <div class="label">Screenshot: Rental Payment Management Page</div>
+            <div class="sublabel">Insert screenshot of admin_rental_payments.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.12:</strong> Rental Payment Management &mdash; Active Leases and Payment Submissions</div>
+        <div class="figure-description">The Rental Payment Management page features KPI cards for Active Leases count, Pending Payments count, and Total Confirmed Revenue at the top. Below, a grid of lease cards shows each lease's property address, tenant name, lease dates, monthly rent, agent name, lease status, and payment summaries. The lower section displays payment submission cards organized by All, Pending, Confirmed, and Rejected tabs.</div>
+    </div>
+
+    <h4>Confirming a Rental Payment:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the <strong>Pending</strong> tab in the payment submissions section.</li>
+            <li>Review the payment details, including the amount, payment period, and supporting documents.</li>
+            <li>Click the <strong>"Confirm"</strong> button.</li>
+            <li>The system updates the payment status to "Confirmed," creates a rental commission record (if applicable), and notifies the agent.</li>
+        </ol>
+    </div>
+
+    <h3>6.9 Lease Management</h3>
+
+    <p class="indent">From the Rental Payments page, click <strong>"View Payment History"</strong> on a specific lease card to access <code>admin_lease_management.php</code>.</p>
+
+    <!-- FIGURE: Lease Management -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📖</div>
+            <div class="label">Screenshot: Lease Management Page</div>
+            <div class="sublabel">Insert screenshot of admin_lease_management.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.13:</strong> Lease Management &mdash; Detailed Payment History View</div>
+        <div class="figure-description">The Lease Management page features a hero section with the property image as a background, displaying the property address, monthly rent, and lease status. Below is a lease details card showing tenant information, lease dates, commission rate, lease status, and agent information. The payment history section includes KPI statistics and a comprehensive table of all payment records with columns for period dates, status, amount, commission earned, and commission status.</div>
+    </div>
+
+    <h3>6.10 Commission Processing</h3>
+
+    <p class="indent">Commission records are created when the administrator approves a sale verification or when a rental payment is confirmed with a commission rate. Commission status follows the lifecycle: <span class="badge badge-yellow">Pending</span> → <span class="badge badge-blue">Calculated</span> → <span class="badge badge-yellow">Processing</span> → <span class="badge badge-green">Paid</span> (or <span class="badge badge-red">Cancelled</span> at any point).</p>
+
+    <!-- FIGURE: Commission Processing -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">💵</div>
+            <div class="label">Screenshot: Commission Payment Processing</div>
+            <div class="sublabel">Insert screenshot of commission payment modal with proof upload</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.14:</strong> Processing a Commission Payment with Proof Upload</div>
+        <div class="figure-description">The commission payment processing modal displays commission details including the percentage, amount, agent name, and sale price. Input fields are provided for Payment Method (dropdown: Bank Transfer, GCash, Maya, Cash, Check, or Other), Payment Reference, Payment Notes, and a file upload area for Payment Proof (max 5 MB). The "Confirm Payment" button finalizes the transaction, and the agent receives a notification.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>12</span>
+    </div>
+</div>
+
+<!-- 6.11 Reports + 6.12 Notifications -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 6: Administrator Guide</span>
+    </div>
+
+    <h3>6.11 Reports</h3>
+
+    <p class="indent">Access Reports by clicking <strong>"Reports"</strong> in the sidebar or navigating to <code>reports.php</code>. The Reports Dashboard provides comprehensive analytics organized into tabbed report categories.</p>
+
+    <!-- FIGURE: Reports -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📈</div>
+            <div class="label">Screenshot: Reports Dashboard</div>
+            <div class="sublabel">Insert screenshot of reports.php showing tabbed reports</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.15:</strong> Reports Dashboard with Tabbed Report Categories</div>
+        <div class="figure-description">The Reports Dashboard provides five tabbed report categories: Property Report, Sales Report, Rental Report, Agent Performance Report, and Tour Requests Report. Each tab displays a data table with sortable columns, search functionality, date range filters, status-specific filters, and pagination. Export options (CSV and Print) are available for each report. A global date range filter applies across all report tabs.</div>
+    </div>
+
+    <h4>Report Categories:</h4>
+    <table>
+        <thead>
+            <tr><th>Report</th><th>Key Columns</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Property Report</strong></td><td>Property ID, Address, City, Province, Type, Price, Status, Approval, Posted By, Bedrooms, Bathrooms, Sq Ft, Date, Views, Likes</td></tr>
+            <tr><td><strong>Sales Report</strong></td><td>Sale ID, Property, Sale Price, Buyer, Agent, Sale Date, Commission Amount, Commission %, Status, Finalized By/Date</td></tr>
+            <tr><td><strong>Rental Report</strong></td><td>Rental ID, Property, Tenant, Monthly Rent, Lease Dates, Lease Status, Agent, Payments Count, Revenue, Commission</td></tr>
+            <tr><td><strong>Agent Performance</strong></td><td>Agent Name, Specializations, Listings, Sales, Revenue, Commissions, Tours, Completed Tours, Status</td></tr>
+            <tr><td><strong>Tour Requests</strong></td><td>Tour ID, Visitor, Property, Date/Time, Tour Type, Status, Agent/Admin, Decision Reason</td></tr>
+        </tbody>
+    </table>
+
+    <h3>6.12 Notifications</h3>
+
+    <p class="indent">Access Notifications by clicking <strong>"Notifications"</strong> in the sidebar or the <strong>"View All Notifications"</strong> link in the navbar bell dropdown.</p>
+
+    <!-- FIGURE: Notifications -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🔔</div>
+            <div class="label">Screenshot: Admin Notifications Center</div>
+            <div class="sublabel">Insert screenshot of admin_notifications.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.16:</strong> Admin Notification Center with Priority Filters</div>
+        <div class="figure-description">The Notification Center features a priority filter for Urgent, High, Normal, and Low priorities. Notifications are categorized into tabs: All, Requests, Updates, Alerts, and System. Each notification card displays a type-specific icon, title, message, category and priority badges (color-coded), relative timestamp, and read/unread indicator. Actions include Mark as Read, Delete, Navigate to related item, Mark All as Read, and Delete All Read.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>13</span>
+    </div>
+</div>
+
+<!-- 6.13 System Settings + 6.14 Admin Profile -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 6: Administrator Guide</span>
+    </div>
+
+    <h3>6.13 System Settings</h3>
+
+    <p class="indent">Access System Settings by clicking <strong>"Settings"</strong> from the profile dropdown in the top navigation bar. The page manages system lookup values organized into three tabs.</p>
+
+    <!-- FIGURE: System Settings -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">⚙️</div>
+            <div class="label">Screenshot: System Settings Page</div>
+            <div class="sublabel">Insert screenshot of admin_settings.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.17:</strong> System Settings &mdash; Property Types, Amenities, and Specializations</div>
+        <div class="figure-description">The System Settings page displays overview cards showing total counts for amenities, specializations, and property types. Three tabbed sections manage system lookup values: Property Types Tab (with add and delete functionality), Amenities Tab (displayed as tags/chips), and Specializations Tab. All operations use AJAX requests for real-time updates without page refresh. Each item has an individual delete button.</div>
+    </div>
+
+    <h4>Settings Tabs:</h4>
+    <ol>
+        <li><strong>Property Types Tab</strong> &mdash; Add new types (e.g., "Condominium," "Townhouse") and delete existing entries.</li>
+        <li><strong>Amenities Tab</strong> &mdash; Add new amenities (e.g., "Swimming Pool," "Gym") displayed as tags/chips.</li>
+        <li><strong>Specializations Tab</strong> &mdash; Add new specializations (e.g., "Residential," "Commercial," "Relocation").</li>
+    </ol>
+
+    <h3>6.14 Admin Profile</h3>
+
+    <p class="indent">Access Admin Profile by clicking <strong>"Profile"</strong> from the profile dropdown. The profile page displays a circular profile picture, read-only account information (First Name, Middle Name, Last Name, Email, Phone, Username), and editable professional information (License Number, Specialization, Years of Experience, Biography).</p>
+
+    <!-- FIGURE: Admin Profile -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">👤</div>
+            <div class="label">Screenshot: Admin Profile Page</div>
+            <div class="sublabel">Insert screenshot of admin_profile.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 6.18:</strong> Administrator Profile Management Page</div>
+        <div class="figure-description">The Admin Profile page features a circular profile picture with a "Change Picture" option at the top. Below, the Account Information section displays read-only fields for First Name, Middle Name, Last Name, Email, Phone Number, and Username. The Professional Information section provides editable fields for License Number, Specialization, Years of Experience, and Biography, with a "Save Changes" button at the bottom.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>14</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 7: REAL ESTATE AGENT GUIDE
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 7: Real Estate Agent Guide</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">7.</span> Real Estate Agent Guide</h2>
+
+    <h3>7.1 Agent Dashboard</h3>
+
+    <p class="indent">After successful login and 2FA verification, agents are directed to the Agent Dashboard (<code>agent_pages/agent_dashboard.php</code>). The dashboard provides key metrics, upcoming tours, pending requests, and quick action buttons.</p>
+
+    <!-- FIGURE: Agent Dashboard -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📊</div>
+            <div class="label">Screenshot: Agent Dashboard</div>
+            <div class="sublabel">Insert screenshot of agent_pages/agent_dashboard.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 7.1:</strong> Real Estate Agent Dashboard Overview</div>
+        <div class="figure-description">The Agent Dashboard displays a statistics grid showing Total Listings, Pending/Confirmed/Completed Tour Requests, Total Commission Earned, and Total Sales Completed. Below are sections for Upcoming Confirmed Tours (up to 5 entries), Pending Tour Requests with quick-action buttons, Recent Properties (4 most recent), Top Performing Properties (3 most-viewed/liked), and Quick Action Buttons for Upload New Property, Manage Tour Requests, View Commissions, and View Notifications.</div>
+    </div>
+
+    <h3>7.2 Completing Your Agent Profile</h3>
+
+    <p class="indent">After initial registration, agents must complete their professional profile before their account can be approved by the administrator.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Log in and navigate to the Agent Profile page (<code>agent_pages/agent_profile.php</code>).</li>
+            <li>Complete the following fields:
+                <ul>
+                    <li><strong>Profile Picture</strong> &mdash; Upload a professional headshot (max 2 MB).</li>
+                    <li><strong>License Number</strong> &mdash; 5–30 characters, alphanumeric.</li>
+                    <li><strong>Years of Experience</strong> &mdash; 0 to 99.</li>
+                    <li><strong>Specializations</strong> &mdash; Select at least one area of expertise.</li>
+                    <li><strong>Biography</strong> &mdash; Up to 2,000 characters.</li>
+                </ul>
+            </li>
+            <li>Click <strong>"Save Changes"</strong> to submit your profile.</li>
+            <li>Wait for administrative approval. You will receive email/in-system notification upon review.</li>
+        </ol>
+    </div>
+
+    <!-- FIGURE: Agent Profile -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📋</div>
+            <div class="label">Screenshot: Agent Profile Completion Form</div>
+            <div class="sublabel">Insert screenshot of agent_pages/agent_profile.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 7.2:</strong> Agent Profile Completion Form</div>
+        <div class="figure-description">The Agent Profile page presents a profile picture upload area at the top, followed by input fields for License Number, Years of Experience, a specialization checklist (Residential, Commercial, First-Time Buyers, Investment Properties, Rentals, Land, Relocation), and a text area for the professional Biography. A "Save Changes" button is positioned at the bottom.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>15</span>
+    </div>
+</div>
+
+<!-- 7.3 Agent Property Management -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 7: Real Estate Agent Guide</span>
+    </div>
+
+    <h3>7.3 Property Management</h3>
+
+    <p class="indent">Access Property Management by clicking <strong>"Properties"</strong> in the navigation bar or navigating to <code>agent_pages/agent_property.php</code>. The page displays your personal property portfolio organized by status: Approved, Pending, Rejected, Pending Sold, Sold, and Rented.</p>
+
+    <!-- FIGURE: Agent Properties -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🏠</div>
+            <div class="label">Screenshot: Agent Property Portfolio</div>
+            <div class="sublabel">Insert screenshot of agent_pages/agent_property.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 7.3:</strong> Agent Property Portfolio with Status Tabs</div>
+        <div class="figure-description">The Agent Property page shows a portfolio header with total property value, total views, and total likes. Properties are organized into status tabs (Approved, Pending, Rejected, Pending Sold, Sold, Rented). Each property card displays the listing image, type badge, address, price, and bedroom/bathroom counts. Pending properties appear with grayed styling, and rejected properties show the rejection reason.</div>
+    </div>
+
+    <h4>Adding a New Property:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Click the <strong>"Add New Property"</strong> button.</li>
+            <li>Complete the form: Address Information, Property Details, Listing Information, Rental Details (if applicable), Amenities, Property Images (drag-and-drop, max 25 MB each), and Floor Plans.</li>
+            <li>Click <strong>"Submit Property"</strong> to submit the listing.</li>
+            <li>The property enters "Pending" status and awaits administrative approval.</li>
+            <li>You receive a notification when the admin approves or rejects the listing.</li>
+        </ol>
+    </div>
+
+    <!-- FIGURE: Agent Add Property -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📸</div>
+            <div class="label">Screenshot: Agent Add Property Form with Image Upload</div>
+            <div class="sublabel">Insert screenshot of the agent add property form with drag-and-drop image area</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 7.4:</strong> Property Listing Form with Image Upload and Reorder</div>
+        <div class="figure-description">The property creation form allows agents to enter address information, select property type, enter dimensions and room counts, set the listing status and price, select amenities from a checklist, and upload multiple property images via drag-and-drop. Uploaded images appear as thumbnails that can be rearranged by dragging to set display order. The first image becomes the primary listing photo.</div>
+    </div>
+
+    <h3>7.4 Tour Request Management</h3>
+
+    <p class="indent">Access Tour Requests by clicking <strong>"Tours"</strong> in the navigation bar or navigating to <code>agent_pages/agent_tour_requests.php</code>.</p>
+
+    <!-- FIGURE: Agent Tours -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🗓️</div>
+            <div class="label">Screenshot: Agent Tour Request Management</div>
+            <div class="sublabel">Insert screenshot of agent_pages/agent_tour_requests.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 7.5:</strong> Agent Tour Request Management with Statistics Header</div>
+        <div class="figure-description">The Agent Tour Request page displays a statistics header showing counts for Total, Pending, Confirmed, Completed, Cancelled, Rejected, and Expired requests. Status filter tabs and a property filter dropdown allow narrowing results. Each tour card shows visitor details (name, email, phone, message), property address, tour date/time, tour type badge (Public/Private), and action buttons for Accept, Complete, Reject, or Cancel.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>16</span>
+    </div>
+</div>
+
+<!-- 7.5 Mark as Sold + 7.6 Mark as Rented -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 7: Real Estate Agent Guide</span>
+    </div>
+
+    <h3>7.5 Marking a Property as Sold</h3>
+
+    <p class="indent">When a property sale is completed, agents submit a sale verification for administrative review.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the property detail view for the sold property.</li>
+            <li>Click the <strong>"Mark as Sold"</strong> button.</li>
+            <li>Complete the Sale Verification form:
+                <ul>
+                    <li><strong>Sale Price</strong> &mdash; Final sale price (must be greater than 0).</li>
+                    <li><strong>Sale Date</strong> &mdash; Date the sale was completed.</li>
+                    <li><strong>Buyer Name</strong> &mdash; Buyer's full name.</li>
+                    <li><strong>Buyer Email</strong> &mdash; (Optional) Buyer's email address.</li>
+                    <li><strong>Additional Notes</strong> &mdash; Relevant transaction notes.</li>
+                    <li><strong>Supporting Documents</strong> &mdash; Contracts, receipts (max 5 MB; PDF, DOCX, XLSX, JPG, PNG).</li>
+                </ul>
+            </li>
+            <li>Click <strong>"Submit Sale Verification."</strong></li>
+        </ol>
+    </div>
+
+    <!-- FIGURE: Mark as Sold -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🏷️</div>
+            <div class="label">Screenshot: Mark as Sold Form</div>
+            <div class="sublabel">Insert screenshot of the sale verification form modal</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 7.6:</strong> Sale Verification Form for Property Sold Submission</div>
+        <div class="figure-description">The Sale Verification form presents input fields for Sale Price, Sale Date, Buyer Name, Buyer Email, and Additional Notes. A file upload area allows attaching supporting documents (contracts, receipts). Each uploaded document is listed with its filename and a remove option. The "Submit Sale Verification" button submits the form, changing the property status to "Pending Sold."</div>
+    </div>
+
+    <h3>7.6 Marking a Property as Rented</h3>
+
+    <p class="indent">When a property is rented to a tenant, agents submit a rental verification for administrative review.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the property detail view for the rented property.</li>
+            <li>Click the <strong>"Mark as Rented"</strong> button.</li>
+            <li>Complete the Rental Verification form: Monthly Rent, Security Deposit, Lease Start Date, Lease Term, Tenant Name, Tenant Email, Tenant Phone, Additional Notes, Supporting Documents.</li>
+            <li>Click <strong>"Submit Rental Verification."</strong></li>
+        </ol>
+    </div>
+
+    <h3>7.7 Rental Payment Recording</h3>
+
+    <p class="indent">For properties with active leases, agents submit monthly rental payment records via <code>agent_pages/agent_rental_payments.php</code>.</p>
+
+    <!-- FIGURE: Rental Payments -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">💸</div>
+            <div class="label">Screenshot: Agent Rental Payments Page</div>
+            <div class="sublabel">Insert screenshot of agent_pages/agent_rental_payments.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 7.7:</strong> Agent Rental Payment Management with KPI Cards</div>
+        <div class="figure-description">The page displays KPI cards for Pending, Confirmed, and Rejected payment counts, Total Confirmed Revenue, and Commission Earned. An active rentals bar provides quick links to active/renewed leases. The payment cards grid shows all submitted payments with property details, amounts, periods, status badges, and commission information. A "Record Payment" button opens the payment submission modal.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>17</span>
+    </div>
+</div>
+
+<!-- 7.8 Lease Management + 7.9 Commission Tracking + 7.10 Notifications -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 7: Real Estate Agent Guide</span>
+    </div>
+
+    <h3>7.8 Lease Management</h3>
+
+    <p class="indent">Agents can manage active leases for their properties. <strong>Renewing a Lease</strong> extends the lease end date by the original term. <strong>Terminating a Lease</strong> changes the status to "Terminated" with a required reason, making the property available for new listings.</p>
+
+    <h3>7.9 Commission Tracking</h3>
+
+    <p class="indent">Access Commission Tracking by clicking <strong>"Commissions"</strong> in the navigation bar or navigating to <code>agent_pages/agent_commissions.php</code>.</p>
+
+    <!-- FIGURE: Commission Tracking -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📊</div>
+            <div class="label">Screenshot: Agent Commission Tracking Page</div>
+            <div class="sublabel">Insert screenshot of agent_pages/agent_commissions.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 7.8:</strong> Agent Commission Tracking with Monthly Chart</div>
+        <div class="figure-description">The Commission Tracking page features summary cards showing Total Earnings, Paid Amount, Pending Amount, Calculated Amount, Average Commission Rate, and Cancelled Count. A 12-month chart visualizes earned versus paid commissions. Below, two tables display Sales Commissions and Rental Commissions with columns for date, property, buyer/tenant, price, commission percentage, amount, status (color-coded), paid date, and payment method. A "Download Proof" button is available for paid commissions.</div>
+    </div>
+
+    <h4>Commission Status Lifecycle:</h4>
+    <table>
+        <thead>
+            <tr><th>Status</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><span class="badge badge-yellow">Pending</span></td><td>Commission record created; awaiting calculation</td></tr>
+            <tr><td><span class="badge badge-blue">Calculated</span></td><td>Commission amount has been computed</td></tr>
+            <tr><td><span class="badge badge-yellow">Processing</span></td><td>Payment is being processed by the administrator</td></tr>
+            <tr><td><span class="badge badge-green">Paid</span></td><td>Commission has been paid to the agent</td></tr>
+            <tr><td><span class="badge badge-red">Cancelled</span></td><td>Commission has been voided</td></tr>
+        </tbody>
+    </table>
+
+    <h3>7.10 Agent Notifications</h3>
+
+    <p class="indent">Access notifications via the bell icon in the navigation bar (dropdown for recent) or navigate to <code>agent_pages/agent_notifications.php</code> for the full Notification Center.</p>
+
+    <!-- FIGURE: Agent Notifications -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🔔</div>
+            <div class="label">Screenshot: Agent Notification Center</div>
+            <div class="sublabel">Insert screenshot of agent_pages/agent_notifications.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 7.9:</strong> Agent Notification Center with Category Filters</div>
+        <div class="figure-description">The Agent Notification Center displays a summary bar with total and unread counts. Filter tabs organize notifications by All, Unread, Read, and by category (Tours, Properties, Sales, Rentals). Each notification card shows an unread indicator, icon, title, message, relative timestamp, and category badge. Available actions include Mark as Read/Unread, Delete, View Details, Mark All as Read, and Delete All Read. The navigation bar bell icon shows an auto-updating unread count badge.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>18</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 8: PUBLIC USER / CLIENT GUIDE
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 8: Public User / Client Guide</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">8.</span> Public User / Client Guide</h2>
+
+    <h3>8.1 Home Page</h3>
+
+    <p class="indent">The home page is the primary landing page of the HomeEstate Realty system, accessible at <code>user_pages/index.php</code>.</p>
+
+    <!-- FIGURE: Home Page -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🏠</div>
+            <div class="label">Screenshot: Home Page</div>
+            <div class="sublabel">Insert screenshot of user_pages/index.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 8.1:</strong> HomeEstate Realty Home Page &mdash; Hero Section and Search Bar</div>
+        <div class="figure-description">The home page features a full-width hero banner with the heading "Find Your Dream Home" and an animated call-to-action button. A sticky search bar below provides quick filters for City, Property Type, Price Range, Bedrooms, and Bathrooms with a "Search" button. Further down, a statistics bar displays live counts for Properties For Sale, For Rent, Sold, and Approved Agents.</div>
+    </div>
+
+    <h4>Page Sections:</h4>
+    <ol>
+        <li><strong>Hero Section</strong> &mdash; Full-width banner with heading and call-to-action button.</li>
+        <li><strong>Search Bar</strong> &mdash; Quick filters for city, type, price, bedrooms, and bathrooms.</li>
+        <li><strong>Statistics Bar</strong> &mdash; Live counts from the database.</li>
+        <li><strong>Featured Properties</strong> &mdash; Carousel/grid of 6 most recently approved listings.</li>
+        <li><strong>Why Choose Us</strong> &mdash; Four feature highlight cards.</li>
+        <li><strong>Browse by City</strong> &mdash; Grid of popular cities with property counts.</li>
+        <li><strong>Browse by Type</strong> &mdash; Carousel of property types with counts.</li>
+    </ol>
+
+    <!-- FIGURE: Featured Properties -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">⭐</div>
+            <div class="label">Screenshot: Featured Properties Section</div>
+            <div class="sublabel">Insert screenshot of the Featured Properties carousel on the home page</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 8.2:</strong> Featured Properties Section with Property Cards</div>
+        <div class="figure-description">The Featured Properties section displays the 6 most recently approved property listings in a grid layout. Each property card includes the listing image, address and city, bedroom and bathroom counts, listing price formatted as Philippine Peso, a like button with count, and a "View Details" call-to-action button.</div>
+    </div>
+
+    <h3>8.2 Browsing Properties</h3>
+
+    <p class="indent">Access the Property Search by clicking <strong>"Browse Properties"</strong> in the navigation bar or using the home page search bar. This navigates to <code>user_pages/search_results.php</code>.</p>
+
+    <!-- FIGURE: Search Results -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🔍</div>
+            <div class="label">Screenshot: Property Search Results Page</div>
+            <div class="sublabel">Insert screenshot of user_pages/search_results.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 8.3:</strong> Property Search Results with Filter Sidebar and Grid View</div>
+        <div class="figure-description">The search results page features a left sidebar (25% width) with comprehensive filters: City dropdown, Property Type multi-select, Status radio buttons, Price Range inputs, Bedrooms/Bathrooms sliders, Category dropdown, Agent filter, and Sort By options. The main area (75% width) displays property cards in a grid layout (24 per page) with thumbnail images, status badges, addresses, property details, prices, and view/like counts. AJAX-driven updates provide seamless filtering and pagination.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>19</span>
+    </div>
+</div>
+
+<!-- 8.3 Property Details + 8.4 Tour Request -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 8: Public User / Client Guide</span>
+    </div>
+
+    <h3>8.3 Viewing Property Details</h3>
+
+    <p class="indent">Click on any property card or the <strong>"View Details"</strong> button to navigate to <code>user_pages/property_details.php?id=[property_ID]</code>.</p>
+
+    <!-- FIGURE: Property Details -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🏡</div>
+            <div class="label">Screenshot: Property Details Page</div>
+            <div class="sublabel">Insert screenshot of user_pages/property_details.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 8.4:</strong> Property Detail Page with Image Gallery and Tour Request Form</div>
+        <div class="figure-description">The property detail page displays the full property address with a status badge and listing price at the top. A large image carousel with scrollable thumbnails and fullscreen option provides visual browsing. Below are sections for Quick Facts (bedrooms, bathrooms, sq ft, lot size, year built, parking), Amenities Grid (checkmark badges), full Description, Floor Plans (if available), and Price/Status Details. A sticky sidebar shows the Agent/Contact Card and the "Schedule a Tour" form.</div>
+    </div>
+
+    <h4>Key Page Sections:</h4>
+    <ol>
+        <li><strong>Image Gallery</strong> &mdash; Large carousel with thumbnails, fullscreen, and image counter.</li>
+        <li><strong>Quick Facts Row</strong> &mdash; Bedrooms, Bathrooms, Square Footage, Lot Size, Year Built, Parking.</li>
+        <li><strong>Amenities Grid</strong> &mdash; Checkmark badges for all property amenities.</li>
+        <li><strong>Description</strong> &mdash; Full listing text, property type, MLS info, and date listed.</li>
+        <li><strong>Floor Plans</strong> &mdash; Expandable images grouped by floor number.</li>
+        <li><strong>Agent/Contact Card</strong> &mdash; Agent photo, name, specializations, phone and email links.</li>
+        <li><strong>Tour Request Form</strong> &mdash; Sticky sidebar form for scheduling tours.</li>
+        <li><strong>Like and Share</strong> &mdash; Heart icon and social sharing buttons.</li>
+        <li><strong>Similar Properties</strong> &mdash; "You Might Also Like" carousel.</li>
+    </ol>
+
+    <h3>8.4 Requesting a Property Tour</h3>
+
+    <p class="indent">Visitors can schedule a property tour without requiring a system account by using the tour request form on the property detail page sidebar.</p>
+
+    <!-- FIGURE: Tour Request Form -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">📝</div>
+            <div class="label">Screenshot: Tour Request Form</div>
+            <div class="sublabel">Insert screenshot of the "Schedule a Tour" form sidebar</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 8.5:</strong> Schedule a Tour Request Form on Property Detail Page</div>
+        <div class="figure-description">The "Schedule a Tour" form appears in the sticky sidebar of the property detail page. It contains input fields for Full Name (required), Email Address (required), Phone Number (optional), Preferred Tour Date (date picker), Preferred Tour Time (time picker), Tour Type selection (Public or Private radio buttons), and an optional Message text area. The "Submit Tour Request" button submits the form via AJAX with real-time validation feedback.</div>
+    </div>
+
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the property detail page.</li>
+            <li>Locate the <strong>"Schedule a Tour"</strong> form in the sidebar.</li>
+            <li>Complete: Full Name, Email, Phone (optional), Date, Time, Tour Type, and Message (optional).</li>
+            <li>Click <strong>"Submit Tour Request."</strong></li>
+            <li>A confirmation message confirms successful submission.</li>
+            <li>Email confirmation is sent to your address. The agent/admin is notified.</li>
+        </ol>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>20</span>
+    </div>
+</div>
+
+<!-- 8.5 Browsing Agents + 8.6 Agent Profile + 8.7 Liking + 8.8 About -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 8: Public User / Client Guide</span>
+    </div>
+
+    <h3>8.5 Browsing Agents</h3>
+
+    <p class="indent">Access the Agent Directory by clicking <strong>"Find Agents"</strong> in the navigation bar or navigating to <code>user_pages/agents.php</code>.</p>
+
+    <!-- FIGURE: Agent Directory -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">👥</div>
+            <div class="label">Screenshot: Agent Directory Page</div>
+            <div class="sublabel">Insert screenshot of user_pages/agents.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 8.6:</strong> Agent Directory with Search and Specialization Filters</div>
+        <div class="figure-description">The Agent Directory page features a hero section with "Trusted Real Estate Professionals" heading and agent count. A filter sidebar provides name/license search, location dropdown, and specialization multi-select filters. The agent grid displays 12 agents per page in 3 columns, each card showing the profile picture, full name, license number, specialization pill badges, years of experience, bio excerpt, statistics (listings, sales, tours), and "View Profile" / "Contact" buttons.</div>
+    </div>
+
+    <h3>8.6 Viewing an Agent Profile</h3>
+
+    <p class="indent">Click <strong>"View Profile"</strong> on any agent card to navigate to <code>user_pages/agent_profile.php?id=[account_id]</code>.</p>
+
+    <!-- FIGURE: Agent Profile -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">🧑‍💼</div>
+            <div class="label">Screenshot: Public Agent Profile Page</div>
+            <div class="sublabel">Insert screenshot of user_pages/agent_profile.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 8.7:</strong> Public Agent Profile with Listings and Statistics</div>
+        <div class="figure-description">The agent profile page displays a header card with the agent's large profile picture, full name, license number, years of experience, specializations, member since date, contact details, and professional bio. Below is a statistics row showing Active Listings, For Sale, For Rent, Completed Sales, and Completed Tours. The Featured Listings section shows the agent's active property cards. Action buttons include "View All Listings," "Contact Agent," and "Call Agent."</div>
+    </div>
+
+    <h3>8.7 Liking a Property</h3>
+
+    <p class="indent">Visitors can express interest by clicking the <strong>heart icon (❤)</strong> on any property card. The like count increments and the heart fills to indicate the liked state. Click again to unlike. Like tracking is managed via browser session and local storage.</p>
+
+    <h3>8.8 About Page</h3>
+
+    <p class="indent">Access the About Page by clicking <strong>"About Us"</strong> in the navigation bar or navigating to <code>user_pages/about.php</code>.</p>
+
+    <!-- FIGURE: About Page -->
+    <div class="figure-container">
+        <div class="screenshot-placeholder">
+            <div class="icon">ℹ️</div>
+            <div class="label">Screenshot: About Page</div>
+            <div class="sublabel">Insert screenshot of user_pages/about.php</div>
+        </div>
+        <div class="figure-caption"><strong>Figure 8.8:</strong> About HomeEstate Realty Page</div>
+        <div class="figure-description">The About page features a hero section with "About HomeEstate Realty" heading and the tagline "Your Trusted Partner in Real Estate." Below are sections for Company Overview (mission, vision, core values), Statistics Section (animated counters for properties and agents), Mission/Vision paragraphs, Why Choose Us feature cards, and a Call-to-Action section with buttons linking to Browse Properties and Find Agents.</div>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>21</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 9: SCREENS AND FEATURES EXPLANATION
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 9: Screens and Features</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">9.</span> Screens and Features Explanation</h2>
+
+    <h3>9.1 Common Interface Elements</h3>
+
+    <p class="indent">The HomeEstate Realty system utilizes consistent design patterns across all portals:</p>
+
+    <table>
+        <thead>
+            <tr><th>Element</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Cards</strong></td><td>Card-based layouts for properties, agents, tour requests, and notifications with images, titles, metadata, status badges, and action buttons.</td></tr>
+            <tr><td><strong>Modals</strong></td><td>Interactive modal dialogs for confirmations, form submissions, and detail views, overlaying the current page without navigation.</td></tr>
+            <tr><td><strong>Tabs</strong></td><td>Tabbed navigation organizing data by status categories with count badges.</td></tr>
+            <tr><td><strong>Toast Notifications</strong></td><td>Brief success/error messages appearing for 3–5 seconds following an action.</td></tr>
+            <tr><td><strong>Breadcrumbs</strong></td><td>Navigation trails on some pages for context (e.g., Dashboard > Properties > Add New Property).</td></tr>
+        </tbody>
+    </table>
+
+    <h3>9.2 Status Badges and Indicators</h3>
+
+    <p class="indent">The system uses color-coded status badges throughout the interface:</p>
+
+    <table>
+        <thead>
+            <tr><th>Badge Color</th><th>Status Examples</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><span class="badge badge-green">Green</span></td><td>Approved, Confirmed, Active, Paid, Completed</td></tr>
+            <tr><td><span class="badge badge-yellow">Yellow/Orange</span></td><td>Pending, Pending Sold, Calculated, Processing</td></tr>
+            <tr><td><span class="badge badge-red">Red</span></td><td>Rejected, Cancelled, Terminated, Expired</td></tr>
+            <tr><td><span class="badge badge-blue">Blue</span></td><td>For Sale, For Rent, Renewed</td></tr>
+            <tr><td><span class="badge badge-gray">Gray</span></td><td>Inactive, Needs Profile Completion</td></tr>
+        </tbody>
+    </table>
+
+    <h3>9.3 Notification System</h3>
+
+    <p class="indent">The system implements a dual notification system:</p>
+
+    <ol>
+        <li><strong>Admin Notifications</strong> (<code>notifications</code> table) &mdash; Centralized alerts for the administrator covering agent submissions, property events, sale/rental verifications, tour requests, and commission updates. Includes priority levels and categories.</li>
+        <li><strong>Agent Notifications</strong> (<code>agent_notifications</code> table) &mdash; Agent-specific alerts for tour requests, property approvals, sale/rental approvals, commission payments, and lease events.</li>
+    </ol>
+
+    <h3>9.4 File Upload Components</h3>
+
+    <table>
+        <thead>
+            <tr><th>Upload Type</th><th>Max Size</th><th>Accepted Formats</th><th>Location</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Property Images</td><td>25 MB/file</td><td>JPEG, PNG, GIF</td><td><code>/uploads/</code></td></tr>
+            <tr><td>Floor Plans</td><td>25 MB/file</td><td>JPEG, PNG, GIF</td><td><code>/uploads/</code></td></tr>
+            <tr><td>Profile Pictures</td><td>2 MB</td><td>JPEG, PNG, GIF, WEBP</td><td><code>/uploads/agents/</code> or <code>/uploads/admins/</code></td></tr>
+            <tr><td>Sale Documents</td><td>5 MB/file</td><td>PDF, DOCX, XLSX, JPG, PNG</td><td><code>/sale_documents/</code></td></tr>
+            <tr><td>Rental Documents</td><td>5 MB/file</td><td>PDF, DOCX, XLSX, JPG, PNG</td><td><code>/rental_documents/</code></td></tr>
+            <tr><td>Payment Receipts</td><td>5 MB/file</td><td>PDF, JPG, PNG</td><td><code>/rental_payment_documents/</code></td></tr>
+            <tr><td>Commission Proof</td><td>5 MB</td><td>JPG, PNG, WEBP, GIF, PDF</td><td><code>/uploads/commission_proofs/</code></td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout callout-info">
+        <span class="callout-label">Security Note:</span>
+        All uploads undergo server-side MIME type verification using <code>finfo_open(FILEINFO_MIME_TYPE)</code> to prevent malicious file uploads.
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>22</span>
+    </div>
+</div>
+
+<!-- 9.5 Email Notifications -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 9: Screens and Features</span>
+    </div>
+
+    <h3>9.5 Email Notifications</h3>
+
+    <p class="indent">The system sends automated email notifications for the following events:</p>
+
+    <table>
+        <thead>
+            <tr><th>Event</th><th>Recipients</th><th>Content</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Agent Registration</td><td>Agent</td><td>Welcome and next steps</td></tr>
+            <tr><td>Agent Profile Approved</td><td>Agent</td><td>Approval confirmation</td></tr>
+            <tr><td>Agent Profile Rejected</td><td>Agent</td><td>Rejection with reason</td></tr>
+            <tr><td>Property Approved</td><td>Agent</td><td>Listing is now live</td></tr>
+            <tr><td>Property Rejected</td><td>Agent</td><td>Rejection with reason</td></tr>
+            <tr><td>Tour Request Submitted</td><td>Agent/Admin</td><td>Tour details</td></tr>
+            <tr><td>Tour Confirmed</td><td>Visitor</td><td>Confirmation with date/time</td></tr>
+            <tr><td>Tour Rejected/Cancelled</td><td>Visitor</td><td>Notification with reason</td></tr>
+            <tr><td>Tour Expired</td><td>Visitor</td><td>Expiration notification</td></tr>
+            <tr><td>Sale Approved</td><td>Agent, Buyer</td><td>Sale confirmation</td></tr>
+            <tr><td>Sale Rejected</td><td>Agent</td><td>Rejection with reason</td></tr>
+            <tr><td>Rental Approved</td><td>Agent, Tenant</td><td>Lease confirmation</td></tr>
+            <tr><td>Rental Rejected</td><td>Agent</td><td>Rejection with reason</td></tr>
+            <tr><td>Rental Payment Confirmed</td><td>Agent</td><td>Payment confirmation</td></tr>
+            <tr><td>Commission Paid</td><td>Agent</td><td>Payment details and reference</td></tr>
+            <tr><td>Lease Expiring (30 days)</td><td>Agent</td><td>Advance warning</td></tr>
+            <tr><td>Lease Expired</td><td>Agent</td><td>Expiration alert</td></tr>
+            <tr><td>2FA OTP Code</td><td>User</td><td>6-digit verification code</td></tr>
+        </tbody>
+    </table>
+
+    <p class="indent">Emails are sent via SMTP using PHPMailer with STARTTLS encryption on port 587. Email templates include branded headers, structured content blocks, and footer information.</p>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>23</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 10: ERROR HANDLING AND TROUBLESHOOTING
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 10: Troubleshooting</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">10.</span> Error Handling and Troubleshooting</h2>
+
+    <h3>10.1 Login Issues</h3>
+    <table>
+        <thead>
+            <tr><th>Issue</th><th>Cause</th><th>Resolution</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>"Invalid username or password"</td><td>Incorrect credentials</td><td>Verify username and password. Ensure Caps Lock is off.</td></tr>
+            <tr><td>"Please complete your profile first"</td><td>Agent profile not filled out</td><td>Navigate to Profile page and complete all required fields.</td></tr>
+            <tr><td>"Your account is pending admin approval"</td><td>Profile submitted, not yet reviewed</td><td>Wait for administrator review. Email notification upon approval.</td></tr>
+            <tr><td>"Your account has been deactivated"</td><td>Account disabled by admin</td><td>Contact the administrator for reactivation.</td></tr>
+            <tr><td>Page redirects to login</td><td>Session expired</td><td>30-minute inactivity timeout. Log in again.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>10.2 Two-Factor Authentication Issues</h3>
+    <table>
+        <thead>
+            <tr><th>Issue</th><th>Cause</th><th>Resolution</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>"Invalid code"</td><td>Incorrect OTP entered</td><td>Check email for the most recent OTP.</td></tr>
+            <tr><td>"Code expired"</td><td>Exceeded 10-minute window</td><td>Click "Resend Code" for a new OTP.</td></tr>
+            <tr><td>"Too many attempts"</td><td>Exceeded 3 attempts</td><td>Click "Resend Code" for a new OTP.</td></tr>
+            <tr><td>OTP email not received</td><td>Delivery delay or spam filter</td><td>Check spam folder. Wait 1–2 minutes. Try "Resend Code."</td></tr>
+            <tr><td>Redirected back to login</td><td>Session expired (10 minutes)</td><td>Restart the login process.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>10.3 Session Timeout</h3>
+    <table>
+        <thead>
+            <tr><th>Issue</th><th>Cause</th><th>Resolution</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>"Session expired due to inactivity"</td><td>No activity for 30 minutes</td><td>Log in again. Unsaved form data is lost.</td></tr>
+            <tr><td>Frequent timeouts during form completion</td><td>Long forms exceeding timeout</td><td>Complete forms promptly. Save periodically.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>10.4 File Upload Errors</h3>
+    <table>
+        <thead>
+            <tr><th>Issue</th><th>Cause</th><th>Resolution</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>"File too large"</td><td>Exceeds max size</td><td>Compress/resize. Images: 25 MB. Docs: 5 MB. Profile: 2 MB.</td></tr>
+            <tr><td>"Invalid file type"</td><td>Format not accepted</td><td>Convert to accepted format (JPEG, PNG for images; PDF, DOCX for documents).</td></tr>
+            <tr><td>Upload stuck or failed</td><td>Network issue</td><td>Refresh and retry. Ensure stable connection.</td></tr>
+            <tr><td>"Failed to upload image"</td><td>Server issue</td><td>Contact system administrator.</td></tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>24</span>
+    </div>
+</div>
+
+<!-- 10.5 - 10.7 continued -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 10: Troubleshooting</span>
+    </div>
+
+    <h3>10.5 Form Validation Errors</h3>
+    <table>
+        <thead>
+            <tr><th>Issue</th><th>Cause</th><th>Resolution</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>"ZIP code must be exactly 4 digits"</td><td>Non-numeric or wrong length</td><td>Enter a valid PH ZIP code (4 digits, numeric).</td></tr>
+            <tr><td>"Password must contain at least 8 characters..."</td><td>Weak password</td><td>Include letters and numbers, minimum 8 characters.</td></tr>
+            <tr><td>"Phone number format invalid"</td><td>Wrong format</td><td>Enter: <code>09XXXXXXXXX</code> (11 digits starting with 09).</td></tr>
+            <tr><td>Required field highlighted in red</td><td>Mandatory field empty</td><td>Fill all fields marked with red asterisk (*).</td></tr>
+            <tr><td>"Username already taken"</td><td>Duplicate username</td><td>Choose a different username.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>10.6 Tour Request Conflicts</h3>
+    <table>
+        <thead>
+            <tr><th>Issue</th><th>Cause</th><th>Resolution</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>"Time conflict detected"</td><td>Another confirmed tour at same time or within 30 min</td><td>Check conflicting tour. Reschedule or reject the conflicting request.</td></tr>
+            <tr><td>Tour auto-expired</td><td>Tour date passed without response</td><td>Monitor pending requests regularly.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>10.7 General Troubleshooting</h3>
+    <table>
+        <thead>
+            <tr><th>Issue</th><th>Resolution</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Page not loading or errors</td><td>Clear browser cache, disable extensions, ensure JavaScript and cookies are enabled.</td></tr>
+            <tr><td>Data not updating after action</td><td>Refresh the page. AJAX-based features should show a success toast.</td></tr>
+            <tr><td>Broken images or missing photos</td><td>Image file may have been deleted from server. Contact administrator.</td></tr>
+            <tr><td>Incorrect financial data</td><td>Verify source records. Financial data derives from approved records only.</td></tr>
+            <tr><td>Emails not arriving</td><td>Check spam/junk folders. Verify SMTP configuration and recipient email.</td></tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>25</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 11: BEST PRACTICES AND USAGE TIPS
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 11: Best Practices</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">11.</span> Best Practices and Usage Tips</h2>
+
+    <h3>11.1 For Administrators</h3>
+    <ol>
+        <li><strong>Review pending items daily.</strong> Check the dashboard for pending approvals, registrations, verifications, and tour requests.</li>
+        <li><strong>Set commission rates carefully during rental finalization.</strong> The rate applies to all confirmed payments for the lease duration.</li>
+        <li><strong>Always provide clear rejection reasons.</strong> These are sent to agents via email to help them correct issues.</li>
+        <li><strong>Monitor the Reports dashboard regularly.</strong> Track performance, productivity, and revenue trends. Export periodically.</li>
+        <li><strong>Keep system settings updated.</strong> Add new property types, amenities, and specializations as the market evolves.</li>
+        <li><strong>Process commission payments promptly.</strong> Upload payment proof when marking commissions as paid.</li>
+        <li><strong>Review tour requests daily.</strong> Respond promptly before requests auto-expire.</li>
+    </ol>
+
+    <h3>11.2 For Agents</h3>
+    <ol>
+        <li><strong>Complete your profile immediately after registration.</strong> Accelerates the approval process.</li>
+        <li><strong>Upload high-quality property images.</strong> Ensure the first image is the most visually appealing.</li>
+        <li><strong>Write detailed property descriptions.</strong> Include neighborhood, amenities, transportation, and unique features.</li>
+        <li><strong>Set accurate property information.</strong> Correct bedrooms, bathrooms, footage, and pricing.</li>
+        <li><strong>Respond to tour requests promptly.</strong> Aim to respond within 24 hours to prevent auto-expiration.</li>
+        <li><strong>Submit sale/rental verifications with complete documentation.</strong> Expedites admin review.</li>
+        <li><strong>Record rental payments regularly.</strong> Submit promptly with receipts for accurate tracking.</li>
+        <li><strong>Monitor notifications.</strong> Check the notification badge regularly.</li>
+    </ol>
+
+    <h3>11.3 For Public Users</h3>
+    <ol>
+        <li><strong>Use filters to narrow your search.</strong> Save time by filtering by city, type, price, and rooms.</li>
+        <li><strong>Sort results strategically.</strong> Use "Newest," "Most Views," or price sorting.</li>
+        <li><strong>Provide accurate contact information in tour requests.</strong> Ensures you receive confirmations.</li>
+        <li><strong>Schedule tours in advance.</strong> Allow agents time to respond.</li>
+        <li><strong>Include a message with your tour request.</strong> Helps the agent prepare for your visit.</li>
+        <li><strong>Browse agent profiles before requesting tours.</strong> Find a good match for your needs.</li>
+        <li><strong>Like properties you're interested in.</strong> Note: likes are stored in browser and cleared with browser data.</li>
+    </ol>
+
+    <h3>11.4 Security Recommendations</h3>
+    <ol>
+        <li><strong>Use strong, unique passwords.</strong> At least 8 characters with letters and numbers.</li>
+        <li><strong>Do not share your OTP codes.</strong> HomeEstate Realty staff will never ask for your OTP.</li>
+        <li><strong>Log out after each session.</strong> Especially on shared or public computers.</li>
+        <li><strong>Be cautious with email links.</strong> Verify emails originate from the official system.</li>
+        <li><strong>Update contact information promptly.</strong> Ensures receipt of security codes and notifications.</li>
+    </ol>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>26</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 12: GLOSSARY OF TERMS
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; User Manual</span>
+        <span class="page-header-right">Chapter 12: Glossary</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">12.</span> Glossary of Terms</h2>
+
+    <table>
+        <thead>
+            <tr><th>Term</th><th>Definition</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>2FA</strong></td><td>Two-Factor Authentication &mdash; a security method requiring two forms of verification (password and OTP) to access the system.</td></tr>
+            <tr><td><strong>Agent</strong></td><td>A licensed real estate professional registered on the platform to list and manage properties.</td></tr>
+            <tr><td><strong>Amenities</strong></td><td>Features and facilities associated with a property (e.g., swimming pool, garage, gym).</td></tr>
+            <tr><td><strong>Approval Status</strong></td><td>The administrative review state of a listing or agent: Pending, Approved, or Rejected.</td></tr>
+            <tr><td><strong>Commission</strong></td><td>A percentage-based payment earned by an agent upon completion of a sale or confirmed rental payment.</td></tr>
+            <tr><td><strong>Commission Rate</strong></td><td>The percentage applied to a payment amount to calculate the agent's commission.</td></tr>
+            <tr><td><strong>Finalized Rental</strong></td><td>A rental agreement approved by the administrator, creating an active lease record.</td></tr>
+            <tr><td><strong>Finalized Sale</strong></td><td>A property sale approved and recorded by the administrator.</td></tr>
+            <tr><td><strong>Floor Plan</strong></td><td>A diagram or image showing the layout of a property's floors.</td></tr>
+            <tr><td><strong>Lease</strong></td><td>A contractual agreement between a property owner and a tenant for a specified duration and rental amount.</td></tr>
+            <tr><td><strong>Lease Status</strong></td><td>The current state of a lease: Active, Renewed, Terminated, or Expired.</td></tr>
+            <tr><td><strong>Listing Price</strong></td><td>The asking price set for a property either for sale or rent.</td></tr>
+            <tr><td><strong>OTP</strong></td><td>One-Time Password &mdash; a 6-digit code sent via email for two-factor authentication.</td></tr>
+            <tr><td><strong>Pending Sold</strong></td><td>Status indicating a sale verification has been submitted but not yet finalized by the administrator.</td></tr>
+            <tr><td><strong>Property Status</strong></td><td>The current state of a property: For Sale, For Rent, Sold, Pending Sold, or Rented.</td></tr>
+            <tr><td><strong>Rental Verification</strong></td><td>Documentation and details submitted by an agent to verify a completed rental transaction.</td></tr>
+            <tr><td><strong>Sale Verification</strong></td><td>Documentation and details submitted by an agent to verify a completed property sale.</td></tr>
+            <tr><td><strong>Session Timeout</strong></td><td>Automatic logout triggered after 30 minutes of inactivity.</td></tr>
+            <tr><td><strong>Specialization</strong></td><td>An agent's area of professional expertise (e.g., Residential, Commercial, Rentals).</td></tr>
+            <tr><td><strong>Tour Request</strong></td><td>A request from a prospective client to visit and inspect a property at a specific date and time.</td></tr>
+            <tr><td><strong>Tour Type</strong></td><td>The nature of the tour: Public (open house) or Private (exclusive one-on-one).</td></tr>
+            <tr><td><strong>Verification Documents</strong></td><td>Supporting files (contracts, receipts, etc.) uploaded with sale or rental verifications.</td></tr>
+        </tbody>
+    </table>
+
+    <div class="spacer-lg"></div>
+
+    <div style="text-align: center; padding: 30px 0; border-top: 2px solid var(--primary); margin-top: 30px;">
+        <p style="font-size: 11pt; color: var(--text-secondary); margin-bottom: 5px;"><strong>End of User Manual</strong></p>
+        <p style="font-size: 10pt; color: var(--text-secondary); margin-bottom: 3px;"><em>HomeEstate Realty &mdash; Real Estate Property Management System</em></p>
+        <p style="font-size: 10pt; color: var(--text-secondary); margin-bottom: 3px;">Version 1.0 &mdash; April 2026</p>
+        <p style="font-size: 10pt; color: var(--text-secondary);">Prepared for Capstone Project Documentation</p>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Version 1.0</span>
+        <span>27</span>
+    </div>
+</div>
+
+</body>
+</html>
