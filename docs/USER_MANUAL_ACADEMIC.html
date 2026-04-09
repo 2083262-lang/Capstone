@@ -1544,6 +1544,22 @@
 
     <p class="indent">Commission records are created when the administrator approves a sale verification or when a rental payment is confirmed with a commission rate. Commission status follows the lifecycle: <span class="badge badge-yellow">Pending</span> → <span class="badge badge-blue">Calculated</span> → <span class="badge badge-yellow">Processing</span> → <span class="badge badge-green">Paid</span> (or <span class="badge badge-red">Cancelled</span> at any point).</p>
 
+    <h4>Processing a Commission Payment:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to the <strong>Sale Approvals</strong> or <strong>Rental Payments</strong> page where commission records are generated.</li>
+            <li>Locate the commission entry with a status of <strong>"Pending"</strong> or <strong>"Calculated"</strong> and click the <strong>"Process Commission"</strong> button.</li>
+            <li>Review the commission details displayed in the modal, including the commission rate percentage, calculated commission amount, agent name, and the associated sale price or rental payment amount.</li>
+            <li>Select the <strong>Payment Method</strong> from the dropdown (Bank Transfer, GCash, Maya, Cash, Check, or Other).</li>
+            <li>Enter the <strong>Payment Reference</strong> number (e.g., transaction ID, check number, or GCash reference).</li>
+            <li>Optionally, add <strong>Payment Notes</strong> for additional context or remarks regarding the commission payment.</li>
+            <li>Upload the <strong>Payment Proof</strong> document (receipt, screenshot, or bank confirmation) using the file upload area. The maximum file size is <strong>5 MB</strong>.</li>
+            <li>Click the <strong>"Confirm Payment"</strong> button to finalize the commission payment.</li>
+            <li>The system updates the commission status to <strong>"Paid,"</strong> records the payment details, and sends a notification to the agent confirming that their commission has been processed.</li>
+        </ol>
+    </div>
+
     <!-- FIGURE: Commission Processing -->
     <div class="figure-container">
         <div class="screenshot-placeholder">
@@ -1597,6 +1613,40 @@
         </tbody>
     </table>
 
+    <h4>Filtering Reports:</h4>
+    <p class="indent">Each report tab includes dedicated filter controls that allow the administrator to narrow down results based on specific criteria. Filters are applied in real time and affect both the displayed table and any subsequent export.</p>
+
+    <table>
+        <thead>
+            <tr><th>Report Tab</th><th>Available Filters</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Property Report</strong></td><td>Date Range (listed date), Property Type (House, Condo, Lot, etc.), Status (For Sale, For Rent, Sold, Rented), City</td></tr>
+            <tr><td><strong>Sales Report</strong></td><td>Date Range (sale date), Commission Status (Pending, Calculated, Processing, Paid, Cancelled), Agent Name</td></tr>
+            <tr><td><strong>Rental Report</strong></td><td>Date Range (lease start date), Lease Status (Active, Expired, Terminated, Renewed), Agent Name</td></tr>
+            <tr><td><strong>Agent Performance</strong></td><td>Agent Status (Approved, Pending, Rejected), Specialization, Date Range (registration date)</td></tr>
+            <tr><td><strong>Tour Requests</strong></td><td>Date Range (tour date), Tour Status (Pending, Confirmed, Completed, Cancelled, Rejected, Expired), Tour Type (Public/Private)</td></tr>
+        </tbody>
+    </table>
+
+    <h4>Exporting a Report:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to <strong>Reports</strong> in the sidebar or go to <code>reports.php</code>.</li>
+            <li>Click the report tab you want to export: <strong>Property Report</strong>, <strong>Sales Report</strong>, <strong>Rental Report</strong>, <strong>Agent Performance</strong>, or <strong>Tour Requests</strong>.</li>
+            <li>Apply the desired filters to narrow the data — set the <strong>Date Range</strong> using the Start Date and End Date fields, and select any additional filters such as Status, Property Type, or Agent Name.</li>
+            <li>Review the filtered results displayed in the report table to verify the data is correct before exporting.</li>
+            <li>To export as a spreadsheet, click the <strong>"Export CSV"</strong> button. The browser will download a <code>.csv</code> file containing all filtered records, which can be opened in Microsoft Excel or Google Sheets.</li>
+            <li>To generate a printable version, click the <strong>"Print"</strong> button. A print-optimized view of the report opens, which can be saved as a PDF or sent directly to a printer.</li>
+        </ol>
+    </div>
+
+    <div class="callout callout-note">
+        <span class="callout-label">Note:</span>
+        The exported CSV or printed report will only include data matching the currently applied filters. If no filters are set, all records for that report category will be exported. Always verify the filter settings before exporting to ensure the report reflects the intended data range.
+    </div>
+
     <h3>6.12 Notifications</h3>
 
     <p class="indent">Access Notifications by clicking <strong>"Notifications"</strong> in the sidebar or the <strong>"View All Notifications"</strong> link in the navbar bell dropdown.</p>
@@ -1649,7 +1699,33 @@
 
     <h3>6.14 Admin Profile</h3>
 
-    <p class="indent">Access Admin Profile by clicking <strong>"Profile"</strong> from the profile dropdown. The profile page displays a circular profile picture, read-only account information (First Name, Middle Name, Last Name, Email, Phone, Username), and editable professional information (License Number, Specialization, Years of Experience, Biography).</p>
+    <p class="indent">Access Admin Profile by clicking <strong>"Profile"</strong> from the profile dropdown in the top navigation bar or navigating to <code>admin_profile.php</code>. The profile page displays a circular profile picture, read-only account information (First Name, Middle Name, Last Name, Email, Phone, Username), and editable professional information (License Number, Specialization, Years of Experience, Biography).</p>
+
+    <h4>Editing the Admin Profile:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Click the administrator's name or avatar in the top-right corner of the navigation bar to open the profile dropdown menu.</li>
+            <li>Click <strong>"Profile"</strong> from the dropdown to open the Admin Profile page (<code>admin_profile.php</code>).</li>
+            <li>To update the <strong>profile picture</strong>, click the <strong>"Change Picture"</strong> button below the circular avatar. Select an image file from your device (JPG, PNG, or GIF; maximum 5 MB). The new photo will be previewed and saved upon submission.</li>
+            <li>Review the <strong>Account Information</strong> section — note that the fields for First Name, Middle Name, Last Name, Email, Phone Number, and Username are <strong>read-only</strong> and cannot be edited from this page.</li>
+            <li>In the <strong>Professional Information</strong> section, update any of the following editable fields as needed:
+                <ul>
+                    <li><strong>License Number</strong> — Enter your PRC real estate license number.</li>
+                    <li><strong>Specialization</strong> — Select your area of specialization from the available options.</li>
+                    <li><strong>Years of Experience</strong> — Enter the number of years you have been practicing real estate.</li>
+                    <li><strong>Biography</strong> — Enter a professional bio or description to appear on your public profile.</li>
+                </ul>
+            </li>
+            <li>Click the <strong>"Save Changes"</strong> button to apply and save all updates.</li>
+            <li>A success notification will confirm that the profile has been updated successfully.</li>
+        </ol>
+    </div>
+
+    <div class="callout callout-note">
+        <span class="callout-label">Note:</span>
+        Account details such as name, email, phone, and username are managed at the account level and cannot be modified through the Profile page. Contact system support to update these fields if necessary.
+    </div>
 
     <!-- FIGURE: Admin Profile -->
     <div class="figure-container">
@@ -1780,7 +1856,7 @@
 
     <h3>7.4 Tour Request Management</h3>
 
-    <p class="indent">Access Tour Requests by clicking <strong>"Tours"</strong> in the navigation bar or navigating to <code>agent_pages/agent_tour_requests.php</code>.</p>
+    <p class="indent">Access Tour Requests by clicking <strong>"Tours"</strong> in the navigation bar or navigating to <code>agent_pages/agent_tour_requests.php</code>. This page lists all tour requests submitted by visitors for properties assigned to the agent.</p>
 
     <!-- FIGURE: Agent Tours -->
     <div class="figure-container">
@@ -1791,6 +1867,53 @@
         </div>
         <div class="figure-caption"><strong>Figure 7.5:</strong> Agent Tour Request Management with Statistics Header</div>
         <div class="figure-description">The Agent Tour Request page displays a statistics header showing counts for Total, Pending, Confirmed, Completed, Cancelled, Rejected, and Expired requests. Status filter tabs and a property filter dropdown allow narrowing results. Each tour card shows visitor details (name, email, phone, message), property address, tour date/time, tour type badge (Public/Private), and action buttons for Accept, Complete, Reject, or Cancel.</div>
+    </div>
+
+    <h4>Accepting a Tour Request:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Navigate to <strong>Tours</strong> in the navigation bar or go to <code>agent_pages/agent_tour_requests.php</code>.</li>
+            <li>Click the <strong>"Pending"</strong> tab to view all incoming tour requests awaiting a response.</li>
+            <li>Review the tour request card — check the visitor's name, contact details, requested tour date and time, tour type (Public or Private), and any message from the visitor.</li>
+            <li>Click the <strong>"Accept"</strong> button on the tour card to confirm the tour schedule.</li>
+            <li>The system updates the tour status to <strong>"Confirmed"</strong> and sends an email notification to the visitor with the confirmed tour details.</li>
+        </ol>
+    </div>
+
+    <h4>Completing a Tour:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>After the tour has taken place, click the <strong>"Confirmed"</strong> tab to locate the relevant tour request.</li>
+            <li>Click the <strong>"Complete"</strong> button on the tour card to mark it as done.</li>
+            <li>The tour status is updated to <strong>"Completed"</strong> and the record is moved to the Completed tab.</li>
+        </ol>
+    </div>
+
+    <h4>Rejecting a Tour Request:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>On a <strong>"Pending"</strong> tour card, click the <strong>"Reject"</strong> button.</li>
+            <li>A confirmation prompt appears. Confirm the rejection to update the tour status to <strong>"Rejected."</strong></li>
+            <li>The visitor receives an email notification informing them that their tour request was not accepted.</li>
+        </ol>
+    </div>
+
+    <h4>Cancelling a Confirmed Tour:</h4>
+    <div class="procedure">
+        <div class="procedure-title">Step-by-Step Procedure:</div>
+        <ol>
+            <li>Click the <strong>"Confirmed"</strong> tab to find the tour you need to cancel.</li>
+            <li>Click the <strong>"Cancel"</strong> button on the tour card.</li>
+            <li>The tour status is updated to <strong>"Cancelled"</strong> and the visitor is notified by email.</li>
+        </ol>
+    </div>
+
+    <div class="callout callout-note">
+        <span class="callout-label">Auto-Expiration:</span>
+        Tour requests in <strong>"Pending"</strong> status that have passed their scheduled date and time are automatically marked as <strong>"Expired"</strong> when the page loads. The visitor receives an automatic expiration email notification.
     </div>
 
     <div class="page-footer">

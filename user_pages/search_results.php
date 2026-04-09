@@ -133,11 +133,13 @@ if ($partial === 'grid') {
     }
 
     // ── ORDER BY based on category ──
+    // Always sort available properties first, then sold/rented at the end
+    $availability_sort = "CASE WHEN p.Status IN ('Sold','Rented') THEN 1 ELSE 0 END ASC";
     switch ($category) {
-        case 'most_viewed': $order = "p.ViewsCount DESC"; break;
-        case 'most_liked':  $order = "p.Likes DESC"; break;
-        case 'most_beds':   $order = "p.Bedrooms DESC, p.Bathrooms DESC"; break;
-        default:            $order = "p.ListingDate DESC"; break;
+        case 'most_viewed': $order = "$availability_sort, p.ViewsCount DESC"; break;
+        case 'most_liked':  $order = "$availability_sort, p.Likes DESC"; break;
+        case 'most_beds':   $order = "$availability_sort, p.Bedrooms DESC, p.Bathrooms DESC"; break;
+        default:            $order = "$availability_sort, p.ListingDate DESC"; break;
     }
 
     // ── COUNT query (clean — no regex, no subquery wrapper) ──
@@ -183,6 +185,18 @@ if ($partial === 'grid') {
     $stmt->close();
     $conn->close();
 
+    // ── Split into available and sold/rented groups ──
+    $available_properties = [];
+    $sold_rented_properties = [];
+    foreach ($properties as $prop) {
+        $st = trim($prop['Status']);
+        if ($st === 'Sold' || $st === 'Rented') {
+            $sold_rented_properties[] = $prop;
+        } else {
+            $available_properties[] = $prop;
+        }
+    }
+
     // ── Render AJAX partial HTML ──
 ?>
 <!-- Results Header -->
@@ -216,8 +230,10 @@ if ($partial === 'grid') {
         <p>Try adjusting your filters or search to see more results</p>
     </div>
 <?php else: ?>
+
+    <?php if (!empty($available_properties)): ?>
     <div class="properties-grid">
-        <?php foreach ($properties as $prop): ?>
+        <?php foreach ($available_properties as $prop): ?>
         <div class="property-card">
             <a href="property_details.php?id=<?= $prop['property_ID'] ?>" class="property-card-link">
                 <div class="property-image-container">
@@ -231,8 +247,6 @@ if ($partial === 'grid') {
                     <div class="property-badge<?php
                         $st = trim($prop['Status']);
                         if ($st === 'For Rent') echo ' for-rent';
-                        elseif ($st === 'Rented') echo ' rented';
-                        elseif ($st === 'Sold') echo ' sold';
                     ?>">
                         <?= htmlspecialchars($prop['Status']) ?>
                     </div>
@@ -268,6 +282,83 @@ if ($partial === 'grid') {
         </div>
         <?php endforeach; ?>
     </div>
+    <?php endif; ?>
+
+    <?php if (!empty($sold_rented_properties)): ?>
+    <!-- Sold / Rented Section Divider -->
+    <div class="sold-rented-section">
+        <div class="sold-rented-header">
+            <div class="sold-rented-line"></div>
+            <div class="sold-rented-label">
+                <i class="bi bi-lock-fill"></i>
+                Sold &amp; Rented Properties
+                <span class="sold-rented-count"><?= count($sold_rented_properties) ?></span>
+            </div>
+            <div class="sold-rented-line"></div>
+        </div>
+        <p class="sold-rented-subtitle">These properties are no longer available</p>
+    </div>
+
+    <div class="properties-grid sold-rented-grid">
+        <?php foreach ($sold_rented_properties as $prop): ?>
+        <div class="property-card sold-rented-card">
+            <a href="property_details.php?id=<?= $prop['property_ID'] ?>" class="property-card-link">
+                <div class="property-image-container">
+                    <img src="../<?= htmlspecialchars($prop['PhotoURL'] ?? 'images/placeholder.jpg') ?>"
+                         class="property-image"
+                         alt="<?= htmlspecialchars($prop['PropertyType'] . ' in ' . $prop['City']) ?>"
+                         loading="lazy"
+                         decoding="async"
+                         width="400"
+                         height="220">
+                    <div class="property-badge<?= trim($prop['Status']) === 'Rented' ? ' rented' : ' sold' ?>">
+                        <?= htmlspecialchars($prop['Status']) ?>
+                    </div>
+                    <div class="sold-rented-overlay">
+                        <i class="bi bi-<?= trim($prop['Status']) === 'Sold' ? 'house-check-fill' : 'key-fill' ?>"></i>
+                        <?= htmlspecialchars($prop['Status']) ?>
+                    </div>
+                    <div class="property-stats">
+                        <div class="stat-badge views">
+                            <i class="bi bi-eye-fill"></i>
+                            <span><?= number_format($prop['ViewsCount'] ?? 0) ?></span>
+                        </div>
+                        <div class="stat-badge likes">
+                            <i class="bi bi-heart-fill"></i>
+                            <span><?= number_format($prop['Likes'] ?? 0) ?></span>
+                        </div>
+                    </div>
+                    <div class="property-image-overlay"></div>
+                </div>
+                <div class="property-body">
+                    <div class="property-price">₱<?= number_format($prop['ListingPrice']) ?></div>
+                    <div class="property-address">
+                        <i class="bi bi-geo-alt-fill"></i>
+                        <?= htmlspecialchars($prop['StreetAddress']) ?>, <?= htmlspecialchars($prop['City']) ?>
+                    </div>
+                    <div class="property-features">
+                        <div class="feature-item"><i class="bi bi-door-open-fill"></i> <?= $prop['Bedrooms'] ?> Beds</div>
+                        <div class="feature-item"><i class="bi bi-droplet-fill"></i> <?= $prop['Bathrooms'] ?> Baths</div>
+                        <div class="feature-item"><i class="bi bi-arrows-fullscreen"></i> <?= number_format($prop['SquareFootage']) ?> ft²</div>
+                    </div>
+                    <div class="property-card-footer">
+                        <div class="property-type"><?= htmlspecialchars($prop['PropertyType']) ?></div>
+                        <span class="view-details-link">View Details <i class="bi bi-arrow-right"></i></span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if (empty($available_properties) && empty($sold_rented_properties)): ?>
+    <div class="no-results">
+        <i class="bi bi-house-x-fill"></i>
+        <h3>No Properties Found</h3>
+        <p>Try adjusting your filters or search to see more results</p>
+    </div>
+    <?php endif; ?>
 
     <?php if ($total_pages > 1): ?>
     <div class="sr-pagination">
@@ -711,6 +802,106 @@ $conn->close();
         .no-results p { color: var(--gray-400); }
 
         /* ═══════════════════════════════════════════════════
+           Sold / Rented Section
+           ═══════════════════════════════════════════════════ */
+        .sold-rented-section {
+            margin-top: 40px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .sold-rented-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .sold-rented-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+        .sold-rented-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            white-space: nowrap;
+        }
+        .sold-rented-label i {
+            color: var(--gray-500);
+            font-size: 0.9rem;
+        }
+        .sold-rented-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 7px;
+            background: rgba(255,255,255,0.08);
+            color: var(--gray-400);
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 11px;
+        }
+        .sold-rented-subtitle {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            margin-top: 6px;
+        }
+
+        /* Sold/Rented cards — dimmed and greyscale */
+        .sold-rented-card {
+            opacity: 0.55;
+            transition: opacity 0.25s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+        }
+        .sold-rented-card:hover {
+            opacity: 0.8;
+        }
+        .sold-rented-card .property-image {
+            filter: grayscale(60%) brightness(0.8);
+            transition: filter 0.3s, transform 0.3s;
+        }
+        .sold-rented-card:hover .property-image {
+            filter: grayscale(30%) brightness(0.9);
+        }
+        .sold-rented-card .property-price {
+            background: linear-gradient(135deg, var(--gray-400), var(--gray-500));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Overlay showing SOLD / RENTED on image */
+        .sold-rented-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.45);
+            color: var(--white);
+            font-size: 1.1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            z-index: 3;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .sold-rented-overlay i {
+            font-size: 1.6rem;
+        }
+        .sold-rented-card:hover .sold-rented-overlay {
+            opacity: 1;
+        }
+
+        /* ═══════════════════════════════════════════════════
            Skeleton Shimmer Animation
            ═══════════════════════════════════════════════════ */
         @keyframes sk-shimmer {
@@ -882,6 +1073,8 @@ $conn->close();
                     <button type="button" class="filter-btn <?= $status === '' ? 'active' : '' ?>" onclick="setFilter('status', '')">All</button>
                     <button type="button" class="filter-btn <?= $status === 'For Sale' ? 'active' : '' ?>" onclick="setFilter('status', 'For Sale')">For Sale</button>
                     <button type="button" class="filter-btn <?= $status === 'For Rent' ? 'active' : '' ?>" onclick="setFilter('status', 'For Rent')">For Rent</button>
+                    <button type="button" class="filter-btn <?= $status === 'Sold' ? 'active' : '' ?>" onclick="setFilter('status', 'Sold')">Sold</button>
+                    <button type="button" class="filter-btn <?= $status === 'Rented' ? 'active' : '' ?>" onclick="setFilter('status', 'Rented')">Rented</button>
                 </div>
                 <input type="hidden" id="statusInput" value="<?= htmlspecialchars($status) ?>">
             </div>
