@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeEstate Realty — GoDaddy Deployment Guide (Academic Format)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&family=Roboto:wght@400;500;700&family=Playfair+Display:wght@700;800&display=swap');
+
+        :root {
+            --primary: #8B1A1A;
+            --primary-dark: #5C0E0E;
+            --accent-gold: #C9A84C;
+            --dark: #1A1A1A;
+            --text-body: #333333;
+            --text-secondary: #555555;
+            --border: #CCCCCC;
+            --light-bg: #F8F8F8;
+            --white: #FFFFFF;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @page {
+            size: A4;
+            margin: 25mm 20mm 25mm 25mm;
+        }
+
+        body {
+            font-family: 'Times New Roman', Georgia, serif;
+            color: var(--text-body);
+            line-height: 1.8;
+            font-size: 12pt;
+            background: #E0E0E0;
+        }
+
+        /* ============================================
+           PAGE CONTAINER
+        ============================================ */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            background: var(--white);
+            padding: 25mm 20mm 25mm 25mm;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            page-break-after: always;
+            position: relative;
+        }
+
+        .page:last-child {
+            page-break-after: avoid;
+        }
+
+        /* ============================================
+           COVER PAGE
+        ============================================ */
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 297mm;
+            padding: 40mm 25mm;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, #A52525 100%);
+            color: var(--white);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover-page::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            pointer-events: none;
+        }
+
+        .cover-logo {
+            width: 120px;
+            height: 120px;
+            border: 3px solid var(--accent-gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-logo-text {
+            font-size: 40pt;
+            font-weight: bold;
+            color: var(--accent-gold);
+        }
+
+        .cover-system-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 28pt;
+            font-weight: 800;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            color: var(--white);
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-subtitle {
+            font-size: 14pt;
+            font-weight: 400;
+            color: var(--accent-gold);
+            letter-spacing: 1px;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-divider {
+            width: 200px;
+            height: 3px;
+            background: var(--accent-gold);
+            margin: 0 auto 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-doc-type {
+            font-size: 22pt;
+            font-weight: 700;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            margin-bottom: 50px;
+            color: var(--white);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-info {
+            font-size: 11pt;
+            line-height: 2;
+            color: rgba(255,255,255,0.85);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cover-info strong {
+            color: var(--accent-gold);
+        }
+
+        .cover-footer {
+            position: absolute;
+            bottom: 30mm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10pt;
+            color: rgba(255,255,255,0.6);
+            z-index: 1;
+        }
+
+        /* ============================================
+           TABLE OF CONTENTS
+        ============================================ */
+        .toc-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 22pt;
+            font-weight: 700;
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .toc-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 6px 0;
+            border-bottom: 1px dotted var(--border);
+            font-size: 11pt;
+        }
+
+        .toc-list li.toc-main {
+            font-weight: 700;
+            font-size: 12pt;
+            padding-top: 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--primary);
+        }
+
+        .toc-list li.toc-sub {
+            padding-left: 25px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            font-size: 10.5pt;
+        }
+
+        .toc-page {
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        /* ============================================
+           SECTION HEADINGS
+        ============================================ */
+        .section-heading {
+            font-family: 'Playfair Display', serif;
+            font-size: 20pt;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 5px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .section-number {
+            color: var(--accent-gold);
+            margin-right: 10px;
+        }
+
+        h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 15pt;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-top: 25px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1.5px solid var(--accent-gold);
+        }
+
+        h4 {
+            font-size: 12pt;
+            font-weight: 700;
+            color: var(--text-body);
+            margin-top: 18px;
+            margin-bottom: 8px;
+        }
+
+        /* ============================================
+           BODY TEXT
+        ============================================ */
+        p {
+            text-align: justify;
+            margin-bottom: 12px;
+            text-indent: 0;
+        }
+
+        .indent {
+            text-indent: 40px;
+        }
+
+        ul, ol {
+            margin: 10px 0 15px 30px;
+        }
+
+        ul li, ol li {
+            margin-bottom: 5px;
+        }
+
+        strong {
+            color: var(--dark);
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 10.5pt;
+            background: var(--light-bg);
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #DDD;
+            color: var(--primary);
+        }
+
+        /* ============================================
+           TABLES
+        ============================================ */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0 20px;
+            font-size: 10.5pt;
+        }
+
+        table thead th {
+            background: var(--primary);
+            color: var(--white);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        table tbody td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #E0E0E0;
+            vertical-align: top;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: var(--light-bg);
+        }
+
+        table tbody tr:hover {
+            background: #F0EDE4;
+        }
+
+        /* ============================================
+           CODE BLOCKS
+        ============================================ */
+        pre {
+            background: #1E1E2E;
+            color: #CDD6F4;
+            padding: 15px 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 9.5pt;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin: 12px 0 18px;
+            border-left: 4px solid var(--accent-gold);
+        }
+
+        pre .comment { color: #6C7086; }
+        pre .keyword { color: #CBA6F7; }
+        pre .string { color: #A6E3A1; }
+        pre .variable { color: #F38BA8; }
+        pre .function { color: #89B4FA; }
+
+        /* ============================================
+           CALLOUT BOXES
+        ============================================ */
+        .callout {
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 10.5pt;
+        }
+
+        .callout-note {
+            background: #FFF8E1;
+            border-left: 4px solid var(--accent-gold);
+        }
+
+        .callout-important {
+            background: #FFF0F0;
+            border-left: 4px solid var(--primary);
+        }
+
+        .callout-info {
+            background: #F0F4FF;
+            border-left: 4px solid #4A70B5;
+        }
+
+        .callout-success {
+            background: #F0FFF4;
+            border-left: 4px solid #28A745;
+        }
+
+        .callout-label {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* ============================================
+           STEP-BY-STEP PROCEDURES
+        ============================================ */
+        .procedure {
+            margin: 15px 0;
+            padding: 15px 20px;
+            background: var(--light-bg);
+            border-radius: 6px;
+            border: 1px solid #E5E5E5;
+        }
+
+        .procedure-title {
+            font-weight: 700;
+            font-size: 11pt;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .procedure ol {
+            margin-left: 20px;
+        }
+
+        .procedure ol li {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+
+        /* ============================================
+           CHECKLIST
+        ============================================ */
+        .checklist {
+            list-style: none;
+            margin: 10px 0 15px 0;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 6px 0 6px 30px;
+            position: relative;
+            border-bottom: 1px solid #EEE;
+        }
+
+        .checklist li::before {
+            content: '☐';
+            position: absolute;
+            left: 5px;
+            font-size: 13pt;
+            color: var(--primary);
+        }
+
+        /* ============================================
+           PAGE HEADER / FOOTER
+        ============================================ */
+        .page-header {
+            position: absolute;
+            top: 12mm;
+            left: 25mm;
+            right: 20mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 8.5pt;
+            color: var(--text-secondary);
+        }
+
+        .page-header-left {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .page-header-right {
+            font-style: italic;
+        }
+
+        .page-footer {
+            position: absolute;
+            bottom: 12mm;
+            left: 25mm;
+            right: 20mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            font-size: 8.5pt;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           PRINT STYLES
+        ============================================ */
+        @media print {
+            body {
+                background: white;
+            }
+            .page {
+                margin: 0;
+                box-shadow: none;
+                width: 100%;
+                padding: 20mm 18mm 20mm 22mm;
+            }
+            .cover-page {
+                padding: 30mm 20mm;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        /* ============================================
+           MISC
+        ============================================ */
+        .spacer { height: 20px; }
+        .spacer-lg { height: 40px; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 9pt;
+            font-weight: 600;
+            color: white;
+        }
+
+        .badge-green { background: #28A745; }
+        .badge-yellow { background: #E6A817; }
+        .badge-red { background: #DC3545; }
+        .badge-blue { background: #007BFF; }
+        .badge-gray { background: #6C757D; }
+
+        .list-table td:first-child {
+            font-weight: 600;
+            white-space: nowrap;
+            width: 200px;
+        }
+
+        .file-tree {
+            background: var(--light-bg);
+            border: 1px solid #E5E5E5;
+            border-radius: 6px;
+            padding: 15px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 9.5pt;
+            line-height: 1.7;
+            margin: 12px 0 18px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ================================================================
+     COVER PAGE
+================================================================ -->
+<div class="page cover-page">
+    <div class="cover-logo">
+        <span class="cover-logo-text">🏠</span>
+    </div>
+    <div class="cover-system-name">HomeEstate Realty</div>
+    <div class="cover-subtitle">Real Estate Property Management System</div>
+    <div class="cover-divider"></div>
+    <div class="cover-doc-type">GoDaddy Deployment Guide</div>
+    <div class="cover-info">
+        <strong>Document Type:</strong> Capstone Project Deployment Guide<br>
+        <strong>Version:</strong> 1.0<br>
+        <strong>Date:</strong> April 10, 2026<br>
+        <strong>Migration:</strong> XAMPP Localhost &rarr; GoDaddy Shared Hosting (cPanel)<br><br>
+        <strong>Prepared for:</strong> Capstone Documentation<br>
+    </div>
+    <div class="cover-footer">
+        HomeEstate Realty &mdash; Real Estate Property Management System &bull; Capstone Project 2026
+    </div>
+</div>
+
+<!-- ================================================================
+     TABLE OF CONTENTS
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Table of Contents</span>
+    </div>
+
+    <div class="toc-title">Table of Contents</div>
+
+    <ul class="toc-list">
+        <li class="toc-main"><span>1. Introduction</span></li>
+        <li class="toc-sub"><span>1.1 Purpose of This Guide</span></li>
+        <li class="toc-sub"><span>1.2 Deployment Overview</span></li>
+
+        <li class="toc-main"><span>2. GoDaddy Plan Selection</span></li>
+        <li class="toc-sub"><span>2.1 Hosting Plan Comparison</span></li>
+        <li class="toc-sub"><span>2.2 Recommended Plan</span></li>
+
+        <li class="toc-main"><span>3. System Requirements Verification</span></li>
+        <li class="toc-sub"><span>3.1 Server Requirements</span></li>
+        <li class="toc-sub"><span>3.2 GoDaddy Compatibility</span></li>
+
+        <li class="toc-main"><span>4. Pre-Deployment Preparation (Local)</span></li>
+        <li class="toc-sub"><span>4.1 Create Database Configuration File</span></li>
+        <li class="toc-sub"><span>4.2 Update Connection File</span></li>
+        <li class="toc-sub"><span>4.3 Enable HTTPS Session Security</span></li>
+        <li class="toc-sub"><span>4.4 Export Local Database</span></li>
+        <li class="toc-sub"><span>4.5 Verify .htaccess Protection</span></li>
+
+        <li class="toc-main"><span>5. GoDaddy Server Setup</span></li>
+        <li class="toc-sub"><span>5.1 Set PHP Version in cPanel</span></li>
+        <li class="toc-sub"><span>5.2 Configure PHP Settings (.user.ini)</span></li>
+        <li class="toc-sub"><span>5.3 Create the Database</span></li>
+        <li class="toc-sub"><span>5.4 Import the Database</span></li>
+
+        <li class="toc-main"><span>6. File Upload and Configuration</span></li>
+        <li class="toc-sub"><span>6.1 Upload Project Files</span></li>
+        <li class="toc-sub"><span>6.2 Update Configuration Files on Server</span></li>
+        <li class="toc-sub"><span>6.3 Enable SSL (HTTPS)</span></li>
+        <li class="toc-sub"><span>6.4 Set Up Cron Job</span></li>
+        <li class="toc-sub"><span>6.5 Set File and Folder Permissions</span></li>
+
+        <li class="toc-main"><span>7. Security Hardening</span></li>
+        <li class="toc-sub"><span>7.1 Root .htaccess Configuration</span></li>
+        <li class="toc-sub"><span>7.2 Upload Directory Protection</span></li>
+        <li class="toc-sub"><span>7.3 Database Security</span></li>
+
+        <li class="toc-main"><span>8. Performance Optimization</span></li>
+        <li class="toc-sub"><span>8.1 Database Indexes</span></li>
+        <li class="toc-sub"><span>8.2 Image Optimization</span></li>
+
+        <li class="toc-main"><span>9. Post-Deployment Testing</span></li>
+        <li class="toc-sub"><span>9.1 Public Pages</span></li>
+        <li class="toc-sub"><span>9.2 Authentication</span></li>
+        <li class="toc-sub"><span>9.3 Admin Portal</span></li>
+        <li class="toc-sub"><span>9.4 Agent Portal</span></li>
+        <li class="toc-sub"><span>9.5 File Operations</span></li>
+        <li class="toc-sub"><span>9.6 Email System</span></li>
+
+        <li class="toc-main"><span>10. Troubleshooting</span></li>
+        <li class="toc-sub"><span>10.1 500 Internal Server Error</span></li>
+        <li class="toc-sub"><span>10.2 Database Connection Failed</span></li>
+        <li class="toc-sub"><span>10.3 Emails Not Arriving</span></li>
+        <li class="toc-sub"><span>10.4 File Upload Fails</span></li>
+        <li class="toc-sub"><span>10.5 Images Not Displaying</span></li>
+        <li class="toc-sub"><span>10.6 CSS/JS Not Loading</span></li>
+        <li class="toc-sub"><span>10.7 Cron Job Not Running</span></li>
+
+        <li class="toc-main"><span>11. Files to Modify Summary</span></li>
+
+        <li class="toc-main"><span>12. Final Verification Checklist</span></li>
+
+        <li class="toc-main"><span>13. Cost Summary</span></li>
+
+        <li class="toc-main"><span>14. GoDaddy cPanel Quick Reference</span></li>
+    </ul>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>ii</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 1: INTRODUCTION
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 1: Introduction</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">1.</span> Introduction</h2>
+
+    <h3>1.1 Purpose of This Guide</h3>
+
+    <p class="indent">This document provides a complete, step-by-step guide for deploying the HomeEstate Realty system from a local XAMPP development environment to GoDaddy shared hosting (cPanel). It is intended for the development team and system administrators responsible for migrating the capstone project to a live production server.</p>
+
+    <p class="indent">The guide covers every phase of deployment, including hosting plan selection, server configuration, database migration, file upload, security hardening, performance optimization, and post-deployment verification.</p>
+
+    <h3>1.2 Deployment Overview</h3>
+
+    <p class="indent">The deployment process migrates the HomeEstate Realty platform from a local development server (XAMPP on Windows) to GoDaddy&rsquo;s shared hosting infrastructure. The following diagram summarizes the migration path:</p>
+
+    <table>
+        <thead>
+            <tr><th>Component</th><th>Local (XAMPP)</th><th>Production (GoDaddy)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Web Server</strong></td><td>Apache 2.4 (XAMPP)</td><td>Apache 2.4 (cPanel)</td></tr>
+            <tr><td><strong>PHP</strong></td><td>PHP 8.2</td><td>PHP 8.1 / 8.2 (selectable)</td></tr>
+            <tr><td><strong>Database</strong></td><td>MariaDB/MySQL (root, no password)</td><td>MySQL 8.0 (dedicated user, strong password)</td></tr>
+            <tr><td><strong>URL</strong></td><td>http://localhost/capstoneSystem/</td><td>https://yourdomain.com/</td></tr>
+            <tr><td><strong>SSL</strong></td><td>Not enabled</td><td>Free AutoSSL (HTTPS)</td></tr>
+            <tr><td><strong>Email</strong></td><td>Gmail SMTP via PHPMailer</td><td>Gmail SMTP via PHPMailer (no change)</td></tr>
+            <tr><td><strong>Cron Jobs</strong></td><td>Manual execution</td><td>cPanel Cron Jobs (automated daily)</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout callout-info">
+        <span class="callout-label">Summary</span>
+        The full deployment can be completed in approximately 1&ndash;2 hours. Steps 4.1 through 4.5 (local preparation) should be completed before beginning the GoDaddy server setup.
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>1</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 2: GODADDY PLAN SELECTION
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 2: GoDaddy Plan Selection</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">2.</span> GoDaddy Plan Selection</h2>
+
+    <h3>2.1 Hosting Plan Comparison</h3>
+
+    <p class="indent">GoDaddy offers several shared hosting plans. The table below compares the plans relevant to the HomeEstate Realty system:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>GoDaddy Plan</th>
+                <th>Monthly Cost</th>
+                <th>Storage</th>
+                <th>Databases</th>
+                <th>SSH</th>
+                <th>Cron</th>
+                <th>Verdict</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Economy</strong></td>
+                <td>~$5.99/mo</td>
+                <td>25 GB</td>
+                <td>1 MySQL DB</td>
+                <td><span class="badge badge-red">No</span></td>
+                <td><span class="badge badge-green">Yes</span></td>
+                <td>Sufficient (1 DB needed)</td>
+            </tr>
+            <tr>
+                <td><strong>Deluxe</strong></td>
+                <td>~$8.99/mo</td>
+                <td>Unlimited</td>
+                <td>25 MySQL DBs</td>
+                <td><span class="badge badge-green">Yes</span></td>
+                <td><span class="badge badge-green">Yes</span></td>
+                <td><span class="badge badge-green">Recommended</span></td>
+            </tr>
+            <tr>
+                <td><strong>Ultimate</strong></td>
+                <td>~$16.99/mo</td>
+                <td>Unlimited</td>
+                <td>Unlimited</td>
+                <td><span class="badge badge-green">Yes</span></td>
+                <td><span class="badge badge-green">Yes</span></td>
+                <td>Overkill for capstone</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>2.2 Recommended Plan</h3>
+
+    <div class="callout callout-note">
+        <span class="callout-label">Recommendation</span>
+        <strong>GoDaddy Deluxe Web Hosting</strong> is the recommended plan. It provides SSH access (useful for debugging), unlimited storage for property images and documents, and room to create a staging database. The Economy plan works if budget is tight, since HomeEstate Realty only requires one database (<code>realestatesystem</code>).
+    </div>
+
+    <p class="indent">GoDaddy includes a free domain name for the first year with annual hosting plans. Otherwise, domains cost approximately $12/year. For capstone demonstrations, a temporary GoDaddy subdomain may also be used.</p>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>2</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 3: SYSTEM REQUIREMENTS VERIFICATION
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 3: System Requirements Verification</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">3.</span> System Requirements Verification</h2>
+
+    <h3>3.1 Server Requirements</h3>
+
+    <p class="indent">Before purchasing hosting, it is essential to verify that GoDaddy meets all technical requirements of the HomeEstate Realty system. The following table maps each system requirement to GoDaddy&rsquo;s offering:</p>
+
+    <h3>3.2 GoDaddy Compatibility</h3>
+
+    <table>
+        <thead>
+            <tr><th>Requirement</th><th>System Needs</th><th>GoDaddy Provides</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>PHP Version</strong></td><td>8.0+ (8.1 or 8.2 ideal)</td><td>PHP 8.1, 8.2, 8.3 (selectable in cPanel)</td><td><span class="badge badge-green">Pass</span></td></tr>
+            <tr><td><strong>MySQL</strong></td><td>5.7+</td><td>MySQL 8.0</td><td><span class="badge badge-green">Pass</span></td></tr>
+            <tr><td><strong>PHP Extensions</strong></td><td>mysqli, fileinfo, mbstring, hash, filter, session, ctype</td><td>All included by default</td><td><span class="badge badge-green">Pass</span></td></tr>
+            <tr><td><strong>Apache</strong></td><td>2.4+ with mod_rewrite</td><td>Apache 2.4 with mod_rewrite enabled</td><td><span class="badge badge-green">Pass</span></td></tr>
+            <tr><td><strong>SSL Certificate</strong></td><td>Required (HTTPS)</td><td>Free SSL via cPanel (AutoSSL)</td><td><span class="badge badge-green">Pass</span></td></tr>
+            <tr><td><strong>SMTP (Port 587)</strong></td><td>Required for Gmail PHPMailer</td><td>Port 587 open on shared plans</td><td><span class="badge badge-green">Pass</span></td></tr>
+            <tr><td><strong>Cron Jobs</strong></td><td>Required (daily lease expiry check)</td><td>Available via cPanel &rarr; Cron Jobs</td><td><span class="badge badge-green">Pass</span></td></tr>
+            <tr><td><strong>Storage</strong></td><td>20 GB+ recommended</td><td>25 GB (Economy) / Unlimited (Deluxe)</td><td><span class="badge badge-green">Pass</span></td></tr>
+            <tr><td><strong>.htaccess</strong></td><td>Required for directory protection</td><td>Fully supported (Apache)</td><td><span class="badge badge-green">Pass</span></td></tr>
+            <tr><td><strong>File Uploads</strong></td><td>Up to 25 MB per file</td><td>Configurable via .user.ini</td><td><span class="badge badge-green">Pass</span></td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout callout-success">
+        <span class="callout-label">Result</span>
+        GoDaddy shared hosting fully supports all HomeEstate Realty system requirements. No workarounds or alternative components are needed.
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>3</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 4: PRE-DEPLOYMENT PREPARATION
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 4: Pre-Deployment Preparation</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">4.</span> Pre-Deployment Preparation (Local)</h2>
+
+    <p class="indent">Complete the following steps on your local machine <strong>before</strong> uploading to GoDaddy. Steps 4.1 through 4.5 can be performed in any order.</p>
+
+    <h3>4.1 Create Database Configuration File</h3>
+
+    <p class="indent">The current <code>connection.php</code> has hardcoded localhost/root credentials. Create a separate configuration file to easily switch between local and production environments.</p>
+
+    <h4>Create <code>config/db_config.php</code>:</h4>
+
+    <pre><span class="comment">&lt;?php</span>
+<span class="comment">// ============================================================</span>
+<span class="comment">// DATABASE CONFIGURATION — PRODUCTION (GoDaddy)</span>
+<span class="comment">// IMPORTANT: Never commit this file to version control.</span>
+<span class="comment">// ============================================================</span>
+
+<span class="function">define</span>(<span class="string">'DB_HOST'</span>, <span class="string">'localhost'</span>);
+<span class="function">define</span>(<span class="string">'DB_USERNAME'</span>, <span class="string">'your_cpanel_dbuser'</span>);
+<span class="function">define</span>(<span class="string">'DB_PASSWORD'</span>, <span class="string">'YourStrongPassword123!'</span>);
+<span class="function">define</span>(<span class="string">'DB_NAME'</span>, <span class="string">'your_cpanel_prefix_realestatesystem'</span>);</pre>
+
+    <div class="callout callout-note">
+        <span class="callout-label">GoDaddy Note</span>
+        GoDaddy automatically prefixes database names and usernames with your cPanel username. For example, if your cPanel username is <code>abc123</code>, your database will be <code>abc123_realestatesystem</code> and your user will be <code>abc123_homestate</code>.
+    </div>
+
+    <h3>4.2 Update Connection File</h3>
+
+    <h4>Edit <code>connection.php</code>:</h4>
+
+    <pre><span class="comment">&lt;?php</span>
+<span class="keyword">require_once</span> <span class="variable">__DIR__</span> . <span class="string">'/config/db_config.php'</span>;
+
+<span class="comment">// Create connection using config constants</span>
+<span class="variable">$conn</span> = <span class="function">mysqli_connect</span>(<span class="variable">DB_HOST</span>, <span class="variable">DB_USERNAME</span>, <span class="variable">DB_PASSWORD</span>, <span class="variable">DB_NAME</span>);
+
+<span class="comment">// Check connection</span>
+<span class="keyword">if</span> (<span class="variable">$conn</span>-&gt;<span class="variable">connect_error</span>) {
+    <span class="function">error_log</span>(<span class="string">"Database connection failed: "</span> . <span class="variable">$conn</span>-&gt;<span class="variable">connect_error</span>);
+    <span class="function">die</span>(<span class="string">"A system error occurred. Please try again later."</span>);
+}</pre>
+
+    <h3>4.3 Enable HTTPS Session Security</h3>
+
+    <p class="indent">In <code>login.php</code> (line 7), uncomment the secure cookie setting to enforce HTTPS-only session cookies:</p>
+
+    <pre><span class="comment">// Change this:</span>
+<span class="comment">// ini_set('session.cookie_secure', 1);</span>
+
+<span class="comment">// To this:</span>
+<span class="function">ini_set</span>(<span class="string">'session.cookie_secure'</span>, <span class="string">1</span>);</pre>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>4</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 4 CONTINUED
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 4: Pre-Deployment Preparation (continued)</span>
+    </div>
+
+    <h3>4.4 Export Local Database</h3>
+
+    <div class="procedure">
+        <div class="procedure-title">Procedure: Export Database from XAMPP</div>
+        <ol>
+            <li>Open phpMyAdmin on XAMPP: <code>http://localhost/phpmyadmin</code></li>
+            <li>Click on the <strong>realestatesystem</strong> database in the left sidebar.</li>
+            <li>Click the <strong>Export</strong> tab at the top of the page.</li>
+            <li>Select <strong>Custom</strong> export method.</li>
+            <li>Under <strong>Format</strong>, keep <strong>SQL</strong> selected.</li>
+            <li>Under <strong>Object creation options</strong>, check:
+                <ul>
+                    <li><strong>Add DROP TABLE / VIEW / PROCEDURE / FUNCTION / EVENT / TRIGGER statement</strong></li>
+                    <li><strong>IF NOT EXISTS</strong></li>
+                </ul>
+            </li>
+            <li>Under <strong>Data</strong>, keep defaults (include data).</li>
+            <li>Click <strong>Go</strong> &mdash; save the file as <code>realestatesystem_export.sql</code>.</li>
+        </ol>
+    </div>
+
+    <div class="callout callout-important">
+        <span class="callout-label">Important</span>
+        Keep this exported <code>.sql</code> file safe. You will import it to GoDaddy in Step 5.4.
+    </div>
+
+    <h3>4.5 Verify .htaccess Protection</h3>
+
+    <p class="indent">Ensure the following upload directories contain protective <code>.htaccess</code> files that block direct execution of scripts:</p>
+
+    <table>
+        <thead>
+            <tr><th>Directory</th><th>Protection</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>uploads/commission_proofs/</code></td><td>Block PHP/script execution</td><td>Commission payment proofs</td></tr>
+            <tr><td><code>rental_documents/</code></td><td>Deny from all</td><td>Rental verification docs</td></tr>
+            <tr><td><code>rental_payment_documents/</code></td><td>Block PHP + no directory listing</td><td>Payment receipts</td></tr>
+            <tr><td><code>sale_documents/</code></td><td>Block PHP/script execution</td><td>Sale verification docs</td></tr>
+            <tr><td><code>logs/</code></td><td>Block all web access</td><td>Debug logs</td></tr>
+        </tbody>
+    </table>
+
+    <p>If any <code>.htaccess</code> file is missing, create one with the following content:</p>
+
+    <pre>Options -Indexes
+&lt;FilesMatch "\.(php|phtml|php3|php4|php5|phps|phar|sh|bash|cgi|pl)$"&gt;
+    Deny from all
+&lt;/FilesMatch&gt;</pre>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>5</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 5: GODADDY SERVER SETUP
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 5: GoDaddy Server Setup</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">5.</span> GoDaddy Server Setup</h2>
+
+    <h3>5.1 Set PHP Version in cPanel</h3>
+
+    <div class="procedure">
+        <div class="procedure-title">Procedure: Set PHP Version</div>
+        <ol>
+            <li>Log in to your GoDaddy account &rarr; <strong>My Products</strong> &rarr; <strong>Web Hosting</strong> &rarr; <strong>Manage</strong>.</li>
+            <li>Open <strong>cPanel</strong> (button at the top of the hosting dashboard).</li>
+            <li>In cPanel, search for <strong>&ldquo;MultiPHP Manager&rdquo;</strong>.</li>
+            <li>Select your domain from the list.</li>
+            <li>Change PHP version to <strong>PHP 8.1</strong> or <strong>PHP 8.2</strong>.</li>
+            <li>Click <strong>Apply</strong>.</li>
+        </ol>
+    </div>
+
+    <div class="callout callout-info">
+        <span class="callout-label">Why PHP 8.1+</span>
+        The system uses <code>random_int()</code>, typed parameters, <code>password_hash()</code>, and other modern PHP features that require PHP 8.1 or later.
+    </div>
+
+    <h3>5.2 Configure PHP Settings (.user.ini)</h3>
+
+    <p class="indent">GoDaddy shared hosting does not provide direct <code>php.ini</code> access. Instead, create a <code>.user.ini</code> file in your project root (inside <code>public_html/</code>):</p>
+
+    <pre><span class="comment">; ============================================================</span>
+<span class="comment">; PHP Settings for HomeEstate Realty (GoDaddy Production)</span>
+<span class="comment">; ============================================================</span>
+
+<span class="comment">; File uploads (system allows up to 25MB images)</span>
+upload_max_filesize = 25M
+post_max_size = 30M
+max_file_uploads = 20
+
+<span class="comment">; Execution limits</span>
+max_execution_time = 120
+max_input_time = 120
+memory_limit = 256M
+
+<span class="comment">; Error handling (NEVER show errors in production)</span>
+display_errors = Off
+log_errors = On
+error_reporting = E_ALL
+
+<span class="comment">; Session settings</span>
+session.gc_maxlifetime = 3600
+session.cookie_lifetime = 0
+
+<span class="comment">; Security</span>
+expose_php = Off</pre>
+
+    <div class="callout callout-note">
+        <span class="callout-label">Note</span>
+        After creating <code>.user.ini</code>, settings may take <strong>up to 5 minutes</strong> to apply on GoDaddy due to PHP configuration caching.
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>6</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 5 CONTINUED: DATABASE
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 5: GoDaddy Server Setup (continued)</span>
+    </div>
+
+    <h3>5.3 Create the Database</h3>
+
+    <div class="procedure">
+        <div class="procedure-title">Procedure: Create MySQL Database on GoDaddy</div>
+        <ol>
+            <li>In cPanel, go to <strong>Databases</strong> &rarr; <strong>MySQL Databases</strong>.</li>
+            <li><strong>Create a New Database:</strong>
+                <ul>
+                    <li>Database Name: type <code>realestatesystem</code></li>
+                    <li>GoDaddy will create it as: <code>yourprefix_realestatesystem</code></li>
+                    <li>Click <strong>Create Database</strong></li>
+                </ul>
+            </li>
+            <li><strong>Create a Database User:</strong>
+                <ul>
+                    <li>Username: type <code>homestate</code></li>
+                    <li>GoDaddy will create it as: <code>yourprefix_homestate</code></li>
+                    <li>Password: click <strong>Password Generator</strong> &rarr; use a strong password &rarr; <strong>copy and save it</strong></li>
+                    <li>Click <strong>Create User</strong></li>
+                </ul>
+            </li>
+            <li><strong>Add User to Database:</strong>
+                <ul>
+                    <li>Select the user (<code>yourprefix_homestate</code>) and database (<code>yourprefix_realestatesystem</code>)</li>
+                    <li>Click <strong>Add</strong></li>
+                    <li>On the privileges page, check <strong>ALL PRIVILEGES</strong></li>
+                    <li>Click <strong>Make Changes</strong></li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="callout callout-important">
+        <span class="callout-label">Write Down These 3 Values</span>
+        You will need them for <code>config/db_config.php</code>:<br>
+        &bull; Database name: <code>yourprefix_realestatesystem</code><br>
+        &bull; Username: <code>yourprefix_homestate</code><br>
+        &bull; Password: <em>(the generated password)</em>
+    </div>
+
+    <h3>5.4 Import the Database</h3>
+
+    <div class="procedure">
+        <div class="procedure-title">Procedure: Import Database via phpMyAdmin</div>
+        <ol>
+            <li>In cPanel, go to <strong>Databases</strong> &rarr; <strong>phpMyAdmin</strong>.</li>
+            <li>In the left sidebar, click on your database (<code>yourprefix_realestatesystem</code>).</li>
+            <li>Click the <strong>Import</strong> tab.</li>
+            <li>Click <strong>Choose File</strong> &rarr; select <code>realestatesystem_export.sql</code> from Step 4.4.</li>
+            <li>Keep format as <strong>SQL</strong>.</li>
+            <li>Click <strong>Go</strong>.</li>
+            <li>Wait for the message: <em>&ldquo;Import has been successfully finished.&rdquo;</em></li>
+            <li><strong>Verify:</strong> Click the database in the sidebar &mdash; you should see 30+ tables (accounts, property, agent_information, tour_requests, etc.).</li>
+        </ol>
+    </div>
+
+    <div class="callout callout-note">
+        <span class="callout-label">If the SQL file is too large</span>
+        <strong>Option A:</strong> Use SSH (Deluxe plan) and run: <code>mysql -u yourprefix_homestate -p yourprefix_realestatesystem &lt; realestatesystem_export.sql</code><br>
+        <strong>Option B:</strong> Split the SQL file into smaller chunks using a tool like BigDump.
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>7</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 6: FILE UPLOAD AND CONFIGURATION
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 6: File Upload and Configuration</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">6.</span> File Upload and Configuration</h2>
+
+    <h3>6.1 Upload Project Files</h3>
+
+    <h4>Option A &mdash; cPanel File Manager (Easiest):</h4>
+
+    <div class="procedure">
+        <div class="procedure-title">Procedure: Upload via cPanel File Manager</div>
+        <ol>
+            <li>In cPanel, open <strong>File Manager</strong>.</li>
+            <li>Navigate to <strong>public_html/</strong>.</li>
+            <li>On your local machine, select all files inside <code>C:\xampp\htdocs\capstoneSystem\</code>.</li>
+            <li>Right-click &rarr; <strong>Send to</strong> &rarr; <strong>Compressed (zipped) folder</strong> &rarr; name it <code>capstoneSystem.zip</code>.</li>
+            <li>In cPanel, click <strong>Upload</strong> in the toolbar.</li>
+            <li>Upload the <code>.zip</code> file to <code>public_html/</code>.</li>
+            <li>After upload, right-click the <code>.zip</code> file &rarr; <strong>Extract</strong> &rarr; extract to <code>public_html/</code>.</li>
+            <li>Delete the <code>.zip</code> file after extraction.</li>
+        </ol>
+    </div>
+
+    <h4>Option B &mdash; FTP via FileZilla:</h4>
+
+    <div class="procedure">
+        <div class="procedure-title">Procedure: Upload via FTP</div>
+        <ol>
+            <li>Download and install <strong>FileZilla</strong> (filezilla-project.org).</li>
+            <li>Get FTP credentials from cPanel &rarr; <strong>Files</strong> &rarr; <strong>FTP Accounts</strong>.</li>
+            <li>Connect using: Host = <code>ftp.yourdomain.com</code>, Port = <code>21</code>, Username &amp; Password = cPanel login.</li>
+            <li>Navigate to <code>public_html/</code> on the remote side.</li>
+            <li>Drag your local project files into <code>public_html/</code>.</li>
+            <li>Wait for all files to transfer (15&ndash;30 minutes depending on images).</li>
+        </ol>
+    </div>
+
+    <h4>Expected File Structure on Server:</h4>
+
+    <div class="file-tree">
+        public_html/<br>
+        ├── admin_dashboard.php<br>
+        ├── connection.php<br>
+        ├── login.php<br>
+        ├── config/<br>
+        │&nbsp;&nbsp;&nbsp;&nbsp;├── db_config.php &nbsp;&nbsp;&larr; <em>Updated with GoDaddy credentials</em><br>
+        │&nbsp;&nbsp;&nbsp;&nbsp;├── mail_config.php<br>
+        │&nbsp;&nbsp;&nbsp;&nbsp;├── paths.php<br>
+        │&nbsp;&nbsp;&nbsp;&nbsp;└── session_timeout.php<br>
+        ├── agent_pages/<br>
+        ├── user_pages/<br>
+        ├── uploads/<br>
+        ├── rental_documents/<br>
+        ├── sale_documents/<br>
+        ├── rental_payment_documents/<br>
+        ├── PHPMailer/<br>
+        ├── assets/<br>
+        ├── images/<br>
+        └── logs/
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>8</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 6 CONTINUED: CONFIGURATION
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 6: File Upload and Configuration (continued)</span>
+    </div>
+
+    <h3>6.2 Update Configuration Files on Server</h3>
+
+    <p class="indent">After uploading, edit the following files using <strong>cPanel File Manager</strong> (right-click file &rarr; <strong>Edit</strong>):</p>
+
+    <h4>1. Edit <code>config/db_config.php</code>:</h4>
+
+    <pre><span class="comment">&lt;?php</span>
+<span class="function">define</span>(<span class="string">'DB_HOST'</span>, <span class="string">'localhost'</span>);
+<span class="function">define</span>(<span class="string">'DB_USERNAME'</span>, <span class="string">'yourprefix_homestate'</span>);       <span class="comment">// From Step 5.3</span>
+<span class="function">define</span>(<span class="string">'DB_PASSWORD'</span>, <span class="string">'YourGeneratedPassword123!'</span>);  <span class="comment">// From Step 5.3</span>
+<span class="function">define</span>(<span class="string">'DB_NAME'</span>, <span class="string">'yourprefix_realestatesystem'</span>);     <span class="comment">// From Step 5.3</span></pre>
+
+    <h4>2. Verify <code>config/mail_config.php</code>:</h4>
+
+    <p class="indent">The existing Gmail SMTP configuration should work on GoDaddy without modification:</p>
+
+    <pre><span class="function">define</span>(<span class="string">'MAIL_SMTP_HOST'</span>, <span class="string">'smtp.gmail.com'</span>);
+<span class="function">define</span>(<span class="string">'MAIL_SMTP_PORT'</span>, <span class="string">587</span>);
+<span class="function">define</span>(<span class="string">'MAIL_SMTP_USERNAME'</span>, <span class="string">'real.estate.system.noreply@gmail.com'</span>);
+<span class="function">define</span>(<span class="string">'MAIL_SMTP_PASSWORD'</span>, <span class="string">'your-gmail-app-password'</span>);</pre>
+
+    <h4>3. Verify <code>config/paths.php</code>:</h4>
+
+    <p class="indent">This file already auto-detects <code>BASE_URL</code> dynamically. <strong>No changes needed.</strong></p>
+
+    <h3>6.3 Enable SSL (HTTPS)</h3>
+
+    <div class="procedure">
+        <div class="procedure-title">Procedure: Enable Free SSL Certificate</div>
+        <ol>
+            <li>In cPanel, go to <strong>Security</strong> &rarr; <strong>SSL/TLS Status</strong> (or <strong>AutoSSL</strong>).</li>
+            <li>Your domain should automatically have a free SSL certificate provisioned.</li>
+            <li>If not, click <strong>Run AutoSSL</strong> to generate one.</li>
+            <li>Wait 5&ndash;15 minutes for the certificate to be issued.</li>
+            <li><strong>Verify:</strong> Visit <code>https://yourdomain.com</code> &mdash; you should see the padlock icon.</li>
+        </ol>
+    </div>
+
+    <h3>6.4 Set Up Cron Job</h3>
+
+    <div class="procedure">
+        <div class="procedure-title">Procedure: Configure Daily Lease Expiry Check</div>
+        <ol>
+            <li>In cPanel, go to <strong>Advanced</strong> &rarr; <strong>Cron Jobs</strong>.</li>
+            <li>Under <strong>Add New Cron Job</strong>, set the schedule:
+                <ul>
+                    <li>Minute: <code>0</code> &nbsp;|&nbsp; Hour: <code>9</code> &nbsp;|&nbsp; Day: <code>*</code> &nbsp;|&nbsp; Month: <code>*</code> &nbsp;|&nbsp; Weekday: <code>*</code></li>
+                </ul>
+            </li>
+            <li>Enter the command:</li>
+        </ol>
+    </div>
+
+    <pre>/usr/local/bin/php ~/public_html/cron_lease_expiry_check.php >> ~/public_html/logs/cron.log 2>&amp;1</pre>
+
+    <div class="callout callout-note">
+        <span class="callout-label">GoDaddy Cron Note</span>
+        Use <code>/usr/local/bin/php</code> (not <code>/usr/bin/php</code>) &mdash; this is GoDaddy&rsquo;s PHP binary path. The <code>~/</code> prefix refers to your home directory.
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>9</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 6 CONTINUED: PERMISSIONS
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 6: File Upload and Configuration (continued)</span>
+    </div>
+
+    <h3>6.5 Set File and Folder Permissions</h3>
+
+    <p class="indent">In <strong>cPanel File Manager</strong>, right-click each directory &rarr; <strong>Change Permissions</strong> and set the following:</p>
+
+    <table>
+        <thead>
+            <tr><th>Path</th><th>Permission</th><th>Reason</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>uploads/</code></td><td>755</td><td>Web server needs to write uploaded images</td></tr>
+            <tr><td><code>uploads/commission_proofs/</code></td><td>755</td><td>Commission payment proof uploads</td></tr>
+            <tr><td><code>rental_documents/</code></td><td>755</td><td>Rental verification document uploads</td></tr>
+            <tr><td><code>sale_documents/</code></td><td>755</td><td>Sale verification document uploads</td></tr>
+            <tr><td><code>rental_payment_documents/</code></td><td>755</td><td>Payment receipt uploads</td></tr>
+            <tr><td><code>logs/</code></td><td>755</td><td>PHP and cron error logs</td></tr>
+            <tr><td><code>config/db_config.php</code></td><td>644</td><td>Readable by PHP only, not writable from web</td></tr>
+            <tr><td><code>config/mail_config.php</code></td><td>644</td><td>Readable by PHP only</td></tr>
+            <tr><td>All <code>.php</code> files</td><td>644</td><td>Standard &mdash; readable, not writable from web</td></tr>
+            <tr><td>All <code>.htaccess</code> files</td><td>644</td><td>Standard &mdash; readable, not writable from web</td></tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>10</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 7: SECURITY HARDENING
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 7: Security Hardening</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">7.</span> Security Hardening</h2>
+
+    <h3>7.1 Root .htaccess Configuration</h3>
+
+    <p class="indent">Create a <code>.htaccess</code> file in the project root (inside <code>public_html/</code>) with the following security and performance rules:</p>
+
+    <pre><span class="comment"># ============================================================</span>
+<span class="comment"># HomeEstate Realty — Root .htaccess (Security + Performance)</span>
+<span class="comment"># ============================================================</span>
+
+<span class="comment"># ── Force HTTPS ──</span>
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+<span class="comment"># ── Block access to sensitive directories ──</span>
+&lt;IfModule mod_rewrite.c&gt;
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^logs/ - [F,L]
+    RewriteRule ^docs/ - [F,L]
+    RewriteRule ^PHPMailer/ - [F,L]
+&lt;/IfModule&gt;
+
+<span class="comment"># ── Block access to hidden files ──</span>
+&lt;FilesMatch "^\."&gt;
+    Order allow,deny
+    Deny from all
+&lt;/FilesMatch&gt;
+
+<span class="comment"># ── Block access to sensitive file types ──</span>
+&lt;FilesMatch "\.(sql|log|md|txt|yml|yaml|json|lock|bak|old)$"&gt;
+    Order allow,deny
+    Deny from all
+&lt;/FilesMatch&gt;
+
+<span class="comment"># ── Security Headers ──</span>
+&lt;IfModule mod_headers.c&gt;
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header unset X-Powered-By
+    Header unset Server
+&lt;/IfModule&gt;
+
+<span class="comment"># ── Prevent directory listing ──</span>
+Options -Indexes
+
+<span class="comment"># ── Browser caching ──</span>
+&lt;IfModule mod_expires.c&gt;
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+&lt;/IfModule&gt;
+
+<span class="comment"># ── Gzip compression ──</span>
+&lt;IfModule mod_deflate.c&gt;
+    AddOutputFilterByType DEFLATE text/html text/plain text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+&lt;/IfModule&gt;</pre>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>11</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 7 CONTINUED
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 7: Security Hardening (continued)</span>
+    </div>
+
+    <h3>7.2 Upload Directory Protection</h3>
+
+    <p class="indent">After deployment, verify that each upload directory blocks direct web access by visiting the following URLs in a browser:</p>
+
+    <table>
+        <thead>
+            <tr><th>URL to Test</th><th>Expected Result</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>https://yourdomain.com/rental_documents/</code></td><td><strong>403 Forbidden</strong></td></tr>
+            <tr><td><code>https://yourdomain.com/rental_payment_documents/</code></td><td><strong>403 Forbidden</strong></td></tr>
+            <tr><td><code>https://yourdomain.com/uploads/commission_proofs/</code></td><td><strong>No directory listing</strong></td></tr>
+            <tr><td><code>https://yourdomain.com/sale_documents/</code></td><td><strong>403 Forbidden</strong></td></tr>
+            <tr><td><code>https://yourdomain.com/config/db_config.php</code></td><td><strong>403 Forbidden</strong></td></tr>
+            <tr><td><code>https://yourdomain.com/logs/</code></td><td><strong>403 Forbidden</strong></td></tr>
+        </tbody>
+    </table>
+
+    <h3>7.3 Database Security</h3>
+
+    <p class="indent">GoDaddy handles most database security automatically on shared hosting. Verify the following:</p>
+
+    <ul>
+        <li><strong>Strong password:</strong> The database user has a strong, generated password (from Step 5.3).</li>
+        <li><strong>Localhost-only access:</strong> GoDaddy enforces this on shared hosting &mdash; no remote MySQL access by default.</li>
+        <li><strong>Dedicated user:</strong> A dedicated user (<code>yourprefix_homestate</code>) is used, not the root account.</li>
+    </ul>
+
+    <h4>Database Backups:</h4>
+
+    <div class="procedure">
+        <div class="procedure-title">Procedure: Manual Database Backup</div>
+        <ol>
+            <li>In cPanel, go to <strong>Files</strong> &rarr; <strong>Backup Wizard</strong> &rarr; <strong>Back Up</strong> &rarr; <strong>MySQL Databases</strong>.</li>
+            <li>Download a backup of your <code>yourprefix_realestatesystem</code> database.</li>
+            <li>Perform this backup <strong>weekly</strong> (GoDaddy does not auto-backup databases on shared plans).</li>
+        </ol>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>12</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 8: PERFORMANCE OPTIMIZATION
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 8: Performance Optimization</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">8.</span> Performance Optimization</h2>
+
+    <h3>8.1 Database Indexes</h3>
+
+    <p class="indent">Add the following database indexes to improve query performance. Execute these SQL statements in <strong>phpMyAdmin &rarr; SQL tab</strong>:</p>
+
+    <pre><span class="comment">-- Speed up property search (AJAX filtering)</span>
+<span class="keyword">ALTER TABLE</span> property <span class="keyword">ADD INDEX</span> idx_search
+  (approval_status, Status, City, PropertyType,
+   ListingPrice, Bedrooms, Bathrooms, ListingDate);
+
+<span class="comment">-- Speed up image loading for property listings</span>
+<span class="keyword">ALTER TABLE</span> property_images <span class="keyword">ADD INDEX</span> idx_img_sort
+  (property_ID, SortOrder);
+
+<span class="comment">-- Speed up property creator lookups</span>
+<span class="keyword">ALTER TABLE</span> property_log <span class="keyword">ADD INDEX</span> idx_log_created
+  (property_id, action, account_id);
+
+<span class="comment">-- Speed up notification badge queries (polled every 10 seconds)</span>
+<span class="keyword">ALTER TABLE</span> agent_notifications <span class="keyword">ADD INDEX</span> idx_agent_unread
+  (agent_account_id, is_read);
+
+<span class="comment">-- Speed up tour request lookups</span>
+<span class="keyword">ALTER TABLE</span> tour_requests <span class="keyword">ADD INDEX</span> idx_tour_agent
+  (agent_account_id, request_status);</pre>
+
+    <h3>8.2 Image Optimization</h3>
+
+    <p class="indent">The following optimizations are already in place or recommended:</p>
+
+    <table>
+        <thead>
+            <tr><th>Optimization</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CSS/JS minified (bootstrap.min.css, bootstrap.bundle.min.js, chart.umd.min.js)</td><td><span class="badge badge-green">Already Done</span></td></tr>
+            <tr><td>Gzip compression enabled via root .htaccess</td><td><span class="badge badge-green">Already Done</span></td></tr>
+            <tr><td>Browser caching headers via root .htaccess</td><td><span class="badge badge-green">Already Done</span></td></tr>
+            <tr><td>Compress existing property images via TinyPNG or Squoosh before upload</td><td><span class="badge badge-yellow">Recommended</span></td></tr>
+            <tr><td>Recommend agents upload images under 2 MB</td><td><span class="badge badge-yellow">Recommended</span></td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout callout-info">
+        <span class="callout-label">Performance Testing</span>
+        After deployment, run <strong>Google PageSpeed Insights</strong> (pagespeed.web.dev) on public pages. Target scores: <strong>70+ on mobile</strong>, <strong>80+ on desktop</strong>.
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>13</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 9: POST-DEPLOYMENT TESTING
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 9: Post-Deployment Testing</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">9.</span> Post-Deployment Testing</h2>
+
+    <p class="indent">Work through the following comprehensive testing checklist after deployment. Each item should pass before considering the deployment successful.</p>
+
+    <h3>9.1 Public Pages (No Login Required)</h3>
+
+    <ul class="checklist">
+        <li>Homepage loads: <code>https://yourdomain.com/user_pages/index.php</code> &mdash; featured properties, stats, and city/type counts display correctly.</li>
+        <li>Property search works: AJAX filters (city, type, price, beds) respond correctly.</li>
+        <li>Property details load: gallery, details, and tour request form visible.</li>
+        <li>Tour request form submits successfully with a success message.</li>
+        <li>Agent listing page shows approved agents.</li>
+        <li>All images load correctly (no broken image icons).</li>
+        <li>CSS/JS loads properly (Bootstrap working, no console errors).</li>
+    </ul>
+
+    <h3>9.2 Authentication</h3>
+
+    <ul class="checklist">
+        <li>Login page loads with HTTPS padlock: <code>https://yourdomain.com/login.php</code></li>
+        <li>Submit login &rarr; 2FA email received within 30&ndash;60 seconds.</li>
+        <li>2FA code validates &rarr; redirects to correct dashboard (admin vs. agent).</li>
+        <li>Session timeout: leave page idle 30+ minutes &rarr; redirected to login.</li>
+        <li>Logout: session fully destroyed, redirected to login.</li>
+    </ul>
+
+    <h3>9.3 Admin Portal (Login as Admin)</h3>
+
+    <ul class="checklist">
+        <li>Dashboard loads with correct statistics.</li>
+        <li>Property management: add, view list, approve/reject.</li>
+        <li>Agent management: view agents, approve pending, reject with reason.</li>
+        <li>Tour request management: accept, reject, cancel, complete.</li>
+        <li>Rental workflow: view approvals, finalize rental, manage lease.</li>
+        <li>Sale workflow: view approvals, approve sale, finalize sale.</li>
+        <li>Commission management: view, process payment with proof upload.</li>
+        <li>Reports page loads with data and charts.</li>
+        <li>Notifications: receive and mark as read.</li>
+        <li>Settings: add/remove amenities, specializations, property types.</li>
+    </ul>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>14</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 9 CONTINUED
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 9: Post-Deployment Testing (continued)</span>
+    </div>
+
+    <h3>9.4 Agent Portal (Login as Agent)</h3>
+
+    <ul class="checklist">
+        <li>Dashboard loads after login.</li>
+        <li>Add new property: fill form + upload images + floor plans &rarr; submitted for approval.</li>
+        <li>Edit property: modify details, reorder images (drag-drop), delete images.</li>
+        <li>Tour requests: view, accept, reject, complete, cancel.</li>
+        <li>Record rental payment: fill form + upload receipt.</li>
+        <li>Lease management: renew lease, terminate lease.</li>
+        <li>View commissions by status.</li>
+        <li>Notifications: receive and mark as read.</li>
+    </ul>
+
+    <h3>9.5 File Operations</h3>
+
+    <ul class="checklist">
+        <li>Image upload works (property photos, floor plans, profile pictures).</li>
+        <li>Document upload works (sale/rental verification docs, payment receipts).</li>
+        <li>Document download works for authorized users.</li>
+        <li>Direct access blocked: <code>https://yourdomain.com/rental_documents/</code> &rarr; 403 Forbidden.</li>
+        <li>Direct access blocked: <code>https://yourdomain.com/config/db_config.php</code> &rarr; 403 Forbidden.</li>
+    </ul>
+
+    <h3>9.6 Email System</h3>
+
+    <ul class="checklist">
+        <li>2FA emails send and arrive (check spam folder).</li>
+        <li>Tour request notifications reach agents.</li>
+        <li>Approval/rejection emails work (agent approval, sale approval, rental approval).</li>
+        <li>Lease expiry warning emails (trigger cron or test manually).</li>
+    </ul>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>15</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 10: TROUBLESHOOTING
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 10: Troubleshooting</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">10.</span> Troubleshooting</h2>
+
+    <h3>10.1 &ldquo;500 Internal Server Error&rdquo;</h3>
+
+    <p><strong>Cause:</strong> Usually a <code>.htaccess</code> syntax error or PHP version mismatch.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Fix:</div>
+        <ol>
+            <li>Check <code>logs/</code> for error details, or cPanel &rarr; <strong>Metrics</strong> &rarr; <strong>Errors</strong>.</li>
+            <li>Temporarily rename <code>.htaccess</code> to <code>.htaccess.bak</code> to see if the error resolves.</li>
+            <li>Verify PHP version is 8.1+ in cPanel &rarr; MultiPHP Manager.</li>
+            <li>Check <code>.user.ini</code> for syntax errors.</li>
+        </ol>
+    </div>
+
+    <h3>10.2 &ldquo;Database Connection Failed&rdquo;</h3>
+
+    <p><strong>Cause:</strong> Incorrect credentials in <code>config/db_config.php</code>.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Fix:</div>
+        <ol>
+            <li>Verify <code>DB_NAME</code> includes the cPanel prefix (e.g., <code>abc123_realestatesystem</code>, not just <code>realestatesystem</code>).</li>
+            <li>Verify <code>DB_USERNAME</code> includes the cPanel prefix (e.g., <code>abc123_homestate</code>).</li>
+            <li>Verify the user is assigned to the database in cPanel &rarr; MySQL Databases &rarr; <strong>Current Databases</strong>.</li>
+            <li><code>DB_HOST</code> should be <code>localhost</code> (not your domain name or IP).</li>
+        </ol>
+    </div>
+
+    <h3>10.3 &ldquo;2FA Emails Not Arriving&rdquo;</h3>
+
+    <p><strong>Cause:</strong> Gmail SMTP blocked or credentials expired.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Fix:</div>
+        <ol>
+            <li>Verify Gmail app password is still valid (regenerate at myaccount.google.com &rarr; Security &rarr; App Passwords if needed).</li>
+            <li>Verify two-factor authentication is enabled on the Gmail account.</li>
+            <li>Try port 465 with <code>SMTPSecure = 'ssl'</code> as a fallback if port 587 is blocked.</li>
+            <li><strong>Alternative:</strong> Use GoDaddy&rsquo;s own SMTP: <code>smtpout.secureserver.net</code> (port 465 SSL or 587 TLS) with a GoDaddy email address.</li>
+        </ol>
+    </div>
+
+    <h3>10.4 &ldquo;File Upload Fails&rdquo;</h3>
+
+    <p><strong>Cause:</strong> PHP upload limits not applied.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Fix:</div>
+        <ol>
+            <li>Verify <code>.user.ini</code> exists in the project root with correct settings.</li>
+            <li>Wait 5 minutes (GoDaddy caches PHP configuration).</li>
+            <li>Create a temporary <code>phpinfo.php</code> file and check <code>upload_max_filesize</code> &mdash; should show 25M.</li>
+            <li><strong>Delete <code>phpinfo.php</code> immediately after checking</strong> &mdash; it exposes server information.</li>
+        </ol>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>16</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 10 CONTINUED
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 10: Troubleshooting (continued)</span>
+    </div>
+
+    <h3>10.5 &ldquo;Images Not Displaying&rdquo;</h3>
+
+    <p><strong>Cause:</strong> File paths or permissions incorrect.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Fix:</div>
+        <ol>
+            <li>Check that the <code>uploads/</code> directory contains the image files (via cPanel &rarr; File Manager).</li>
+            <li>Verify permissions are 755 on upload directories.</li>
+            <li>Check the image URLs in page source &mdash; they should match the actual file paths on server.</li>
+            <li>If you uploaded a <code>.zip</code>, ensure files extracted to the correct location (not a nested folder).</li>
+        </ol>
+    </div>
+
+    <h3>10.6 &ldquo;CSS/JS Not Loading&rdquo;</h3>
+
+    <p><strong>Cause:</strong> Asset paths incorrect.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Fix:</div>
+        <ol>
+            <li>View page source &rarr; check CSS/JS URLs are pointing to correct locations.</li>
+            <li>Verify <code>config/paths.php</code> detects the correct <code>BASE_URL</code>.</li>
+            <li>Check that <code>assets/css/</code> and <code>assets/js/</code> directories uploaded correctly.</li>
+            <li>Clear browser cache (Ctrl+Shift+R).</li>
+        </ol>
+    </div>
+
+    <h3>10.7 &ldquo;Cron Job Not Running&rdquo;</h3>
+
+    <p><strong>Cause:</strong> Wrong PHP path or file path in the cron command.</p>
+
+    <div class="procedure">
+        <div class="procedure-title">Fix:</div>
+        <ol>
+            <li>In cPanel &rarr; Cron Jobs, verify the command uses <code>/usr/local/bin/php</code> (GoDaddy&rsquo;s PHP path).</li>
+            <li>Use the full absolute path: <code>~/public_html/cron_lease_expiry_check.php</code></li>
+            <li>Check <code>logs/cron.log</code> for output.</li>
+            <li>Test manually via SSH (Deluxe plan): <code>/usr/local/bin/php ~/public_html/cron_lease_expiry_check.php</code></li>
+        </ol>
+    </div>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>17</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 11: FILES TO MODIFY SUMMARY
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 11: Files to Modify Summary</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">11.</span> Files to Modify Summary</h2>
+
+    <p class="indent">The following table summarizes all files that must be created, modified, or verified during deployment:</p>
+
+    <table>
+        <thead>
+            <tr><th>File</th><th>Action</th><th>Details</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>connection.php</code></td>
+                <td><span class="badge badge-yellow">Edit</span></td>
+                <td>Replace hardcoded credentials with <code>require_once 'config/db_config.php'</code> and use constants</td>
+            </tr>
+            <tr>
+                <td><code>config/db_config.php</code></td>
+                <td><span class="badge badge-blue">Create</span></td>
+                <td>Production DB credentials (host, user, password, database with GoDaddy prefix)</td>
+            </tr>
+            <tr>
+                <td><code>config/mail_config.php</code></td>
+                <td><span class="badge badge-gray">Verify</span></td>
+                <td>Confirm Gmail SMTP credentials; no changes unless emails fail</td>
+            </tr>
+            <tr>
+                <td><code>config/paths.php</code></td>
+                <td><span class="badge badge-green">No Change</span></td>
+                <td>Already handles dynamic URL detection</td>
+            </tr>
+            <tr>
+                <td><code>config/session_timeout.php</code></td>
+                <td><span class="badge badge-green">No Change</span></td>
+                <td>30-minute timeout already configured</td>
+            </tr>
+            <tr>
+                <td><code>login.php</code></td>
+                <td><span class="badge badge-yellow">Edit</span></td>
+                <td>Uncomment <code>ini_set('session.cookie_secure', 1);</code> on line 7</td>
+            </tr>
+            <tr>
+                <td><code>.user.ini</code> (root)</td>
+                <td><span class="badge badge-blue">Create</span></td>
+                <td>PHP settings: upload limits, error handling, memory limit</td>
+            </tr>
+            <tr>
+                <td><code>.htaccess</code> (root)</td>
+                <td><span class="badge badge-blue">Create</span></td>
+                <td>HTTPS redirect, security headers, block config/logs, caching, gzip</td>
+            </tr>
+            <tr>
+                <td><code>cron_lease_expiry_check.php</code></td>
+                <td><span class="badge badge-green">No Change</span></td>
+                <td>Configure as cron job in cPanel (Step 6.4)</td>
+            </tr>
+            <tr>
+                <td><code>PHPMailer/</code></td>
+                <td><span class="badge badge-gray">Upload</span></td>
+                <td>Upload entire directory &mdash; required for email functionality</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>18</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 12: FINAL VERIFICATION CHECKLIST
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 12: Final Verification Checklist</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">12.</span> Final Verification Checklist</h2>
+
+    <p class="indent">After completing all deployment steps, verify every item below passes before considering the deployment successful:</p>
+
+    <table>
+        <thead>
+            <tr><th>#</th><th>Test</th><th>Expected Result</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>1</td><td>Visit <code>https://yourdomain.com</code></td><td>Padlock icon, no mixed content warnings</td><td>&#9744;</td></tr>
+            <tr><td>2</td><td>Visit <code>http://yourdomain.com</code></td><td>Auto-redirects to HTTPS</td><td>&#9744;</td></tr>
+            <tr><td>3</td><td>Login as admin</td><td>Dashboard loads with correct stats</td><td>&#9744;</td></tr>
+            <tr><td>4</td><td>Trigger 2FA during login</td><td>Email arrives within 30&ndash;60 seconds</td><td>&#9744;</td></tr>
+            <tr><td>5</td><td>Add a property with images</td><td>Images upload and display correctly</td><td>&#9744;</td></tr>
+            <tr><td>6</td><td>Visit <code>https://yourdomain.com/config/db_config.php</code></td><td>403 Forbidden</td><td>&#9744;</td></tr>
+            <tr><td>7</td><td>Visit <code>https://yourdomain.com/rental_documents/</code></td><td>403 Forbidden</td><td>&#9744;</td></tr>
+            <tr><td>8</td><td>Visit <code>https://yourdomain.com/logs/</code></td><td>403 Forbidden</td><td>&#9744;</td></tr>
+            <tr><td>9</td><td>Submit a tour request (public page)</td><td>Success message + email to agent</td><td>&#9744;</td></tr>
+            <tr><td>10</td><td>Open public pages on mobile phone</td><td>Responsive layout, no broken elements</td><td>&#9744;</td></tr>
+            <tr><td>11</td><td>Leave page idle 30+ minutes</td><td>Session expires, redirected to login</td><td>&#9744;</td></tr>
+            <tr><td>12</td><td>Check cPanel &rarr; Cron Jobs</td><td>Lease expiry cron is scheduled</td><td>&#9744;</td></tr>
+            <tr><td>13</td><td>Run Google PageSpeed Insights</td><td>Score 70+ mobile, 80+ desktop</td><td>&#9744;</td></tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>19</span>
+    </div>
+</div>
+
+<!-- ================================================================
+     CHAPTER 13: COST SUMMARY
+================================================================ -->
+<div class="page">
+    <div class="page-header">
+        <span class="page-header-left">HomeEstate Realty &mdash; Deployment Guide</span>
+        <span class="page-header-right">Chapter 13: Cost Summary</span>
+    </div>
+
+    <h2 class="section-heading"><span class="section-number">13.</span> Cost Summary</h2>
+
+    <p class="indent">The following table provides an estimated cost breakdown for hosting the HomeEstate Realty system on GoDaddy:</p>
+
+    <table>
+        <thead>
+            <tr><th>Item</th><th>Cost</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>GoDaddy Deluxe Hosting</strong></td><td>~$8.99/month</td><td>~$5/month on annual promotional pricing</td></tr>
+            <tr><td><strong>Domain Name</strong></td><td>Free (1st year) / ~$12/year</td><td>Included with annual hosting plan</td></tr>
+            <tr><td><strong>SSL Certificate</strong></td><td>Free</td><td>Included with hosting (AutoSSL)</td></tr>
+            <tr><td><strong>Gmail SMTP</strong></td><td>Free</td><td>Using existing app password (500 emails/day limit)</td></tr>
+            <tr><td colspan="3" style="text-align: center; font-weight: 700; background: var(--light-bg); color: var(--primary);">Total: approximately $6&ndash;9 per month</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout callout-info">
+        <span class="callout-label">First-Year Savings</span>
+        GoDaddy frequently offers promotional pricing for the first year. Annual plans typically include a free domain and reduced hosting rates, bringing the total cost to approximately $60&ndash;72 for the first year.
+    </div>
+
+    <div class="spacer-lg"></div>
+
+    <h2 class="section-heading"><span class="section-number">14.</span> GoDaddy cPanel Quick Reference</h2>
+
+    <p class="indent">The following table maps common deployment tasks to their locations in the GoDaddy cPanel interface:</p>
+
+    <table>
+        <thead>
+            <tr><th>Task</th><th>cPanel Location</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Set PHP version</td><td>MultiPHP Manager</td></tr>
+            <tr><td>Create database</td><td>Databases &rarr; MySQL Databases</td></tr>
+            <tr><td>Import SQL</td><td>Databases &rarr; phpMyAdmin &rarr; Import tab</td></tr>
+            <tr><td>Upload files</td><td>Files &rarr; File Manager</td></tr>
+            <tr><td>Set permissions</td><td>File Manager &rarr; right-click &rarr; Change Permissions</td></tr>
+            <tr><td>Enable SSL</td><td>Security &rarr; SSL/TLS Status &rarr; Run AutoSSL</td></tr>
+            <tr><td>Set up cron job</td><td>Advanced &rarr; Cron Jobs</td></tr>
+            <tr><td>View error logs</td><td>Metrics &rarr; Errors</td></tr>
+            <tr><td>FTP credentials</td><td>Files &rarr; FTP Accounts</td></tr>
+            <tr><td>Email accounts</td><td>Email &rarr; Email Accounts</td></tr>
+            <tr><td>Backups</td><td>Files &rarr; Backup Wizard</td></tr>
+            <tr><td>SSH access (Deluxe+)</td><td>Security &rarr; SSH Access</td></tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>HomeEstate Realty &bull; Deployment Guide v1.0</span>
+        <span>20</span>
+    </div>
+</div>
+
+</body>
+</html>
